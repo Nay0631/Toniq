@@ -15,3 +15,24 @@ export interface DrumPattern {
   tracks:    Record<string, DrumTrack>;
   notes?:    string;  
 }
+
+export interface ChordDegree {
+  bar:          number;
+  degree:       string;
+  type:         string;
+  inversion:    number;
+  duration_bars: number;
+}
+
+export interface ChordProgression {
+  id:          string;
+  name:        string;
+  mood:        string[];
+  genre:       string[];
+  bpm_range:   { min: number; max: number };
+  base_scale:  string;
+  length_bars: number;
+  progression: ChordDegree[];
+  chord_rhythm: { pattern: string; description: string };
+  notes?:      string;
+}

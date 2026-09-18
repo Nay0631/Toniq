@@ -1,0 +1,336 @@
+[
+  {
+    "id": "chord_001",
+    "name": "王道進行",
+    "mood": ["明るい"],
+    "genre": ["EDM", "ゲームBGM", "シンセウェイブ"],
+    "bpm_range": { "min": 100, "max": 160 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVI",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bIII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "Jポップ・ゲーム音楽最頻出。明るく感動的でループが自然。"
+  },
+  {
+    "id": "chord_002",
+    "name": "カノン進行",
+    "mood": ["明るい"],
+    "genre": ["ゲームBGM", "8bit"],
+    "bpm_range": { "min": 80, "max": 140 },
+    "base_scale": "major",
+    "length_bars": 8,
+    "progression": [
+      { "bar": 1, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "V",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "VIm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "IIIm", "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 5, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 6, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 7, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 8, "degree": "V",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "パッヘルベルのカノン由来。フィールド系ゲームBGMに特に合う。"
+  },
+  {
+    "id": "chord_003",
+    "name": "4度進行（明るいループ）",
+    "mood": ["明るい"],
+    "genre": ["EDM", "テクノ"],
+    "bpm_range": { "min": 120, "max": 160 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IV", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "V",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "I",  "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "シンプルな3コード。リズムが主役のジャンルに向く。"
+  },
+  {
+    "id": "chord_004",
+    "name": "小室進行",
+    "mood": ["暗い", "切ない"],
+    "genre": ["EDM", "シンセウェイブ"],
+    "bpm_range": { "min": 100, "max": 145 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "Vm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVI", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVII","type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "切なさと疾走感を両立。80〜90年代サウンドとの相性が特に良い。"
+  },
+  {
+    "id": "chord_005",
+    "name": "下降クロマティック",
+    "mood": ["暗い", "緊張感"],
+    "genre": ["ゲームBGM", "テクノ"],
+    "bpm_range": { "min": 90, "max": 140 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",        "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "Im_bassG",  "type": "minor", "inversion": 1, "duration_bars": 1 },
+      { "bar": 3, "degree": "Im_bassFsh","type": "minor", "inversion": 2, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVI",       "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ベース音が半音下降。ダンジョン・ボス戦系BGMに向く。"
+  },
+  {
+    "id": "chord_006",
+    "name": "エオリアン進行",
+    "mood": ["暗い"],
+    "genre": ["8bit", "ゲームBGM"],
+    "bpm_range": { "min": 90, "max": 150 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "Vm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVII","type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "IV",  "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "マイナーキーながら解決感がありループと相性良い。夜のフィールド系BGM向き。"
+  },
+  {
+    "id": "chord_007",
+    "name": "ローファイ下降進行",
+    "mood": ["落ち着いた"],
+    "genre": ["ローファイ", "シンセウェイブ"],
+    "bpm_range": { "min": 70, "max": 100 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IIIm", "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IIm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "順次下降する落ち着いた進行。ローファイヒップホップの定番。"
+  },
+  {
+    "id": "chord_008",
+    "name": "2コードドローン",
+    "mood": ["落ち着いた"],
+    "genre": ["テクノ", "ローファイ"],
+    "bpm_range": { "min": 80, "max": 130 },
+    "base_scale": "minor",
+    "length_bars": 2,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVII","type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "2コードのみ。テクノ・アンビエント系でリズムやアルペジオを主役にする場合に向く。"
+  },
+  {
+    "id": "chord_009",
+    "name": "フラメンコ進行（フリジアン）",
+    "mood": ["緊張感", "暗い"],
+    "genre": ["ゲームBGM", "8bit", "テクノ"],
+    "bpm_range": { "min": 100, "max": 160 },
+    "base_scale": "phrygian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVII","type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVI", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",   "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "フリジアンスケール由来。V長和音で終わる独特の引きが緊張感を演出。"
+  },
+  {
+    "id": "chord_010",
+    "name": "壮大ループ",
+    "mood": ["緊張感", "明るい"],
+    "genre": ["ゲームBGM", "EDM"],
+    "bpm_range": { "min": 110, "max": 155 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVI",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "メジャーキーに♭系コードが混ざり壮大かつ緊張感のある印象。クライマックスシーン向き。"
+  },
+  {
+    "id": "chord_011",
+    "name": "5度下降ループ",
+    "mood": ["落ち着いた", "暗い"],
+    "genre": ["ローファイ", "シンセウェイブ"],
+    "bpm_range": { "min": 70, "max": 100 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IVm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bIII", "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "5度ずつ下降する落ち着いた進行。ローファイの浮遊感に合う。"
+  },
+  {
+    "id": "chord_012",
+    "name": "シンプルメジャーループ",
+    "mood": ["明るい"],
+    "genre": ["8bit", "ゲームBGM"],
+    "bpm_range": { "min": 100, "max": 160 },
+    "base_scale": "major",
+    "length_bars": 2,
+    "progression": [
+      { "bar": 1, "degree": "I", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "V", "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "2コードのみのシンプルなメジャーループ。8bitのフィールド・町BGMに向く。"
+  },
+  {
+    "id": "chord_013",
+    "name": "アンビエントドローン",
+    "mood": ["落ち着いた"],
+    "genre": ["ローファイ", "テクノ"],
+    "bpm_range": { "min": 60, "max": 90 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",   "type": "maj7", "inversion": 0, "duration_bars": 2 },
+      { "bar": 3, "degree": "IIm", "type": "min7", "inversion": 0, "duration_bars": 2 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符（2小節ずつ）" },
+    "notes": "7thコードを使った浮遊感のある進行。テンポが遅く音が伸びる場面に向く。"
+  },
+  {
+    "id": "chord_014",
+    "name": "上昇明るいループ",
+    "mood": ["明るい"],
+    "genre": ["EDM", "シンセウェイブ", "ゲームBGM"],
+    "bpm_range": { "min": 110, "max": 155 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IIm", "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IIIm","type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "IV",  "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "順次上昇する明るい進行。エネルギーが高まっていく印象を作る。"
+  },
+  {
+    "id": "chord_015",
+    "name": "マイナー循環",
+    "mood": ["暗い", "落ち着いた"],
+    "genre": ["ローファイ", "ゲームBGM", "シンセウェイブ"],
+    "bpm_range": { "min": 70, "max": 120 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IVm", "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "Vm",  "type": "minor", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "オールマイナーで統一した重厚な進行。ループ感が強く、メランコリックな雰囲気。"
+  },
+  {
+    "id": "chord_016",
+    "name": "ペンタトニックループ（EDM）",
+    "mood": ["明るい", "緊張感"],
+    "genre": ["EDM", "テクノ"],
+    "bpm_range": { "min": 125, "max": 145 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 2 },
+      { "bar": 3, "degree": "bVI", "type": "major", "inversion": 0, "duration_bars": 2 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符（2小節ずつ）" },
+    "notes": "2コードを2小節ずつ鳴らすEDM向け。リードシンセが主役になりやすい構成。"
+  },
+  {
+    "id": "chord_017",
+    "name": "サビ向け4コード（メジャー）",
+    "mood": ["明るい"],
+    "genre": ["ゲームBGM", "シンセウェイブ", "EDM"],
+    "bpm_range": { "min": 100, "max": 145 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "V",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "VIm", "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "IV",  "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ポップスのサビで頻出。明るく解放感があり、誰もが聴いたことのある安定した進行。"
+  },
+  {
+    "id": "chord_018",
+    "name": "ドリアンループ",
+    "mood": ["落ち着いた", "暗い"],
+    "genre": ["ローファイ", "テクノ"],
+    "bpm_range": { "min": 80, "max": 115 },
+    "base_scale": "dorian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 2 },
+      { "bar": 3, "degree": "IV",  "type": "major", "inversion": 0, "duration_bars": 2 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符（2小節ずつ）" },
+    "notes": "ドリアンスケール由来。マイナーながら明るさを含む独特の浮遊感を持つ。ファンク・ソウルにも頻出。"
+  },
+  {
+    "id": "chord_019",
+    "name": "8bitボス戦（ディミニッシュ混じり）",
+    "mood": ["緊張感", "暗い"],
+    "genre": ["8bit", "ゲームBGM"],
+    "bpm_range": { "min": 140, "max": 180 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IIdim","type": "dim",   "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ディミニッシュを挟むことで不安定さと緊張感を演出。ボス戦BGMの定番。"
+  },
+  {
+    "id": "chord_020",
+    "name": "シンセウェイブ・ノスタルジア",
+    "mood": ["落ち着いた", "暗い"],
+    "genre": ["シンセウェイブ"],
+    "bpm_range": { "min": 90, "max": 120 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVI", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bIII","type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVII","type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "half", "description": "2分音符（1小節に2回刻む）" },
+    "notes": "王道進行と同じコードだがリズムを2分音符刻みにすることで80年代シンセポップ感が出る。"
+  }
+]
