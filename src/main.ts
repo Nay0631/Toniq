@@ -2,7 +2,9 @@ import * as Tone from "tone";
 import { loadDrumPattern } from "./engine/DrumEngine";
 import { initChordSynth, loadChordProgression } from "./engine/ChordPlayer";
 import { initBassSynth, loadBassLine } from "./engine/BassPlayer";
-import drumDB from "./data/drum_patterns.json";
+import { initArpSynth, loadArpPattern } from "./engine/ArpPlayer";
+import { initPadSynth, loadPadPattern } from "./engine/PadPlayer";
+import drumDB  from "./data/drum_patterns.json";
 import chordDB from "./data/chord_progressions.json";
 import { DrumPattern, ChordProgression } from "./data/types";
 
@@ -15,12 +17,16 @@ window.addEventListener("load", () => {
 
   initChordSynth();
   initBassSynth();
+  initArpSynth();
+  initPadSynth();
 
   playBtn?.addEventListener("click", async () => {
     await Tone.start();
     loadDrumPattern(drumPattern);
     loadChordProgression(chordPattern, "A", 4);
     loadBassLine(chordPattern, "A", 2);
+    loadArpPattern(chordPattern, "A", 5, "8n");
+    loadPadPattern(chordPattern, "A", 4);
     Tone.getTransport().bpm.value = 128;
     Tone.getTransport().start();
   });
