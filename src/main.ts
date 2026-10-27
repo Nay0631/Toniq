@@ -1,19 +1,29 @@
 import * as Tone from "tone";
-import { loadDrumPattern }                        from "./engine/DrumEngine";
-import { initChordSynth, loadChordProgression }   from "./engine/ChordPlayer";
-import { initBassSynth,  loadBassLine }           from "./engine/BassPlayer";
-import { initArpSynth,   loadArpPattern }         from "./engine/ArpPlayer";
-import { initPadSynth,   loadPadPattern }         from "./engine/PadPlayer";
-import { initMelodySynth, loadMelody }            from "./engine/MelodyPlayer";
-import { generateMelody }                         from "./engine/MelodyGenerator";
-import { exportMidi }                             from "./engine/MidiExporter";
+import { loadDrumPattern }                          from "./engine/DrumEngine";
+import { initChordSynth, loadChordProgression }     from "./engine/ChordPlayer";
+import { initBassSynth,  loadBassLine }             from "./engine/BassPlayer";
+import { initArpSynth,   loadArpPattern }           from "./engine/ArpPlayer";
+import { initPadSynth,   loadPadPattern }           from "./engine/PadPlayer";
+import { initMelodySynth, loadMelody }              from "./engine/MelodyPlayer";
+import { generateMelody }                           from "./engine/MelodyGenerator";
+import { exportMidi }                               from "./engine/MidiExporter";
+import { initMixer, applyMixPreset }                from "./engine/MixerEngine";
+import { startLoopArranger, stopLoopArranger }      from "./engine/LoopArranger";
+import { resolveSimpleMode }                        from "./engine/SimpleModeResolver";
+import { getState, setState, applySimpleToCustom }  from "./engine/AppState";
 import drumDB  from "./data/drum_patterns.json";
 import chordDB from "./data/chord_progressions.json";
 import { DrumPattern, ChordProgression } from "./data/types";
-import { resolveSimpleMode } from "./engine/SimpleModeResolver";
 
-const drumPattern  = (drumDB  as unknown as DrumPattern[])[0];
-const chordPattern = (chordDB as unknown as ChordProgression[])[0];
+// シンプルモードで初期状態を解決
+const initialResult = resolveSimpleMode("EDM", "明るい");
+setState({
+  genre:        "EDM",
+  mood:         "明るい",
+  bpm:          initialResult.bpm,
+  chordPattern: initialResult.chordPattern,
+  drumPattern:  initialResult.drumPattern,
+});
 
 window.addEventListener("load", () => {
   const playBtn       = document.getElementById("play");
@@ -21,9 +31,8 @@ window.addEventListener("load", () => {
   const regenBtn      = document.getElementById("regen");
   const exportBtn     = document.getElementById("export-wav");
   const exportMidiBtn = document.getElementById("export-midi");
-  // かんたんモード動作確認
-  const result = resolveSimpleMode("EDM", "明るい");
-  console.log("かんたんモード結果:", result);
+  const toCustomBtn   = document.getElementById("to-custom");
+  const presetLabel   = document.getElementById("preset-label");
 
   initChordSynth();
   initBassSynth();
@@ -31,46 +40,99 @@ window.addEventListener("load", () => {
   initPadSynth();
   initMelodySynth();
 
-  // melodyNotesをload内で宣言してすべてのリスナーからアクセスできるようにする
-  let melodyNotes = generateMelody(chordPattern, "A", "lofi");
+  // メロディ生成
+  let melodyNotes = generateMelody(
+    getState().chordPattern!,
+    getState().key,
+    getState().genre.toLowerCase().replace(" ", "_")
+  );
+  setState({ melodyNotes });
 
   const startAll = () => {
-    loadDrumPattern(drumPattern);
-    loadChordProgression(chordPattern, "A", 4);
-    loadBassLine(chordPattern, "A", 2);
-    loadArpPattern(chordPattern, "A", 5, "8n");
-    loadPadPattern(chordPattern, "A", 4);
-    loadMelody(melodyNotes, `${chordPattern.length_bars}m`);
-    Tone.getTransport().bpm.value = 128;
+    const s = getState();
+    if (!s.chordPattern || !s.drumPattern) return;
+    loadDrumPattern(s.drumPattern);
+    loadChordProgression(s.chordPattern, s.key, 4);
+    loadBassLine(s.chordPattern, s.key, 2);
+    loadArpPattern(s.chordPattern, s.key, 5, "8n");
+    loadPadPattern(s.chordPattern, s.key, 4);
+    loadMelody(s.melodyNotes, `${s.chordPattern.length_bars}m`);
+    Tone.getTransport().bpm.value = s.bpm;
   };
 
   playBtn?.addEventListener("click", async () => {
     await Tone.start();
-    startAll();
+    const s = getState();
+    initMixer();
+    applyMixPreset(s.genre);
+    if (presetLabel) presetLabel.textContent = `${s.genre} / ${s.mood} — シンプルモード`;
+
+    startLoopArranger({
+      genre:        s.genre,
+      chordPattern: s.chordPattern!,
+      drumPattern:  s.drumPattern!,
+      melodyNotes:  s.melodyNotes,
+      key:          s.key,
+      bpm:          s.bpm,
+      onLoopChange: (loop, parts) => {
+        if (presetLabel)
+          presetLabel.textContent = `${s.genre} / ${s.mood} — 周回 ${loop} (${parts.join(", ")})`;
+      },
+    });
+
     Tone.getTransport().start();
   });
 
   stopBtn?.addEventListener("click", () => {
     Tone.getTransport().stop();
+    stopLoopArranger();
   });
 
   regenBtn?.addEventListener("click", () => {
-    melodyNotes = generateMelody(chordPattern, "A", "lofi");
-    loadMelody(melodyNotes, `${chordPattern.length_bars}m`);
+    const s = getState();
+    const newMelody = generateMelody(s.chordPattern!, s.key, s.genre.toLowerCase());
+    setState({ melodyNotes: newMelody });
+    loadMelody(newMelody, `${s.chordPattern!.length_bars}m`);
+  });
+
+  // シンプル→カスタム引き継ぎボタン
+  toCustomBtn?.addEventListener("click", () => {
+    applySimpleToCustom();
+    const s = getState();
+    console.log("カスタムモードに引き継ぎ:", s);
+    if (presetLabel)
+      presetLabel.textContent =
+        `${s.genre} / ${s.mood} — カスタムモード（引き継ぎ済み）`;
+    alert(`カスタムモードに引き継ぎました。\nBPM: ${s.bpm}\nコード: ${s.chordPattern?.name}\nドラム: ${s.drumPattern?.name}`);
   });
 
   exportBtn?.addEventListener("click", async () => {
     exportBtn.textContent = "レンダリング中...";
     exportBtn.setAttribute("disabled", "true");
-
     try {
-      const bpm         = 128;
-      const bars        = chordPattern.length_bars;
+      const s           = getState();
+      const bpm         = s.bpm;
+      const bars        = s.chordPattern!.length_bars;
       const durationSec = (bars * 4 * 60) / bpm + 2;
 
       const buffer = await Tone.Offline(async () => {
+        initMixer();
+        applyMixPreset(s.genre);
         Tone.getTransport().bpm.value = bpm;
-        startAll();
+
+        const { loadDrumPattern: loadDrum }               = await import("./engine/DrumEngine");
+        const { initChordSynth: initC, loadChordProgression: loadC } = await import("./engine/ChordPlayer");
+        const { initBassSynth: initB,  loadBassLine: loadB }         = await import("./engine/BassPlayer");
+        const { initArpSynth: initAr,  loadArpPattern: loadAr }      = await import("./engine/ArpPlayer");
+        const { initPadSynth: initP,   loadPadPattern: loadP }       = await import("./engine/PadPlayer");
+        const { initMelodySynth: initM, loadMelody: loadMel }        = await import("./engine/MelodyPlayer");
+
+        loadDrum(s.drumPattern!);
+        initC(); loadC(s.chordPattern!, s.key, 4);
+        initB(); loadB(s.chordPattern!, s.key, 2);
+        initAr(); loadAr(s.chordPattern!, s.key, 5, "8n");
+        initP(); loadP(s.chordPattern!, s.key, 4);
+        initM(); loadMel(s.melodyNotes, `${bars}m`);
         Tone.getTransport().start();
       }, durationSec);
 
@@ -82,7 +144,6 @@ window.addEventListener("load", () => {
       a.download = "toniq_export.wav";
       a.click();
       URL.revokeObjectURL(url);
-
     } catch (e) {
       console.error("WAVエクスポートエラー:", e);
     } finally {
@@ -92,13 +153,11 @@ window.addEventListener("load", () => {
   });
 
   exportMidiBtn?.addEventListener("click", () => {
-    console.log("MIDI書き出しボタン押下");
-    console.log("melodyNotes:", melodyNotes);
-    exportMidi(chordPattern, melodyNotes, "A", 128, "toniq_export.mid");
+    const s = getState();
+    exportMidi(s.chordPattern!, s.melodyNotes, s.key, s.bpm);
   });
 });
 
-// ===== AudioBuffer → WAVバイナリ =====
 function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
   const numCh      = buffer.numberOfChannels;
   const sr         = buffer.sampleRate;
