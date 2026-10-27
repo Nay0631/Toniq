@@ -1,25 +1,46 @@
 {
   "name": "toniq",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "ルールベース自動作曲アプリ",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "electron:build": "vite build && electron-builder"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "dependencies": {
     "@tonejs/midi": "^2.0.28",
     "tone": "^15.1.22"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",
+    "concurrently": "^9.2.5",
+    "cross-env": "^7.0.3",
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
-    "vite-plugin-electron": "^1.1.2"
+    "vite-plugin-electron": "^1.1.2",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.toniq.app",
+    "productName": "Toniq",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ]
   }
 }
