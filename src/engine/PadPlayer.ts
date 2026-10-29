@@ -1,12 +1,15 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
+import { createVolumeNode } from "./VolumeManager";
 
 let padPart: Tone.Part | null = null;
 let padSynth: Tone.PolySynth | null = null;
+let padVol: Tone.Volume | null = null;
 
 export function initPadSynth() {
-  const reverb = new Tone.Reverb({ decay: 4.0, wet: 0.5 }).toDestination();
+  if (!padVol) padVol = createVolumeNode("pad");
+  const reverb = new Tone.Reverb({ decay: 4.0, wet: 0.5 }).connect(padVol);
   const chorus = new Tone.Chorus(3, 2.5, 0.5).connect(reverb).start();
   padSynth = new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: "triangle" },

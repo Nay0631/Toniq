@@ -23,6 +23,22 @@
   </div>
 
   <div style="margin-top:8px">
+    <button id="tap-btn">タップ</button>
+    <button id="tap-reset">リセット</button>
+    <span id="tap-label">-- BPM</span>
+  </div>
+
+  <div style="margin-top:12px">
+    <p><strong>パート別音量</strong></p>
+    <div>ドラム <input type="range" id="vol-drum" min="0" max="100" value="80"> <span id="vol-drum-label">80</span></div>
+    <div>コード <input type="range" id="vol-chord" min="0" max="100" value="65"> <span id="vol-chord-label">65</span></div>
+    <div>ベース <input type="range" id="vol-bass" min="0" max="100" value="70"> <span id="vol-bass-label">70</span></div>
+    <div>アルペジオ <input type="range" id="vol-arp" min="0" max="100" value="60"> <span id="vol-arp-label">60</span></div>
+    <div>パッド <input type="range" id="vol-pad" min="0" max="100" value="50"> <span id="vol-pad-label">50</span></div>
+    <div>メロディ <input type="range" id="vol-melody" min="0" max="100" value="75"> <span id="vol-melody-label">75</span></div>
+  </div>
+
+  <div style="margin-top:8px">
     <button id="export-wav">WAV書き出し</button>
     <button id="export-midi">MIDI書き出し</button>
   </div>

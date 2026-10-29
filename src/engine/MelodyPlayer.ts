@@ -1,15 +1,20 @@
 import * as Tone from "tone";
 import { MelodyNote } from "./MelodyGenerator";
+import { createVolumeNode } from "./VolumeManager";
+
 
 let melodyPart:  Tone.Part | null = null;
 let melodySynth: Tone.Synth | null = null;
+let melodyVol: Tone.Volume | null = null;
+
 
 export function initMelodySynth() {
-  const reverb = new Tone.Reverb({ decay: 1.0, wet: 0.15 }).toDestination();
-  melodySynth  = new Tone.Synth({
+  if (!melodyVol) melodyVol = createVolumeNode("melody");
+  const reverb = new Tone.Reverb({ decay: 1.0, wet: 0.15 }).connect(melodyVol);
+  melodySynth = new Tone.Synth({
     oscillator: { type: "sine" },
     envelope:   { attack: 0.02, decay: 0.1, sustain: 0.6, release: 0.5 },
-    volume:     -1,
+    volume: -8,
   }).connect(reverb);
 }
 

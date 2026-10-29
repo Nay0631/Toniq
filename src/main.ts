@@ -16,6 +16,8 @@ import chordDB from "./data/chord_progressions.json";
 import { DrumPattern, ChordProgression } from "./data/types";
 import { replaceDrumPattern, replaceChordProgression, setLayerEnabled } from "./engine/LayerManager";
 import { resolveSimpleMode, resolveTempoPreset } from "./engine/SimpleModeResolver";
+import { tap, resetTap } from "./engine/TapTempo";
+import { setVolume } from "./engine/VolumeManager";
 
 
 // シンプルモードで初期状態を解決
@@ -148,6 +150,35 @@ window.addEventListener("load", () => {
     setLayerEnabled("arp", !enabled);
     const btn = document.getElementById("toggle-arp");
     if (btn) btn.textContent = enabled ? "アルペジオON" : "アルペジオOFF";
+  });
+
+    // タップBPM
+  document.getElementById("tap-btn")?.addEventListener("click", () => {
+    const bpm = tap();
+    if (bpm !== null) {
+      Tone.getTransport().bpm.value = bpm;
+      const tapLabel = document.getElementById("tap-label");
+      if (tapLabel) tapLabel.textContent = `${bpm} BPM`;
+      console.log("タップBPM:", bpm);
+    }
+  });
+
+  document.getElementById("tap-reset")?.addEventListener("click", () => {
+    resetTap();
+    const tapLabel = document.getElementById("tap-label");
+    if (tapLabel) tapLabel.textContent = "-- BPM";
+    console.log("タップBPMリセット");
+  });
+
+    // パート別音量スライダー
+  const parts = ["drum", "chord", "bass", "arp", "pad", "melody"] as const;
+  parts.forEach(part => {
+    document.getElementById(`vol-${part}`)?.addEventListener("input", (e) => {
+      const value = parseInt((e.target as HTMLInputElement).value);
+      setVolume(part, value);
+      const label = document.getElementById(`vol-${part}-label`);
+      if (label) label.textContent = String(value);
+    });
   });
 
   exportBtn?.addEventListener("click", async () => {

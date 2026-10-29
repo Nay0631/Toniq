@@ -1,12 +1,15 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
+import { createVolumeNode } from "./VolumeManager";
 
 let arpPart: Tone.Part | null = null;
 let arpSynth: Tone.Synth | null = null;
+let arpVol: Tone.Volume | null = null;
 
 export function initArpSynth() {
-  const reverb = new Tone.Reverb({ decay: 1.0, wet: 0.2 }).toDestination();
+  if (!arpVol) arpVol = createVolumeNode("arp");
+  const reverb = new Tone.Reverb({ decay: 1.0, wet: 0.2 }).connect(arpVol);
   const delay  = new Tone.FeedbackDelay("8n", 0.2).connect(reverb);
   arpSynth = new Tone.Synth({
     oscillator: { type: "square" },

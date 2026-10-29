@@ -1,6 +1,7 @@
 import * as Tone from "tone";
 import { DrumPattern } from "../data/types";
 import { createKick, createSnare, createHihat, createClap } from "./SynthFactory";
+import { createVolumeNode } from "./VolumeManager";
 
 const SYNTH_MAP: Record<string, () => any> = {
   kick:         createKick,
@@ -13,16 +14,26 @@ const SYNTH_MAP: Record<string, () => any> = {
 
 let currentSeq: Tone.Sequence | null = null;
 let synths: any[] = [];
+let drumVol: Tone.Volume | null = null;
 
 export function loadDrumPattern(pattern: DrumPattern) {
   if (currentSeq) { currentSeq.dispose(); currentSeq = null; }
-  synths.forEach(s => s?.dispose?.());
+  synths.forEach(s => s?.env?.disconnect?.() ?? s?.disconnect?.());
   synths = [];
+
+  if (!drumVol) drumVol = createVolumeNode("drum");
 
   const parts = Object.entries(pattern.tracks).map(([name, track]) => {
     const factory = SYNTH_MAP[name] ?? createClap;
-    const synth = factory();
+    const synth   = factory();
     synths.push(synth);
+
+    // Volumeノード経由で出力
+    if (synth.env) {
+      synth.env.connect(drumVol!);
+    } else {
+      synth.connect(drumVol!);
+    }
     return { name, track, synth };
   });
 
@@ -49,4 +60,6 @@ export function loadDrumPattern(pattern: DrumPattern) {
 export function disposeDrum() {
   currentSeq?.dispose();
   synths.forEach(s => s?.dispose?.());
+  currentSeq = null;
+  synths     = [];
 }

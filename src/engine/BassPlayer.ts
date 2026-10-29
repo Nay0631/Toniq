@@ -1,12 +1,15 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
+import { createVolumeNode } from "./VolumeManager";
 
 let bassPart: Tone.Part | null = null;
 let bassSynth: Tone.Synth | null = null;
+let bassVol: Tone.Volume | null = null;
 
 export function initBassSynth() {
-  const filter = new Tone.Filter(300, "lowpass").toDestination();
+  if (!bassVol) bassVol = createVolumeNode("bass");
+  const filter = new Tone.Filter(300, "lowpass").connect(bassVol);
   bassSynth = new Tone.Synth({
     oscillator: { type: "sawtooth" },
     envelope: { attack: 0.01, decay: 0.2, sustain: 0.5, release: 0.3 },

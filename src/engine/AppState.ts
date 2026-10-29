@@ -26,6 +26,15 @@ export interface AppState {
     pad:     boolean;
     melody:  boolean;
   };
+
+  volumes: {
+    drum:    number;  // 0〜100
+    chord:   number;
+    bass:    number;
+    arp:     number;
+    pad:     number;
+    melody:  number;
+  };
 }
 
 // 初期状態
@@ -48,6 +57,15 @@ export const defaultState: AppState = {
     arp:    true,
     pad:    true,
     melody: true,
+  },
+
+    volumes: {
+    drum:   80,
+    chord:  65,
+    bass:   70,
+    arp:    60,
+    pad:    50,
+    melody: 75,
   },
 };
 
