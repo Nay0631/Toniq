@@ -120,11 +120,13 @@ window.addEventListener("load", () => {
     if (presetLabel) presetLabel.textContent = `ドラム差し替え → ${next.name}`;
   });
 
-  document.getElementById("replace-chord")?.addEventListener("click", () => {
+ document.getElementById("replace-chord")?.addEventListener("click", () => {
     const chords = chordDB as unknown as ChordProgression[];
     const current = getState().chordPattern;
-    const next = chords.find(c => c.id !== current?.id) ?? chords[0];
-    const result = replaceChordProgression(next);
+    // 現在と異なるコードをランダムに選ぶ
+    const candidates = chords.filter(c => c.id !== current?.id);
+    const next = candidates[Math.floor(Math.random() * candidates.length)];
+    const result = replaceChordProgression(next, false); // スケールチェックを無効にして強制差し替え
     if (!result.success && result.warning) {
       console.warn(result.warning);
       if (presetLabel) presetLabel.textContent = `⚠ ${result.warning}`;
@@ -139,6 +141,13 @@ window.addEventListener("load", () => {
     setLayerEnabled("melody", !enabled);
     const btn = document.getElementById("toggle-melody");
     if (btn) btn.textContent = enabled ? "メロディON" : "メロディOFF";
+  });
+
+    document.getElementById("toggle-arp")?.addEventListener("click", () => {
+    const enabled = getState().parts.arp;
+    setLayerEnabled("arp", !enabled);
+    const btn = document.getElementById("toggle-arp");
+    if (btn) btn.textContent = enabled ? "アルペジオON" : "アルペジオOFF";
   });
 
   exportBtn?.addEventListener("click", async () => {

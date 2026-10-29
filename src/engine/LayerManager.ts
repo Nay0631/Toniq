@@ -86,24 +86,31 @@ export function replaceChordProgression(
     console.warn(
       `スケール不一致: 現在=${state.chordPattern?.base_scale} / 新=${newProgression.base_scale}`
     );
-    // メロディをスケール外警告対象としてマーク（UIで表示）
     return {
       success: false,
       warning: `スケールが変わります（${state.chordPattern?.base_scale} → ${newProgression.base_scale}）。メロディの再生成を推奨します。`,
     };
   }
 
+  // Stateを先に更新
   setState({ chordPattern: newProgression });
+
+  // 既存のPartを破棄
   disposeChord();
   disposeBass();
   disposeArp();
   disposePad();
-  loadChordProgression(newProgression, state.key, 4);
-  loadBassLine(newProgression, state.key, 2);
-  loadArpPattern(newProgression, state.key, 5, "8n");
-  loadPadPattern(newProgression, state.key, 4);
 
-  console.log(`コード進行差し替え: ${newProgression.name}`);
+  // Transport動作中でも正しく再開始できるよう少し遅延して再ロード
+  const key = state.key;
+  setTimeout(() => {
+    loadChordProgression(newProgression, key, 4);
+    loadBassLine(newProgression, key, 2);
+    loadArpPattern(newProgression, key, 5, "8n");
+    loadPadPattern(newProgression, key, 4);
+    console.log(`コード進行差し替え完了: ${newProgression.name}`);
+  }, 50);
+
   return { success: true, warning: null };
 }
 
