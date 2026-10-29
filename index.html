@@ -7,12 +7,25 @@
 <body>
   <h1>Toniq</h1>
   <p>現在のモード：<span id="preset-label">未設定</span></p>
-  <button id="play">再生</button>
-  <button id="stop">停止</button>
-  <button id="regen">メロディ再生成</button>
-  <button id="to-custom">カスタムモードに引き継ぎ</button>
-  <button id="export-wav">WAV書き出し</button>
-  <button id="export-midi">MIDI書き出し</button>
+
+  <div>
+    <button id="play">再生</button>
+    <button id="stop">停止</button>
+    <button id="regen">メロディ再生成</button>
+    <button id="to-custom">カスタムモードに引き継ぎ</button>
+  </div>
+
+  <div style="margin-top:8px">
+    <button id="replace-drum">ドラム差し替え</button>
+    <button id="replace-chord">コード差し替え</button>
+    <button id="toggle-melody">メロディOFF</button>
+  </div>
+
+  <div style="margin-top:8px">
+    <button id="export-wav">WAV書き出し</button>
+    <button id="export-midi">MIDI書き出し</button>
+  </div>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -9,18 +9,23 @@ import { generateMelody }                           from "./engine/MelodyGenerat
 import { exportMidi }                               from "./engine/MidiExporter";
 import { initMixer, applyMixPreset }                from "./engine/MixerEngine";
 import { startLoopArranger, stopLoopArranger }      from "./engine/LoopArranger";
-import { resolveSimpleMode }                        from "./engine/SimpleModeResolver";
+//import { resolveSimpleMode }                        from "./engine/SimpleModeResolver";
 import { getState, setState, applySimpleToCustom }  from "./engine/AppState";
 import drumDB  from "./data/drum_patterns.json";
 import chordDB from "./data/chord_progressions.json";
 import { DrumPattern, ChordProgression } from "./data/types";
+import { replaceDrumPattern, replaceChordProgression, setLayerEnabled } from "./engine/LayerManager";
+import { resolveSimpleMode, resolveTempoPreset } from "./engine/SimpleModeResolver";
+
 
 // シンプルモードで初期状態を解決
 const initialResult = resolveSimpleMode("EDM", "明るい");
+const initialBpm    = resolveTempoPreset("EDM", "普通");
 setState({
   genre:        "EDM",
   mood:         "明るい",
-  bpm:          initialResult.bpm,
+  tempoPreset:  "普通",
+  bpm:          initialBpm,
   chordPattern: initialResult.chordPattern,
   drumPattern:  initialResult.drumPattern,
 });
@@ -104,6 +109,36 @@ window.addEventListener("load", () => {
       presetLabel.textContent =
         `${s.genre} / ${s.mood} — カスタムモード（引き継ぎ済み）`;
     alert(`カスタムモードに引き継ぎました。\nBPM: ${s.bpm}\nコード: ${s.chordPattern?.name}\nドラム: ${s.drumPattern?.name}`);
+  });
+    // レイヤー差し替えテスト用ボタン
+  document.getElementById("replace-drum")?.addEventListener("click", () => {
+    const drums = drumDB as unknown as DrumPattern[];
+    const current = getState().drumPattern;
+    const next = drums.find(d => d.id !== current?.id) ?? drums[0];
+    replaceDrumPattern(next);
+    console.log("ドラム差し替え:", next.name);
+    if (presetLabel) presetLabel.textContent = `ドラム差し替え → ${next.name}`;
+  });
+
+  document.getElementById("replace-chord")?.addEventListener("click", () => {
+    const chords = chordDB as unknown as ChordProgression[];
+    const current = getState().chordPattern;
+    const next = chords.find(c => c.id !== current?.id) ?? chords[0];
+    const result = replaceChordProgression(next);
+    if (!result.success && result.warning) {
+      console.warn(result.warning);
+      if (presetLabel) presetLabel.textContent = `⚠ ${result.warning}`;
+    } else {
+      console.log("コード差し替え:", next.name);
+      if (presetLabel) presetLabel.textContent = `コード差し替え → ${next.name}`;
+    }
+  });
+
+  document.getElementById("toggle-melody")?.addEventListener("click", () => {
+    const enabled = getState().parts.melody;
+    setLayerEnabled("melody", !enabled);
+    const btn = document.getElementById("toggle-melody");
+    if (btn) btn.textContent = enabled ? "メロディON" : "メロディOFF";
   });
 
   exportBtn?.addEventListener("click", async () => {

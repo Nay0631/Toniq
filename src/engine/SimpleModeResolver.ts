@@ -2,6 +2,7 @@ import easyTable from "../data/easy_mode_table.json";
 import chordDB   from "../data/chord_progressions.json";
 import drumDB    from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
+import tempoPresets from "../data/tempo_presets.json";
 
 interface SimpleModeResult {
   bpm:          number;
@@ -47,4 +48,12 @@ export function resolveSimpleMode(
     genre,
     mood,
   };
+}
+
+export function resolveTempoPreset(
+  genre: string,
+  preset: "ゆっくり" | "普通" | "速い"
+): number {
+  const presets = tempoPresets as Record<string, Record<string, number>>;
+  return presets[genre]?.[preset] ?? 128;
 }

@@ -30,12 +30,13 @@ export interface AppState {
 
 // 初期状態
 export const defaultState: AppState = {
-  mode:  "simple",
-  genre: "EDM",
-  mood:  "明るい",
-  key:   "A",
-  bpm:   128,
-
+  mode:        "simple",
+  genre:       "EDM",
+  mood:        "明るい",
+  key:         "A",
+  bpm:         128,
+  tempoPreset: "普通",  // ← 追加
+  
   chordPattern: null,
   drumPattern:  null,
   melodyNotes:  [],
@@ -69,4 +70,26 @@ export function applySimpleToCustom(): void {
     // シンプルモードで決定したパラメータはそのままカスタムモードに引き継がれる
   };
   console.log("シンプル→カスタム引き継ぎ完了:", state);
+}
+
+export interface AppState {
+  mode:   "simple" | "custom";
+  genre:  string;
+  mood:   string;
+  key:    string;
+  bpm:    number;
+  tempoPreset: "ゆっくり" | "普通" | "速い" | "custom"; // ← 追加
+
+  chordPattern:  ChordProgression | null;
+  drumPattern:   DrumPattern      | null;
+  melodyNotes:   MelodyNote[];
+
+  parts: {
+    drum:    boolean;
+    chord:   boolean;
+    bass:    boolean;
+    arp:     boolean;
+    pad:     boolean;
+    melody:  boolean;
+  };
 }
