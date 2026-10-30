@@ -7,20 +7,21 @@ import { loadBassLine } from "./BassPlayer";
 import { loadArpPattern } from "./ArpPlayer";
 import { loadPadPattern } from "./PadPlayer";
 import { loadMelody } from "./MelodyPlayer";
+import { loadFx } from "./FxPlayer";
 
-// ジャンルごとの周回アレンジ定義
+// ジャンルごとの周回アレンジ定義（パートは一度入ると以降の周回でも鳴り続ける）
 const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
   "EDM": {
     1: ["drum", "chord"],
-    2: ["drum", "chord", "bass"],
-    3: ["drum", "chord", "bass", "arp", "pad"],
-    4: ["drum", "chord", "bass", "arp", "pad", "melody"],
+    2: ["drum", "chord", "bass", "fx"],
+    3: ["drum", "chord", "bass", "arp", "pad", "fx"],
+    4: ["drum", "chord", "bass", "arp", "pad", "melody", "fx"],
   },
   "8bit": {
     1: ["drum", "chord"],
     2: ["drum", "chord", "melody"],
-    3: ["drum", "chord", "melody", "bass"],
-    4: ["drum", "chord", "melody", "bass", "arp"],
+    3: ["drum", "chord", "melody", "bass", "fx"],
+    4: ["drum", "chord", "melody", "bass", "arp", "fx"],
   },
   "ローファイ": {
     1: ["drum", "chord", "pad"],
@@ -31,8 +32,14 @@ const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
   "ゲームBGM": {
     1: ["drum", "chord"],
     2: ["drum", "chord", "bass", "pad"],
-    3: ["drum", "chord", "bass", "pad", "melody"],
-    4: ["drum", "chord", "bass", "pad", "melody", "arp"],
+    3: ["drum", "chord", "bass", "pad", "melody", "fx"],
+    4: ["drum", "chord", "bass", "pad", "melody", "arp", "fx"],
+  },
+  "テクノ": {
+    1: ["drum"],
+    2: ["drum", "bass", "fx"],
+    3: ["drum", "bass", "arp", "chord", "fx"],
+    4: ["drum", "bass", "arp", "chord", "pad", "melody", "fx"],
   },
 };
 
@@ -89,6 +96,9 @@ export function startLoopArranger(params: LoopArrangerParams) {
 
       if (activeParts.includes("melody"))
         loadMelody(melodyNotes, `${loopBars}m`);
+
+      if (activeParts.includes("fx"))
+        loadFx(chordPattern);
 
     }, time);
   }, [

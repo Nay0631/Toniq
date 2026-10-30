@@ -7,9 +7,10 @@ import { loadBassLine, disposeBass }          from "./BassPlayer";
 import { loadArpPattern, disposeArp }         from "./ArpPlayer";
 import { loadPadPattern, disposePad }         from "./PadPlayer";
 import { loadMelody, disposeMelody }          from "./MelodyPlayer";
+import { loadFx, disposeFx }                  from "./FxPlayer";
 import { getState, setState }                 from "./AppState";
 
-export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "melody";
+export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "melody" | "fx";
 
 // ===== レイヤーON/OFF =====
 export function setLayerEnabled(layer: LayerName, enabled: boolean) {
@@ -36,6 +37,7 @@ function disposeLayer(layer: LayerName) {
     case "arp":    disposeArp();     break;
     case "pad":    disposePad();     break;
     case "melody": disposeMelody();  break;
+    case "fx":     disposeFx();      break;
   }
 }
 
@@ -62,6 +64,9 @@ export function reloadLayer(layer: LayerName) {
       break;
     case "melody":
       loadMelody(s.melodyNotes, `${s.chordPattern.length_bars}m`);
+      break;
+    case "fx":
+      loadFx(s.chordPattern);
       break;
   }
 }
@@ -100,6 +105,7 @@ export function replaceChordProgression(
   disposeBass();
   disposeArp();
   disposePad();
+  disposeFx();
 
   // Transport動作中でも正しく再開始できるよう少し遅延して再ロード
   const key = state.key;
@@ -108,6 +114,7 @@ export function replaceChordProgression(
     loadBassLine(newProgression, key, 2);
     loadArpPattern(newProgression, key, 5, "8n");
     loadPadPattern(newProgression, key, 4);
+    if (getState().parts.fx) loadFx(newProgression);
     console.log(`コード進行差し替え完了: ${newProgression.name}`);
   }, 50);
 
@@ -127,7 +134,7 @@ export function replaceMelody(newNotes: MelodyNote[]) {
 export function reloadAllLayers() {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
-  (["drum","chord","bass","arp","pad","melody"] as LayerName[]).forEach(layer => {
+  (["drum","chord","bass","arp","pad","melody","fx"] as LayerName[]).forEach(layer => {
     if (s.parts[layer]) reloadLayer(layer);
   });
 }

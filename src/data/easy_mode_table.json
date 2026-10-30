@@ -3,7 +3,6 @@
     "明るい":    { "bpm": 128, "chord_ids": ["chord_003","chord_014","chord_017"], "drum_ids": ["drum_001","drum_002","drum_014"] },
     "暗い":      { "bpm": 130, "chord_ids": ["chord_004","chord_006","chord_010"], "drum_ids": ["drum_001","drum_004"] },
     "落ち着いた":{ "bpm": 120, "chord_ids": ["chord_008","chord_016"],             "drum_ids": ["drum_014"] },
-    "緊張感":    { "bpm": 138, "chord_ids": ["chord_010","chord_019"],             "drum_ids": ["drum_002","drum_004"] },
     "切ない":    { "bpm": 125, "chord_ids": ["chord_004","chord_011"],             "drum_ids": ["drum_001","drum_014"] },
     "激しい":    { "bpm": 145, "chord_ids": ["chord_010","chord_016"],             "drum_ids": ["drum_002","drum_004"] }
   },
@@ -11,7 +10,6 @@
     "明るい":    { "bpm": 140, "chord_ids": ["chord_002","chord_012","chord_017"], "drum_ids": ["drum_008","drum_009"] },
     "暗い":      { "bpm": 150, "chord_ids": ["chord_006","chord_019"],             "drum_ids": ["drum_015"] },
     "落ち着いた":{ "bpm": 120, "chord_ids": ["chord_012","chord_002"],             "drum_ids": ["drum_008"] },
-    "緊張感":    { "bpm": 160, "chord_ids": ["chord_009","chord_019"],             "drum_ids": ["drum_009","drum_015"] },
     "切ない":    { "bpm": 130, "chord_ids": ["chord_006","chord_015"],             "drum_ids": ["drum_008","drum_015"] },
     "激しい":    { "bpm": 170, "chord_ids": ["chord_009","chord_019"],             "drum_ids": ["drum_009","drum_015"] }
   },
@@ -19,7 +17,6 @@
     "明るい":    { "bpm": 85,  "chord_ids": ["chord_007","chord_017"],             "drum_ids": ["drum_006","drum_007"] },
     "暗い":      { "bpm": 75,  "chord_ids": ["chord_011","chord_015"],             "drum_ids": ["drum_005","drum_007"] },
     "落ち着いた":{ "bpm": 80,  "chord_ids": ["chord_007","chord_013","chord_018"], "drum_ids": ["drum_005","drum_006","drum_007"] },
-    "緊張感":    { "bpm": 90,  "chord_ids": ["chord_004","chord_015"],             "drum_ids": ["drum_006"] },
     "切ない":    { "bpm": 78,  "chord_ids": ["chord_011","chord_018"],             "drum_ids": ["drum_005","drum_007"] },
     "激しい":    { "bpm": 95,  "chord_ids": ["chord_004","chord_015"],             "drum_ids": ["drum_006","drum_005"] }
   },
@@ -27,8 +24,14 @@
     "明るい":    { "bpm": 120, "chord_ids": ["chord_001","chord_002","chord_014"], "drum_ids": ["drum_011"] },
     "暗い":      { "bpm": 130, "chord_ids": ["chord_005","chord_009","chord_019"], "drum_ids": ["drum_010","drum_015"] },
     "落ち着いた":{ "bpm": 100, "chord_ids": ["chord_002","chord_007"],             "drum_ids": ["drum_011","drum_016"] },
-    "緊張感":    { "bpm": 145, "chord_ids": ["chord_009","chord_010","chord_020"], "drum_ids": ["drum_010","drum_015"] },
     "切ない":    { "bpm": 110, "chord_ids": ["chord_006","chord_015"],             "drum_ids": ["drum_011","drum_016"] },
     "激しい":    { "bpm": 155, "chord_ids": ["chord_009","chord_010"],             "drum_ids": ["drum_010","drum_009"] }
+  },
+  "テクノ": {
+    "明るい":    { "bpm": 130, "chord_ids": ["chord_003","chord_016"],             "drum_ids": ["drum_001","drum_003"] },
+    "暗い":      { "bpm": 134, "chord_ids": ["chord_005","chord_009","chord_018"], "drum_ids": ["drum_003","drum_004"] },
+    "落ち着いた":{ "bpm": 125, "chord_ids": ["chord_008","chord_013"],             "drum_ids": ["drum_003"] },
+    "切ない":    { "bpm": 128, "chord_ids": ["chord_004","chord_018"],             "drum_ids": ["drum_001","drum_003"] },
+    "激しい":    { "bpm": 142, "chord_ids": ["chord_009","chord_016"],             "drum_ids": ["drum_002","drum_004"] }
   }
 }

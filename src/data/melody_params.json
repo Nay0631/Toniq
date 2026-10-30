@@ -1,19 +1,19 @@
 {
-  "edm": {
+  "EDM": {
     "noteLengthWeights": { "4n": 0.3, "8n": 0.5, "16n": 0.2 },
     "restProbability": 0.1,
     "maxLeap": 7,
     "preferStepwise": false,
     "octaveRange": [4, 5]
   },
-  "lofi": {
+  "ローファイ": {
     "noteLengthWeights": { "2n": 0.2, "4n": 0.5, "8n": 0.3 },
     "restProbability": 0.3,
     "maxLeap": 3,
     "preferStepwise": true,
     "octaveRange": [4, 5]
   },
-  "game_bgm": {
+  "ゲームBGM": {
     "noteLengthWeights": { "4n": 0.4, "8n": 0.4, "16n": 0.2 },
     "restProbability": 0.15,
     "maxLeap": 5,
@@ -26,5 +26,12 @@
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 6]
+  },
+  "テクノ": {
+    "noteLengthWeights": { "4n": 0.2, "8n": 0.5, "16n": 0.3 },
+    "restProbability": 0.2,
+    "maxLeap": 5,
+    "preferStepwise": false,
+    "octaveRange": [4, 5]
   }
 }

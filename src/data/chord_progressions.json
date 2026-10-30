@@ -74,7 +74,7 @@
   {
     "id": "chord_005",
     "name": "下降クロマティック",
-    "mood": ["暗い", "緊張感"],
+    "mood": ["暗い", "激しい"],
     "genre": ["ゲームBGM", "テクノ"],
     "bpm_range": { "min": 90, "max": 140 },
     "base_scale": "minor",
@@ -140,7 +140,7 @@
   {
     "id": "chord_009",
     "name": "フラメンコ進行（フリジアン）",
-    "mood": ["緊張感", "暗い"],
+    "mood": ["激しい", "暗い"],
     "genre": ["ゲームBGM", "8bit", "テクノ"],
     "bpm_range": { "min": 100, "max": 160 },
     "base_scale": "phrygian",
@@ -157,7 +157,7 @@
   {
     "id": "chord_010",
     "name": "壮大ループ",
-    "mood": ["緊張感", "明るい"],
+    "mood": ["激しい", "明るい"],
     "genre": ["ゲームBGM", "EDM"],
     "bpm_range": { "min": 110, "max": 155 },
     "base_scale": "major",
@@ -255,7 +255,7 @@
   {
     "id": "chord_016",
     "name": "ペンタトニックループ（EDM）",
-    "mood": ["明るい", "緊張感"],
+    "mood": ["明るい", "激しい"],
     "genre": ["EDM", "テクノ"],
     "bpm_range": { "min": 125, "max": 145 },
     "base_scale": "minor",
@@ -302,7 +302,7 @@
   {
     "id": "chord_019",
     "name": "8bitボス戦（ディミニッシュ混じり）",
-    "mood": ["緊張感", "暗い"],
+    "mood": ["激しい", "暗い"],
     "genre": ["8bit", "ゲームBGM"],
     "bpm_range": { "min": 140, "max": 180 },
     "base_scale": "minor",

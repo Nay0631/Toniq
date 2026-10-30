@@ -32,6 +32,7 @@ export interface AppState {
     arp:     boolean;
     pad:     boolean;
     melody:  boolean;
+    fx:      boolean;
   };
 
   volumes: {
@@ -41,6 +42,7 @@ export interface AppState {
     arp:     number;
     pad:     number;
     melody:  number;
+    fx:      number;
   };
 }
 
@@ -65,6 +67,7 @@ export const defaultState: AppState = {
     arp:    true,
     pad:    true,
     melody: true,
+    fx:     true,
   },
 
     volumes: {
@@ -74,6 +77,7 @@ export const defaultState: AppState = {
     arp:    60,
     pad:    50,
     melody: 75,
+    fx:     55,
   },
 };
 

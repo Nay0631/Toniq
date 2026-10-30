@@ -37,7 +37,7 @@ src/engine/
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
   LoopArranger.ts         周回ごとにパートを増やしていくアレンジ
-  {Drum,Chord,Bass,Arp,Pad,Melody}Player/Engine.ts  各パートの Tone.Part 生成
+  {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループ末尾のライザーSE）
   MelodyGenerator.ts      コード構成音・スケールに基づくメロディ生成
   SynthFactory.ts         ドラム音源
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）
@@ -74,15 +74,17 @@ src/engine/
 
 ## その他の決まりごと
 
-- パート名は `"drum" | "chord" | "bass" | "arp" | "pad" | "melody"`（`LayerName`）で統一。
+- パート名は `"drum" | "chord" | "bass" | "arp" | "pad" | "melody" | "fx"`（`LayerName`）で統一。UI 表示名はドラム／コード／ベース／アルペジオ／パッド／メロディ／FX/SE。パート別音量の UI にはアルペジオも含める。
 - 各パートモジュールは `init*Synth()` / `load*()` / `dispose*()` の形にそろえる。`load*` は既存の Part を破棄してから作り直す。
-- ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `緊張感` / `切ない` / `激しい`。JSON のキーと完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
+- ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
+- ジャンルは今後も追加・削除がありうる。追加するときは上の4つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE` にそろえて追加する。
+- 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
+- 拍子の変更（3/4 など）は保留中。現状は 4/4・16ステップ前提。
 - コメント・ログは日本語。
 
 ## 既知の問題（修正時に注意）
 
-- `melody_params.json` のキーは `edm` / `lofi` / `game_bgm` / `8bit` だが、`main.ts` ではジャンル名を `toLowerCase()` して渡している。そのため `ローファイ` と `ゲームBGM` はどちらも `lofi` にフォールバックしている。
 - タップテンポは `AppState.bpm` を更新するが、`main.ts` 側では Transport の BPM を直接書き換えている。
-- `dist-electron/` がリポジトリに含まれている（ビルド成果物）。
+- `LoopArranger` はパートを追加していくだけで、周回の途中でパートを止めない。
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
 - シンプルモード画面には、画面の作り直しまで旧検証用のボタン類を「開発用コントロール」として仮置きしている。

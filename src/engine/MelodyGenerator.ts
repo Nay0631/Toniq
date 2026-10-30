@@ -120,10 +120,10 @@ function pickNextNote(
 export function generateMelody(
   progression: ChordProgression,
   key:         string = "A",
-  genre:       string = "lofi"
+  genre:       string = "ローファイ"
 ): MelodyNote[] {
   const param = (melodyParams as unknown as Record<string, MelodyParam>)[genre]
-              ?? (melodyParams as unknown as Record<string, MelodyParam>)["lofi"];
+              ?? (melodyParams as unknown as Record<string, MelodyParam>)["ローファイ"];
   const scaleNotes = getScaleNotes(key, progression.base_scale, param.octaveRange[0], param.octaveRange[1]);
 
   const notes: MelodyNote[] = [];

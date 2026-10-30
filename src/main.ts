@@ -5,6 +5,7 @@ import { initBassSynth,  loadBassLine }             from "./engine/BassPlayer";
 import { initArpSynth,   loadArpPattern }           from "./engine/ArpPlayer";
 import { initPadSynth,   loadPadPattern }           from "./engine/PadPlayer";
 import { initMelodySynth, loadMelody }              from "./engine/MelodyPlayer";
+import { initFxSynth, loadFx }                      from "./engine/FxPlayer";
 import { generateMelody }                           from "./engine/MelodyGenerator";
 import { exportMidi }                               from "./engine/MidiExporter";
 import { initMixer, applyMixPreset }                from "./engine/MixerEngine";
@@ -50,12 +51,13 @@ window.addEventListener("load", () => {
   initArpSynth();
   initPadSynth();
   initMelodySynth();
+  initFxSynth();
 
   // メロディ生成
   let melodyNotes = generateMelody(
     getState().chordPattern!,
     getState().key,
-    getState().genre.toLowerCase().replace(" ", "_")
+    getState().genre
   );
   setState({ melodyNotes });
 
@@ -68,6 +70,7 @@ window.addEventListener("load", () => {
     loadArpPattern(s.chordPattern, s.key, 5, "8n");
     loadPadPattern(s.chordPattern, s.key, 4);
     loadMelody(s.melodyNotes, `${s.chordPattern.length_bars}m`);
+    loadFx(s.chordPattern);
     Tone.getTransport().bpm.value = s.bpm;
   };
 
@@ -101,7 +104,7 @@ window.addEventListener("load", () => {
 
   regenBtn?.addEventListener("click", () => {
     const s = getState();
-    const newMelody = generateMelody(s.chordPattern!, s.key, s.genre.toLowerCase());
+    const newMelody = generateMelody(s.chordPattern!, s.key, s.genre);
     setState({ melodyNotes: newMelody });
     loadMelody(newMelody, `${s.chordPattern!.length_bars}m`);
   });
@@ -171,7 +174,7 @@ window.addEventListener("load", () => {
   });
 
     // パート別音量スライダー
-  const parts = ["drum", "chord", "bass", "arp", "pad", "melody"] as const;
+  const parts = ["drum", "chord", "bass", "arp", "pad", "melody", "fx"] as const;
   parts.forEach(part => {
     document.getElementById(`vol-${part}`)?.addEventListener("input", (e) => {
       const value = parseInt((e.target as HTMLInputElement).value);
@@ -201,6 +204,7 @@ window.addEventListener("load", () => {
         const { initArpSynth: initAr,  loadArpPattern: loadAr }      = await import("./engine/ArpPlayer");
         const { initPadSynth: initP,   loadPadPattern: loadP }       = await import("./engine/PadPlayer");
         const { initMelodySynth: initM, loadMelody: loadMel }        = await import("./engine/MelodyPlayer");
+        const { initFxSynth: initF,    loadFx: loadF }               = await import("./engine/FxPlayer");
 
         loadDrum(s.drumPattern!);
         initC(); loadC(s.chordPattern!, s.key, 4);
@@ -208,6 +212,7 @@ window.addEventListener("load", () => {
         initAr(); loadAr(s.chordPattern!, s.key, 5, "8n");
         initP(); loadP(s.chordPattern!, s.key, 4);
         initM(); loadMel(s.melodyNotes, `${bars}m`);
+        if (s.parts.fx) { initF(); loadF(s.chordPattern!); }
         Tone.getTransport().start();
       }, durationSec);
 
