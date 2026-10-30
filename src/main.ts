@@ -10,7 +10,7 @@ import { exportMidi }                               from "./engine/MidiExporter"
 import { initMixer, applyMixPreset }                from "./engine/MixerEngine";
 import { startLoopArranger, stopLoopArranger }      from "./engine/LoopArranger";
 //import { resolveSimpleMode }                        from "./engine/SimpleModeResolver";
-import { getState, setState, applySimpleToCustom }  from "./engine/AppState";
+import { getState, setState }                      from "./engine/AppState";
 import drumDB  from "./data/drum_patterns.json";
 import chordDB from "./data/chord_progressions.json";
 import { DrumPattern, ChordProgression } from "./data/types";
@@ -18,6 +18,8 @@ import { replaceDrumPattern, replaceChordProgression, setLayerEnabled } from "./
 import { resolveSimpleMode, resolveTempoPreset } from "./engine/SimpleModeResolver";
 import { tap, resetTap } from "./engine/TapTempo";
 import { setVolume } from "./engine/VolumeManager";
+import { initRouter, showScreen } from "./ui/Router";
+import "./ui/styles.css";
 
 
 // シンプルモードで初期状態を解決
@@ -40,6 +42,8 @@ window.addEventListener("load", () => {
   const exportMidiBtn = document.getElementById("export-midi");
   const toCustomBtn   = document.getElementById("to-custom");
   const presetLabel   = document.getElementById("preset-label");
+
+  initRouter();
 
   initChordSynth();
   initBassSynth();
@@ -104,13 +108,9 @@ window.addEventListener("load", () => {
 
   // シンプル→カスタム引き継ぎボタン
   toCustomBtn?.addEventListener("click", () => {
-    applySimpleToCustom();
-    const s = getState();
-    console.log("カスタムモードに引き継ぎ:", s);
-    if (presetLabel)
-      presetLabel.textContent =
-        `${s.genre} / ${s.mood} — カスタムモード（引き継ぎ済み）`;
-    alert(`カスタムモードに引き継ぎました。\nBPM: ${s.bpm}\nコード: ${s.chordPattern?.name}\nドラム: ${s.drumPattern?.name}`);
+    // showScreen 内で applySimpleToCustom() が呼ばれる
+    showScreen("custom");
+    console.log("カスタムモードに引き継ぎ:", getState());
   });
     // レイヤー差し替えテスト用ボタン
   document.getElementById("replace-drum")?.addEventListener("click", () => {

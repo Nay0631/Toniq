@@ -2,46 +2,152 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Toniq</title>
 </head>
 <body>
-  <h1>Toniq</h1>
-  <p>現在のモード：<span id="preset-label">未設定</span></p>
+  <!-- アプリヘッダー -->
+  <header class="app-header">
+    <h1 class="app-title">Toniq</h1>
+    <div class="app-header-spacer"></div>
+    <div class="mode-switch" id="mode-switch" hidden>
+      <button data-mode-target="simple">シンプル</button>
+      <button data-mode-target="custom">カスタム</button>
+    </div>
+    <div class="more">
+      <button class="more-btn" id="more-btn" aria-label="メニュー">⋯</button>
+      <div class="more-menu" id="more-menu" hidden>
+        <button data-goto="menu">メニューに戻る</button>
+        <button data-goto="musiclist">ミュージックリスト</button>
+        <button data-goto="quiz">音楽クイズ</button>
+      </div>
+    </div>
+  </header>
 
-  <div>
-    <button id="play">再生</button>
-    <button id="stop">停止</button>
-    <button id="regen">メロディ再生成</button>
-    <button id="to-custom">カスタムモードに引き継ぎ</button>
-  </div>
+  <!-- パンくず（メニュー以外の画面で表示） -->
+  <nav class="breadcrumb" id="breadcrumb" hidden>
+    <button class="breadcrumb-back" data-goto="menu">‹ メニュー</button>
+    <span class="breadcrumb-sep"></span>
+    <span class="breadcrumb-title" id="breadcrumb-title"></span>
+  </nav>
 
-  <div style="margin-top:8px">
-    <button id="replace-drum">ドラム差し替え</button>
-    <button id="replace-chord">コード差し替え</button>
-    <button id="toggle-melody">メロディOFF</button>
-    <button id="toggle-arp">アルペジオOFF</button>
-  </div>
+  <main>
+    <!-- メニュー画面 -->
+    <section class="screen" data-screen="menu">
+      <div class="menu-grid">
+        <button class="menu-card" data-goto="simple">
+          <span class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+              <path d="M10 3l1.8 5.2L17 10l-5.2 1.8L10 17l-1.8-5.2L3 10l5.2-1.8z"/>
+              <path d="M18 14l.9 2.1L21 17l-2.1.9L18 20l-.9-2.1L15 17l2.1-.9z"/>
+            </svg>
+          </span>
+          <span>
+            <span class="menu-card-title">シンプルモード</span>
+            <span class="menu-card-desc">雰囲気とジャンルを選ぶだけで、すぐに一曲</span>
+          </span>
+        </button>
 
-  <div style="margin-top:8px">
-    <button id="tap-btn">タップ</button>
-    <button id="tap-reset">リセット</button>
-    <span id="tap-label">-- BPM</span>
-  </div>
+        <button class="menu-card" data-goto="custom">
+          <span class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/>
+              <circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>
+            </svg>
+          </span>
+          <span>
+            <span class="menu-card-title">カスタムモード</span>
+            <span class="menu-card-desc">キー・コード進行・ドラムまで細かく設定</span>
+          </span>
+        </button>
 
-  <div style="margin-top:12px">
-    <p><strong>パート別音量</strong></p>
-    <div>ドラム <input type="range" id="vol-drum" min="0" max="100" value="80"> <span id="vol-drum-label">80</span></div>
-    <div>コード <input type="range" id="vol-chord" min="0" max="100" value="65"> <span id="vol-chord-label">65</span></div>
-    <div>ベース <input type="range" id="vol-bass" min="0" max="100" value="70"> <span id="vol-bass-label">70</span></div>
-    <div>アルペジオ <input type="range" id="vol-arp" min="0" max="100" value="60"> <span id="vol-arp-label">60</span></div>
-    <div>パッド <input type="range" id="vol-pad" min="0" max="100" value="50"> <span id="vol-pad-label">50</span></div>
-    <div>メロディ <input type="range" id="vol-melody" min="0" max="100" value="75"> <span id="vol-melody-label">75</span></div>
-  </div>
+        <button class="menu-card" data-goto="musiclist">
+          <span class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 6h10M4 12h10M4 18h6"/>
+              <path d="M18 17V5l3 1.5"/><circle cx="16" cy="17" r="2"/>
+            </svg>
+          </span>
+          <span>
+            <span class="menu-card-title">ミュージックリスト</span>
+            <span class="menu-card-desc">つくった曲を聴き返す・管理する</span>
+          </span>
+        </button>
 
-  <div style="margin-top:8px">
-    <button id="export-wav">WAV書き出し</button>
-    <button id="export-midi">MIDI書き出し</button>
-  </div>
+        <button class="menu-card" data-goto="quiz">
+          <span class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/>
+              <path d="M12 17h0"/>
+            </svg>
+          </span>
+          <span>
+            <span class="menu-card-title">音楽クイズ</span>
+            <span class="menu-card-desc">耳とセンスをためすミニクイズ</span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- シンプルモード画面（画面の作り直しまでは開発用コントロールを置く） -->
+    <section class="screen" data-screen="simple" hidden>
+      <div class="dev-panel">
+        <h2>開発用コントロール</h2>
+        <p>状態：<span id="preset-label">未設定</span></p>
+
+        <div class="row">
+          <button id="play">再生</button>
+          <button id="stop">停止</button>
+          <button id="regen">メロディ再生成</button>
+          <button id="to-custom">カスタムモードに引き継ぎ</button>
+        </div>
+
+        <div class="row">
+          <button id="replace-drum">ドラム差し替え</button>
+          <button id="replace-chord">コード差し替え</button>
+          <button id="toggle-melody">メロディOFF</button>
+          <button id="toggle-arp">アルペジオOFF</button>
+        </div>
+
+        <div class="row">
+          <button id="tap-btn">タップ</button>
+          <button id="tap-reset">リセット</button>
+          <span id="tap-label">-- BPM</span>
+        </div>
+
+        <div class="row">
+          <p><strong>パート別音量</strong></p>
+          <div>ドラム <input type="range" id="vol-drum" min="0" max="100" value="80"> <span id="vol-drum-label">80</span></div>
+          <div>コード <input type="range" id="vol-chord" min="0" max="100" value="65"> <span id="vol-chord-label">65</span></div>
+          <div>ベース <input type="range" id="vol-bass" min="0" max="100" value="70"> <span id="vol-bass-label">70</span></div>
+          <div>アルペジオ <input type="range" id="vol-arp" min="0" max="100" value="60"> <span id="vol-arp-label">60</span></div>
+          <div>パッド <input type="range" id="vol-pad" min="0" max="100" value="50"> <span id="vol-pad-label">50</span></div>
+          <div>メロディ <input type="range" id="vol-melody" min="0" max="100" value="75"> <span id="vol-melody-label">75</span></div>
+        </div>
+
+        <div class="row">
+          <button id="export-wav">WAV書き出し</button>
+          <button id="export-midi">MIDI書き出し</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- カスタムモード画面 -->
+    <section class="screen" data-screen="custom" hidden>
+      <div class="placeholder">カスタムモードの画面は準備中です</div>
+    </section>
+
+    <!-- ミュージックリスト画面 -->
+    <section class="screen" data-screen="musiclist" hidden>
+      <div class="placeholder">ミュージックリストは準備中です</div>
+    </section>
+
+    <!-- 音楽クイズ画面 -->
+    <section class="screen" data-screen="quiz" hidden>
+      <div class="placeholder">音楽クイズは準備中です</div>
+    </section>
+  </main>
 
   <script type="module" src="/src/main.ts"></script>
 </body>

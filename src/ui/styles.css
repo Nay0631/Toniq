@@ -1,0 +1,239 @@
+/* デザイントークン（ゴール画面に合わせた配色） */
+:root {
+  --bg:            #f7f7f5;
+  --surface:       #ffffff;
+  --border:        #e3e3df;
+  --text:          #1f1f1f;
+  --text-muted:    #6b6b66;
+
+  --simple:        #2e9a6e;
+  --simple-soft:   #e3f3ec;
+  --custom:        #5b4fcf;
+  --custom-soft:   #ecebfd;
+  --list:          #4a78c2;
+  --list-soft:     #e4ecf8;
+  --quiz:          #b8742a;
+  --quiz-soft:     #fbeedf;
+
+  --radius:        12px;
+  --font: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+}
+
+[hidden] { display: none !important; }
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* ── アプリヘッダー ───────────────────── */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.app-header-spacer { flex: 1; }
+
+.mode-switch {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mode-switch button {
+  border: none;
+  background: var(--surface);
+  padding: 6px 18px;
+  color: var(--text-muted);
+}
+
+.mode-switch button.is-active[data-mode-target="simple"] { background: var(--simple); color: #fff; }
+.mode-switch button.is-active[data-mode-target="custom"] { background: var(--custom); color: #fff; }
+
+.more {
+  position: relative;
+}
+
+.more-btn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.more-btn:hover { background: var(--bg); }
+
+.more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 180px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+}
+
+.more-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+
+.more-menu button:hover { background: var(--bg); }
+
+/* ── パンくず ─────────────────────────── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.breadcrumb-back {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0;
+}
+
+.breadcrumb-back:hover { color: var(--text); }
+
+.breadcrumb-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+}
+
+.breadcrumb-title { font-weight: 700; }
+
+/* ── 画面共通 ─────────────────────────── */
+.screen {
+  padding: 24px 20px;
+}
+
+/* ── メニュー画面 ─────────────────────── */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 960px;
+  margin: 24px auto;
+}
+
+.menu-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 36px 22px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.menu-card:hover {
+  border-color: #cfcfca;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+.menu-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+}
+
+.menu-icon svg { width: 26px; height: 26px; }
+
+.menu-card[data-goto="simple"]    .menu-icon { background: var(--simple-soft); color: var(--simple); }
+.menu-card[data-goto="custom"]    .menu-icon { background: var(--custom-soft); color: var(--custom); }
+.menu-card[data-goto="musiclist"] .menu-icon { background: var(--list-soft);   color: var(--list); }
+.menu-card[data-goto="quiz"]      .menu-icon { background: var(--quiz-soft);   color: var(--quiz); }
+
+.menu-card-title {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.menu-card-desc {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+  .menu-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 準備中の画面 ─────────────────────── */
+.placeholder {
+  max-width: 960px;
+  margin: 24px auto;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* ── 開発用コントロール（シンプルモード画面の作り直しまでの仮置き） ── */
+.dev-panel {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.dev-panel h2 {
+  font-size: 14px;
+  margin: 0 0 12px;
+  color: var(--text-muted);
+}
+
+.dev-panel .row { margin-top: 8px; }

@@ -18,8 +18,11 @@ npm run electron:build  # インストーラ作成（release/）
 
 ```
 electron/main.ts        Electron メインプロセス（ウィンドウ生成のみ）
-index.html              UI（現状はボタン・スライダーのみの検証用画面）
+index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz）
 src/main.ts             エントリ。UIイベント → AppState 更新 → engine 呼び出し、WAV書き出し
+src/ui/
+  Router.ts               画面切り替え（showScreen / render）。表示中の画面は AppState.screen
+  styles.css              デザイントークンと共通スタイル
 src/data/               楽曲データとデータ型
   types.ts                ChordProgression / DrumPattern 型
   degree_resolver.ts      ディグリー → 実音の変換（resolveChord）
@@ -62,7 +65,7 @@ src/engine/
 
 ### 3. 状態は AppState.ts で一元管理する
 
-- モード・ジャンル・雰囲気・キー・BPM・テンポプリセット・選択中パターン・メロディ・パートON/OFF・音量は、すべて `AppState` に置く。
+- 表示中の画面・モード・ジャンル・雰囲気・キー・BPM・テンポプリセット・選択中パターン・メロディ・パートON/OFF・音量は、すべて `AppState` に置く。
 - 読み取りは `getState()`、更新は `setState(partial)` のみ。モジュール内に同じ値のコピーを持たない（`let currentBpm` のような変数を作らない）。
 - 各 engine モジュールが持ってよいのは Tone.js のオブジェクト（Synth / Part / Volume ノード）だけ。
 - `setState` はシャローマージなので、`parts` / `volumes` などのネストしたオブジェクトはスプレッドで丸ごと渡す：
@@ -78,7 +81,8 @@ src/engine/
 
 ## 既知の問題（修正時に注意）
 
-- `AppState.ts` に `interface AppState` が2回宣言されている（宣言マージで動いているだけ）。`tempoPreset` は2つ目にしかないので、1つにまとめること。
 - `melody_params.json` のキーは `edm` / `lofi` / `game_bgm` / `8bit` だが、`main.ts` ではジャンル名を `toLowerCase()` して渡している。そのため `ローファイ` と `ゲームBGM` はどちらも `lofi` にフォールバックしている。
 - タップテンポは `AppState.bpm` を更新するが、`main.ts` 側では Transport の BPM を直接書き換えている。
 - `dist-electron/` がリポジトリに含まれている（ビルド成果物）。
+- `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
+- シンプルモード画面には、画面の作り直しまで旧検証用のボタン類を「開発用コントロール」として仮置きしている。
