@@ -51,6 +51,12 @@ const INSTRUMENTS: Record<ChordInstrument, () => Tone.PolySynth<any>> = {
     envelope:   { attack: 0.005, decay: 0.2, sustain: 0.5, release: 0.1 },
     volume:     -20,
   }),
+  // SuperSaw：少しずつずらしたノコギリ波を重ねた厚い音（EDM・トランス向け）
+  supersaw: () => new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: "fatsawtooth", count: 5, spread: 40 },
+    envelope:   { attack: 0.02, decay: 0.3, sustain: 0.8, release: 0.8 },
+    volume:     -22,
+  }),
 };
 
 let chordPart: Tone.Part | null = null;

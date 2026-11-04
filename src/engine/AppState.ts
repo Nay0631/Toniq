@@ -15,7 +15,7 @@ export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 export type MelodyInstrument = "soft" | "lead" | "square" | "pluck";
 
 // コードの音色
-export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square";
+export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
 
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
