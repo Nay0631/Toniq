@@ -1,11 +1,12 @@
 {
   "EDM": {
     "rhythmPatterns": [
-      "x--x--x-x-x-x---",
-      "x-x--x--x-x--x--",
-      "x---x-x---x-x-x-",
-      "x-x-x--xx---x...",
-      "..x-x-x-x--x-x--"
+      "x--x--x-........",
+      "x--x--x-----....",
+      "..x--x--x-------",
+      "x---....x--x--x-",
+      "x-x-....x--x----",
+      "........x--x--x-"
     ],
     "phraseForms": ["AAAB", "ABAB", "AABB"],
     "maxLeap": 7,
