@@ -7,6 +7,7 @@ import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
 import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, formatTime } from "./format";
+import { startPianoRollPlayhead } from "./PianoRollTab";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -55,6 +56,7 @@ async function restartIfPlaying(): Promise<void> {
 async function startPlayback(): Promise<void> {
   await Playback.play({ onEnded: render });
   startPlayheadLoop();
+  startPianoRollPlayhead();
   render();
 }
 

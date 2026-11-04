@@ -18,6 +18,9 @@ export type MelodyInstrument =
 // コードの音色
 export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
 
+// ピアノロールで入力する音符の長さ
+export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
+
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
   start:  number;
@@ -66,6 +69,11 @@ export interface AppState {
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
   startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
+
+  // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
+  pianoRollLength:    PianoRollLength;
+  pianoRollScaleLock: boolean;  // ON のときはスケール外の音を置けない
+  pianoRollOctave:    number;   // 鍵盤入力（A〜K）のオクターブ
 
   // パートのON/OFF
   parts: {
@@ -116,6 +124,10 @@ export const defaultState: AppState = {
 
   arrangement: null,
   startBar:    0,
+
+  pianoRollLength:    "4n",
+  pianoRollScaleLock: true,
+  pianoRollOctave:    4,
 
   parts: {
     drum:   true,

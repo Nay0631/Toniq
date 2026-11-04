@@ -23,13 +23,13 @@ interface MelodyParam {
 // ===== 音名→MIDIノート番号 =====
 const NOTE_ORDER = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
-function noteToMidi(note: string): number {
+export function noteToMidi(note: string): number {
   const name   = note.slice(0, -1);
   const octave = parseInt(note.slice(-1));
   return NOTE_ORDER.indexOf(name) + (octave + 1) * 12;
 }
 
-function midiToNote(midi: number): string {
+export function midiToNote(midi: number): string {
   const name   = NOTE_ORDER[midi % 12];
   const octave = Math.floor(midi / 12) - 1;
   return `${name}${octave}`;
@@ -81,13 +81,26 @@ const UNITS_TO_DURATION: Record<number, string> = {
   1: "16n", 2: "8n", 3: "8n.", 4: "4n", 6: "4n.", 8: "2n", 12: "2n.", 16: "1n",
 };
 
-function unitsToDuration(units: number): string {
+export function unitsToDuration(units: number): string {
   return UNITS_TO_DURATION[units]
       ?? `0:${Math.floor(units / 4)}:${units % 4}`; // 半端な長さは 小節:拍:16分 表記
 }
 
-function unitsToTime(units: number): string {
+export function unitsToTime(units: number): string {
   return `${Math.floor(units / 16)}:${Math.floor((units % 16) / 4)}:${units % 4}`;
+}
+
+// 小節:拍:16分 表記を16分音符単位に戻す
+export function timeToUnits(time: string): number {
+  const [bar = 0, beat = 0, sixteenth = 0] = time.split(":").map(Number);
+  return bar * 16 + beat * 4 + sixteenth;
+}
+
+// 音価表記（"4n" など）か 小節:拍:16分 表記の長さを16分音符単位に戻す
+export function durationToUnits(duration: string): number {
+  const entry = Object.entries(UNITS_TO_DURATION).find(([, d]) => d === duration);
+  if (entry) return Number(entry[0]);
+  return duration.includes(":") ? timeToUnits(duration) : 4;
 }
 
 function pickRandom<T>(list: T[]): T {

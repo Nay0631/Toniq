@@ -190,6 +190,13 @@ export function loadMelody(notes: MelodyNote[], loopEnd: string) {
   melodyPart.start(0);
 }
 
+// ピアノロールで置いた音を試聴する（Synth がなければ作る。再生中は鳴っているメロディの Synth で鳴らす）
+export async function previewMelodyNote(note: string) {
+  await Tone.start();
+  if (!melodySynth) initMelodySynth();
+  melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);
+}
+
 function disposeMelodySynth() {
   melodySynth?.dispose();
   melodyFx.forEach(n => n.dispose());
