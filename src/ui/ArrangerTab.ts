@@ -98,10 +98,17 @@ export function renderArranger(): void {
       </div>`;
   }).join("");
 
+  const startLeft = `${(Math.min(s.startBar, bars - 1) / bars) * 100}%`;
   root.innerHTML = `
-    <div class="arr-ruler"><div class="arr-head"></div><div class="arr-ticks">${ticks}</div></div>
+    <div class="arr-ruler">
+      <div class="arr-head arr-ruler-head">再生開始 <b>${Math.min(s.startBar, bars - 1) + 1}</b> 小節目</div>
+      <div class="arr-ticks" title="クリックで再生開始位置を指定">${ticks}<span class="arr-start-marker" style="left:${startLeft}"></span></div>
+    </div>
     ${lanes}
-    <div class="arr-overlay"><div class="arr-playhead" id="c-arr-playhead" hidden></div></div>`;
+    <div class="arr-overlay">
+      <div class="arr-start-line" style="left:${startLeft}"></div>
+      <div class="arr-playhead" id="c-arr-playhead" hidden></div>
+    </div>`;
 
   const edited = s.arrangement !== null;
   $("c-arr-mode")!.textContent = edited ? "編集済み" : `${s.genre} の標準アレンジ`;
@@ -241,13 +248,26 @@ function endDrag(): void {
   renderArranger();
 }
 
-export function initArranger(): void {
+// onSeek：再生開始位置を変えたときに呼ぶ（再生中ならその位置から再生し直す）
+export function initArranger(onSeek: () => void): void {
   const root = $("c-arranger");
   if (!root) return;
 
   root.addEventListener("pointerdown", e => {
     const target = e.target as HTMLElement;
     if (e.button !== 0 || target.closest(".arr-del, [data-arr-toggle]")) return;
+
+    // 小節番号の目盛りをクリック：その小節を再生開始位置にする
+    const ticks = target.closest<HTMLElement>(".arr-ticks");
+    if (ticks) {
+      const rect = ticks.getBoundingClientRect();
+      const bars = getState().bars;
+      const bar  = Math.floor(((e.clientX - rect.left) / rect.width) * bars);
+      setState({ startBar: Math.max(0, Math.min(bar, bars - 1)) });
+      onSeek();
+      return;
+    }
+
     const track = target.closest<HTMLElement>(".arr-track");
     if (!track) return;
     const part  = track.dataset.part as LayerName;
@@ -292,6 +312,11 @@ export function initArranger(): void {
     const part = block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName;
     removeBlock(part, Number(block.dataset.start));
     renderArranger();
+  });
+
+  $("c-arr-to-start")?.addEventListener("click", () => {
+    setState({ startBar: 0 });
+    onSeek();
   });
 
   $("c-arr-reset")?.addEventListener("click", () => {

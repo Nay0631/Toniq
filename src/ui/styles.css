@@ -686,10 +686,38 @@ button {
   color: #55554f;
 }
 
+.arr-ticks { cursor: pointer; }
+.arr-ticks:hover { background: var(--custom-soft); }
+
 .arr-ticks span {
   position: absolute;
   top: 8px;
   padding-left: 6px;
+}
+
+.arr-ruler-head { font-size: 12px; color: var(--text-muted); }
+.arr-ruler-head b { color: var(--custom); }
+
+/* 再生開始位置（目盛りの三角と、レーンに重ねる線） */
+.arr-ticks .arr-start-marker {
+  top: auto;
+  bottom: 0;
+  padding: 0;
+  width: 0;
+  height: 0;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-bottom: 8px solid var(--custom);
+  border-top: none;
+}
+
+.arr-start-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 2px dashed var(--custom);
+  margin-left: -1px;
+  opacity: 0.5;
 }
 
 /* 小節線と、コード進行1周ごとの太い線 */

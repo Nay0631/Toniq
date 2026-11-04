@@ -7,11 +7,12 @@ import { disposeAllLayers, reloadLayer, reloadAllLayers } from "./LayerManager";
 let endEventId: number | null = null;
 
 interface PlayOptions {
+  fromBar?:      number;  // 再生を始める小節（0始まり）。省略すると先頭から
   onLoopChange?: (loop: number, parts: string[]) => void;
   onEnded?:      () => void;
 }
 
-// 曲の先頭から再生する。AppState.bars 小節で自動停止する
+// 曲の先頭（または fromBar 小節目）から再生する。AppState.bars 小節で自動停止する
 export async function play(options: PlayOptions = {}): Promise<void> {
   await Tone.start();
   const s = getState();
@@ -27,8 +28,10 @@ export async function play(options: PlayOptions = {}): Promise<void> {
 
   // ON のパートはすべて先頭で読み込み、どの小節で鳴らすかは各パートがアレンジを見て決める
   reloadAllLayers();
+  const fromBar = Math.max(0, Math.min(options.fromBar ?? 0, s.bars - 1));
   startLoopArranger({
     loopBars:     s.chordPattern.length_bars,
+    fromBar,
     onLoopChange: options.onLoopChange,
   });
 
@@ -39,7 +42,8 @@ export async function play(options: PlayOptions = {}): Promise<void> {
     }, time);
   }, `${s.bars}m`);
 
-  transport.start();
+  // ループする Part は Transport の位置に合わせて途中から鳴る
+  transport.start(undefined, `${fromBar}m`);
 }
 
 // 1つのパートだけを試聴する（コード進行は1周、ドラムは2小節）。曲の再生中なら止めてから鳴らす

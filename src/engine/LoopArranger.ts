@@ -127,27 +127,34 @@ export function arrangementGate(part: LayerName): (time: number) => boolean {
 
 interface LoopArrangerParams {
   loopBars:      number;
+  fromBar:       number;  // 再生を始める小節（途中から再生するとき）
   onLoopChange?: (loop: number, parts: string[]) => void;
 }
 
 let loopCount = 0;
 let repeatId: number | null = null;
 
-// 周回の頭ごとに、その周回の頭で鳴っているパートを知らせる
-export function startLoopArranger(params: LoopArrangerParams) {
-  const { loopBars, onLoopChange } = params;
-  loopCount = 0;
+// 周回を知らせる（その周回の頭の小節で鳴っているパートと一緒に）
+function notifyLoop(loop: number, loopBars: number, onLoopChange?: LoopArrangerParams["onLoopChange"]) {
+  loopCount = loop;
+  const bar   = (loop - 1) * loopBars;
+  const parts = getState().parts;
+  const activeParts = LAYERS.filter(p => parts[p] && isArrangedAt(p, bar));
+  console.log(`周回 ${loop} / アクティブパート: ${activeParts.join(", ")}`);
+  onLoopChange?.(loop, activeParts);
+}
 
+// 再生開始時の周回をすぐ知らせ、以降は周回の頭ごとに知らせる
+export function startLoopArranger(params: LoopArrangerParams) {
+  const { loopBars, fromBar, onLoopChange } = params;
+  const firstLoop = Math.floor(fromBar / loopBars) + 1;
+  notifyLoop(firstLoop, loopBars, onLoopChange);
+
+  let loop = firstLoop;
   repeatId = Tone.getTransport().scheduleRepeat(time => {
-    Tone.getDraw().schedule(() => {
-      loopCount++;
-      const bar   = (loopCount - 1) * loopBars;
-      const parts = getState().parts;
-      const activeParts = LAYERS.filter(p => parts[p] && isArrangedAt(p, bar));
-      console.log(`周回 ${loopCount} / アクティブパート: ${activeParts.join(", ")}`);
-      onLoopChange?.(loopCount, activeParts);
-    }, time);
-  }, `${loopBars}m`, 0);
+    const next = ++loop;
+    Tone.getDraw().schedule(() => notifyLoop(next, loopBars, onLoopChange), time);
+  }, `${loopBars}m`, `${firstLoop * loopBars}m`);
 }
 
 export function stopLoopArranger() {

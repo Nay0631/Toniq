@@ -60,6 +60,7 @@ export interface AppState {
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
+  startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
 
   // パートのON/OFF
   parts: {
@@ -108,6 +109,7 @@ export const defaultState: AppState = {
   drumCategory:     "EDM",
 
   arrangement: null,
+  startBar:    0,
 
   parts: {
     drum:   true,

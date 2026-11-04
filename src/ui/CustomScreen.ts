@@ -70,8 +70,15 @@ async function restartIfPlaying(): Promise<void> {
   if (Playback.isPlaying()) await startPlayback();
 }
 
+// アレンジャータブでは再生開始位置から、それ以外のタブでは先頭から再生する
+function playFromBar(): number {
+  const s = getState();
+  return s.tab === "arranger" ? Math.min(s.startBar, s.bars - 1) : 0;
+}
+
 async function startPlayback(): Promise<void> {
   await Playback.play({
+    fromBar: playFromBar(),
     onLoopChange: loop => {
       const el = $("c-info-loop");
       if (el) el.textContent = `周回 ${loop}`;
@@ -182,7 +189,10 @@ function render(): void {
   $("c-info-key")!.textContent  = `${s.key}${SCALE_LABELS[scale] ?? ""}`;
   $("c-info-bars")!.textContent = `${s.bars}`;
   $("c-info-loop")!.hidden = !playing;
-  $("c-play")!.textContent = playing ? "↺ 最初から" : "▷ 再生";
+  const fromBar = playFromBar();
+  $("c-play")!.textContent = fromBar > 0
+    ? `${playing ? "↺" : "▷"} ${fromBar + 1}小節目から`
+    : playing ? "↺ 最初から" : "▷ 再生";
 
   // 基本設定
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
@@ -411,7 +421,11 @@ export function initCustomScreen(): void {
   });
 
   // ===== アレンジャー =====
-  initArranger();
+  // 再生開始位置を変えたら、再生中ならその位置から再生し直す
+  initArranger(async () => {
+    if (Playback.isPlaying()) await startPlayback();
+    else render();
+  });
 
   $("c-arr-chord-reroll")?.addEventListener("click", async () => {
     const next = pickOther(chordCandidates(), getState().chordPattern?.id);
