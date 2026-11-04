@@ -12,6 +12,7 @@ import { ChordProgression, DrumPattern } from "../data/types";
 import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
+import { startPianoRollPlayhead } from "./PianoRollTab";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -86,6 +87,7 @@ async function startPlayback(): Promise<void> {
     onEnded: render,
   });
   startArrangerPlayhead();
+  startPianoRollPlayhead();
   render();
 }
 

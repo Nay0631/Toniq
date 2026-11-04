@@ -11,11 +11,15 @@ export type Tab = "settings" | "arranger" | "pianoroll";
 // コードを鳴らすリズム（whole = コードの長さいっぱいに伸ばす）
 export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
-// メロディの音色
-export type MelodyInstrument = "soft" | "lead" | "square" | "pluck";
+// メロディの音色（auto = ジャンルの標準。melody_params.json の instrument）
+export type MelodyInstrument =
+  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid";
 
 // コードの音色
 export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
+
+// ピアノロールで入力する音符の長さ
+export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
 
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
@@ -66,6 +70,11 @@ export interface AppState {
   arrangement: Arrangement | null;
   startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
 
+  // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
+  pianoRollLength:    PianoRollLength;
+  pianoRollScaleLock: boolean;  // ON のときはスケール外の音を置けない
+  pianoRollOctave:    number;   // 鍵盤入力（A〜K）のオクターブ
+
   // パートのON/OFF
   parts: {
     drum:    boolean;
@@ -107,7 +116,7 @@ export const defaultState: AppState = {
   melodyMethod:  "auto",
   melodyVersion: 0,
 
-  melodyInstrument: "soft",
+  melodyInstrument: "auto",
   chordRhythm:      "whole",
   chordInstrument:  "soft",
   scaleLock:        true,
@@ -115,6 +124,10 @@ export const defaultState: AppState = {
 
   arrangement: null,
   startBar:    0,
+
+  pianoRollLength:    "4n",
+  pianoRollScaleLock: true,
+  pianoRollOctave:    4,
 
   parts: {
     drum:   true,

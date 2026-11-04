@@ -10,6 +10,7 @@ import { resolveSimpleMode, resolveTempoPreset } from "./engine/SimpleModeResolv
 import { initRouter } from "./ui/Router";
 import { initSimpleScreen } from "./ui/SimpleScreen";
 import { initCustomScreen } from "./ui/CustomScreen";
+import { initPianoRoll } from "./ui/PianoRollTab";
 import "./ui/styles.css";
 
 
@@ -38,5 +39,6 @@ window.addEventListener("load", () => {
 
   initSimpleScreen();
   initCustomScreen();
+  initPianoRoll();
   initRouter();
 });

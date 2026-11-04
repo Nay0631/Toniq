@@ -108,6 +108,13 @@ export function getPositionSeconds(): number {
   return isPlaying() ? Tone.getTransport().seconds : 0;
 }
 
+// 再生位置（小節。曲の先頭からの小数）
+export function getPositionBars(): number {
+  if (!isPlaying()) return 0;
+  const transport = Tone.getTransport();
+  return transport.ticks / (transport.PPQ * 4);
+}
+
 // 曲全体をオフラインでレンダリングして WAV の Blob を返す
 export async function renderWav(): Promise<Blob> {
   const s = getState();

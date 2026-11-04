@@ -12,7 +12,8 @@
     "maxLeap": 7,
     "preferStepwise": false,
     "octaveRange": [4, 5],
-    "accentProbability": 0.15
+    "accentProbability": 0.15,
+    "instrument": "supersaw"
   },
   "ローファイ": {
     "rhythmPatterns": [
@@ -26,7 +27,8 @@
     "maxLeap": 3,
     "preferStepwise": true,
     "octaveRange": [4, 5],
-    "accentProbability": 0.2
+    "accentProbability": 0.2,
+    "instrument": "epiano"
   },
   "ゲームBGM": {
     "rhythmPatterns": [
@@ -40,7 +42,8 @@
     "maxLeap": 5,
     "preferStepwise": true,
     "octaveRange": [4, 5],
-    "accentProbability": 0.3
+    "accentProbability": 0.3,
+    "instrument": "bell"
   },
   "8bit": {
     "rhythmPatterns": [
@@ -54,7 +57,8 @@
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 6],
-    "accentProbability": 0.3
+    "accentProbability": 0.3,
+    "instrument": "square"
   },
   "テクノ": {
     "rhythmPatterns": [
@@ -68,6 +72,7 @@
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 5],
-    "accentProbability": 0.1
+    "accentProbability": 0.1,
+    "instrument": "acid"
   }
 }
