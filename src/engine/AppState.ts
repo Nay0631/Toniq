@@ -11,8 +11,9 @@ export type Tab = "settings" | "arranger" | "pianoroll";
 // コードを鳴らすリズム（whole = コードの長さいっぱいに伸ばす）
 export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
-// メロディの音色
-export type MelodyInstrument = "soft" | "lead" | "square" | "pluck";
+// メロディの音色（auto = ジャンルの標準。melody_params.json の instrument）
+export type MelodyInstrument =
+  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid";
 
 // コードの音色
 export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
@@ -107,7 +108,7 @@ export const defaultState: AppState = {
   melodyMethod:  "auto",
   melodyVersion: 0,
 
-  melodyInstrument: "soft",
+  melodyInstrument: "auto",
   chordRhythm:      "whole",
   chordInstrument:  "soft",
   scaleLock:        true,

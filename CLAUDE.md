@@ -34,7 +34,7 @@ src/data/               楽曲データとデータ型
   drum_patterns.json      ドラムパターンDB（16ステップ）
   easy_mode_table.json    シンプルモード用：ジャンル×雰囲気 → BPM・候補ID
   tempo_presets.json      ジャンル別テンポプリセット（ゆっくり/普通/速い）
-  melody_params.json      ジャンル別メロディ生成パラメータ（リズムテンプレート・フレーズ形式・アクセント音の頻度など）
+  melody_params.json      ジャンル別メロディ生成パラメータ（リズムテンプレート・フレーズ形式・アクセント音の頻度・標準の音色 instrument など）
   bass_params.json        ジャンル別ベース設定（16ステップのパターン・音色）
   mix_presets.json        ジャンル別マスターエフェクト設定
 src/engine/
@@ -111,7 +111,7 @@ src/engine/
 - カスタムモード画面のピアノロールのタブは未実装（準備中表示）。
 - MIDI書き出しはアレンジに未対応（コード進行1周分のコードとメロディだけ）。ベースもジャンル別パターンに未対応（コードごとのルート音の全音符）。
 - カスタムモードの「雰囲気」はコード進行の「カテゴリ」として選ぶ。スケールは `chordPattern.base_scale` から決まり（別に持たない）、スケールを選ぶとそのスケールのコード進行に切り替わる。
-- コードのリズム（`chordRhythm`）・コードの音色（`chordInstrument`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。音色の定義は各 Player の `INSTRUMENTS`。音色は Synth を作り直したとき（再生開始時）に反映される。MIDI書き出しはコードのリズムに未対応。
+- コードのリズム（`chordRhythm`）・コードの音色（`chordInstrument`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。音色の定義は各 Player の `INSTRUMENTS`。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。MIDI書き出しはコードのリズムに未対応。
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
 - シンプルモードの曲の長さは「コード進行の長さ × 全パートがそろうまでの周回数（4）」。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
