@@ -1,4 +1,4 @@
-import { getState, setState, ChordRhythm, MelodyInstrument } from "../engine/AppState";
+import { getState, setState, ChordRhythm, ChordInstrument, MelodyInstrument } from "../engine/AppState";
 import { resolveTempoPreset } from "../engine/SimpleModeResolver";
 import { generateMelody } from "../engine/MelodyGenerator";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
@@ -223,6 +223,7 @@ function render(): void {
   $select("c-mood").value = s.mood;
   fillSelect($select("c-chord"), chordCandidates(), s.chordPattern, c => chordLabel(c, s.key));
   $select("c-rhythm").value = s.chordRhythm;
+  $select("c-chord-instrument").value = s.chordInstrument;
 
   // ドラム
   $select("c-drum-category").value = s.drumCategory;
@@ -372,6 +373,13 @@ export function initCustomScreen(): void {
 
   $select("c-rhythm").addEventListener("change", async e => {
     setState({ chordRhythm: (e.target as HTMLSelectElement).value as ChordRhythm });
+    render();
+    await restartIfPlaying();
+  });
+
+  // コードの音色：Synth は再生開始時に作り直されるので、再生中なら再生し直す
+  $select("c-chord-instrument").addEventListener("change", async e => {
+    setState({ chordInstrument: (e.target as HTMLSelectElement).value as ChordInstrument });
     render();
     await restartIfPlaying();
   });

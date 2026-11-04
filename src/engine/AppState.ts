@@ -14,6 +14,9 @@ export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 // メロディの音色
 export type MelodyInstrument = "soft" | "lead" | "square" | "pluck";
 
+// コードの音色
+export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
+
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
   start:  number;
@@ -55,6 +58,7 @@ export interface AppState {
   // カスタムモードの設定
   melodyInstrument: MelodyInstrument;
   chordRhythm:      ChordRhythm;
+  chordInstrument:  ChordInstrument;
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
 
@@ -105,6 +109,7 @@ export const defaultState: AppState = {
 
   melodyInstrument: "soft",
   chordRhythm:      "whole",
+  chordInstrument:  "soft",
   scaleLock:        true,
   drumCategory:     "EDM",
 
