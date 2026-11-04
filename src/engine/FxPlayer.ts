@@ -8,7 +8,7 @@ let fxFilter: Tone.Filter     | null = null;
 let fxVol:    Tone.Volume     | null = null;
 
 export function initFxSynth() {
-  if (!fxVol) fxVol = createVolumeNode("fx");
+  fxVol = createVolumeNode("fx");  // 現在のオーディオコンテキスト用のノード
   fxFilter = new Tone.Filter({ type: "highpass", frequency: 200, Q: 4 }).connect(fxVol);
   fxNoise = new Tone.NoiseSynth({
     noise:    { type: "white" },

@@ -8,6 +8,8 @@ import { loadArpPattern } from "./ArpPlayer";
 import { loadPadPattern } from "./PadPlayer";
 import { loadMelody } from "./MelodyPlayer";
 import { loadFx } from "./FxPlayer";
+import { getState } from "./AppState";
+import type { LayerName } from "./LayerManager";
 
 // ジャンルごとの周回アレンジ定義（パートは一度入ると以降の周回でも鳴り続ける）
 const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
@@ -43,6 +45,19 @@ const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
   },
 };
 
+// 指定した周回で鳴っているパート
+export function getActiveParts(genre: string, loop: number): string[] {
+  const schedule = LOOP_SCHEDULE[genre] ?? LOOP_SCHEDULE["ローファイ"];
+  const maxLoop  = Math.max(...Object.keys(schedule).map(Number));
+  return schedule[Math.min(Math.max(loop, 1), maxLoop)];
+}
+
+// 全パートがそろうまでの周回数
+export function getFullArrangementLoops(genre: string): number {
+  const schedule = LOOP_SCHEDULE[genre] ?? LOOP_SCHEDULE["ローファイ"];
+  return Math.max(...Object.keys(schedule).map(Number));
+}
+
 interface LoopArrangerParams {
   genre:        string;
   chordPattern: ChordProgression;
@@ -55,6 +70,7 @@ interface LoopArrangerParams {
 
 let loopCount    = 0;
 let repeatPart: Tone.Part | null = null;
+let arrangedParts: string[] = [];  // 現在の周回でアレンジ上鳴らすパート
 
 export function startLoopArranger(params: LoopArrangerParams) {
   const {
@@ -76,28 +92,32 @@ export function startLoopArranger(params: LoopArrangerParams) {
 
     Tone.getDraw().schedule(() => {
       console.log(`周回 ${loopCount} / アクティブパート: ${activeParts.join(", ")}`);
+      arrangedParts = activeParts;
       onLoopChange?.(loopCount, activeParts);
 
-      // 各パートをON/OFF
-      if (activeParts.includes("drum"))
+      // アレンジ上鳴らすパートのうち、パートON/OFFでONのものだけ鳴らす
+      const parts = getState().parts;
+      const on = (part: LayerName) => activeParts.includes(part) && parts[part];
+
+      if (on("drum"))
         loadDrumPattern(drumPattern);
 
-      if (activeParts.includes("chord"))
+      if (on("chord"))
         loadChordProgression(chordPattern, key, 4);
 
-      if (activeParts.includes("bass"))
+      if (on("bass"))
         loadBassLine(chordPattern, key, 2);
-      
-      if (activeParts.includes("arp"))
+
+      if (on("arp"))
         loadArpPattern(chordPattern, key, 5, "8n");
 
-      if (activeParts.includes("pad"))
+      if (on("pad"))
         loadPadPattern(chordPattern, key, 4);
 
-      if (activeParts.includes("melody"))
+      if (on("melody"))
         loadMelody(melodyNotes, `${loopBars}m`);
 
-      if (activeParts.includes("fx"))
+      if (on("fx"))
         loadFx(chordPattern);
 
     }, time);
@@ -113,8 +133,14 @@ export function stopLoopArranger() {
   repeatPart?.dispose();
   repeatPart = null;
   loopCount  = 0;
+  arrangedParts = [];
 }
 
 export function getCurrentLoop(): number {
   return loopCount;
+}
+
+// 再生中の周回でアレンジ上鳴っているパートか（停止中は false）
+export function isArrangedNow(part: string): boolean {
+  return arrangedParts.includes(part);
 }

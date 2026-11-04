@@ -8,7 +8,7 @@ let padSynth: Tone.PolySynth | null = null;
 let padVol: Tone.Volume | null = null;
 
 export function initPadSynth() {
-  if (!padVol) padVol = createVolumeNode("pad");
+  padVol = createVolumeNode("pad");  // 現在のオーディオコンテキスト用のノード
   const reverb = new Tone.Reverb({ decay: 4.0, wet: 0.5 }).connect(padVol);
   const chorus = new Tone.Chorus(3, 2.5, 0.5).connect(reverb).start();
   padSynth = new Tone.PolySynth(Tone.Synth, {

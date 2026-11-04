@@ -8,7 +8,7 @@ let arpSynth: Tone.Synth | null = null;
 let arpVol: Tone.Volume | null = null;
 
 export function initArpSynth() {
-  if (!arpVol) arpVol = createVolumeNode("arp");
+  arpVol = createVolumeNode("arp");  // 現在のオーディオコンテキスト用のノード
   const reverb = new Tone.Reverb({ decay: 1.0, wet: 0.2 }).connect(arpVol);
   const delay  = new Tone.FeedbackDelay("8n", 0.2).connect(reverb);
   arpSynth = new Tone.Synth({

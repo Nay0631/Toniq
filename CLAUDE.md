@@ -19,9 +19,12 @@ npm run electron:build  # インストーラ作成（release/）
 ```
 electron/main.ts        Electron メインプロセス（ウィンドウ生成のみ）
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz）
-src/main.ts             エントリ。UIイベント → AppState 更新 → engine 呼び出し、WAV書き出し
+src/main.ts             エントリ。初期状態の解決と各画面の初期化
 src/ui/
-  Router.ts               画面切り替え（showScreen / render）。表示中の画面は AppState.screen
+  Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab
+  SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、書き出し）
+  CustomScreen.ts         カスタムモード画面の設定タブ（基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオ・パート別音量の3列）
+  format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   styles.css              デザイントークンと共通スタイル
 src/data/               楽曲データとデータ型
   types.ts                ChordProgression / DrumPattern 型
@@ -40,11 +43,12 @@ src/engine/
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループ末尾のライザーSE）
   MelodyGenerator.ts      コード構成音・スケールに基づくメロディ生成
   SynthFactory.ts         ドラム音源
-  VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）
+  Playback.ts             再生・停止（AppState.bars 小節で自動停止）、再生位置、WAVレンダリング
+  VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）。オーディオコンテキストごとに保持
   MixerEngine.ts          マスターリバーブ／コンプ／リミッター
   Transport.ts / TapTempo.ts  BPM・再生制御、タップテンポ
   MidiExporter.ts         MIDI書き出し
-  Exoporter.ts            旧WAV書き出し（全体コメントアウト済み・未使用。WAVは main.ts で実装）
+  Exoporter.ts            旧WAV書き出し（全体コメントアウト済み・未使用。WAVは Playback.ts で実装）
 ```
 
 ## 設計ルール
@@ -80,11 +84,21 @@ src/engine/
 - ジャンルは今後も追加・削除がありうる。追加するときは上の4つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE` にそろえて追加する。
 - 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
 - 拍子の変更（3/4 など）は保留中。現状は 4/4・16ステップ前提。
+- 「小節数」は曲全体の最大の長さを表す（コード進行1周の長さではない）。コード進行・ドラムはその長さに達するまでループし、アレンジャーのタイムラインと書き出しの長さもこの値に合わせる。現状は未実装で、コード進行の `length_bars` でループしているだけ。
+- Git のコミット・push はユーザーが自分で行う。Claude はコミット・push しない。
 - コメント・ログは日本語。
+- Claude の出力はすべて日本語で書く。ユーザーへの返答・作業報告に加え、ツール実行時の説明（権限確認で表示される description）、ユーザーへの質問（選択肢を含む）、計画の提示も日本語にする。
 
 ## 既知の問題（修正時に注意）
 
 - タップテンポは `AppState.bpm` を更新するが、`main.ts` 側では Transport の BPM を直接書き換えている。
 - `LoopArranger` はパートを追加していくだけで、周回の途中でパートを止めない。
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
-- シンプルモード画面には、画面の作り直しまで旧検証用のボタン類を「開発用コントロール」として仮置きしている。
+- カスタムモード画面のアレンジャー／ピアノロールのタブは未実装（準備中表示）。
+- カスタムモードの「雰囲気」はコード進行の「カテゴリ」として選ぶ。スケールは `chordPattern.base_scale` から決まり（別に持たない）、スケールを選ぶとそのスケールのコード進行に切り替わる。
+- コードのリズム（`chordRhythm`）とメロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。音色は Synth を作り直したとき（再生開始時）に反映される。MIDI書き出しはコードのリズムに未対応。
+- パートの ON/OFF は `LoopArranger` が周回ごとに `AppState.parts` を見て反映する。再生中に ON にしたパートは、アレンジ上いま鳴る周回ならすぐ、そうでなければ予定の周回から鳴る。
+- シンプルモードの曲の長さは「コード進行の長さ × 全パートがそろうまでの周回数（4）」。
+- シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
+- 各パートの Synth はモジュールに1つずつ。WAV書き出し（Tone.Offline）は再生を止めて Synth を作り直し、終わったら破棄する。再生中に書き出すと再生は止まる。
+- `Playback.play()` は開始時点の AppState で LoopArranger を組むので、再生中に曲の内容を変えたら先頭から再生し直す。

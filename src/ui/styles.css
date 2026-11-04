@@ -220,20 +220,412 @@ button {
   border-radius: var(--radius);
 }
 
-/* ── 開発用コントロール（シンプルモード画面の作り直しまでの仮置き） ── */
-.dev-panel {
-  max-width: 960px;
+/* ── モード画面（シンプル／カスタム）共通 ───────────── */
+.screen.screen-mode { padding: 0; }
+
+.screen-body {
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 16px 20px;
+  padding: 24px 20px 32px;
+}
+
+.infobar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 60px;
+  padding: 10px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.info {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.info-item { padding: 0 14px; border-left: 1px solid var(--border); }
+.info-item:first-child { padding-left: 0; border-left: none; }
+.info-item b { color: var(--text); margin-left: 6px; }
+
+.infobar-actions { display: flex; gap: 8px; }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs button {
+  border: none;
+  background: transparent;
+  padding: 12px 18px;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+[data-screen="simple"] .tabs button.is-active { color: var(--simple); border-bottom-color: var(--simple); }
+[data-screen="custom"] .tabs button.is-active { color: var(--custom); border-bottom-color: var(--custom); }
+
+/* ── ボタン ─────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.btn:hover { border-color: #c9c9c4; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+
+.btn-large  { padding: 16px 24px; font-size: 18px; font-weight: 700; }
+.btn-small  { padding: 7px 12px; font-size: 13px; background: var(--bg); }
+.btn-play   { padding: 10px 26px; font-size: 16px; font-weight: 700; }
+.btn-square { width: 42px; height: 42px; padding: 0; }
+.btn-custom { background: var(--custom-soft); border-color: #c6c1f3; color: var(--custom); font-weight: 700; }
+.btn-custom:hover { border-color: var(--custom); }
+
+.icon-stop {
+  width: 12px;
+  height: 12px;
+  border: 1.6px solid currentColor;
+  border-radius: 2px;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+}
+
+.link-btn:hover { color: var(--text); }
+
+/* ── 設定フォーム ───────────────────────── */
+.field { margin-bottom: 24px; }
+
+.field-label {
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #44443f;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.chip {
+  padding: 9px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: #55554f;
+}
+
+.chip:hover { border-color: #c9c9c4; }
+
+.chips-mood  .chip.is-active { background: var(--simple-soft); border-color: var(--simple); color: #1f6e4e; font-weight: 600; }
+.chips-genre .chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: #3f35a8; font-weight: 600; }
+.chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: #2c5596; font-weight: 600; }
+
+.bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
+
+.method-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.method-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
-.dev-panel h2 {
-  font-size: 14px;
-  margin: 0 0 12px;
+.method-card.is-active { background: var(--custom-soft); border: 1.5px solid var(--custom); color: #3f35a8; }
+.method-icon  { font-size: 22px; }
+.method-title { font-size: 16px; font-weight: 700; }
+.method-desc  { font-size: 13px; color: var(--text-muted); }
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+
+.setup-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+}
+
+/* ── 生成結果 ───────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.wave-card { padding: 18px 24px 14px; margin-bottom: 24px; }
+.wave-title { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+
+.wave-area { position: relative; }
+
+.wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 72px;
+}
+
+.wave span {
+  flex: 1;
+  min-width: 1px;
+  border-radius: 2px;
+  background: #a9d8c3;
+}
+
+.wave span.played { background: var(--simple); }
+
+.playhead {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 2px;
+  margin-left: -1px;
+  background: #d9502f;
+}
+
+.wave-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 12px;
   color: var(--text-muted);
 }
 
-.dev-panel .row { margin-top: 8px; }
+.layer-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.layer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.layer-name { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.layer-desc { min-height: 1.5em; font-size: 13px; color: #55554f; }
+
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-melody { background: #b3a9ef; }
+.dot-chord  { background: #6cc9a0; }
+.dot-drum   { background: #a9c8f0; }
+
+.result-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.result-actions .btn { padding: 14px 18px; font-size: 15px; }
+
+.hint {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── カスタムモード ─────────────────────── */
+.screen-body-wide { max-width: 1240px; }
+
+.btn-generate { padding: 10px 22px; font-size: 16px; font-weight: 700; }
+
+.custom-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.panel { padding: 20px 22px; }
+
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-weight: 700;
+  color: #44443f;
+}
+
+.panel-title svg { width: 18px; height: 18px; color: var(--text-muted); }
+.panel-title-plain { margin-bottom: 10px; }
+
+.panel-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 18px 0;
+}
+
+/* ラベル＋入力の1行 */
+.form-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.form-label { font-size: 13px; color: var(--text-muted); }
+
+.select {
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-size: 15px;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-overflow: ellipsis;
+}
+
+.select:focus { outline: 2px solid var(--custom-soft); border-color: var(--custom); }
+
+.select-with-btn {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.range { accent-color: var(--custom); min-width: 0; }
+
+.bpm-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.bpm-number { text-align: right; font-variant-numeric: tabular-nums; }
+#c-tap.is-active { border-color: var(--custom); color: var(--custom); }
+
+/* スケールロックなどのスイッチ */
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #d4d4cf;
+  transition: background 0.15s;
+}
+
+.toggle span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.toggle.is-on { background: var(--custom); }
+.toggle-green.is-on { background: var(--simple); }
+.toggle.is-on span { transform: translateX(18px); }
+
+/* パッド / アルペジオの ON/OFF */
+.pill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #55554f;
+}
+
+.pill {
+  min-width: 52px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.pill.is-on { color: #1f6e4e; background: var(--simple-soft); border-color: transparent; }
+
+/* パート別音量 */
+.volume-list { display: flex; flex-direction: column; gap: 8px; }
+
+.volume-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 12px;
+  color: #55554f;
+}
+
+.volume-value { text-align: right; font-variant-numeric: tabular-nums; }
+.volume-row.is-off { color: var(--text-muted); }
+.volume-row.is-off .range { opacity: 0.4; }
+
+.export-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.export-label { font-size: 13px; color: var(--text-muted); margin-right: 4px; }
+
+@media (max-width: 1000px) {
+  .custom-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 720px) {
+  .layer-cards,
+  .result-actions,
+  .method-cards,
+  .setup-actions,
+  .custom-grid { grid-template-columns: 1fr; }
+}

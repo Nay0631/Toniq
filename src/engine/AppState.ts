@@ -4,10 +4,23 @@ import { MelodyNote } from "./MelodyGenerator";
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz";
 
+// 画面内のタブ
+export type Tab = "settings" | "arranger" | "pianoroll";
+
+// コードを鳴らすリズム（whole = コードの長さいっぱいに伸ばす）
+export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
+
+// メロディの音色
+export type MelodyInstrument = "soft" | "lead" | "square" | "pluck";
+
 // アプリ全体の状態を一元管理する
 export interface AppState {
-  // 表示中の画面
+  // 表示中の画面とタブ
   screen: Screen;
+  tab:    Tab;
+
+  // 曲を生成済みか（シンプルモードの設定画面／生成結果画面の切り替え）
+  generated: boolean;
 
   // モード
   mode:   "simple" | "custom";
@@ -18,11 +31,22 @@ export interface AppState {
   key:    string;
   bpm:    number;
   tempoPreset: "ゆっくり" | "普通" | "速い" | "custom";
+  bars:   number;  // 曲全体の最大の長さ（小節）
 
   // 選択中のパターン
   chordPattern:  ChordProgression | null;
   drumPattern:   DrumPattern      | null;
   melodyNotes:   MelodyNote[];
+
+  // メロディの入力方法（自動生成／ピアノロールで自分で入力）と自動生成の回数
+  melodyMethod:  "auto" | "manual";
+  melodyVersion: number;  // 0 = フレーズA, 1 = フレーズB …
+
+  // カスタムモードの設定
+  melodyInstrument: MelodyInstrument;
+  chordRhythm:      ChordRhythm;
+  scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
+  drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
 
   // パートのON/OFF
   parts: {
@@ -49,16 +73,26 @@ export interface AppState {
 // 初期状態
 export const defaultState: AppState = {
   screen:      "menu",
+  tab:         "settings",
+  generated:   false,
   mode:        "simple",
   genre:       "EDM",
   mood:        "明るい",
   key:         "A",
   bpm:         128,
   tempoPreset: "普通",
+  bars:        16,
 
   chordPattern: null,
   drumPattern:  null,
   melodyNotes:  [],
+  melodyMethod:  "auto",
+  melodyVersion: 0,
+
+  melodyInstrument: "soft",
+  chordRhythm:      "whole",
+  scaleLock:        true,
+  drumCategory:     "EDM",
 
   parts: {
     drum:   true,
@@ -98,6 +132,8 @@ export function applySimpleToCustom(): void {
     ...state,
     mode: "custom",
     // シンプルモードで決定したパラメータはそのままカスタムモードに引き継がれる
+    // ドラムの絞り込みはシンプルモードで選んだジャンルに合わせる
+    drumCategory: state.genre,
   };
   console.log("シンプル→カスタム引き継ぎ完了:", state);
 }

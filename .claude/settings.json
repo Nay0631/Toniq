@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npx tsc --noEmit)",
+      "mcp__claude_ai_Claude_Docs__batch",
+      "mcp__claude_ai_Claude_Docs__guide",
+      "mcp__claude_ai_Claude_Docs__update",
+      "Bash(node -e \"for \\(const f of ['chord_progressions','drum_patterns']\\){const d=require\\('./src/data/'+f+'.json'\\);console.log\\(f,d.length\\)};for \\(const f of ['easy_mode_table','tempo_presets','melody_params','mix_presets']\\){console.log\\(f, JSON.stringify\\(require\\('./src/data/'+f+'.json'\\)\\).slice\\(0,500\\)\\)}\")"
+    ]
+  }
+}

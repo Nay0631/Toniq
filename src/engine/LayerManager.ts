@@ -9,6 +9,7 @@ import { loadPadPattern, disposePad }         from "./PadPlayer";
 import { loadMelody, disposeMelody }          from "./MelodyPlayer";
 import { loadFx, disposeFx }                  from "./FxPlayer";
 import { getState, setState }                 from "./AppState";
+import { isArrangedNow }                      from "./LoopArranger";
 
 export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "melody" | "fx";
 
@@ -23,7 +24,8 @@ export function setLayerEnabled(layer: LayerName, enabled: boolean) {
     disposeLayer(layer);
     console.log(`レイヤーOFF: ${layer}`);
   } else {
-    reloadLayer(layer);
+    // 再生中でアレンジ上いま鳴るパートならすぐ鳴らす。それ以外は次の周回でアレンジャーが読み込む
+    if (isArrangedNow(layer)) reloadLayer(layer);
     console.log(`レイヤーON: ${layer}`);
   }
 }
@@ -128,6 +130,11 @@ export function replaceMelody(newNotes: MelodyNote[]) {
   const s = getState();
   loadMelody(newNotes, `${s.chordPattern!.length_bars}m`);
   console.log("メロディ差し替え完了");
+}
+
+// ===== 全レイヤーを一括破棄（停止時に前回の Part を残さない） =====
+export function disposeAllLayers() {
+  (["drum","chord","bass","arp","pad","melody","fx"] as LayerName[]).forEach(disposeLayer);
 }
 
 // ===== 全レイヤーを一括再ロード =====

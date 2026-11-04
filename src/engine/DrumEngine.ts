@@ -21,7 +21,7 @@ export function loadDrumPattern(pattern: DrumPattern) {
   synths.forEach(s => s?.env?.disconnect?.() ?? s?.disconnect?.());
   synths = [];
 
-  if (!drumVol) drumVol = createVolumeNode("drum");
+  drumVol = createVolumeNode("drum");  // 現在のオーディオコンテキスト用のノード
 
   const parts = Object.entries(pattern.tracks).map(([name, track]) => {
     const factory = SYNTH_MAP[name] ?? createClap;

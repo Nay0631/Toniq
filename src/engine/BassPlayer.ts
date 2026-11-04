@@ -8,7 +8,7 @@ let bassSynth: Tone.Synth | null = null;
 let bassVol: Tone.Volume | null = null;
 
 export function initBassSynth() {
-  if (!bassVol) bassVol = createVolumeNode("bass");
+  bassVol = createVolumeNode("bass");  // 現在のオーディオコンテキスト用のノード
   const filter = new Tone.Filter(300, "lowpass").connect(bassVol);
   bassSynth = new Tone.Synth({
     oscillator: { type: "sawtooth" },

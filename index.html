@@ -90,53 +90,341 @@
       </div>
     </section>
 
-    <!-- シンプルモード画面（画面の作り直しまでは開発用コントロールを置く） -->
-    <section class="screen" data-screen="simple" hidden>
-      <div class="dev-panel">
-        <h2>開発用コントロール</h2>
-        <p>状態：<span id="preset-label">未設定</span></p>
+    <!-- シンプルモード画面 -->
+    <section class="screen screen-mode" data-screen="simple" hidden>
+      <!-- 情報バー -->
+      <div class="infobar">
+        <div class="info">
+          <span class="info-item">BPM <b id="s-info-bpm"></b></span>
+          <span class="info-item">ジャンル <b id="s-info-genre"></b></span>
+          <span class="info-item">雰囲気 <b id="s-info-mood"></b></span>
+          <span class="info-item" id="s-info-song"></span>
+        </div>
+        <div class="infobar-actions" id="s-transport">
+          <button class="btn btn-square" id="s-stop" aria-label="停止"><span class="icon-stop"></span></button>
+          <button class="btn btn-play" id="s-play">▷ 再生</button>
+        </div>
+      </div>
 
-        <div class="row">
-          <button id="play">再生</button>
-          <button id="stop">停止</button>
-          <button id="regen">メロディ再生成</button>
-          <button id="to-custom">カスタムモードに引き継ぎ</button>
+      <!-- タブ -->
+      <nav class="tabs">
+        <button data-tab="settings">設定</button>
+        <button data-tab="pianoroll">ピアノロール</button>
+      </nav>
+
+      <div class="screen-body" data-tab-panel="settings">
+        <!-- 生成前：設定 -->
+        <div id="s-setup">
+          <div class="field">
+            <div class="field-label">☺ 雰囲気</div>
+            <div class="chips chips-mood">
+              <button class="chip" data-mood="明るい">明るい</button>
+              <button class="chip" data-mood="暗い">暗い</button>
+              <button class="chip" data-mood="切ない">切ない</button>
+              <button class="chip" data-mood="激しい">激しい</button>
+              <button class="chip" data-mood="落ち着いた">落ち着いた</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">♫ ジャンル</div>
+            <div class="chips chips-genre">
+              <button class="chip" data-genre="EDM">EDM</button>
+              <button class="chip" data-genre="8bit">8bit</button>
+              <button class="chip" data-genre="ローファイ">ローファイ</button>
+              <button class="chip" data-genre="ゲームBGM">ゲームBGM</button>
+              <button class="chip" data-genre="テクノ">テクノ</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">◷ テンポ</div>
+            <div class="chips chips-tempo">
+              <button class="chip" data-tempo="ゆっくり">ゆっくり</button>
+              <button class="chip" data-tempo="普通">普通</button>
+              <button class="chip" data-tempo="速い">速い</button>
+              <button class="chip" id="s-tap">☝ タップで調整</button>
+              <span class="bpm-value" id="s-bpm"></span>
+            </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">メロディの入力方法</div>
+            <div class="method-cards">
+              <button class="method-card" data-melody-method="auto">
+                <span class="method-icon">✦</span>
+                <span class="method-title">自動生成</span>
+                <span class="method-desc">ジャンルに合わせて自動で作成</span>
+              </button>
+              <button class="method-card" data-melody-method="manual">
+                <span class="method-icon">𝄞</span>
+                <span class="method-title">自分で入力</span>
+                <span class="method-desc">ピアノロールタブで入力できます</span>
+              </button>
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <div class="setup-actions">
+            <button class="btn btn-large" id="s-generate">✦ 生成する</button>
+            <button class="btn" data-goto="custom">カスタムモードで細かく設定 →</button>
+          </div>
         </div>
 
-        <div class="row">
-          <button id="replace-drum">ドラム差し替え</button>
-          <button id="replace-chord">コード差し替え</button>
-          <button id="toggle-melody">メロディOFF</button>
-          <button id="toggle-arp">アルペジオOFF</button>
-        </div>
+        <!-- 生成後：結果 -->
+        <div id="s-result" hidden>
+          <button class="link-btn" id="s-edit-settings">‹ 設定を変更</button>
 
-        <div class="row">
-          <button id="tap-btn">タップ</button>
-          <button id="tap-reset">リセット</button>
-          <span id="tap-label">-- BPM</span>
-        </div>
+          <div class="card wave-card">
+            <div class="wave-title">生成された楽曲</div>
+            <div class="wave-area">
+              <div class="wave" id="s-wave"></div>
+              <div class="playhead" id="s-playhead" hidden></div>
+            </div>
+            <div class="wave-ticks" id="s-ticks"></div>
+          </div>
 
-        <div class="row">
-          <p><strong>パート別音量</strong></p>
-          <div>ドラム <input type="range" id="vol-drum" min="0" max="100" value="80"> <span id="vol-drum-label">80</span></div>
-          <div>コード <input type="range" id="vol-chord" min="0" max="100" value="65"> <span id="vol-chord-label">65</span></div>
-          <div>ベース <input type="range" id="vol-bass" min="0" max="100" value="70"> <span id="vol-bass-label">70</span></div>
-          <div>アルペジオ <input type="range" id="vol-arp" min="0" max="100" value="60"> <span id="vol-arp-label">60</span></div>
-          <div>パッド <input type="range" id="vol-pad" min="0" max="100" value="50"> <span id="vol-pad-label">50</span></div>
-          <div>メロディ <input type="range" id="vol-melody" min="0" max="100" value="75"> <span id="vol-melody-label">75</span></div>
-          <div>FX/SE <input type="range" id="vol-fx" min="0" max="100" value="55"> <span id="vol-fx-label">55</span></div>
-        </div>
+          <div class="field-label">↻ レイヤー差し替え</div>
+          <div class="layer-cards">
+            <div class="card layer-card">
+              <div class="layer-name"><span class="dot dot-melody"></span>メロディ</div>
+              <div class="layer-desc" id="s-melody-desc"></div>
+              <button class="btn btn-small" id="s-melody-action"></button>
+            </div>
+            <div class="card layer-card">
+              <div class="layer-name"><span class="dot dot-chord"></span>コード</div>
+              <div class="layer-desc" id="s-chord-desc"></div>
+              <button class="btn btn-small" id="s-chord-reroll">↻ 再抽選</button>
+            </div>
+            <div class="card layer-card">
+              <div class="layer-name"><span class="dot dot-drum"></span>ドラム</div>
+              <div class="layer-desc" id="s-drum-desc"></div>
+              <button class="btn btn-small" id="s-drum-reroll">↻ 再抽選</button>
+            </div>
+          </div>
 
-        <div class="row">
-          <button id="export-wav">WAV書き出し</button>
-          <button id="export-midi">MIDI書き出し</button>
+          <hr class="divider">
+
+          <div class="result-actions">
+            <button class="btn" id="s-export-midi">MIDIで書き出す</button>
+            <button class="btn" id="s-export-wav">WAVで書き出す</button>
+            <button class="btn" id="s-regenerate">✦ もう一度生成する</button>
+            <button class="btn btn-custom" data-goto="custom">☰ カスタムモードで編集する</button>
+          </div>
+          <p class="hint">音量バランスを調整したい場合はカスタムモードで編集できます</p>
         </div>
+      </div>
+
+      <div class="screen-body" data-tab-panel="pianoroll" hidden>
+        <div class="placeholder">ピアノロールは準備中です</div>
       </div>
     </section>
 
     <!-- カスタムモード画面 -->
-    <section class="screen" data-screen="custom" hidden>
-      <div class="placeholder">カスタムモードの画面は準備中です</div>
+    <section class="screen screen-mode" data-screen="custom" hidden>
+      <!-- 情報バー -->
+      <div class="infobar">
+        <div class="info">
+          <span class="info-item">BPM <b id="c-info-bpm"></b></span>
+          <span class="info-item">キー <b id="c-info-key"></b></span>
+          <span class="info-item">拍子 <b>4/4</b></span>
+          <span class="info-item">小節 <b id="c-info-bars"></b></span>
+          <span class="info-item" id="c-info-loop"></span>
+        </div>
+        <div class="infobar-actions">
+          <button class="btn btn-square" id="c-stop" aria-label="停止"><span class="icon-stop"></span></button>
+          <button class="btn" id="c-play">▷ 再生</button>
+          <button class="btn btn-generate" id="c-generate">✦ 生成する</button>
+        </div>
+      </div>
+
+      <!-- タブ -->
+      <nav class="tabs">
+        <button data-tab="settings">設定</button>
+        <button data-tab="arranger">アレンジャー</button>
+        <button data-tab="pianoroll">ピアノロール</button>
+      </nav>
+
+      <div class="screen-body screen-body-wide" data-tab-panel="settings">
+        <div class="custom-grid">
+          <!-- 基本設定 -->
+          <div class="card panel">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>
+              </svg>
+              基本設定
+            </div>
+
+            <div class="form-row">
+              <span class="form-label">BPM</span>
+              <div class="bpm-control">
+                <input type="range" class="range" id="c-bpm-range" min="40" max="220" step="1" aria-label="BPM">
+                <span class="bpm-number" id="c-bpm-value"></span>
+                <button class="btn btn-small" id="c-tap">タップ</button>
+              </div>
+            </div>
+
+            <label class="form-row">
+              <span class="form-label">拍子</span>
+              <select class="select" id="c-meter">
+                <option value="4/4">4/4</option>
+                <option value="3/4" disabled>3/4（準備中）</option>
+              </select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label">小節数</span>
+              <select class="select" id="c-bars"></select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label">ジャンル</span>
+              <select class="select" id="c-genre">
+                <option value="EDM">EDM</option>
+                <option value="8bit">8bit</option>
+                <option value="ローファイ">ローファイ</option>
+                <option value="ゲームBGM">ゲームBGM</option>
+                <option value="テクノ">テクノ</option>
+              </select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label">インスト</span>
+              <select class="select" id="c-instrument">
+                <option value="soft">ソフトサイン</option>
+                <option value="lead">シンセリード</option>
+                <option value="square">スクエア（8bit）</option>
+                <option value="pluck">プラック</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- スケール・キー／コード進行 -->
+          <div class="card panel">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2M14 9l2 2"/>
+              </svg>
+              スケール・キー
+            </div>
+
+            <label class="form-row">
+              <span class="form-label">ルート音</span>
+              <select class="select" id="c-key"></select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label">スケール</span>
+              <select class="select" id="c-scale"></select>
+            </label>
+
+            <div class="switch-row">
+              <button class="toggle toggle-green" id="c-scale-lock" role="switch" aria-label="スケールロック"><span></span></button>
+              <span>スケールロック<span id="c-scale-lock-label"></span></span>
+            </div>
+
+            <hr class="panel-divider">
+
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <path d="M4 20h16M6 20V11h3v9M10.5 20V6h3v14M15 20v-7h3v7"/>
+              </svg>
+              コード進行
+            </div>
+
+            <label class="form-row">
+              <span class="form-label">カテゴリ</span>
+              <select class="select" id="c-mood">
+                <option value="明るい">明るい</option>
+                <option value="暗い">暗い</option>
+                <option value="切ない">切ない</option>
+                <option value="激しい">激しい</option>
+                <option value="落ち着いた">落ち着いた</option>
+              </select>
+            </label>
+
+            <div class="form-row">
+              <span class="form-label">進行</span>
+              <div class="select-with-btn">
+                <select class="select" id="c-chord" aria-label="コード進行"></select>
+                <button class="btn btn-small" id="c-chord-preview">▷ 試聴</button>
+              </div>
+            </div>
+
+            <label class="form-row">
+              <span class="form-label">リズム</span>
+              <select class="select" id="c-rhythm">
+                <option value="whole">全音符</option>
+                <option value="half">2分音符</option>
+                <option value="quarter">4分音符</option>
+                <option value="eighth">8分音符</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- ドラム／パッド・アルペジオ／パート別音量 -->
+          <div class="card panel">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="14" r="3.5"/><circle cx="12" cy="7" r="1"/>
+              </svg>
+              ドラム
+            </div>
+
+            <label class="form-row">
+              <span class="form-label">カテゴリ</span>
+              <select class="select" id="c-drum-category"></select>
+            </label>
+
+            <div class="form-row">
+              <span class="form-label">パターン</span>
+              <div class="select-with-btn">
+                <select class="select" id="c-drum" aria-label="ドラムパターン"></select>
+                <button class="btn btn-small" id="c-drum-preview">▷ 試聴</button>
+              </div>
+            </div>
+
+            <hr class="panel-divider">
+
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <path d="M3 12h3l2-6 3 12 3-9 2 3h5"/>
+              </svg>
+              パッド / アルペジオ
+            </div>
+
+            <div class="pill-row">
+              <span>パッド / Str</span>
+              <button class="pill" data-part-toggle="pad"></button>
+            </div>
+            <div class="pill-row">
+              <span>アルペジオ</span>
+              <button class="pill" data-part-toggle="arp"></button>
+            </div>
+
+            <hr class="panel-divider">
+
+            <div class="panel-title panel-title-plain">パート別音量</div>
+            <div class="volume-list" id="c-volume-list"></div>
+          </div>
+        </div>
+
+        <div class="export-row">
+          <span class="export-label">書き出し</span>
+          <button class="btn btn-small" id="c-export-midi">MIDI</button>
+          <button class="btn btn-small" id="c-export-wav">WAV</button>
+        </div>
+      </div>
+
+      <div class="screen-body" data-tab-panel="arranger" hidden>
+        <div class="placeholder">アレンジャーは準備中です</div>
+      </div>
+
+      <div class="screen-body" data-tab-panel="pianoroll" hidden>
+        <div class="placeholder">ピアノロールは準備中です</div>
+      </div>
     </section>
 
     <!-- ミュージックリスト画面 -->
