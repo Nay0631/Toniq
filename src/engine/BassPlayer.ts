@@ -2,6 +2,7 @@ import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
+import { arrangementGate } from "./LoopArranger";
 
 let bassPart: Tone.Part | null = null;
 let bassSynth: Tone.Synth | null = null;
@@ -44,7 +45,9 @@ export function loadBassLine(
     });
   });
 
+  const arranged = arrangementGate("bass");
   bassPart = new Tone.Part((time, event: any) => {
+    if (!arranged(time)) return;
     bassSynth?.triggerAttackRelease(event.note, event.dur, time);
   }, events);
 

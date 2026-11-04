@@ -1,7 +1,7 @@
 import { getState, setState } from "../engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset, rerollChord, rerollDrum } from "../engine/SimpleModeResolver";
 import { generateMelody } from "../engine/MelodyGenerator";
-import { getActiveParts, getFullArrangementLoops } from "../engine/LoopArranger";
+import { getFullArrangementLoops, isArrangedAt, LAYERS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
 import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
@@ -40,6 +40,7 @@ function generate(): void {
     drumPattern:   result.drumPattern,
     melodyVersion: 0,
     generated:     true,
+    arrangement:   null,  // カスタムモードで編集したアレンジは捨ててジャンルの標準に戻す
   });
   setState({ bars: songBars() });
   makeMelody();
@@ -59,7 +60,7 @@ async function startPlayback(): Promise<void> {
 
 // ===== 表示 =====
 
-// 波形風の表示：周回ごとのパート数とドラムの強さから拍ごとの高さを決める
+// 波形風の表示：小節ごとに鳴っているパート数とドラムの強さから拍ごとの高さを決める
 function renderWave(): void {
   const s    = getState();
   const wave = $("s-wave");
@@ -84,8 +85,7 @@ function renderWave(): void {
   wave.innerHTML = "";
   for (let i = 0; i < beats; i++) {
     const bar   = Math.floor(i / 4);
-    const loop  = Math.floor(bar / s.chordPattern.length_bars) + 1;
-    const parts = getActiveParts(s.genre, loop).length;
+    const parts = LAYERS.filter(p => s.parts[p] && isArrangedAt(p, bar)).length;
     const jitter = ((i * 37) % 11) / 55;
     const h = Math.min(1, 0.2 + (parts / 7) * (0.45 + 0.45 * energies[i] / maxEnergy) + jitter);
     const el = document.createElement("span");

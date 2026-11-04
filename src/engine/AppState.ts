@@ -1,5 +1,6 @@
 import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
+import type { LayerName } from "./LayerManager";
 
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz";
@@ -12,6 +13,15 @@ export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
 // メロディの音色
 export type MelodyInstrument = "soft" | "lead" | "square" | "pluck";
+
+// アレンジャーのブロック（小節は 0 始まり）
+export interface ArrangeBlock {
+  start:  number;
+  length: number;
+}
+
+// パートごとのブロックの並び（開始小節順・重なりなし）
+export type Arrangement = Record<LayerName, ArrangeBlock[]>;
 
 // アプリ全体の状態を一元管理する
 export interface AppState {
@@ -47,6 +57,10 @@ export interface AppState {
   chordRhythm:      ChordRhythm;
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
+
+  // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
+  arrangement: Arrangement | null;
+  startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
 
   // パートのON/OFF
   parts: {
@@ -94,17 +108,20 @@ export const defaultState: AppState = {
   scaleLock:        true,
   drumCategory:     "EDM",
 
+  arrangement: null,
+  startBar:    0,
+
   parts: {
     drum:   true,
     chord:  true,
     bass:   true,
-    arp:    true,
+    arp:    false,  // アルペジオは初期状態で OFF
     pad:    true,
     melody: true,
     fx:     true,
   },
 
-    volumes: {
+  volumes: {
     drum:   80,
     chord:  65,
     bass:   70,

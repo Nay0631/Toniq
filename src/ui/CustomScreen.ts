@@ -9,8 +9,9 @@ import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
-import { onRender } from "./Router";
+import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames } from "./format";
+import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -69,15 +70,29 @@ async function restartIfPlaying(): Promise<void> {
   if (Playback.isPlaying()) await startPlayback();
 }
 
+// アレンジャータブでは再生開始位置から、それ以外のタブでは先頭から再生する
+function playFromBar(): number {
+  const s = getState();
+  return s.tab === "arranger" ? Math.min(s.startBar, s.bars - 1) : 0;
+}
+
 async function startPlayback(): Promise<void> {
   await Playback.play({
+    fromBar: playFromBar(),
     onLoopChange: loop => {
       const el = $("c-info-loop");
       if (el) el.textContent = `周回 ${loop}`;
     },
     onEnded: render,
   });
+  startArrangerPlayhead();
   render();
+}
+
+// 差し替え：今のものとは別の候補から選ぶ
+function pickOther<T extends { id: string }>(items: T[], currentId: string | undefined): T | undefined {
+  const others = items.filter(i => i.id !== currentId);
+  return others[Math.floor(Math.random() * others.length)];
 }
 
 function setBpm(bpm: number): void {
@@ -130,9 +145,12 @@ function fillSelect<T extends { id: string }>(
   if (current) select.value = current.id;
 }
 
-function renderVolumeList(): void {
+// 設定タブとアレンジャータブに同じ音量リストがある
+const VOLUME_LISTS = ["c-volume-list", "c-arr-volume-list"];
+
+function renderVolumeList(listId: string): void {
   const s    = getState();
-  const list = $("c-volume-list");
+  const list = $(listId);
   if (!list) return;
 
   // スライダー操作中に作り直すとドラッグが切れるので、行は最初の1回だけ作る
@@ -171,7 +189,10 @@ function render(): void {
   $("c-info-key")!.textContent  = `${s.key}${SCALE_LABELS[scale] ?? ""}`;
   $("c-info-bars")!.textContent = `${s.bars}`;
   $("c-info-loop")!.hidden = !playing;
-  $("c-play")!.textContent = playing ? "↺ 最初から" : "▷ 再生";
+  const fromBar = playFromBar();
+  $("c-play")!.textContent = fromBar > 0
+    ? `${playing ? "↺" : "▷"} ${fromBar + 1}小節目から`
+    : playing ? "↺ 最初から" : "▷ 再生";
 
   // 基本設定
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
@@ -215,7 +236,21 @@ function render(): void {
     el.setAttribute("aria-pressed", String(on));
   });
 
-  renderVolumeList();
+  VOLUME_LISTS.forEach(renderVolumeList);
+
+  // アレンジャー
+  renderArranger();
+  let chordText = "";
+  try {
+    chordText = s.chordPattern ? chordNames(s.chordPattern, s.key).replace(/ - /g, "-") : "";
+  } catch {
+    chordText = s.chordPattern?.name ?? "";
+  }
+  $("c-arr-chord")!.textContent = chordText;
+  $("c-arr-drum")!.textContent  = s.drumPattern ? drumLabel(s.drumPattern) : "";
+  $("c-arr-melody")!.textContent = s.melodyMethod === "auto"
+    ? `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`
+    : "ピアノロールで入力";
 }
 
 // ===== イベント =====
@@ -374,35 +409,73 @@ export function initCustomScreen(): void {
     }));
 
   // ===== パート別音量 =====
-  renderVolumeList();
-  $("c-volume-list")?.addEventListener("input", e => {
-    const input = e.target as HTMLInputElement;
-    const row   = input.closest<HTMLElement>("[data-part]");
-    if (!row) return;
-    setVolume(row.dataset.part!, parseInt(input.value));
-    row.querySelector(".volume-value")!.textContent = input.value;
+  VOLUME_LISTS.forEach(id => {
+    renderVolumeList(id);
+    $(id)?.addEventListener("input", e => {
+      const input = e.target as HTMLInputElement;
+      const row   = input.closest<HTMLElement>("[data-part]");
+      if (!row) return;
+      setVolume(row.dataset.part!, parseInt(input.value));
+      row.querySelector(".volume-value")!.textContent = input.value;
+    });
   });
 
-  // ===== 書き出し =====
-  $("c-export-midi")?.addEventListener("click", () => {
+  // ===== アレンジャー =====
+  // 再生開始位置を変えたら、再生中ならその位置から再生し直す
+  initArranger(async () => {
+    if (Playback.isPlaying()) await startPlayback();
+    else render();
+  });
+
+  $("c-arr-chord-reroll")?.addEventListener("click", async () => {
+    const next = pickOther(chordCandidates(), getState().chordPattern?.id);
+    if (next) setChordPattern(next);
+    render();
+    await restartIfPlaying();
+  });
+
+  $("c-arr-drum-reroll")?.addEventListener("click", async () => {
+    const next = pickOther(drumCandidates(), getState().drumPattern?.id);
+    if (next) setState({ drumPattern: next });
+    render();
+    await restartIfPlaying();
+  });
+
+  $("c-arr-melody-reroll")?.addEventListener("click", async () => {
     const s = getState();
-    if (s.chordPattern) exportMidi(s.chordPattern, s.melodyNotes, s.key, s.bpm);
+    if (s.melodyMethod === "manual") {
+      showTab("pianoroll");
+      return;
+    }
+    setState({ melodyVersion: s.melodyVersion + 1 });
+    makeMelody();
+    render();
+    await restartIfPlaying();
   });
 
-  const wavBtn = $("c-export-wav") as HTMLButtonElement | null;
-  wavBtn?.addEventListener("click", async () => {
-    const label = wavBtn.textContent;
-    wavBtn.textContent = "レンダリング中…";
-    wavBtn.disabled = true;
-    try {
+  // ===== 書き出し（設定タブとアレンジャータブ） =====
+  ["c-export-midi", "c-arr-export-midi"].forEach(id =>
+    $(id)?.addEventListener("click", () => {
       const s = getState();
-      Playback.downloadBlob(await Playback.renderWav(), `toniq_${s.genre}_${s.key}.wav`);
-    } catch (e) {
-      console.error("WAVエクスポートエラー:", e);
-    } finally {
-      wavBtn.textContent = label;
-      wavBtn.disabled = false;
-      render();
-    }
+      if (s.chordPattern) exportMidi(s.chordPattern, s.melodyNotes, s.key, s.bpm);
+    }));
+
+  ["c-export-wav", "c-arr-export-wav"].forEach(id => {
+    const wavBtn = $(id) as HTMLButtonElement | null;
+    wavBtn?.addEventListener("click", async () => {
+      const label = wavBtn.textContent;
+      wavBtn.textContent = "レンダリング中…";
+      wavBtn.disabled = true;
+      try {
+        const s = getState();
+        Playback.downloadBlob(await Playback.renderWav(), `toniq_${s.genre}_${s.key}.wav`);
+      } catch (e) {
+        console.error("WAVエクスポートエラー:", e);
+      } finally {
+        wavBtn.textContent = label;
+        wavBtn.disabled = false;
+        render();
+      }
+    });
   });
 }

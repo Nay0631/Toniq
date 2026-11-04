@@ -2,6 +2,7 @@ import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
+import { arrangementGate } from "./LoopArranger";
 import { getState, ChordRhythm } from "./AppState";
 
 // リズムごとの刻みの長さ（16分音符の数）。whole はコードの長さいっぱいに伸ばす
@@ -61,7 +62,9 @@ export function loadChordProgression(
     }
   });
 
+  const arranged = arrangementGate("chord");
   chordPart = new Tone.Part((time, event: any) => {
+    if (!arranged(time)) return;
     padSynth?.triggerAttackRelease(event.notes, event.dur, time);
   }, events);
 

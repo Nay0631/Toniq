@@ -2,6 +2,7 @@ import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
+import { arrangementGate } from "./LoopArranger";
 
 let arpPart: Tone.Part | null = null;
 let arpSynth: Tone.Synth | null = null;
@@ -53,7 +54,9 @@ export function loadArpPattern(
     }
   });
 
+  const arranged = arrangementGate("arp");
   arpPart = new Tone.Part((time, event: any) => {
+    if (!arranged(time)) return;
     arpSynth?.triggerAttackRelease(event.note, stepUnit, time);
   }, events);
 

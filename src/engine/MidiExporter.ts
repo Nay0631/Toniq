@@ -19,11 +19,18 @@ function noteToMidi(note: string): number {
 
 const DURATION_TO_BEATS: Record<string, number> = {
   "1n": 4, "2n": 2, "4n": 1, "8n": 0.5, "16n": 0.25,
+  "2n.": 3, "4n.": 1.5, "8n.": 0.75,
 };
 
 function timeStrToBeats(time: string): number {
   const [bar, beat, tick] = time.split(":").map(Number);
   return bar * 4 + beat + (tick ?? 0) * 0.25;
+}
+
+// 音価表記（"4n" など）か 小節:拍:16分 表記の長さを拍数に変換する
+function durationToBeats(duration: string): number {
+  return DURATION_TO_BEATS[duration]
+      ?? (duration.includes(":") ? timeStrToBeats(duration) : 1);
 }
 
 // ===== MIDIエクスポート本体 =====
@@ -50,7 +57,7 @@ export function exportMidi(
   melodyNotes.forEach(n => {
     if (!n.note) return;
     const startBeats = timeStrToBeats(n.time);
-    const durBeats   = DURATION_TO_BEATS[n.duration] ?? 1;
+    const durBeats   = durationToBeats(n.duration);
     melTrack.addNote({
       midi:     noteToMidi(n.note),
       ticks:    beatsToTicks(startBeats),

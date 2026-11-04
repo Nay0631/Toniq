@@ -1,17 +1,11 @@
 import * as Tone from "tone";
-import { ChordProgression, DrumPattern } from "../data/types";
-import { MelodyNote } from "./MelodyGenerator";
-import { loadDrumPattern } from "./DrumEngine";
-import { loadChordProgression } from "./ChordPlayer";
-import { loadBassLine } from "./BassPlayer";
-import { loadArpPattern } from "./ArpPlayer";
-import { loadPadPattern } from "./PadPlayer";
-import { loadMelody } from "./MelodyPlayer";
-import { loadFx } from "./FxPlayer";
-import { getState } from "./AppState";
+import { getState, ArrangeBlock, Arrangement } from "./AppState";
 import type { LayerName } from "./LayerManager";
 
+export const LAYERS: LayerName[] = ["drum", "chord", "bass", "arp", "pad", "melody", "fx"];
+
 // ジャンルごとの周回アレンジ定義（パートは一度入ると以降の周回でも鳴り続ける）
+// 標準アレンジ（AppState.arrangement が null のとき）はこれを周回の長さで並べて作る
 const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
   "EDM": {
     1: ["drum", "chord"],
@@ -58,89 +52,119 @@ export function getFullArrangementLoops(genre: string): number {
   return Math.max(...Object.keys(schedule).map(Number));
 }
 
+// ===== アレンジ =====
+
+export function emptyArrangement(): Arrangement {
+  return { drum: [], chord: [], bass: [], arp: [], pad: [], melody: [], fx: [] };
+}
+
+// ジャンルの標準アレンジ：周回ごとに LOOP_SCHEDULE のパートを置き、続いている周回は1つのブロックにまとめる
+export function buildDefaultArrangement(genre: string, loopBars: number, totalBars: number): Arrangement {
+  const arrangement = emptyArrangement();
+  for (let start = 0, loop = 1; start < totalBars; start += loopBars, loop++) {
+    const length = Math.min(loopBars, totalBars - start);
+    for (const part of getActiveParts(genre, loop) as LayerName[]) {
+      const blocks = arrangement[part];
+      const last   = blocks[blocks.length - 1];
+      if (last && last.start + last.length === start) last.length += length;
+      else blocks.push({ start, length });
+    }
+  }
+  return arrangement;
+}
+
+// 標準アレンジは再生中に何度も参照するので、条件が同じあいだは作り直さない
+let defaultCache: { key: string; arrangement: Arrangement } | null = null;
+
+// 現在のアレンジ（編集していなければジャンルの標準アレンジ）
+export function getArrangement(): Arrangement {
+  const s = getState();
+  if (s.arrangement) return s.arrangement;
+  if (!s.chordPattern) return emptyArrangement();
+
+  const key = `${s.genre}|${s.chordPattern.length_bars}|${s.bars}`;
+  if (defaultCache?.key !== key) {
+    defaultCache = { key, arrangement: buildDefaultArrangement(s.genre, s.chordPattern.length_bars, s.bars) };
+  }
+  return defaultCache.arrangement;
+}
+
+// 編集用のコピー（ブロックも複製する）
+export function cloneArrangement(arrangement: Arrangement): Arrangement {
+  const copy = emptyArrangement();
+  for (const part of LAYERS) copy[part] = arrangement[part].map(b => ({ ...b }));
+  return copy;
+}
+
+export function findBlock(blocks: ArrangeBlock[], bar: number): ArrangeBlock | undefined {
+  return blocks.find(b => bar >= b.start && bar < b.start + b.length);
+}
+
+// アレンジ上、指定した小節（0 始まり）でパートが鳴るか
+export function isArrangedAt(part: LayerName, bar: number): boolean {
+  return findBlock(getArrangement()[part], bar) !== undefined;
+}
+
+// パート単体の試聴中はアレンジに関係なく鳴らす（Playback.preview が立て、stop で戻す）
+let bypass = false;
+
+export function setArrangementBypass(on: boolean): void {
+  bypass = on;
+}
+
+// 各パートの Part / Sequence のコールバックで使う判定。
+// 読み込んだ時点の Transport（WAV書き出しではオフライン用）で、発音時刻が何小節目かを調べる
+export function arrangementGate(part: LayerName): (time: number) => boolean {
+  const transport = Tone.getTransport();
+  return time => {
+    if (bypass) return true;
+    const bar = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
+    return isArrangedAt(part, bar);
+  };
+}
+
+// ===== 周回の表示 =====
+
 interface LoopArrangerParams {
-  genre:        string;
-  chordPattern: ChordProgression;
-  drumPattern:  DrumPattern;
-  melodyNotes:  MelodyNote[];
-  key:          string;
-  bpm:          number;
+  loopBars:      number;
+  fromBar:       number;  // 再生を始める小節（途中から再生するとき）
   onLoopChange?: (loop: number, parts: string[]) => void;
 }
 
-let loopCount    = 0;
-let repeatPart: Tone.Part | null = null;
-let arrangedParts: string[] = [];  // 現在の周回でアレンジ上鳴らすパート
+let loopCount = 0;
+let repeatId: number | null = null;
 
+// 周回を知らせる（その周回の頭の小節で鳴っているパートと一緒に）
+function notifyLoop(loop: number, loopBars: number, onLoopChange?: LoopArrangerParams["onLoopChange"]) {
+  loopCount = loop;
+  const bar   = (loop - 1) * loopBars;
+  const parts = getState().parts;
+  const activeParts = LAYERS.filter(p => parts[p] && isArrangedAt(p, bar));
+  console.log(`周回 ${loop} / アクティブパート: ${activeParts.join(", ")}`);
+  onLoopChange?.(loop, activeParts);
+}
+
+// 再生開始時の周回をすぐ知らせ、以降は周回の頭ごとに知らせる
 export function startLoopArranger(params: LoopArrangerParams) {
-  const {
-    genre, chordPattern, drumPattern,
-    melodyNotes, key, bpm, onLoopChange
-  } = params;
+  const { loopBars, fromBar, onLoopChange } = params;
+  const firstLoop = Math.floor(fromBar / loopBars) + 1;
+  notifyLoop(firstLoop, loopBars, onLoopChange);
 
-  loopCount = 0;
-  const schedule = LOOP_SCHEDULE[genre] ?? LOOP_SCHEDULE["ローファイ"];
-  const maxLoop  = Math.max(...Object.keys(schedule).map(Number));
-  const loopBars = chordPattern.length_bars;
-  const loopSec  = (loopBars * 4 * 60) / bpm;
-
-  // ループごとにパートを切り替えるRepeatを設定
-  repeatPart = new Tone.Part((time) => {
-    loopCount++;
-    const currentLoop  = Math.min(loopCount, maxLoop);
-    const activeParts  = schedule[currentLoop] ?? schedule[maxLoop];
-
-    Tone.getDraw().schedule(() => {
-      console.log(`周回 ${loopCount} / アクティブパート: ${activeParts.join(", ")}`);
-      arrangedParts = activeParts;
-      onLoopChange?.(loopCount, activeParts);
-
-      // アレンジ上鳴らすパートのうち、パートON/OFFでONのものだけ鳴らす
-      const parts = getState().parts;
-      const on = (part: LayerName) => activeParts.includes(part) && parts[part];
-
-      if (on("drum"))
-        loadDrumPattern(drumPattern);
-
-      if (on("chord"))
-        loadChordProgression(chordPattern, key, 4);
-
-      if (on("bass"))
-        loadBassLine(chordPattern, key, 2);
-
-      if (on("arp"))
-        loadArpPattern(chordPattern, key, 5, "8n");
-
-      if (on("pad"))
-        loadPadPattern(chordPattern, key, 4);
-
-      if (on("melody"))
-        loadMelody(melodyNotes, `${loopBars}m`);
-
-      if (on("fx"))
-        loadFx(chordPattern);
-
-    }, time);
-  }, [
-    // 各ループの開始タイミングを登録（最大8周まで）
-    ...Array.from({ length: 8 }, (_, i) => ({ time: `+${i * loopSec}` }))
-  ]);
-
-  repeatPart.start(0);
+  let loop = firstLoop;
+  repeatId = Tone.getTransport().scheduleRepeat(time => {
+    const next = ++loop;
+    Tone.getDraw().schedule(() => notifyLoop(next, loopBars, onLoopChange), time);
+  }, `${loopBars}m`, `${firstLoop * loopBars}m`);
 }
 
 export function stopLoopArranger() {
-  repeatPart?.dispose();
-  repeatPart = null;
-  loopCount  = 0;
-  arrangedParts = [];
+  if (repeatId !== null) {
+    Tone.getTransport().clear(repeatId);
+    repeatId = null;
+  }
+  loopCount = 0;
 }
 
 export function getCurrentLoop(): number {
   return loopCount;
-}
-
-// 再生中の周回でアレンジ上鳴っているパートか（停止中は false）
-export function isArrangedNow(part: string): boolean {
-  return arrangedParts.includes(part);
 }

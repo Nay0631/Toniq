@@ -1,6 +1,7 @@
 import * as Tone from "tone";
 import { MelodyNote } from "./MelodyGenerator";
 import { createVolumeNode } from "./VolumeManager";
+import { arrangementGate } from "./LoopArranger";
 import { getState, MelodyInstrument } from "./AppState";
 
 
@@ -40,7 +41,9 @@ export function loadMelody(notes: MelodyNote[], loopEnd: string) {
     .filter(n => n.note !== null)
     .map(n => ({ time: n.time, note: n.note!, dur: n.duration }));
 
+  const arranged = arrangementGate("melody");
   melodyPart = new Tone.Part((time, event: any) => {
+    if (!arranged(time)) return;
     melodySynth?.triggerAttackRelease(event.note, event.dur, time);
   }, events);
 

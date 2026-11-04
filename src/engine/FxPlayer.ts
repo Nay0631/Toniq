@@ -1,6 +1,7 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { createVolumeNode } from "./VolumeManager";
+import { arrangementGate } from "./LoopArranger";
 
 let fxPart:   Tone.Part       | null = null;
 let fxNoise:  Tone.NoiseSynth | null = null;
@@ -24,7 +25,9 @@ export function loadFx(progression: ChordProgression) {
 
   const lastBar = progression.length_bars - 1;
 
+  const arranged = arrangementGate("fx");
   fxPart = new Tone.Part((time) => {
+    if (!arranged(time)) return;
     if (!fxNoise || !fxFilter) return;
     const dur = Tone.Time("1m").toSeconds();
     fxFilter.frequency.setValueAtTime(200, time);

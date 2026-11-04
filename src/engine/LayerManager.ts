@@ -9,7 +9,6 @@ import { loadPadPattern, disposePad }         from "./PadPlayer";
 import { loadMelody, disposeMelody }          from "./MelodyPlayer";
 import { loadFx, disposeFx }                  from "./FxPlayer";
 import { getState, setState }                 from "./AppState";
-import { isArrangedNow }                      from "./LoopArranger";
 
 export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "melody" | "fx";
 
@@ -24,8 +23,8 @@ export function setLayerEnabled(layer: LayerName, enabled: boolean) {
     disposeLayer(layer);
     console.log(`レイヤーOFF: ${layer}`);
   } else {
-    // 再生中でアレンジ上いま鳴るパートならすぐ鳴らす。それ以外は次の周回でアレンジャーが読み込む
-    if (isArrangedNow(layer)) reloadLayer(layer);
+    // 再生中なら読み込む。どの小節で鳴らすかはパートがアレンジを見て決める
+    if (Tone.getTransport().state === "started") reloadLayer(layer);
     console.log(`レイヤーON: ${layer}`);
   }
 }
