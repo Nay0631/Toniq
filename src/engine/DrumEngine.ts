@@ -3,6 +3,7 @@ import { DrumPattern } from "../data/types";
 import { getState } from "./AppState";
 import { createDrumKit, DrumKit } from "./SynthFactory";
 import { createVolumeNode } from "./VolumeManager";
+import { arrangementGate } from "./LoopArranger";
 
 // クローズドハイハットが鳴ったら止める音（実機と同じくオープンハイハットを切る）
 const CHOKES: Record<string, string[]> = {
@@ -36,9 +37,11 @@ export function loadDrumPattern(pattern: DrumPattern) {
   kit = createDrumKit(getState().genre, tracks.map(([name]) => name));
   kit.output.connect(drumVol);
   const voices = kit.voices;
+  const arranged = arrangementGate("drum");
 
   currentSeq = new Tone.Sequence(
     (time, step) => {
+      if (!arranged(time)) return;
       const hit = new Set<string>();
       tracks.forEach(([name, track]) => {
         if (!track.pattern[step]) return;

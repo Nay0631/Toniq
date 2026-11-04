@@ -9,8 +9,9 @@ import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
-import { onRender } from "./Router";
+import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames } from "./format";
+import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -77,7 +78,14 @@ async function startPlayback(): Promise<void> {
     },
     onEnded: render,
   });
+  startArrangerPlayhead();
   render();
+}
+
+// 差し替え：今のものとは別の候補から選ぶ
+function pickOther<T extends { id: string }>(items: T[], currentId: string | undefined): T | undefined {
+  const others = items.filter(i => i.id !== currentId);
+  return others[Math.floor(Math.random() * others.length)];
 }
 
 function setBpm(bpm: number): void {
@@ -130,9 +138,12 @@ function fillSelect<T extends { id: string }>(
   if (current) select.value = current.id;
 }
 
-function renderVolumeList(): void {
+// 設定タブとアレンジャータブに同じ音量リストがある
+const VOLUME_LISTS = ["c-volume-list", "c-arr-volume-list"];
+
+function renderVolumeList(listId: string): void {
   const s    = getState();
-  const list = $("c-volume-list");
+  const list = $(listId);
   if (!list) return;
 
   // スライダー操作中に作り直すとドラッグが切れるので、行は最初の1回だけ作る
@@ -215,7 +226,21 @@ function render(): void {
     el.setAttribute("aria-pressed", String(on));
   });
 
-  renderVolumeList();
+  VOLUME_LISTS.forEach(renderVolumeList);
+
+  // アレンジャー
+  renderArranger();
+  let chordText = "";
+  try {
+    chordText = s.chordPattern ? chordNames(s.chordPattern, s.key).replace(/ - /g, "-") : "";
+  } catch {
+    chordText = s.chordPattern?.name ?? "";
+  }
+  $("c-arr-chord")!.textContent = chordText;
+  $("c-arr-drum")!.textContent  = s.drumPattern ? drumLabel(s.drumPattern) : "";
+  $("c-arr-melody")!.textContent = s.melodyMethod === "auto"
+    ? `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`
+    : "ピアノロールで入力";
 }
 
 // ===== イベント =====
@@ -374,35 +399,69 @@ export function initCustomScreen(): void {
     }));
 
   // ===== パート別音量 =====
-  renderVolumeList();
-  $("c-volume-list")?.addEventListener("input", e => {
-    const input = e.target as HTMLInputElement;
-    const row   = input.closest<HTMLElement>("[data-part]");
-    if (!row) return;
-    setVolume(row.dataset.part!, parseInt(input.value));
-    row.querySelector(".volume-value")!.textContent = input.value;
+  VOLUME_LISTS.forEach(id => {
+    renderVolumeList(id);
+    $(id)?.addEventListener("input", e => {
+      const input = e.target as HTMLInputElement;
+      const row   = input.closest<HTMLElement>("[data-part]");
+      if (!row) return;
+      setVolume(row.dataset.part!, parseInt(input.value));
+      row.querySelector(".volume-value")!.textContent = input.value;
+    });
   });
 
-  // ===== 書き出し =====
-  $("c-export-midi")?.addEventListener("click", () => {
+  // ===== アレンジャー =====
+  initArranger();
+
+  $("c-arr-chord-reroll")?.addEventListener("click", async () => {
+    const next = pickOther(chordCandidates(), getState().chordPattern?.id);
+    if (next) setChordPattern(next);
+    render();
+    await restartIfPlaying();
+  });
+
+  $("c-arr-drum-reroll")?.addEventListener("click", async () => {
+    const next = pickOther(drumCandidates(), getState().drumPattern?.id);
+    if (next) setState({ drumPattern: next });
+    render();
+    await restartIfPlaying();
+  });
+
+  $("c-arr-melody-reroll")?.addEventListener("click", async () => {
     const s = getState();
-    if (s.chordPattern) exportMidi(s.chordPattern, s.melodyNotes, s.key, s.bpm);
+    if (s.melodyMethod === "manual") {
+      showTab("pianoroll");
+      return;
+    }
+    setState({ melodyVersion: s.melodyVersion + 1 });
+    makeMelody();
+    render();
+    await restartIfPlaying();
   });
 
-  const wavBtn = $("c-export-wav") as HTMLButtonElement | null;
-  wavBtn?.addEventListener("click", async () => {
-    const label = wavBtn.textContent;
-    wavBtn.textContent = "レンダリング中…";
-    wavBtn.disabled = true;
-    try {
+  // ===== 書き出し（設定タブとアレンジャータブ） =====
+  ["c-export-midi", "c-arr-export-midi"].forEach(id =>
+    $(id)?.addEventListener("click", () => {
       const s = getState();
-      Playback.downloadBlob(await Playback.renderWav(), `toniq_${s.genre}_${s.key}.wav`);
-    } catch (e) {
-      console.error("WAVエクスポートエラー:", e);
-    } finally {
-      wavBtn.textContent = label;
-      wavBtn.disabled = false;
-      render();
-    }
+      if (s.chordPattern) exportMidi(s.chordPattern, s.melodyNotes, s.key, s.bpm);
+    }));
+
+  ["c-export-wav", "c-arr-export-wav"].forEach(id => {
+    const wavBtn = $(id) as HTMLButtonElement | null;
+    wavBtn?.addEventListener("click", async () => {
+      const label = wavBtn.textContent;
+      wavBtn.textContent = "レンダリング中…";
+      wavBtn.disabled = true;
+      try {
+        const s = getState();
+        Playback.downloadBlob(await Playback.renderWav(), `toniq_${s.genre}_${s.key}.wav`);
+      } catch (e) {
+        console.error("WAVエクスポートエラー:", e);
+      } finally {
+        wavBtn.textContent = label;
+        wavBtn.disabled = false;
+        render();
+      }
+    });
   });
 }

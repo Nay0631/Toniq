@@ -1,8 +1,8 @@
 import * as Tone from "tone";
 import { getState } from "./AppState";
 import { initMixer, applyMixPreset, disposeMixer } from "./MixerEngine";
-import { startLoopArranger, stopLoopArranger } from "./LoopArranger";
-import { disposeAllLayers, reloadLayer } from "./LayerManager";
+import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
+import { disposeAllLayers, reloadLayer, reloadAllLayers } from "./LayerManager";
 
 let endEventId: number | null = null;
 
@@ -25,13 +25,10 @@ export async function play(options: PlayOptions = {}): Promise<void> {
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
 
+  // ON のパートはすべて先頭で読み込み、どの小節で鳴らすかは各パートがアレンジを見て決める
+  reloadAllLayers();
   startLoopArranger({
-    genre:        s.genre,
-    chordPattern: s.chordPattern,
-    drumPattern:  s.drumPattern,
-    melodyNotes:  s.melodyNotes,
-    key:          s.key,
-    bpm:          s.bpm,
+    loopBars:     s.chordPattern.length_bars,
     onLoopChange: options.onLoopChange,
   });
 
@@ -46,6 +43,7 @@ export async function play(options: PlayOptions = {}): Promise<void> {
 }
 
 // 1つのパートだけを試聴する（コード進行は1周、ドラムは2小節）。曲の再生中なら止めてから鳴らす
+// アレンジに関係なく鳴らすので、試聴中はアレンジの判定を外す
 export async function preview(layer: "chord" | "drum", onEnded?: () => void): Promise<void> {
   await Tone.start();
   const s = getState();
@@ -58,6 +56,7 @@ export async function preview(layer: "chord" | "drum", onEnded?: () => void): Pr
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
+  setArrangementBypass(true);
   reloadLayer(layer);
 
   const bars = layer === "chord" ? s.chordPattern.length_bars : 2;
@@ -80,6 +79,7 @@ export function stop(): void {
     endEventId = null;
   }
   stopLoopArranger();
+  setArrangementBypass(false);
   disposeAllLayers();
   transport.position = 0;
 }

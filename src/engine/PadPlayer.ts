@@ -2,6 +2,7 @@ import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
+import { arrangementGate } from "./LoopArranger";
 
 let padPart: Tone.Part | null = null;
 let padSynth: Tone.PolySynth | null = null;
@@ -44,7 +45,9 @@ export function loadPadPattern(
     });
   });
 
+  const arranged = arrangementGate("pad");
   padPart = new Tone.Part((time, event: any) => {
+    if (!arranged(time)) return;
     padSynth?.triggerAttackRelease(event.notes, event.dur, time);
   }, events);
 

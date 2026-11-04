@@ -418,8 +418,50 @@
         </div>
       </div>
 
-      <div class="screen-body" data-tab-panel="arranger" hidden>
-        <div class="placeholder">アレンジャーは準備中です</div>
+      <div class="screen-body screen-body-wide" data-tab-panel="arranger" hidden>
+        <div class="card arranger-card">
+          <div class="arranger-toolbar">
+            <span class="arranger-mode" id="c-arr-mode"></span>
+            <span class="arranger-hint">空いている所をクリックで配置／ドラッグで移動／端をドラッグで長さを変更／× で削除</span>
+            <button class="btn btn-small" id="c-arr-reset">↺ 標準に戻す</button>
+          </div>
+          <div class="arranger" id="c-arranger"></div>
+        </div>
+
+        <div class="arranger-bottom">
+          <div class="card panel">
+            <div class="panel-title panel-title-plain">レイヤー差し替え</div>
+            <div class="swap-row">
+              <span class="form-label">コード</span>
+              <span class="swap-desc" id="c-arr-chord"></span>
+              <button class="btn btn-small btn-icon" id="c-arr-chord-reroll" aria-label="コード進行を差し替え" title="差し替え">↻</button>
+            </div>
+            <div class="swap-row">
+              <span class="form-label">ドラム</span>
+              <span class="swap-desc" id="c-arr-drum"></span>
+              <button class="btn btn-small btn-icon" id="c-arr-drum-reroll" aria-label="ドラムを差し替え" title="差し替え">↻</button>
+            </div>
+            <div class="swap-row">
+              <span class="form-label">メロディ</span>
+              <span class="swap-desc" id="c-arr-melody"></span>
+              <button class="btn btn-small btn-icon" id="c-arr-melody-reroll" aria-label="メロディを差し替え" title="差し替え">↻</button>
+            </div>
+          </div>
+
+          <div class="card panel">
+            <div class="panel-title panel-title-plain">パート別音量</div>
+            <div class="volume-list" id="c-arr-volume-list"></div>
+          </div>
+
+          <div class="card panel">
+            <div class="panel-title panel-title-plain">エクスポート</div>
+            <div class="export-buttons">
+              <button class="btn" id="c-arr-export-midi">MIDI</button>
+              <button class="btn" id="c-arr-export-wav">WAV</button>
+            </div>
+            <p class="hint hint-left">MIDI はアレンジに未対応です（コード進行1周分）</p>
+          </div>
+        </div>
       </div>
 
       <div class="screen-body" data-tab-panel="pianoroll" hidden>
