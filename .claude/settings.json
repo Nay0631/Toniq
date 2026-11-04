@@ -5,7 +5,12 @@
       "mcp__claude_ai_Claude_Docs__batch",
       "mcp__claude_ai_Claude_Docs__guide",
       "mcp__claude_ai_Claude_Docs__update",
-      "Bash(node -e \"for \\(const f of ['chord_progressions','drum_patterns']\\){const d=require\\('./src/data/'+f+'.json'\\);console.log\\(f,d.length\\)};for \\(const f of ['easy_mode_table','tempo_presets','melody_params','mix_presets']\\){console.log\\(f, JSON.stringify\\(require\\('./src/data/'+f+'.json'\\)\\).slice\\(0,500\\)\\)}\")"
+      "Bash(node -e \"for \\(const f of ['chord_progressions','drum_patterns']\\){const d=require\\('./src/data/'+f+'.json'\\);console.log\\(f,d.length\\)};for \\(const f of ['easy_mode_table','tempo_presets','melody_params','mix_presets']\\){console.log\\(f, JSON.stringify\\(require\\('./src/data/'+f+'.json'\\)\\).slice\\(0,500\\)\\)}\")",
+      "Bash(cd /c/Users/st20234129/Desktop/toniq/node_modules/tone/build/esm/instrument && grep -n \"triggerAttackRelease\\\\|triggerAttack\\(\\\\|triggerRelease\\(\" MetalSynth.d.ts Monophonic.d.ts NoiseSynth.d.ts Instrument.d.ts; grep -n \"version\" ../../../package.json | head -2)",
+      "Read(//c/Users/**)",
+      "PowerShell($sp = \"C:\\\\Users\\\\ST2023~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-st20234129-Desktop-toniq\\\\25d6a90b-38d9-4103-8e02-405583b72478\\\\scratchpad\"; Start-Process -WindowStyle Hidden -FilePath \"cmd.exe\" -ArgumentList \"/c npx vite --config `\"$sp\\\\vite.web.config.mjs`\" > `\"$sp\\\\vite.log`\" 2>&1\" -WorkingDirectory \"C:\\\\Users\\\\st20234129\\\\Desktop\\\\toniq\"; Start-Sleep 5; Set-Location \"$sp\\\\pw\"; node drums.cjs)",
+      "PowerShell(npx tsc --noEmit; if \\($?\\) { Select-String -Path src\\\\engine\\\\SynthFactory.ts -Pattern \"makeup\" | ForEach-Object { $_.LineNumber.ToString\\(\\) + \": \" + $_.Line.Trim\\(\\) }; Set-Location \"C:\\\\Users\\\\ST2023~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-st20234129-Desktop-toniq\\\\25d6a90b-38d9-4103-8e02-405583b72478\\\\scratchpad\\\\pw\"; node drums.cjs })",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5174 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -Confirm:$false }; \"停止\")"
     ]
   }
 }

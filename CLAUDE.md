@@ -42,7 +42,7 @@ src/engine/
   LoopArranger.ts         周回ごとにパートを増やしていくアレンジ
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループ末尾のライザーSE）
   MelodyGenerator.ts      コード構成音・スケールに基づくメロディ生成
-  SynthFactory.ts         ドラム音源
+  SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止）、再生位置、WAVレンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）。オーディオコンテキストごとに保持
   MixerEngine.ts          マスターリバーブ／コンプ／リミッター
@@ -81,11 +81,13 @@ src/engine/
 - パート名は `"drum" | "chord" | "bass" | "arp" | "pad" | "melody" | "fx"`（`LayerName`）で統一。UI 表示名はドラム／コード／ベース／アルペジオ／パッド／メロディ／FX/SE。パート別音量の UI にはアルペジオも含める。
 - 各パートモジュールは `init*Synth()` / `load*()` / `dispose*()` の形にそろえる。`load*` は既存の Part を破棄してから作り直す。
 - ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
-- ジャンルは今後も追加・削除がありうる。追加するときは上の4つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE` にそろえて追加する。
+- ジャンルは今後も追加・削除がありうる。追加するときは上の4つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE` にそろえて追加する。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。
+- ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
 - 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
 - 拍子の変更（3/4 など）は保留中。現状は 4/4・16ステップ前提。
 - 「小節数」は曲全体の最大の長さを表す（コード進行1周の長さではない）。コード進行・ドラムはその長さに達するまでループし、アレンジャーのタイムラインと書き出しの長さもこの値に合わせる。現状は未実装で、コード進行の `length_bars` でループしているだけ。
 - Git のコミット・push はユーザーが自分で行う。Claude はコミット・push しない。
+- ある程度まとまった作業（機能の追加・画面の作成・不具合修正など）が終わったら、作業報告の最後にコミットメッセージ案を日本語で提示する。1行目に変更の要約（`feat:` / `fix:` / `refactor:` / `docs:` などの接頭辞付き）、空行のあとに主な変更点を箇条書きにする。案を示すだけで、コミットは実行しない。
 - コメント・ログは日本語。
 - Claude の出力はすべて日本語で書く。ユーザーへの返答・作業報告に加え、ツール実行時の説明（権限確認で表示される description）、ユーザーへの質問（選択肢を含む）、計画の提示も日本語にする。
 
