@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 import { getState } from "./AppState";
-import { initMixer, applyMixPreset, disposeMixer } from "./MixerEngine";
+import { applyMixPreset, mixerReady } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
 import { disposeAllLayers, reloadLayer, reloadAllLayers } from "./LayerManager";
 
@@ -19,9 +19,8 @@ export async function play(options: PlayOptions = {}): Promise<void> {
   if (!s.chordPattern || !s.drumPattern) return;
 
   stop();
-  disposeMixer();
-  initMixer();
   applyMixPreset(s.genre);
+  await mixerReady();
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
@@ -54,9 +53,8 @@ export async function preview(layer: "chord" | "drum", onEnded?: () => void): Pr
   if (!s.chordPattern || !s.drumPattern) return;
 
   stop();
-  disposeMixer();
-  initMixer();
   applyMixPreset(s.genre);
+  await mixerReady();
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
@@ -128,8 +126,8 @@ export async function renderWav(): Promise<Blob> {
   stop();
 
   const buffer = await Tone.Offline(async () => {
-    initMixer();
     applyMixPreset(s.genre);
+    await mixerReady();
     Tone.getTransport().bpm.value = s.bpm;
 
     const { loadDrumPattern: loadDrum }                          = await import("./DrumEngine");

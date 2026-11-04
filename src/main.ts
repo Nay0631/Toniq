@@ -11,6 +11,8 @@ import { initRouter } from "./ui/Router";
 import { initSimpleScreen } from "./ui/SimpleScreen";
 import { initCustomScreen } from "./ui/CustomScreen";
 import { initPianoRoll } from "./ui/PianoRollTab";
+import { initMusicListScreen } from "./ui/MusicListScreen";
+import { initQuizScreen } from "./ui/QuizScreen";
 import "./ui/styles.css";
 
 
@@ -40,5 +42,7 @@ window.addEventListener("load", () => {
   initSimpleScreen();
   initCustomScreen();
   initPianoRoll();
+  initMusicListScreen();
+  initQuizScreen();
   initRouter();
 });

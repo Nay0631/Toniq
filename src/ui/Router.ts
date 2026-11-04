@@ -49,18 +49,10 @@ export function render(): void {
     el.hidden = el.dataset.tabPanel !== tab;
   });
 
-  // シンプル／カスタムの切り替えは、その2画面でだけ表示する
-  const isMode = screen === "simple" || screen === "custom";
-  const modeSwitch = document.getElementById("mode-switch");
-  if (modeSwitch) modeSwitch.hidden = !isMode;
-  document.querySelectorAll<HTMLButtonElement>("[data-mode-target]").forEach(btn => {
-    btn.classList.toggle("is-active", btn.dataset.modeTarget === screen);
-  });
-
-  // パンくずはミュージックリスト・音楽クイズで表示する（モード画面はヘッダーで切り替える）
+  // パンくず（「メニューに戻る」と画面名）はメニュー以外のすべての画面で表示する
   const breadcrumb = document.getElementById("breadcrumb");
   const crumbTitle = document.getElementById("breadcrumb-title");
-  if (breadcrumb) breadcrumb.hidden = screen === "menu" || isMode;
+  if (breadcrumb) breadcrumb.hidden = screen === "menu";
   if (crumbTitle) crumbTitle.textContent = SCREEN_TITLES[screen];
 
   renderers.forEach(fn => fn());
@@ -70,33 +62,12 @@ export function render(): void {
 export function initRouter(): void {
   // data-goto 属性を持つ要素で画面を切り替える
   document.querySelectorAll<HTMLElement>("[data-goto]").forEach(el => {
-    el.addEventListener("click", () => {
-      showScreen(el.dataset.goto as Screen);
-      closeMoreMenu();
-    });
-  });
-
-  document.querySelectorAll<HTMLButtonElement>("[data-mode-target]").forEach(btn => {
-    btn.addEventListener("click", () => showScreen(btn.dataset.modeTarget as Screen));
+    el.addEventListener("click", () => showScreen(el.dataset.goto as Screen));
   });
 
   document.querySelectorAll<HTMLButtonElement>("[data-tab]").forEach(btn => {
     btn.addEventListener("click", () => showTab(btn.dataset.tab as Tab));
   });
 
-  // 「…」メニュー
-  const moreBtn  = document.getElementById("more-btn");
-  const moreMenu = document.getElementById("more-menu");
-  moreBtn?.addEventListener("click", e => {
-    e.stopPropagation();
-    if (moreMenu) moreMenu.hidden = !moreMenu.hidden;
-  });
-  document.addEventListener("click", closeMoreMenu);
-
   render();
-}
-
-function closeMoreMenu(): void {
-  const moreMenu = document.getElementById("more-menu");
-  if (moreMenu) moreMenu.hidden = true;
 }

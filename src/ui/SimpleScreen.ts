@@ -41,6 +41,7 @@ function generate(): void {
     drumPattern:   result.drumPattern,
     melodyVersion: 0,
     generated:     true,
+    songId:        null,  // 新しい曲としてミュージックリストに保存する
     arrangement:   null,  // カスタムモードで編集したアレンジは捨ててジャンルの標準に戻す
   });
   setState({ bars: songBars() });
