@@ -109,7 +109,7 @@ src/engine/
 - カスタムモード画面のピアノロールのタブは未実装（準備中表示）。
 - MIDI書き出しはアレンジに未対応（コード進行1周分のコードとメロディだけ）。
 - カスタムモードの「雰囲気」はコード進行の「カテゴリ」として選ぶ。スケールは `chordPattern.base_scale` から決まり（別に持たない）、スケールを選ぶとそのスケールのコード進行に切り替わる。
-- コードのリズム（`chordRhythm`）とメロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。音色は Synth を作り直したとき（再生開始時）に反映される。MIDI書き出しはコードのリズムに未対応。
+- コードのリズム（`chordRhythm`）・コードの音色（`chordInstrument`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。音色の定義は各 Player の `INSTRUMENTS`。音色は Synth を作り直したとき（再生開始時）に反映される。MIDI書き出しはコードのリズムに未対応。
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
 - シンプルモードの曲の長さは「コード進行の長さ × 全パートがそろうまでの周回数（4）」。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
