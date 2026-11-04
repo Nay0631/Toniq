@@ -1,0 +1,77 @@
+{
+  "EDM": {
+    "patterns": [
+      "..R...R...R...R.",
+      "..R...R...R..RR."
+    ],
+    "fill": "..R...R...O.O.F.",
+    "octaveShift": 1,
+    "synth": {
+      "oscillator": "sawtooth",
+      "envelope": { "attack": 0.005, "decay": 0.15, "sustain": 0.6, "release": 0.1 },
+      "filterQ": 2,
+      "filterEnvelope": { "attack": 0.005, "decay": 0.15, "sustain": 0.3, "release": 0.1, "baseFrequency": 200, "octaves": 3 },
+      "volume": -10
+    }
+  },
+  "テクノ": {
+    "patterns": [
+      ".RRR.RRR.RRR.RRR",
+      ".RRR.RRR.ROR.RRR"
+    ],
+    "fill": ".RRR.RRR.OOO.FFF",
+    "octaveShift": 1,
+    "synth": {
+      "oscillator": "square",
+      "envelope": { "attack": 0.002, "decay": 0.1, "sustain": 0.2, "release": 0.05 },
+      "filterQ": 4,
+      "filterEnvelope": { "attack": 0.002, "decay": 0.08, "sustain": 0.1, "release": 0.05, "baseFrequency": 150, "octaves": 3.5 },
+      "volume": -12
+    }
+  },
+  "8bit": {
+    "patterns": [
+      "R.O.R.O.R.O.R.O.",
+      "R.O.F.O.R.O.F.O."
+    ],
+    "fill": "R.O.R.O.F.F.O.O.",
+    "octaveShift": 1,
+    "synth": {
+      "oscillator": "triangle",
+      "envelope": { "attack": 0.001, "decay": 0.05, "sustain": 0.9, "release": 0.02 },
+      "filterQ": 0,
+      "filterEnvelope": { "attack": 0.001, "decay": 0.1, "sustain": 1, "release": 0.1, "baseFrequency": 5000, "octaves": 0 },
+      "volume": -4
+    }
+  },
+  "ローファイ": {
+    "patterns": [
+      "R-----F-..R-----",
+      "R-------..F-R---"
+    ],
+    "fill": "R-----F---O-F---",
+    "octaveShift": 1,
+    "synth": {
+      "oscillator": "sine",
+      "envelope": { "attack": 0.02, "decay": 0.4, "sustain": 0.6, "release": 0.4 },
+      "filterQ": 0.5,
+      "filterEnvelope": { "attack": 0.02, "decay": 0.3, "sustain": 0.5, "release": 0.4, "baseFrequency": 400, "octaves": 1 },
+      "volume": -4
+    }
+  },
+  "ゲームBGM": {
+    "patterns": [
+      "R---F---R---F---",
+      "R---F---O---F---"
+    ],
+    "fill": "R-R-F-F-O-O-F-F-",
+    "octaveShift": 1,
+    "synth": {
+      "oscillator": "sawtooth",
+      "envelope": { "attack": 0.01, "decay": 0.2, "sustain": 0.5, "release": 0.2 },
+      "filterQ": 1,
+      "filterEnvelope": { "attack": 0.01, "decay": 0.2, "sustain": 0.4, "release": 0.2, "baseFrequency": 300, "octaves": 1.5 },
+      "volume": -9
+    }
+  }
+}
