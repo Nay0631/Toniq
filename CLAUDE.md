@@ -28,12 +28,12 @@ src/ui/
   styles.css              デザイントークンと共通スタイル
 src/data/               楽曲データとデータ型
   types.ts                ChordProgression / DrumPattern 型
-  degree_resolver.ts      ディグリー → 実音の変換（resolveChord）
+  degree_resolver.ts      ディグリー → 実音の変換（resolveChord）、メロディ用のスケール音の役割（SCALE_TONES）
   chord_progressions.json コード進行DB（ディグリー表記）
   drum_patterns.json      ドラムパターンDB（16ステップ）
   easy_mode_table.json    シンプルモード用：ジャンル×雰囲気 → BPM・候補ID
   tempo_presets.json      ジャンル別テンポプリセット（ゆっくり/普通/速い）
-  melody_params.json      ジャンル別メロディ生成パラメータ
+  melody_params.json      ジャンル別メロディ生成パラメータ（リズムテンプレート・フレーズ形式・アクセント音の頻度など）
   mix_presets.json        ジャンル別マスターエフェクト設定
 src/engine/
   AppState.ts             アプリ状態の唯一の保持場所
@@ -41,7 +41,7 @@ src/engine/
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
   LoopArranger.ts         周回ごとにパートを増やしていくアレンジ
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループ末尾のライザーSE）
-  MelodyGenerator.ts      コード構成音・スケールに基づくメロディ生成
+  MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止）、再生位置、WAVレンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）。オーディオコンテキストごとに保持
@@ -64,7 +64,7 @@ src/engine/
 
 - `chord_progressions.json` には実音（`Am`, `F` など）を書かず、ディグリー（`Im`, `bVI`, `IV` …）＋ `type` ＋ `inversion` ＋ `base_scale` で記述する。
 - 実音への変換はキーが確定した再生・書き出し時点で `resolveChord(degree, type, inversion, key, scale, octave)`（`src/data/degree_resolver.ts`）を通して行う。各 Player や Generator で独自に音名を計算しない。
-- 新しいディグリーやスケールを使う場合は、`degree_resolver.ts` の `SCALE_INTERVALS`（必要なら `CHORD_INTERVALS`）にも追加する。未定義だと実行時に例外になる。
+- 新しいディグリーやスケールを使う場合は、`degree_resolver.ts` の `SCALE_INTERVALS`（必要なら `CHORD_INTERVALS`）にも追加する。未定義だと実行時に例外になる。スケールを追加するときは、同じファイルの `SCALE_TONES`（メロディ用のペンタトニック5音とアクセント2音）にも追加する。ない場合、メロディは minor として生成される。
 - キー変更は `AppState.key` を変えて再ロードするだけで済む状態を保つ。
 
 ### 3. 状態は AppState.ts で一元管理する
@@ -83,6 +83,11 @@ src/engine/
 - ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
 - ジャンルは今後も追加・削除がありうる。追加するときは上の4つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE` にそろえて追加する。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
+- メロディ生成の規則（`MelodyGenerator.ts`）：
+  - 音はペンタトニックの5音が基本。残りの2音（アクセント音）は、1拍目・3拍目の頭以外で、休符を挟まず次の音が続く位置にだけ経過音・刺繍音として置き、次の音で解決先へ順次進行させる。コード構成音になるアクセント音は普通の音として扱う。
+  - リズムは `melody_params.json` の `rhythmPatterns`（16ステップ表記。`x` = 発音、`-` = 伸ばす、`.` = 休符）から小節ごとに選ぶ。各小節の最初の音はコード構成音。
+  - `phraseForms`（例 `"AAAB"`。1文字 = 1小節）で同じ文字の小節は同じモチーフを使う。最初の音が新しいコードの構成音になるようスケール上でずらして繰り返す（音域に収まらなければ同じリズムで音を選び直す）。形式より長い進行は形式を繰り返す。
+  - 音価は `4n` などのほか付点（`8n.` など）や `0:拍:16分` 表記も出る。MIDI書き出しは `MidiExporter.ts` の `durationToBeats` で変換する。
 - 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
 - 拍子の変更（3/4 など）は保留中。現状は 4/4・16ステップ前提。
 - 「小節数」は曲全体の最大の長さを表す（コード進行1周の長さではない）。コード進行・ドラムはその長さに達するまでループし、アレンジャーのタイムラインと書き出しの長さもこの値に合わせる。現状は未実装で、コード進行の `length_bars` でループしているだけ。
@@ -103,4 +108,5 @@ src/engine/
 - シンプルモードの曲の長さは「コード進行の長さ × 全パートがそろうまでの周回数（4）」。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
 - 各パートの Synth はモジュールに1つずつ。WAV書き出し（Tone.Offline）は再生を止めて Synth を作り直し、終わったら破棄する。再生中に書き出すと再生は止まる。
+- `chord_progressions.json` の `chord_005`（`Im_bassG` などベース指定のディグリー）、`chord_010`（major に `bVII` / `bVI`）、`chord_019`（minor に `IIdim`）は `SCALE_INTERVALS` に定義がなく `resolveChord` が例外になる。これらが選ばれるとメロディ生成・再生ができない。
 - `Playback.play()` は開始時点の AppState で LoopArranger を組むので、再生中に曲の内容を変えたら先頭から再生し直す。

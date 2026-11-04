@@ -1,4 +1,4 @@
-const NOTE_INDEX: Record<string, number> = {
+export const NOTE_INDEX: Record<string, number> = {
   C: 0, "C#": 1, Db: 1,
   D: 2, "D#": 3, Eb: 3,
   E: 4,
@@ -15,6 +15,22 @@ const SCALE_INTERVALS: Record<string, Record<string, number>> = {
   minor:    { I:0, II:2, bIII:3, IV:5, V:7, bVI:8, bVII:10, Im:0, IVm:5, Vm:7, IIm:2 },
   phrygian: { I:0, bII:1, bIII:3, IV:5, V:7, bVI:8, bVII:10 },
   dorian:   { I:0, II:2, bIII:3, IV:5, V:7, VI:9, bVII:10 },
+};
+
+// ===== メロディ用のスケール音の役割（スケールを追加するときは SCALE_INTERVALS とそろえる） =====
+// core:   ペンタトニックの5音。メロディは基本的にこの5音で作る
+// accent: 残りの2音 → 解決先（どちらも主音からの半音数）。
+//         弱拍で経過音・刺繍音として使い、次の音で解決先へ順次進行する
+export interface ScaleTones {
+  core:   number[];
+  accent: Record<number, number[]>;
+}
+
+export const SCALE_TONES: Record<string, ScaleTones> = {
+  major:    { core: [0, 2, 4, 7, 9],  accent: { 5: [4],     11: [0] } },
+  minor:    { core: [0, 3, 5, 7, 10], accent: { 2: [0, 3],  8:  [7] } },
+  phrygian: { core: [0, 3, 5, 7, 10], accent: { 1: [0],     8:  [7] } },
+  dorian:   { core: [0, 3, 5, 7, 10], accent: { 9: [7, 10], 2:  [0, 3] } },
 };
 
 const CHORD_INTERVALS: Record<string, number[]> = {

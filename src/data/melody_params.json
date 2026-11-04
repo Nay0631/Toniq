@@ -1,39 +1,69 @@
 {
   "EDM": {
-    "noteLengthWeights": { "4n": 0.3, "8n": 0.5, "16n": 0.2 },
-    "restProbability": 0.1,
+    "rhythmPatterns": [
+      "x--x--x-x-x-x---",
+      "x-x--x--x-x--x--",
+      "x---x-x---x-x-x-",
+      "x-x-x--xx---x...",
+      "..x-x-x-x--x-x--"
+    ],
+    "phraseForms": ["AAAB", "ABAB", "AABB"],
     "maxLeap": 7,
     "preferStepwise": false,
     "octaveRange": [4, 5],
     "accentProbability": 0.15
   },
   "ローファイ": {
-    "noteLengthWeights": { "2n": 0.2, "4n": 0.5, "8n": 0.3 },
-    "restProbability": 0.3,
+    "rhythmPatterns": [
+      "x---..x-x-------",
+      "..x-x---x---....",
+      "x-----x-x---....",
+      "x-------..x-x---",
+      "....x-x-x-----.."
+    ],
+    "phraseForms": ["ABAC", "ABAB", "AABA"],
     "maxLeap": 3,
     "preferStepwise": true,
     "octaveRange": [4, 5],
     "accentProbability": 0.2
   },
   "ゲームBGM": {
-    "noteLengthWeights": { "4n": 0.4, "8n": 0.4, "16n": 0.2 },
-    "restProbability": 0.15,
+    "rhythmPatterns": [
+      "x---x---x-x-x---",
+      "x-x-x---x---x---",
+      "x---x-x-x-------",
+      "x-x-x-x-x---x-x-",
+      "x---x---x-----.."
+    ],
+    "phraseForms": ["ABAC", "AAAB", "ABAB"],
     "maxLeap": 5,
     "preferStepwise": true,
     "octaveRange": [4, 5],
     "accentProbability": 0.3
   },
   "8bit": {
-    "noteLengthWeights": { "4n": 0.3, "8n": 0.5, "16n": 0.2 },
-    "restProbability": 0.1,
+    "rhythmPatterns": [
+      "x-x-x-xxx-x-x---",
+      "x-xxx-x-x-xxx-x-",
+      "x---x-x-xx-xx---",
+      "x-x-x-x-x---x-x-",
+      "xxx-x-x-x---x---"
+    ],
+    "phraseForms": ["AAAB", "ABAC", "ABAB"],
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 6],
     "accentProbability": 0.3
   },
   "テクノ": {
-    "noteLengthWeights": { "4n": 0.2, "8n": 0.5, "16n": 0.3 },
-    "restProbability": 0.2,
+    "rhythmPatterns": [
+      "x.x.x..x..x.x...",
+      "x..x..x...x.x...",
+      "..x...x...x.x.x.",
+      "x.x...x.x.x.....",
+      "x..x..x.x..x..x."
+    ],
+    "phraseForms": ["AAAA", "AAAB", "ABAB"],
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 5],
