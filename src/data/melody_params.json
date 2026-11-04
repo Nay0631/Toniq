@@ -4,34 +4,39 @@
     "restProbability": 0.1,
     "maxLeap": 7,
     "preferStepwise": false,
-    "octaveRange": [4, 5]
+    "octaveRange": [4, 5],
+    "accentProbability": 0.15
   },
   "ローファイ": {
     "noteLengthWeights": { "2n": 0.2, "4n": 0.5, "8n": 0.3 },
     "restProbability": 0.3,
     "maxLeap": 3,
     "preferStepwise": true,
-    "octaveRange": [4, 5]
+    "octaveRange": [4, 5],
+    "accentProbability": 0.2
   },
   "ゲームBGM": {
     "noteLengthWeights": { "4n": 0.4, "8n": 0.4, "16n": 0.2 },
     "restProbability": 0.15,
     "maxLeap": 5,
     "preferStepwise": true,
-    "octaveRange": [4, 5]
+    "octaveRange": [4, 5],
+    "accentProbability": 0.3
   },
   "8bit": {
     "noteLengthWeights": { "4n": 0.3, "8n": 0.5, "16n": 0.2 },
     "restProbability": 0.1,
     "maxLeap": 5,
     "preferStepwise": false,
-    "octaveRange": [4, 6]
+    "octaveRange": [4, 6],
+    "accentProbability": 0.3
   },
   "テクノ": {
     "noteLengthWeights": { "4n": 0.2, "8n": 0.5, "16n": 0.3 },
     "restProbability": 0.2,
     "maxLeap": 5,
     "preferStepwise": false,
-    "octaveRange": [4, 5]
+    "octaveRange": [4, 5],
+    "accentProbability": 0.1
   }
 }

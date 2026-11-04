@@ -15,6 +15,7 @@ interface MelodyParam {
   maxLeap:           number;
   preferStepwise:    boolean;
   octaveRange:       number[];  // [number, number] → number[] に変更
+  accentProbability: number;    // 弱拍でアクセント音（ペンタトニック外の2音）を使う確率
 }
 
 // ===== 音名→MIDIノート番号 =====
@@ -32,12 +33,20 @@ function midiToNote(midi: number): string {
   return `${name}${octave}`;
 }
 
-// ===== スケール音一覧をMIDIで取得 =====
-const SCALE_SEMITONES: Record<string, number[]> = {
-  major:    [0, 2, 4, 5, 7, 9, 11],
-  minor:    [0, 2, 3, 5, 7, 8, 10],
-  phrygian: [0, 1, 3, 5, 7, 8, 10],
-  dorian:   [0, 2, 3, 5, 7, 9, 10],
+// ===== スケール音の役割 =====
+// core:   ペンタトニックの5音。メロディは基本的にこの5音で作る
+// accent: 残りの2音 → 解決先（どちらも主音からの半音数）。
+//         弱拍で経過音・刺繍音として使い、次の音で解決先へ順次進行する
+interface ScaleTones {
+  core:   number[];
+  accent: Record<number, number[]>;
+}
+
+const SCALE_TONES: Record<string, ScaleTones> = {
+  major:    { core: [0, 2, 4, 7, 9],  accent: { 5: [4],     11: [0] } },
+  minor:    { core: [0, 3, 5, 7, 10], accent: { 2: [0, 3],  8:  [7] } },
+  phrygian: { core: [0, 3, 5, 7, 10], accent: { 1: [0],     8:  [7] } },
+  dorian:   { core: [0, 3, 5, 7, 10], accent: { 9: [7, 10], 2:  [0, 3] } },
 };
 
 const NOTE_INDEX: Record<string, number> = {
@@ -46,14 +55,13 @@ const NOTE_INDEX: Record<string, number> = {
   A:9,"A#":10,Bb:10,B:11,
 };
 
+// ===== スケール音一覧をMIDIで取得 =====
 function getScaleNotes(
-  key: string,
-  scale: string,
+  root:      number,
+  semitones: number[],
   octaveMin: number,
   octaveMax: number
 ): number[] {
-  const root      = NOTE_INDEX[key] ?? 0;
-  const semitones = SCALE_SEMITONES[scale] ?? SCALE_SEMITONES.minor;
   const notes: number[] = [];
   for (let oct = octaveMin; oct <= octaveMax; oct++) {
     semitones.forEach(s => {
@@ -76,28 +84,69 @@ function weightedRandom(weights: Record<string, number>): string {
   return entries[entries.length - 1][0];
 }
 
+function pickRandom(list: number[]): number {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
 // ===== 次の音を選ぶ =====
+interface PickContext {
+  root:          number;   // 主音のピッチクラス
+  tones:         ScaleTones;
+  scaleNotes:    number[]; // スケール7音（MIDI）
+  coreNotes:     number[]; // ペンタトニック5音（MIDI）
+  chordMidi:     number[]; // 現在のコードの構成音（ピッチクラス）
+  param:         MelodyParam;
+  isDownbeat:    boolean;  // 小節の1拍目
+  accentAllowed: boolean;  // アクセント音を置いてよい位置か
+}
+
+function degreeOf(midi: number, root: number): number {
+  return (midi % 12 - root + 12) % 12;
+}
+
+// 解決が必要なアクセント音か（コード構成音になっているときは普通の音として扱う）
+function needsResolve(midi: number, ctx: PickContext): boolean {
+  return ctx.tones.accent[degreeOf(midi, ctx.root)] !== undefined
+      && !ctx.chordMidi.includes(midi % 12);
+}
+
 function pickNextNote(
-  prev:       number | null,
-  scaleNotes: number[],
-  chordMidi:  number[],
-  param:      MelodyParam,
-  isDownbeat: boolean
+  prev:          number | null,
+  prevNeedsRes:  boolean,
+  ctx:           PickContext
 ): number {
-  // ダウンビート（小節の1拍目）はコード構成音に着地
-  if (isDownbeat && chordMidi.length > 0) {
-    const candidates = scaleNotes.filter(n => chordMidi.includes(n % 12));
-    if (candidates.length > 0) {
-      return candidates[Math.floor(Math.random() * candidates.length)];
-    }
+  const { root, tones, scaleNotes, coreNotes, chordMidi, param } = ctx;
+
+  // 直前がアクセント音なら、解決先へ順次進行（2半音以内）
+  if (prev !== null && prevNeedsRes) {
+    const targets    = tones.accent[degreeOf(prev, root)] ?? [];
+    const candidates = scaleNotes.filter(n =>
+      n !== prev && Math.abs(n - prev) <= 2 && targets.includes(degreeOf(n, root))
+    );
+    if (candidates.length > 0) return pickRandom(candidates);
   }
 
-  if (prev === null) {
-    return scaleNotes[Math.floor(Math.random() * scaleNotes.length)];
+  // ダウンビート（小節の1拍目）はコード構成音に着地
+  if (ctx.isDownbeat && chordMidi.length > 0) {
+    const candidates = scaleNotes.filter(n => chordMidi.includes(n % 12));
+    if (candidates.length > 0) return pickRandom(candidates);
   }
+
+  if (prev === null) return pickRandom(coreNotes);
+
+  // 弱拍ではアクセント音を経過音・刺繍音として入れる
+  if (ctx.accentAllowed && Math.random() < param.accentProbability) {
+    const candidates = scaleNotes.filter(n =>
+      n !== prev && Math.abs(n - prev) <= 2 && needsResolve(n, ctx)
+    );
+    if (candidates.length > 0) return pickRandom(candidates);
+  }
+
+  // それ以外はペンタトニック5音＋コード構成音になっているアクセント音から選ぶ
+  const pool = scaleNotes.filter(n => coreNotes.includes(n) || chordMidi.includes(n % 12));
 
   // 跳躍幅・順次進行の優先度を適用してフィルタリング
-  let candidates = scaleNotes.filter(n => {
+  let candidates = pool.filter(n => {
     const leap = Math.abs(n - prev);
     if (leap === 0) return false;           // 同じ音の連続を避ける
     if (leap > param.maxLeap) return false; // 最大跳躍を超えない
@@ -124,7 +173,11 @@ export function generateMelody(
 ): MelodyNote[] {
   const param = (melodyParams as unknown as Record<string, MelodyParam>)[genre]
               ?? (melodyParams as unknown as Record<string, MelodyParam>)["ローファイ"];
-  const scaleNotes = getScaleNotes(key, progression.base_scale, param.octaveRange[0], param.octaveRange[1]);
+  const root       = NOTE_INDEX[key] ?? 0;
+  const tones      = SCALE_TONES[progression.base_scale] ?? SCALE_TONES.minor;
+  const allTones   = [...tones.core, ...Object.keys(tones.accent).map(Number)];
+  const scaleNotes = getScaleNotes(root, allTones,   param.octaveRange[0], param.octaveRange[1]);
+  const coreNotes  = getScaleNotes(root, tones.core, param.octaveRange[0], param.octaveRange[1]);
 
   const notes: MelodyNote[] = [];
   let currentTime = 0; // 16分音符単位で管理
@@ -155,10 +208,11 @@ export function generateMelody(
   }
 
   let prevMidi: number | null = null;
+  let prevNeedsRes = false;
 
   while (currentTime < totalUnits) {
-    // 休符判定
-    if (Math.random() < param.restProbability) {
+    // 休符判定（直前のアクセント音は休符を挟まずすぐ解決させる）
+    if (!prevNeedsRes && Math.random() < param.restProbability) {
       const dur   = weightedRandom(param.noteLengthWeights);
       const units = durationToUnits[dur] ?? 4;
       const bar   = Math.floor(currentTime / 16);
@@ -173,7 +227,12 @@ export function generateMelody(
     const units     = durationToUnits[dur] ?? 4;
     const isDownbeat = currentTime % 16 === 0;
     const chordMidi = getChordMidi(currentTime);
-    const midi      = pickNextNote(prevMidi, scaleNotes, chordMidi, param, isDownbeat);
+    // 1拍目・3拍目の頭と最後の音にはアクセント音を置かない（解決できずに終わるのを防ぐ）
+    const accentAllowed = currentTime % 8 !== 0 && currentTime + units < totalUnits;
+    const ctx: PickContext = {
+      root, tones, scaleNotes, coreNotes, chordMidi, param, isDownbeat, accentAllowed,
+    };
+    const midi      = pickNextNote(prevMidi, prevNeedsRes, ctx);
     const bar       = Math.floor(currentTime / 16);
     const beat      = Math.floor((currentTime % 16) / 4);
     const tick      = (currentTime % 4);
@@ -185,6 +244,7 @@ export function generateMelody(
     });
 
     prevMidi     = midi;
+    prevNeedsRes = needsResolve(midi, ctx);
     currentTime += Math.min(units, totalUnits - currentTime);
   }
 
