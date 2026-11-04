@@ -74,5 +74,35 @@
     "octaveRange": [4, 5],
     "accentProbability": 0.1,
     "instrument": "acid"
+  },
+  "ハウス": {
+    "rhythmPatterns": [
+      "x-..x-..x-x-....",
+      "x--x--x---..x-..",
+      "x-x-..x---x-....",
+      "..x-..x-..x-x---",
+      "x-......x-..x-x-"
+    ],
+    "phraseForms": ["AAAB", "ABAB", "AABB"],
+    "maxLeap": 5,
+    "preferStepwise": false,
+    "octaveRange": [4, 5],
+    "accentProbability": 0.15,
+    "instrument": "pluck"
+  },
+  "アンビエント": {
+    "rhythmPatterns": [
+      "x---------------",
+      "x-------x-------",
+      "x-----------x---",
+      "x-------....x---",
+      "x-----x-x-------"
+    ],
+    "phraseForms": ["ABAC", "AABA", "ABAB"],
+    "maxLeap": 4,
+    "preferStepwise": true,
+    "octaveRange": [4, 5],
+    "accentProbability": 0.25,
+    "instrument": "soft"
   }
 }

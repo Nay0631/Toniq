@@ -16,7 +16,7 @@ import { startPianoRollPlayhead } from "./PianoRollTab";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
-const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ"];
+const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "アンビエント"];
 
 // パート別音量の並び（UI 表示名）
 const VOLUME_PARTS: { name: LayerName; label: string }[] = [
@@ -273,16 +273,6 @@ export function initCustomScreen(): void {
   $("c-stop")?.addEventListener("click", () => {
     Playback.stop();
     render();
-  });
-
-  // 生成する：自動生成ならメロディを新しいフレーズにして、今の設定で先頭から再生する
-  $("c-generate")?.addEventListener("click", async () => {
-    const s = getState();
-    if (s.melodyMethod === "auto") {
-      setState({ melodyVersion: s.melodyVersion + 1 });
-      makeMelody();
-    }
-    await startPlayback();
   });
 
   // ===== 基本設定 =====

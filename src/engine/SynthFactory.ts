@@ -62,6 +62,19 @@ const DRUM_KITS: Record<string, DrumKitParams> = {
     hat:   { decay: 0.04, openDecay: 0.28, freq: 8000 },
     bus:   { lowpass: 15000, drive: 0.05, compress: -12, makeup: 8 },
   },
+  ハウス: {
+    kick:  { note: "C1", octaves: 4.5, pitchDecay: 0.04, decay: 0.45, wave: "sine", click: 0.3 },
+    snare: { tone: 200, decay: 0.18, noiseFreq: 2000 },
+    hat:   { decay: 0.04, openDecay: 0.4, freq: 8500 },
+    bus:   { lowpass: 17000, drive: 0.15, compress: -14, makeup: 4 },
+  },
+  // アンビエント：アタックを丸め、高域を落として奥で鳴らす
+  アンビエント: {
+    kick:  { note: "D1", octaves: 2.5, pitchDecay: 0.03, decay: 0.4, wave: "sine", click: 0.05 },
+    snare: { tone: 180, decay: 0.22, noiseFreq: 1200 },
+    hat:   { decay: 0.03, openDecay: 0.3, freq: 6500 },
+    bus:   { lowpass: 7000, drive: 0.05, compress: -18, makeup: 6 },
+  },
 };
 
 // 強弱を音量に変換する（弱い音が小さくなりすぎないよう曲線をつける）

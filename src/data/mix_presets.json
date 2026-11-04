@@ -33,5 +33,19 @@
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.12 },
     "limiter":   { "threshold": -1 },
     "gain":      -3
+  },
+  "ハウス": {
+    "reverb":    { "decay": 1.8, "wet": 0.2 },
+    "eq":        { "low": 3, "mid": -1, "high": 2 },
+    "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.15 },
+    "limiter":   { "threshold": -1 },
+    "gain":      -4
+  },
+  "アンビエント": {
+    "reverb":    { "decay": 6.0, "wet": 0.45 },
+    "eq":        { "low": 0, "mid": -1, "high": 1 },
+    "compressor":{ "threshold": -20, "ratio": 2, "attack": 0.05, "release": 0.5 },
+    "limiter":   { "threshold": -1 },
+    "gain":      -4
   }
 }

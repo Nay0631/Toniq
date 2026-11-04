@@ -37,6 +37,19 @@ const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
     3: ["drum", "bass", "arp", "chord", "fx"],
     4: ["drum", "bass", "arp", "chord", "pad", "melody", "fx"],
   },
+  "ハウス": {
+    1: ["drum", "bass"],
+    2: ["drum", "bass", "chord", "fx"],
+    3: ["drum", "bass", "chord", "pad", "melody", "fx"],
+    4: ["drum", "bass", "chord", "pad", "melody", "arp", "fx"],
+  },
+  // アンビエント：パッドとコードから始め、ドラムは最後に薄く足す
+  "アンビエント": {
+    1: ["pad", "chord"],
+    2: ["pad", "chord", "melody"],
+    3: ["pad", "chord", "melody", "bass", "arp"],
+    4: ["pad", "chord", "melody", "bass", "arp", "drum"],
+  },
 };
 
 // 指定した周回で鳴っているパート
