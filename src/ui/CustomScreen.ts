@@ -2,6 +2,7 @@ import { getState, setState, ChordRhythm, ChordInstrument, MelodyInstrument } fr
 import { resolveTempoPreset } from "../engine/SimpleModeResolver";
 import { generateMelody } from "../engine/MelodyGenerator";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
+import { signatureLabel } from "../engine/SignaturePlayer";
 import { setVolume } from "../engine/VolumeManager";
 import { tap } from "../engine/TapTempo";
 import { exportMidi } from "../engine/MidiExporter";
@@ -26,6 +27,7 @@ const VOLUME_PARTS: { name: LayerName; label: string }[] = [
   { name: "bass",   label: "ベース" },
   { name: "pad",    label: "パッド" },
   { name: "arp",    label: "アルペジオ" },
+  { name: "signature", label: "シグネチャー" },
   { name: "fx",     label: "FX/SE" },
 ];
 
@@ -238,7 +240,9 @@ function render(): void {
   $select("c-drum-category").value = s.drumCategory;
   fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
 
-  // パッド / アルペジオ
+  // パッド / アルペジオ / シグネチャー
+  const sigLabel = document.getElementById("c-signature-label");
+  if (sigLabel) sigLabel.textContent = `（${signatureLabel(s.genre)}）`;
   document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el => {
     const on = s.parts[el.dataset.partToggle as LayerName];
     el.classList.toggle("is-on", on);
@@ -409,7 +413,7 @@ export function initCustomScreen(): void {
     render();
   });
 
-  // ===== パッド / アルペジオ =====
+  // ===== パッド / アルペジオ / シグネチャー =====
   document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el =>
     el.addEventListener("click", () => {
       const part = el.dataset.partToggle as LayerName;

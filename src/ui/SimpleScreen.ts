@@ -90,7 +90,7 @@ function renderWave(): void {
     const bar   = Math.floor(i / 4);
     const parts = LAYERS.filter(p => s.parts[p] && isArrangedAt(p, bar)).length;
     const jitter = ((i * 37) % 11) / 55;
-    const h = Math.min(1, 0.2 + (parts / 7) * (0.45 + 0.45 * energies[i] / maxEnergy) + jitter);
+    const h = Math.min(1, 0.2 + (parts / LAYERS.length) * (0.45 + 0.45 * energies[i] / maxEnergy) + jitter);
     const el = document.createElement("span");
     el.style.height = `${Math.round(h * 100)}%`;
     wave.appendChild(el);

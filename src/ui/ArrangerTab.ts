@@ -2,6 +2,7 @@ import { getState, setState, ArrangeBlock, Arrangement } from "../engine/AppStat
 import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArranger";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
+import { signatureLabel } from "../engine/SignaturePlayer";
 
 // アレンジャーのレーン（上から表示する順）
 const LANES: { name: LayerName; label: string }[] = [
@@ -11,6 +12,7 @@ const LANES: { name: LayerName; label: string }[] = [
   { name: "melody", label: "メロディ" },
   { name: "pad",    label: "パッド" },
   { name: "arp",    label: "アルペジオ" },
+  { name: "signature", label: "シグネチャー" },
   { name: "fx",     label: "FX / SE" },
 ];
 
@@ -43,6 +45,10 @@ function laneLabels(part: LayerName): { sub: string; block: string } {
     case "bass": return { sub: "ルート追従", block: "ルート追従" };
     case "pad":  return { sub: "コード追従", block: "パッド" };
     case "arp":  return { sub: "8分音符",   block: "アルペジオ" };
+    case "signature": {
+      const label = signatureLabel(s.genre);
+      return { sub: label, block: label };
+    }
     case "fx":   return { sub: "ライザーSE", block: "ライザーSE" };
   }
 }

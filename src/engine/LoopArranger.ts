@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { getState, ArrangeBlock, Arrangement } from "./AppState";
 import type { LayerName } from "./LayerManager";
 
-export const LAYERS: LayerName[] = ["drum", "chord", "bass", "arp", "pad", "melody", "fx"];
+export const LAYERS: LayerName[] = ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"];
 
 // ジャンルごとの周回アレンジ定義（パートは一度入ると以降の周回でも鳴り続ける）
 // 標準アレンジ（AppState.arrangement が null のとき）はこれを周回の長さで並べて作る
@@ -10,45 +10,45 @@ const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
   "EDM": {
     1: ["drum", "chord"],
     2: ["drum", "chord", "bass", "fx"],
-    3: ["drum", "chord", "bass", "arp", "pad", "fx"],
-    4: ["drum", "chord", "bass", "arp", "pad", "melody", "fx"],
+    3: ["drum", "chord", "bass", "arp", "pad", "signature", "fx"],
+    4: ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"],
   },
   "8bit": {
     1: ["drum", "chord"],
     2: ["drum", "chord", "melody"],
     3: ["drum", "chord", "melody", "bass", "fx"],
-    4: ["drum", "chord", "melody", "bass", "arp", "fx"],
+    4: ["drum", "chord", "melody", "bass", "arp", "signature", "fx"],
   },
   "ローファイ": {
-    1: ["drum", "chord", "pad"],
-    2: ["drum", "chord", "pad", "bass"],
-    3: ["drum", "chord", "pad", "bass", "melody"],
-    4: ["drum", "chord", "pad", "bass", "melody", "arp"],
+    1: ["drum", "chord", "pad", "signature"],
+    2: ["drum", "chord", "pad", "bass", "signature"],
+    3: ["drum", "chord", "pad", "bass", "melody", "signature"],
+    4: ["drum", "chord", "pad", "bass", "melody", "arp", "signature"],
   },
   "ゲームBGM": {
     1: ["drum", "chord"],
     2: ["drum", "chord", "bass", "pad"],
-    3: ["drum", "chord", "bass", "pad", "melody", "fx"],
-    4: ["drum", "chord", "bass", "pad", "melody", "arp", "fx"],
+    3: ["drum", "chord", "bass", "pad", "melody", "signature", "fx"],
+    4: ["drum", "chord", "bass", "pad", "melody", "arp", "signature", "fx"],
   },
   "テクノ": {
     1: ["drum"],
-    2: ["drum", "bass", "fx"],
-    3: ["drum", "bass", "arp", "chord", "fx"],
-    4: ["drum", "bass", "arp", "chord", "pad", "melody", "fx"],
+    2: ["drum", "bass", "signature", "fx"],
+    3: ["drum", "bass", "signature", "arp", "chord", "fx"],
+    4: ["drum", "bass", "signature", "arp", "chord", "pad", "melody", "fx"],
   },
   "ハウス": {
     1: ["drum", "bass"],
     2: ["drum", "bass", "chord", "fx"],
-    3: ["drum", "bass", "chord", "pad", "melody", "fx"],
-    4: ["drum", "bass", "chord", "pad", "melody", "arp", "fx"],
+    3: ["drum", "bass", "chord", "pad", "melody", "signature", "fx"],
+    4: ["drum", "bass", "chord", "pad", "melody", "arp", "signature", "fx"],
   },
   // アンビエント：パッドとコードから始め、ドラムは最後に薄く足す
   "アンビエント": {
     1: ["pad", "chord"],
-    2: ["pad", "chord", "melody"],
-    3: ["pad", "chord", "melody", "bass", "arp"],
-    4: ["pad", "chord", "melody", "bass", "arp", "drum"],
+    2: ["pad", "chord", "melody", "signature"],
+    3: ["pad", "chord", "melody", "bass", "arp", "signature"],
+    4: ["pad", "chord", "melody", "bass", "arp", "signature", "drum"],
   },
 };
 
@@ -68,7 +68,7 @@ export function getFullArrangementLoops(genre: string): number {
 // ===== アレンジ =====
 
 export function emptyArrangement(): Arrangement {
-  return { drum: [], chord: [], bass: [], arp: [], pad: [], melody: [], fx: [] };
+  return { drum: [], chord: [], bass: [], arp: [], pad: [], signature: [], melody: [], fx: [] };
 }
 
 // ジャンルの標準アレンジ：周回ごとに LOOP_SCHEDULE のパートを置き、続いている周回は1つのブロックにまとめる
