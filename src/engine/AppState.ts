@@ -42,6 +42,7 @@ export interface ArrangeBlock {
   start:  number;
   length: number;
   fx?:    FxType;  // FX のブロックだけ：このブロックで鳴らす種類（なし・"auto" = 曲の設定 AppState.fxType）
+  drum?:  string;  // ドラムのブロックだけ：このブロックで鳴らすパターンの ID（なし = 曲の設定 AppState.drumPattern）
 }
 
 // パートごとのブロックの並び（開始小節順・重なりなし）

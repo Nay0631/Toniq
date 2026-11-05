@@ -962,8 +962,8 @@ button {
   text-overflow: ellipsis;
 }
 
-/* FX のブロックの種類選び：ラベルと同じ見た目で、▾ を付けたセレクト */
-.arr-fx-select {
+/* FX の種類・ドラムのパターンのブロックごとの選択：ラベルと同じ見た目で、▾ を付けたセレクト */
+.arr-block-select {
   appearance: none;
   -webkit-appearance: none;
   height: 100%;
@@ -980,9 +980,9 @@ button {
   background-repeat: no-repeat;
 }
 
-.arr-fx-select:focus-visible { outline: 2px solid var(--custom); outline-offset: -2px; }
+.arr-block-select:focus-visible { outline: 2px solid var(--custom); outline-offset: -2px; }
 
-.arr-fx-select option {
+.arr-block-select option {
   color: var(--text);
   background: var(--surface);
 }

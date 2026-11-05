@@ -102,6 +102,7 @@ src/engine/
   - `chord_progressions.json` / `drum_patterns.json` の `genre` タグにも新ジャンルを付ける。シンプルモードの差し替え候補は、`easy_mode_table.json` の ID に加えてジャンル・雰囲気のタグが一致するものから選ばれる。下の既知の問題にある、例外になるコード進行はタグに含めない。
   - 4/4・16ステップの前提で表せないジャンル（スウィング・3連符、32分のハイハットロール、3拍子など）は今の仕組みでは作れない。
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
+- アレンジャーのドラムのブロックは1つずつパターンを持てる（`ArrangeBlock.drum` = パターン ID。ブロックのラベルのセレクトで選ぶ。今のジャンルのパターンを先に並べ、ほかのジャンルも選べる。なし = 曲の設定 `drumPattern`）。鳴らすときはステップごとに `arrangementBlockAt("drum")` でブロックを調べてパターンを決めるので、再生中の変更もすぐ反映される。キットはパターンを切り替えても音が欠けないよう、DB に出てくる全トラック分を作る。16ステップ・`16n` 以外のパターンを足すときは `DrumEngine.ts` の Sequence を見直す。
 - ドラムの音源（テスト中）：`AppState.drumSource` が `"synth"`（Tone.js のシンセ、初期値）か `"sample"`（ワンショット音源）。カスタムモードのドラム欄の「音源」で切り替える。曲の内容ではないので `SONG_FIELDS` には入れない。
   - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。
