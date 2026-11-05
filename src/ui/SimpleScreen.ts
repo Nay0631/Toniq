@@ -3,6 +3,7 @@ import { resolveSimpleMode, resolveTempoPreset, rerollChord, rerollDrum } from "
 import { generateMelody } from "../engine/MelodyGenerator";
 import { getFullArrangementLoops, isArrangedAt, LAYERS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
+import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
 import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
 import { onRender, showTab } from "./Router";
@@ -34,6 +35,7 @@ function makeMelody(): void {
 
 function generate(): void {
   Playback.stop();
+  stopMetronome();  // 設定画面が隠れるので BPM のクリック音も止める
   const s = getState();
   const result = resolveSimpleMode(s.genre, s.mood);
   setState({
@@ -157,6 +159,9 @@ function render(): void {
     el.classList.toggle("is-active", el.dataset.tempo === s.tempoPreset));
   $("s-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   $("s-bpm")!.textContent = `${s.bpm} BPM`;
+  const metronomeOn = isMetronomeOn();
+  $("s-metronome")!.textContent = metronomeOn ? "■ クリックを止める" : "♪ クリックで試聴";
+  $("s-metronome")!.classList.toggle("is-active", metronomeOn);
   $$("[data-melody-method]").forEach(el =>
     el.classList.toggle("is-active", el.dataset.melodyMethod === s.melodyMethod));
 
@@ -206,6 +211,13 @@ export function initSimpleScreen(): void {
       setState({ tempoPreset: preset, bpm: resolveTempoPreset(getState().genre, preset) });
       render();
     }));
+
+  // 今の BPM の速さをクリック音で確かめる（鳴らしたままテンポを変えるとすぐ反映される）
+  $("s-metronome")?.addEventListener("click", () => {
+    if (!isMetronomeOn()) Playback.stop();  // 曲の再生とは重ねない
+    toggleMetronome();
+  });
+  onMetronomeChange(render);
 
   $("s-tap")?.addEventListener("click", () => {
     // tap() が AppState.bpm と tempoPreset を更新する

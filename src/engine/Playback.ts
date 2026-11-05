@@ -3,6 +3,7 @@ import { getState } from "./AppState";
 import { applyMixPreset, mixerReady } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
 import { disposeAllLayers, reloadLayer, reloadAllLayers } from "./LayerManager";
+import { stopMetronome } from "./Metronome";
 
 let endEventId: number | null = null;
 
@@ -18,6 +19,7 @@ export async function play(options: PlayOptions = {}): Promise<void> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
+  stopMetronome();  // BPM のクリック音と重ねない
   stop();
   applyMixPreset(s.genre);
   await mixerReady();
@@ -52,6 +54,7 @@ export async function preview(layer: "chord" | "drum", onEnded?: () => void): Pr
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
+  stopMetronome();  // BPM のクリック音と重ねない
   stop();
   applyMixPreset(s.genre);
   await mixerReady();

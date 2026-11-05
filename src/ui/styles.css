@@ -722,6 +722,8 @@ button {
 
 .bpm-number { text-align: right; font-variant-numeric: tabular-nums; }
 #c-tap.is-active { border-color: var(--custom); color: var(--custom); }
+#c-metronome.is-active { border-color: var(--custom); color: var(--custom); }
+#s-metronome.is-active { background: var(--list-soft); border-color: var(--list); color: var(--list-ink); font-weight: 600; }
 
 /* スケールロックなどのスイッチ */
 .switch-row {

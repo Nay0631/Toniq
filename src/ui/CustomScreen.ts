@@ -4,6 +4,7 @@ import { generateMelody } from "../engine/MelodyGenerator";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { signatureLabel } from "../engine/SignaturePlayer";
 import { tap } from "../engine/TapTempo";
+import { isMetronomeOn, onMetronomeChange, toggleMetronome } from "../engine/Metronome";
 import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
@@ -168,6 +169,9 @@ function render(): void {
   $("c-bpm-value")!.textContent = `${s.bpm}`;
   syncControls();
   $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
+  const metronomeOn = isMetronomeOn();
+  $("c-metronome")!.textContent = metronomeOn ? "■ 停止" : "♪ 試聴";
+  $("c-metronome")!.classList.toggle("is-active", metronomeOn);
 
   // 小節数：選択肢にない値（シンプルモードから引き継いだ値など）も表示できるようにする
   const barsSelect = $select("c-bars");
@@ -257,6 +261,13 @@ export function initCustomScreen(): void {
     setBpm(parseInt(bpmRange.value));
     render();
   });
+
+  // 今の BPM の速さをクリック音で確かめる（鳴らしたままノブを回すとすぐ反映される）
+  $("c-metronome")?.addEventListener("click", () => {
+    if (!isMetronomeOn()) Playback.stop();  // 曲の再生とは重ねない
+    toggleMetronome();
+  });
+  onMetronomeChange(render);
 
   $("c-tap")?.addEventListener("click", () => {
     // tap() が AppState.bpm と tempoPreset を更新する
