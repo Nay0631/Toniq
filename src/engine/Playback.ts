@@ -26,7 +26,36 @@ interface PlayOptions {
   onEnded?:      () => void;
 }
 
-// 曲の先頭（または fromBar 小節目）から再生する。AppState.bars 小節で自動停止する
+// 曲の再生（play）中の終わったときの処理。null = 曲を再生していない（試聴・サンプル・停止中）
+let songOnEnded: (() => void) | null = null;
+
+// 曲の終わりの扱いを AppState.loopPlayback に合わせる。
+// ループ再生なら Transport を曲全体（先頭〜AppState.bars 小節）でループさせ、そうでなければ曲の終わりで止める
+export function applyLoopPlayback(): void {
+  if (songOnEnded === null) return;
+  const transport = Tone.getTransport();
+  const s = getState();
+  if (endEventId !== null) {
+    transport.clear(endEventId);
+    endEventId = null;
+  }
+  if (s.loopPlayback) {
+    transport.loopStart = 0;
+    transport.loopEnd   = `${s.bars}m`;
+    transport.loop      = true;
+  } else {
+    transport.loop = false;
+    const onEnded = songOnEnded;
+    endEventId = transport.scheduleOnce(time => {
+      Tone.getDraw().schedule(() => {
+        stop();
+        onEnded();
+      }, time);
+    }, `${s.bars}m`);
+  }
+}
+
+// 曲の先頭（または fromBar 小節目）から再生する。AppState.bars 小節で自動停止する（ループ再生なら先頭へ戻る）
 export async function play(options: PlayOptions = {}): Promise<void> {
   await Tone.start();
   const s = getState();
@@ -49,12 +78,8 @@ export async function play(options: PlayOptions = {}): Promise<void> {
     onLoopChange: options.onLoopChange,
   });
 
-  endEventId = transport.scheduleOnce(time => {
-    Tone.getDraw().schedule(() => {
-      stop();
-      options.onEnded?.();
-    }, time);
-  }, `${s.bars}m`);
+  songOnEnded = () => options.onEnded?.();
+  applyLoopPlayback();
 
   // ループする Part は Transport の位置に合わせて途中から鳴る
   transport.start(undefined, `${fromBar}m`);
@@ -149,6 +174,8 @@ export function stopSample(): void {
 export function stop(): void {
   const transport = Tone.getTransport();
   transport.stop();
+  transport.loop = false;  // ループ再生の設定は曲の再生のたびに applyLoopPlayback で付け直す
+  songOnEnded = null;
   if (endEventId !== null) {
     transport.clear(endEventId);
     endEventId = null;

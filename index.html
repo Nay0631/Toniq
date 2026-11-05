@@ -463,15 +463,6 @@
               </div>
             </div>
 
-            <!-- テスト中：ドラムを Tone.js のシンセで鳴らすか、ワンショット音源（public/samples/drums）で鳴らすか -->
-            <label class="form-row">
-              <span class="form-label">音源</span>
-              <select class="select" id="c-drum-source">
-                <option value="synth">Tone.js シンセ</option>
-                <option value="sample">サンプル音源</option>
-              </select>
-            </label>
-
             <hr class="panel-divider">
 
             <div class="panel-title">
@@ -711,6 +702,40 @@
               <button class="chip" role="radio" data-settings-skin="flat">フラット</button>
               <button class="chip" role="radio" data-settings-skin="studio">スタジオ</button>
               <button class="chip" role="radio" data-settings-skin="pop">ポップ</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-text">
+              <div class="settings-label">音名の表記</div>
+              <div class="settings-desc">ピアノロールの鍵盤・ルート音・音楽クイズの音名を「C D E」か「ド レ ミ」で表示します。コード名（Am など）とキーは C D E のままです。</div>
+            </div>
+            <div class="chips settings-options" role="radiogroup" aria-label="音名の表記">
+              <button class="chip" role="radio" data-settings-notes="cde">C D E</button>
+              <button class="chip" role="radio" data-settings-notes="doremi">ド レ ミ</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card settings-group">
+          <h2 class="settings-group-title">再生・音</h2>
+
+          <div class="settings-row">
+            <div class="settings-text">
+              <div class="settings-label">ループ再生</div>
+              <div class="settings-desc">曲の終わりで止めずに、先頭へ戻って繰り返し再生します。聴きながら作るときに便利です。再生中に切り替えてもすぐ反映されます。</div>
+            </div>
+            <button class="toggle" id="settings-loop" role="switch" aria-label="ループ再生"><span></span></button>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-text">
+              <div class="settings-label">ドラムの音源（テスト中）</div>
+              <div class="settings-desc">ドラムを、パソコンの中で音を作るシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がないジャンルの音はシンセで鳴ります。</div>
+            </div>
+            <div class="chips settings-options" role="radiogroup" aria-label="ドラムの音源">
+              <button class="chip" role="radio" data-settings-drum-source="synth">シンセ</button>
+              <button class="chip" role="radio" data-settings-drum-source="sample">サンプル音源</button>
             </div>
           </div>
         </div>

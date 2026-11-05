@@ -1,4 +1,5 @@
 import { getState } from "../engine/AppState";
+import { displayNote } from "../ui/format";
 import * as A from "./QuizAudio";
 
 // 音楽クイズの出題モード（初心者向け）。各モードは出題設定（モード内に保持）と問題の作り方を持つ
@@ -74,10 +75,9 @@ const DOREMI        = ["ド", "ド#", "レ", "レ#", "ミ", "ファ", "ファ#",
 const WHITE_INDEXES = [0, 2, 4, 5, 7, 9, 11];
 const ALL_INDEXES   = NOTES.map((_, i) => i);
 
-// 音名（CDE 表記）を今の表記（CDE／ドレミ）で表す。コード名・キー名は CDE 表記のまま
-export function displayNote(note: string): string {
-  return getState().quizNoteNames === "doremi" ? DOREMI[NOTES.indexOf(note)] : note;
-}
+// 音名（CDE 表記）を今の表記（CDE／ドレミ。アプリ全体の設定 AppState.noteNames）で表す。
+// コード名・キー名は CDE 表記のまま
+export { displayNote };
 
 function noteName(index: number): string {
   return displayNote(NOTES[index % 12]);
@@ -350,7 +350,7 @@ const keyPosition = ((): QuizMode => {
     question() {
       const pool = notePool(black);
       const i = pool[rand(pool.length)];
-      const other = getState().quizNoteNames === "doremi" ? NOTES[i] : DOREMI[i];
+      const other = getState().noteNames === "doremi" ? NOTES[i] : DOREMI[i];
       return {
         label: "この音の鍵盤を押してください",
         prompt: `<em>${noteName(i)}</em>`,

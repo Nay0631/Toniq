@@ -8,12 +8,11 @@ import { tap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, toggleMetronome } from "../engine/Metronome";
 import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
-import type { DrumSource } from "../engine/SynthFactory";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
 import { onRender, showTab } from "./Router";
-import { SCALE_LABELS, chordNames } from "./format";
+import { SCALE_LABELS, chordNames, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
@@ -187,6 +186,10 @@ function render(): void {
   $select("c-instrument").value = s.melodyInstrument;
 
   // スケール・キー
+  // ルート音は単音なので、ドレミ表記なら読みを添える（値・キー名は CDE 表記のまま）
+  Array.from($select("c-key").options).forEach(o => {
+    o.textContent = s.noteNames === "doremi" ? `${o.value}（${toDoremi(o.value)}）` : o.value;
+  });
   $select("c-key").value   = s.key;
   $select("c-scale").value = scale;
   const lock = $("c-scale-lock")!;
@@ -202,7 +205,6 @@ function render(): void {
 
   // ドラム
   $select("c-drum-category").value = s.drumCategory;
-  $select("c-drum-source").value   = s.drumSource;
 
   // FX / SE（「ジャンルの標準」には今のジャンルで鳴る種類を添える）
   const fxSelect = $select("c-fx-type");
@@ -386,13 +388,6 @@ export function initCustomScreen(): void {
   $select("c-drum").addEventListener("change", async e => {
     const next = drums.find(d => d.id === (e.target as HTMLSelectElement).value);
     if (next) setState({ drumPattern: next });
-    render();
-    await restartIfPlaying();
-  });
-
-  // ドラムの音源（テスト中の切り替え）：キットは読み込み時に作られるので、再生中なら再生し直す
-  $select("c-drum-source").addEventListener("change", async e => {
-    setState({ drumSource: (e.target as HTMLSelectElement).value as DrumSource });
     render();
     await restartIfPlaying();
   });

@@ -1,6 +1,7 @@
 import * as Playback from "../engine/Playback";
 import { onRender, render as renderAll } from "./Router";
-import { getState, setState, QuizNoteNames } from "../engine/AppState";
+import { getState, setState, NoteNames } from "../engine/AppState";
+import { setNoteNames } from "./Preferences";
 import {
   QUIZ_CATEGORIES, QUIZ_MODES, NOTES, displayNote, QuizMode, QuizSetting, Question, QuizAnswer,
 } from "../quiz/QuizModes";
@@ -332,7 +333,7 @@ function render(): void {
     btn.classList.toggle("is-active", btn.dataset.quizCategory === category.key);
   });
   document.querySelectorAll<HTMLButtonElement>("[data-quiz-notes]").forEach(btn => {
-    btn.classList.toggle("is-active", btn.dataset.quizNotes === getState().quizNoteNames);
+    btn.classList.toggle("is-active", btn.dataset.quizNotes === getState().noteNames);
   });
 
   const modeTabs = $("quiz-modes");
@@ -366,12 +367,12 @@ export function initQuizScreen(): void {
     categories.appendChild(btn);
   });
 
-  // 音名の表記（CDE／ドレミ）。問題の文面に音名が入るので、切り替えたら新しい問題を出す
+  // 音名の表記（CDE／ドレミ。設定画面と共通のアプリ全体の設定）。問題の文面に音名が入るので、切り替えたら新しい問題を出す
   document.querySelectorAll<HTMLButtonElement>("[data-quiz-notes]").forEach(btn => {
     btn.addEventListener("click", () => {
-      const notation = btn.dataset.quizNotes as QuizNoteNames;
-      if (notation === getState().quizNoteNames) return;
-      setState({ quizNoteNames: notation });
+      const notation = btn.dataset.quizNotes as NoteNames;
+      if (notation === getState().noteNames) return;
+      setNoteNames(notation);
       nextQuestion();
       renderAll();
     });
