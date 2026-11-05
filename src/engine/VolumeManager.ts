@@ -17,6 +17,20 @@ function currentNodes(): Record<string, Tone.Volume> {
   return nodes;
 }
 
+// ミキサーのレベルメーター用。再生用のコンテキストだけに作る（WAV書き出しでは使わない）
+const metersByContext = new WeakMap<Tone.BaseContext, Record<string, Tone.Meter>>();
+
+function currentMeters(): Record<string, Tone.Meter> | null {
+  const ctx = Tone.getContext();
+  if (ctx instanceof Tone.OfflineContext) return null;
+  let meters = metersByContext.get(ctx);
+  if (!meters) {
+    meters = {};
+    metersByContext.set(ctx, meters);
+  }
+  return meters;
+}
+
 // 0〜100の値をdBに変換
 function toDb(value: number): number {
   if (value <= 0) return -Infinity;
@@ -34,7 +48,25 @@ export function createVolumeNode(part: string): Tone.Volume {
   const node    = new Tone.Volume(db);
   connectToMixer(node, part);  // マスター（EQ・コンプ・リミッター）とリバーブ送りへ
   nodes[part] = node;
+
+  // 音量を通ったあとのレベルを測る（メーターは音を出さない枝分かれ）
+  const meters = currentMeters();
+  if (meters && !meters[part]) {
+    meters[part] = new Tone.Meter({ smoothing: 0.6 });
+    node.connect(meters[part]);
+  }
   return node;
+}
+
+// 各パートの今のレベル（dB）。まだ鳴らしていないパートは含まない
+export function getPartLevels(): Record<string, number> {
+  const meters = currentMeters() ?? {};
+  const levels: Record<string, number> = {};
+  for (const [part, meter] of Object.entries(meters)) {
+    const v = meter.getValue();
+    levels[part] = Array.isArray(v) ? Math.max(...v) : v;
+  }
+  return levels;
 }
 
 // 音量を変更する
@@ -67,4 +99,9 @@ export function disposeVolumeNodes(): void {
   const nodes = currentNodes();
   Object.values(nodes).forEach(node => node.dispose());
   Object.keys(nodes).forEach(key => delete nodes[key]);
+  const meters = currentMeters();
+  if (meters) {
+    Object.values(meters).forEach(meter => meter.dispose());
+    Object.keys(meters).forEach(key => delete meters[key]);
+  }
 }

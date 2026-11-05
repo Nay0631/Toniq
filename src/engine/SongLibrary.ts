@@ -1,20 +1,14 @@
-import { getState, setState, AppState, defaultState } from "./AppState";
+import { getState, setState, defaultState, SONG_FIELDS, SongFields } from "./AppState";
 import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset } from "./SimpleModeResolver";
 import { emptyArrangement } from "./LoopArranger";
+import { resetHistory } from "./History";
+
+export { SONG_FIELDS };
+export type { SongFields };
 
 // ミュージックリスト：保存した曲を localStorage に置く
 const STORAGE_KEY = "toniq.songs";
-
-// 曲として保存する AppState の項目（画面・タブ・ピアノロールの入力設定などの表示上の状態は含めない）
-const SONG_FIELDS = [
-  "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
-  "chordPattern", "drumPattern", "melodyNotes", "melodyMethod", "melodyVersion",
-  "melodyInstrument", "chordRhythm", "chordInstrument", "scaleLock", "drumCategory",
-  "arrangement", "parts", "volumes",
-] as const;
-
-type SongFields = Pick<AppState, typeof SONG_FIELDS[number]>;
 
 export interface SavedSong extends SongFields {
   id:        string;
@@ -101,26 +95,115 @@ export function deleteSong(id: string): void {
   if (getState().songId === id) setState({ songId: null });
 }
 
+// 保存した曲の内容を取り出す。あとから増えた項目（FX の種類・シグネチャーなど）は、古い曲では初期値で補う
+function songFields(song: Partial<SongFields>): SongFields {
+  const fields = {} as Record<string, unknown>;
+  SONG_FIELDS.forEach(f => { fields[f] = song[f] ?? defaultState[f]; });
+  const loaded = structuredClone(fields) as SongFields;
+  return {
+    ...loaded,
+    parts:       { ...defaultState.parts,   ...loaded.parts },
+    volumes:     { ...defaultState.volumes, ...loaded.volumes },
+    arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
+  };
+}
+
 // 保存した曲を今の曲として読み込む（再生中なら呼び出し側で止めておく）
 export function loadSong(id: string): boolean {
   const song = findSong(id);
   if (!song) return false;
 
-  const fields = {} as Record<string, unknown>;
-  SONG_FIELDS.forEach(f => { fields[f] = song[f]; });
-  const loaded = structuredClone(fields) as SongFields;
   setState({
-    ...loaded,
-    // あとから増えたパート（シグネチャーなど）は、古い曲では初期値で補う
-    parts:       { ...defaultState.parts,   ...loaded.parts },
-    volumes:     { ...defaultState.volumes, ...loaded.volumes },
-    arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
+    ...songFields(song),
     songId:    song.id,
     generated: true,  // シンプルモードで開いたときは生成結果の画面を出す
     startBar:  0,
   });
   applyAllVolumes();
+  resetHistory();  // 別の曲の編集は元に戻せないようにする
   return true;
+}
+
+// ===== 曲ファイル（.toniq.json）の書き出し・読み込み =====
+// ミュージックリストの曲を JSON ファイルにして、バックアップや別の PC への持ち運びに使う
+
+const FILE_FORMAT  = "toniq-song";
+const FILE_VERSION = 1;
+export const SONG_FILE_EXT = ".toniq.json";
+
+interface SongFile {
+  format:     typeof FILE_FORMAT;
+  version:    number;
+  exportedAt: number;
+  songs:      SavedSong[];
+}
+
+// 曲（1曲またはリスト全体）をファイルの中身にする
+export function songsToFile(songs: SavedSong[]): Blob {
+  const file: SongFile = { format: FILE_FORMAT, version: FILE_VERSION, exportedAt: Date.now(), songs };
+  return new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
+}
+
+// ファイル名に使えない文字を置き換える
+export function songFileName(name: string): string {
+  return `${name.replace(/[\\/:*?"<>|]/g, "_").trim() || "toniq"}${SONG_FILE_EXT}`;
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+// 曲として最低限の形になっているか（コード進行とドラムがないと鳴らせない）
+function isSongLike(v: unknown): v is Partial<SavedSong> {
+  if (!isObject(v)) return false;
+  const chord = v.chordPattern, drum = v.drumPattern;
+  return isObject(chord) && Array.isArray(chord.progression) && typeof chord.length_bars === "number"
+      && isObject(drum)  && isObject(drum.tracks) && typeof drum.steps === "number"
+      && typeof v.genre === "string" && typeof v.key === "string"
+      && typeof v.bpm === "number" && Number.isFinite(v.bpm)
+      && typeof v.bars === "number" && Number.isFinite(v.bars)
+      && (v.melodyNotes === undefined || Array.isArray(v.melodyNotes));
+}
+
+export interface ImportResult {
+  added:   number;
+  skipped: number;  // 形が正しくなく読み込めなかった曲の数
+}
+
+// ファイルの中身（JSON の文字列）から曲をミュージックリストに追加する。
+// 同じ曲を2回読み込んでも上書きはせず、別の曲として追加する
+export function importSongFile(text: string): ImportResult {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("ファイルの形式が正しくありません（JSON として読めません）");
+  }
+  // Toniq の曲ファイル。念のため曲1つだけの JSON も受け付ける
+  const items: unknown[] = isObject(data) && data.format === FILE_FORMAT && Array.isArray(data.songs)
+    ? data.songs
+    : isSongLike(data) ? [data] : [];
+  if (items.length === 0) throw new Error("Toniq の曲ファイルではありません");
+
+  const songs = listSongs();
+  const now   = Date.now();
+  let added = 0;
+  items.forEach((item, i) => {
+    if (!isSongLike(item)) return;
+    const fields = songFields(item);
+    songs.unshift({
+      ...fields,
+      mode:      fields.mode === "simple" ? "simple" : "custom",
+      bpm:       Math.max(20, Math.min(240, Math.round(fields.bpm))),
+      bars:      Math.max(1, Math.min(256, Math.round(fields.bars))),
+      id:        `song_${now.toString(36)}${i.toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      name:      typeof item.name === "string" && item.name.trim() ? item.name.trim().slice(0, 100) : defaultName(songs),
+      favorite:  item.favorite === true,
+      createdAt: typeof item.createdAt === "number" ? item.createdAt : now,
+      updatedAt: now,  // 読み込んだ曲が一覧の先頭に来るようにする
+    });
+    added++;
+  });
+  if (added > 0) writeSongs(songs);
+  return { added, skipped: items.length - added };
 }
 
 // 曲の内容を初期状態に戻して、未保存の新しい曲にする（モードはそのまま。再生中なら呼び出し側で止めておく）
@@ -145,4 +228,5 @@ export function newSong(): void {
   });
   // メロディは空のまま（自動生成ボタンを押したときに初めて作る）
   applyAllVolumes();
+  resetHistory();
 }

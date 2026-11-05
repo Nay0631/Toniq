@@ -1,7 +1,8 @@
 import { Midi } from "@tonejs/midi";
 import { ChordProgression } from "../data/types";
-import { resolveChord } from "../data/degree_resolver";
+import { resolveChord, voiceProgression, VOICING_RANGES } from "../data/degree_resolver";
 import { MelodyNote } from "./MelodyGenerator";
+import { arpNotes, arpParam } from "./ArpPlayer";
 
 // ===== 共通ユーティリティ =====
 const NOTE_ORDER = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -69,14 +70,12 @@ export function exportMidi(
   // ===== Track 2: コード =====
   const chordTrack = midi.addTrack();
   chordTrack.name = "Chord";
-  progression.progression.forEach(chord => {
-    const resolved = resolveChord(
-      chord.degree, chord.type, chord.inversion,
-      key, progression.base_scale, 4
-    );
+  // 再生と同じボイシング（前のコードから一番近い転回形）にする
+  const chordVoicing = voiceProgression(progression, key, VOICING_RANGES.chord);
+  progression.progression.forEach((chord, c) => {
     const startBeats = (chord.bar - 1) * 4;
     const durBeats   = chord.duration_bars * 4;
-    resolved.notes.forEach(note => {
+    chordVoicing[c].forEach(note => {
       chordTrack.addNote({
         midi:     noteToMidi(note),
         ticks:    beatsToTicks(startBeats),
@@ -107,28 +106,16 @@ export function exportMidi(
   // ===== Track 4: アルペジオ =====
   const arpTrack = midi.addTrack();
   arpTrack.name = "Arpeggio";
-  const stepUnit    = "8n";
-  const durBeatsArp = DURATION_TO_BEATS[stepUnit];
-
-  progression.progression.forEach(chord => {
-    const resolved = resolveChord(
-      chord.degree, chord.type, chord.inversion,
-      key, progression.base_scale, 5
-    );
-    const notes      = resolved.notes;
-    const barStart   = (chord.bar - 1) * 4;
-    const totalSteps = chord.duration_bars * 8; // 8分音符単位
-
-    for (let i = 0; i < totalSteps; i++) {
-      const note       = notes[i % notes.length];
-      const startBeats = barStart + i * durBeatsArp;
-      arpTrack.addNote({
-        midi:     noteToMidi(note),
-        ticks:    beatsToTicks(startBeats),
-        durationTicks: beatsToTicks(durBeatsArp * 0.9),
-        velocity: 0.6,
-      });
-    }
+  // 再生と同じ並び（ジャンル別の刻み・パターン・音の長さ。arp_params.json）
+  const param       = arpParam();
+  const durBeatsArp = DURATION_TO_BEATS[param.step] * param.gate;
+  arpNotes(progression, key, param).forEach(n => {
+    arpTrack.addNote({
+      midi:     noteToMidi(n.note),
+      ticks:    beatsToTicks(n.sixteenth * 0.25),
+      durationTicks: beatsToTicks(durBeatsArp),
+      velocity: n.velocity,
+    });
   });
 
   // ===== ダウンロード =====

@@ -1,6 +1,7 @@
 import { getState, setState, MusicListSort } from "../engine/AppState";
 import {
   listSongs, findSong, saveCurrentSong, renameSong, deleteSong, loadSong, newSong, toggleFavorite, SavedSong,
+  songsToFile, songFileName, importSongFile,
 } from "../engine/SongLibrary";
 import * as Playback from "../engine/Playback";
 import { onRender, render as renderAll, showScreen } from "./Router";
@@ -71,6 +72,43 @@ function removeSong(id: string): void {
   render();
 }
 
+// ===== 曲ファイル =====
+
+function exportSong(id: string): void {
+  const song = findSong(id);
+  if (song) Playback.downloadBlob(songsToFile([song]), songFileName(song.name));
+}
+
+function exportAllSongs(): void {
+  const songs = listSongs();
+  if (songs.length === 0) {
+    alert("書き出す曲がありません");
+    return;
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  Playback.downloadBlob(songsToFile(songs), songFileName(`toniq_ミュージックリスト_${date}`));
+}
+
+async function importFiles(files: FileList): Promise<void> {
+  let added = 0, skipped = 0;
+  const errors: string[] = [];
+  for (const file of Array.from(files)) {
+    try {
+      const result = importSongFile(await file.text());
+      added   += result.added;
+      skipped += result.skipped;
+    } catch (e) {
+      errors.push(`${file.name}：${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  const lines = [];
+  if (added > 0)   lines.push(`${added}曲をミュージックリストに追加しました。`);
+  if (skipped > 0) lines.push(`${skipped}曲は内容が足りないため読み込めませんでした。`);
+  lines.push(...errors);
+  alert(lines.join("\n") || "読み込める曲がありませんでした。");
+  render();
+}
+
 function startRename(id: string): void {
   renameSongId = id;
   render();
@@ -137,6 +175,7 @@ function songRow(song: SavedSong): string {
         <div class="song-menu" ${menuSongId === song.id ? "" : "hidden"}>
           <button data-action="open">${MODE_LABELS[song.mode]}で開く</button>
           <button data-action="start-rename">名前を変更</button>
+          <button data-action="export">ファイルに書き出す</button>
           <button class="is-danger" data-action="delete">削除</button>
         </div>
       </div>
@@ -246,6 +285,15 @@ export function initMusicListScreen(): void {
       render();
     }));
 
+  // 曲ファイルの読み込み・すべて書き出す
+  const fileInput = $("ml-import-file") as HTMLInputElement | null;
+  $("ml-import")?.addEventListener("click", () => fileInput?.click());
+  fileInput?.addEventListener("change", async () => {
+    if (fileInput.files && fileInput.files.length > 0) await importFiles(fileInput.files);
+    fileInput.value = "";  // 同じファイルをもう一度選んでも change が起きるようにする
+  });
+  $("ml-export-all")?.addEventListener("click", exportAllSongs);
+
   // 曲の操作
   const list = $("ml-list")!;
   list.addEventListener("click", e => {
@@ -263,6 +311,7 @@ export function initMusicListScreen(): void {
     if (action === "menu")         render();
     if (action === "open")         openSong(id);
     if (action === "start-rename") startRename(id);
+    if (action === "export")       { exportSong(id); render(); }
     if (action === "delete")       removeSong(id);
   });
   document.addEventListener("click", () => {

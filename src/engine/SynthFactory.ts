@@ -1,4 +1,5 @@
 import * as Tone from "tone";
+import { getDrumSample } from "./DrumSamples";
 
 // ドラムの1音色。output をドラムのバスにつなぎ、trigger で鳴らす
 export interface DrumVoice {
@@ -67,6 +68,13 @@ const DRUM_KITS: Record<string, DrumKitParams> = {
     snare: { tone: 200, decay: 0.18, noiseFreq: 2000 },
     hat:   { decay: 0.04, openDecay: 0.4, freq: 8500 },
     bus:   { lowpass: 17000, drive: 0.15, compress: -14, makeup: 4 },
+  },
+  // トランス：低く伸びるキックに、明るく短いハイハット
+  トランス: {
+    kick:  { note: "B0", octaves: 5, pitchDecay: 0.045, decay: 0.5, wave: "sine", click: 0.45 },
+    snare: { tone: 190, decay: 0.15, noiseFreq: 2000 },
+    hat:   { decay: 0.035, openDecay: 0.22, freq: 9500 },
+    bus:   { lowpass: 17000, drive: 0.18, compress: -15, makeup: 3 },
   },
   // アンビエント：アタックを丸め、高域を落として奥で鳴らす
   アンビエント: {
@@ -230,6 +238,41 @@ function createRim(): DrumVoice {
   };
 }
 
+// ===== ワンショット音源で鳴らす音色（DrumSamples.ts で読み込んだもの） =====
+
+// 音源ファイルはシンセより大きく作られていることが多いので、バスに入る前に下げておく（dB）。
+// 音源を差し替えたら mix_presets.json の gain と合わせて測り直す
+const SAMPLE_TRIM_DB = -6;
+
+// 止める（チョーク）ときのフェードアウト（秒）。急に切るとプツッと鳴るので少しだけ伸ばす
+const CHOKE_FADE = 0.03;
+
+function createSampleVoice(buffer: AudioBuffer): DrumVoice {
+  const output = new Tone.Gain(SAMPLE_TRIM_DB, "decibels");
+  const active = new Set<Tone.ToneBufferSource>();
+
+  return {
+    output,
+    // 発音のたびに再生用のノードを作る（同じ音が重なっても前の音を切らない）
+    trigger: (time, velocity) => {
+      const src = new Tone.ToneBufferSource({ url: buffer, fadeOut: CHOKE_FADE }).connect(output);
+      // 鳴り終わったノードは Tone.js が自動で破棄する（通常のコンテキストのみ）
+      src.onended = () => active.delete(src);
+      active.add(src);
+      src.start(time, 0, undefined, velGain(velocity));
+    },
+    choke: time => active.forEach(src => src.stop(time)),
+    dispose: () => {
+      active.forEach(src => { if (!src.disposed) src.dispose(); });
+      active.clear();
+      output.dispose();
+    },
+  };
+}
+
+// ドラムの音源：synth = Tone.js のシンセで合成、sample = ワンショット音源（ないトラックはシンセ）
+export type DrumSource = "synth" | "sample";
+
 // ドラムキット：トラック名ごとの音色と、全体をまとめるバス（高域カット→歪み→コンプ→持ち上げ）
 export interface DrumKit {
   voices:  Record<string, DrumVoice>;
@@ -237,7 +280,7 @@ export interface DrumKit {
   dispose: () => void;
 }
 
-export function createDrumKit(genre: string, trackNames: string[]): DrumKit {
+export function createDrumKit(genre: string, trackNames: string[], source: DrumSource = "synth"): DrumKit {
   const p = DRUM_KITS[genre] ?? DEFAULT_KIT;
 
   const makeup = new Tone.Gain(p.bus.makeup, "decibels");
@@ -258,7 +301,8 @@ export function createDrumKit(genre: string, trackNames: string[]): DrumKit {
 
   const voices: Record<string, DrumVoice> = {};
   for (const name of trackNames) {
-    const voice = (factories[name] ?? createClap)();
+    const sample = source === "sample" ? getDrumSample(genre, name) : undefined;
+    const voice  = sample ? createSampleVoice(sample) : (factories[name] ?? createClap)();
     voice.output.connect(lowpass);
     voices[name] = voice;
   }

@@ -1,8 +1,12 @@
-import { getState, setState, ArrangeBlock, Arrangement } from "../engine/AppState";
+import { getState, setState, ArrangeBlock, Arrangement, FxType } from "../engine/AppState";
 import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArranger";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
 import { signatureLabel } from "../engine/SignaturePlayer";
+import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
+import drumDB from "../data/drum_patterns.json";
+import { DrumPattern } from "../data/types";
+import { render } from "./Router";
 
 // アレンジャーのレーン（上から表示する順）
 const LANES: { name: LayerName; label: string }[] = [
@@ -17,6 +21,11 @@ const LANES: { name: LayerName; label: string }[] = [
 ];
 
 const $ = (id: string) => document.getElementById(id);
+
+const DRUM_PATTERNS = drumDB as unknown as DrumPattern[];
+
+// ブロックのラベルの位置に置くセレクト（FX の種類・ドラムのパターン）
+const BLOCK_SELECT = ".arr-block-select";
 
 // ===== 表示 =====
 
@@ -49,13 +58,50 @@ function laneLabels(part: LayerName): { sub: string; block: string } {
       const label = signatureLabel(s.genre);
       return { sub: label, block: label };
     }
-    case "fx":   return { sub: "ライザーSE", block: "ライザーSE" };
+    case "fx": {
+      const label = fxLabel();
+      return { sub: label, block: label };
+    }
   }
 }
 
 // 小節番号の間引き（小節数が多いときは2小節・4小節おき）
 function rulerStep(bars: number): number {
   return bars <= 8 ? 1 : bars <= 32 ? 2 : 4;
+}
+
+// FX のブロックの種類選び（"" = 曲の設定。設定タブの「FX / SE」の種類）
+function fxSelect(b: ArrangeBlock): string {
+  const current = b.fx && b.fx !== "auto" ? b.fx : "";
+  const options = [
+    { value: "", label: `標準（${fxLabel()}）` },
+    ...FX_OPTIONS,
+  ].map(o => option(o.value, o.label, current)).join("");
+  return `<select class="arr-block-label arr-block-select" data-select="fx" aria-label="このブロックの FX の種類" title="このブロックで鳴らす FX の種類">${options}</select>`;
+}
+
+function option(value: string, label: string, current: string): string {
+  return `<option value="${value}"${value === current ? " selected" : ""}>${label}</option>`;
+}
+
+// ドラムのブロックのパターン選び（"" = 曲の設定。設定タブのドラムパターン）。今のジャンルのパターンを先に並べる
+function drumSelect(b: ArrangeBlock): string {
+  const s = getState();
+  const current = b.drum ?? "";
+  const label = (d: DrumPattern) => `${patternNo(d.id)} ${d.name}`;
+  const group = (title: string, items: DrumPattern[]) => items.length === 0 ? ""
+    : `<optgroup label="${title}">${items.map(d => option(d.id, label(d), current)).join("")}</optgroup>`;
+  const inGenre = DRUM_PATTERNS.filter(d => d.genre.includes(s.genre));
+  const others  = DRUM_PATTERNS.filter(d => !d.genre.includes(s.genre));
+  const base    = s.drumPattern ? `標準（${patternNo(s.drumPattern.id)}）` : "標準";
+  const options = option("", base, current) + group(s.genre, inGenre) + group("ほかのジャンル", others);
+  return `<select class="arr-block-label arr-block-select" data-select="drum" aria-label="このブロックのドラムパターン" title="このブロックで鳴らすドラムパターン">${options}</select>`;
+}
+
+function blockLabel(part: LayerName, b: ArrangeBlock, label: string): string {
+  if (part === "fx")   return fxSelect(b);
+  if (part === "drum") return drumSelect(b);
+  return `<span class="arr-block-label">${label}</span>`;
 }
 
 function blockStyle(b: ArrangeBlock, bars: number): string {
@@ -67,6 +113,8 @@ export function renderArranger(): void {
   const root = $("c-arranger");
   const s = getState();
   if (!root || !s.chordPattern || drag) return;
+  // ブロックの種類・パターンを選んでいる途中に描き直すとドロップダウンが閉じるので待つ（選び終えると blur して描き直す）
+  if (document.activeElement?.closest(BLOCK_SELECT)) return;
 
   const bars        = s.bars;
   const arrangement = getArrangement();
@@ -86,9 +134,9 @@ export function renderArranger(): void {
       ? `<div class="arr-empty">クリックして配置…</div>`
       : blocks.map(b => `
           <div class="arr-block arr-${name}" tabindex="0" data-start="${b.start}" style="${blockStyle(b, bars)}"
-               title="${b.start + 1}〜${b.start + b.length}小節（ドラッグで移動・端で長さを変更・Delete で削除）">
+               title="${b.start + 1}〜${b.start + b.length}小節（ドラッグで移動・端で長さを変更・右クリック／Delete で削除）">
             <span class="arr-handle arr-handle-left"></span>
-            <span class="arr-block-label">${labels.block}</span>
+            ${blockLabel(name, b, labels.block)}
             <button class="arr-del" aria-label="削除">×</button>
             <span class="arr-handle arr-handle-right"></span>
           </div>`).join("");
@@ -96,7 +144,7 @@ export function renderArranger(): void {
       <div class="arr-lane${on ? "" : " is-off"}">
         <div class="arr-head">
           <div>
-            <div class="arr-name">${label}</div>
+            <div class="arr-name" data-term="${name}">${label}</div>
             <div class="arr-sub">${sub}</div>
           </div>
           <button class="pill${on ? " is-on" : ""}" data-arr-toggle="${name}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
@@ -262,7 +310,7 @@ export function initArranger(onSeek: () => void): void {
 
   root.addEventListener("pointerdown", e => {
     const target = e.target as HTMLElement;
-    if (e.button !== 0 || target.closest(".arr-del, [data-arr-toggle]")) return;
+    if (e.button !== 0 || target.closest(`.arr-del, ${BLOCK_SELECT}, [data-arr-toggle]`)) return;
 
     // 小節番号の目盛りをクリック：その小節を再生開始位置にする
     const ticks = target.closest<HTMLElement>(".arr-ticks");
@@ -299,7 +347,7 @@ export function initArranger(onSeek: () => void): void {
     if (toggle) {
       const part = toggle.dataset.arrToggle as LayerName;
       setLayerEnabled(part, !getState().parts[part]);
-      renderArranger();
+      render();  // ミキサーの電源ボタンなど、アレンジャー以外の表示もそろえる
       return;
     }
     const del = target.closest(".arr-del");
@@ -311,9 +359,43 @@ export function initArranger(onSeek: () => void): void {
     }
   });
 
-  // フォーカス中のブロックは Delete / Backspace で削除
+  // ブロックを右クリックで削除（ピアノロールと同じ操作。ブラウザの右クリックメニューは出さない）
+  root.addEventListener("contextmenu", e => {
+    const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
+    if (!block) return;
+    e.preventDefault();
+    if (drag) return;
+    const part = block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName;
+    removeBlock(part, Number(block.dataset.start));
+    renderArranger();
+  });
+
+  // FX のブロックの種類・ドラムのブロックのパターンを変える（再生中も次に鳴らすところから反映される）
+  root.addEventListener("change", e => {
+    const select = (e.target as HTMLElement).closest<HTMLSelectElement>(BLOCK_SELECT);
+    if (!select) return;
+    const start = Number(select.closest<HTMLElement>(".arr-block")!.dataset.start);
+    const value = select.value;
+    const part  = select.dataset.select === "drum" ? "drum" : "fx";
+    editArrangement(a => {
+      const block = a[part].find(b => b.start === start);
+      if (!block) return;
+      if (part === "fx") {
+        if (value) block.fx = value as FxType;
+        else delete block.fx;
+      } else {
+        if (value) block.drum = value;
+        else delete block.drum;
+      }
+    });
+    select.blur();
+    renderArranger();
+  });
+
+  // フォーカス中のブロックは Delete / Backspace で削除（種類のセレクトを操作中は除く）
   root.addEventListener("keydown", e => {
     if (e.key !== "Delete" && e.key !== "Backspace") return;
+    if ((e.target as HTMLElement).closest(BLOCK_SELECT)) return;
     const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
     if (!block) return;
     const part = block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName;

@@ -13,6 +13,10 @@ import { initCustomScreen } from "./ui/CustomScreen";
 import { initPianoRoll } from "./ui/PianoRollTab";
 import { initMusicListScreen } from "./ui/MusicListScreen";
 import { initQuizScreen } from "./ui/QuizScreen";
+import { initTheme } from "./ui/Theme";
+import { initHistoryControls } from "./ui/HistoryControls";
+import { initGlossary } from "./ui/Glossary";
+import { initSettingsScreen } from "./ui/SettingsScreen";
 import "./ui/styles.css";
 
 
@@ -39,10 +43,14 @@ window.addEventListener("load", () => {
 
   // メロディは起動時には作らない（自動生成ボタンを押したときに初めて作る）
 
+  initTheme();
   initSimpleScreen();
   initCustomScreen();
   initPianoRoll();
   initMusicListScreen();
   initQuizScreen();
+  initHistoryControls();
+  initGlossary();
+  initSettingsScreen();
   initRouter();
 });

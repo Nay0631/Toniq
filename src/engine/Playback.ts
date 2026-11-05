@@ -1,8 +1,22 @@
 import * as Tone from "tone";
-import { getState } from "./AppState";
+import { AppState, getState, setState } from "./AppState";
+import { ChordProgression, DrumPattern } from "../data/types";
+import { MelodyNote } from "./MelodyGenerator";
 import { applyMixPreset, mixerReady } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
-import { disposeAllLayers, reloadLayer, reloadAllLayers } from "./LayerManager";
+import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
+import { stopMetronome } from "./Metronome";
+import { prepareDrumSamples } from "./DrumSamples";
+import { fxPreviewStartBar } from "./FxPlayer";
+import { withoutHistory } from "./History";
+
+// 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
+async function audioReady(genre: string): Promise<void> {
+  await Promise.all([
+    mixerReady(),
+    getState().drumSource === "sample" ? prepareDrumSamples(genre) : Promise.resolve(),
+  ]);
+}
 
 let endEventId: number | null = null;
 
@@ -18,9 +32,10 @@ export async function play(options: PlayOptions = {}): Promise<void> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
+  stopMetronome();  // BPM のクリック音と重ねない
   stop();
   applyMixPreset(s.genre);
-  await mixerReady();
+  await audioReady(s.genre);
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
@@ -47,21 +62,70 @@ export async function play(options: PlayOptions = {}): Promise<void> {
 
 // 1つのパートだけを試聴する（コード進行は1周、ドラムは2小節）。曲の再生中なら止めてから鳴らす
 // アレンジに関係なく鳴らすので、試聴中はアレンジの判定を外す
-export async function preview(layer: "chord" | "drum", onEnded?: () => void): Promise<void> {
+// FX はループの終わりの盛り上げ（ライザーなど）から次のループの頭の1小節まで鳴らす
+export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => void): Promise<void> {
   await Tone.start();
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
+  stopMetronome();  // BPM のクリック音と重ねない
   stop();
   applyMixPreset(s.genre);
-  await mixerReady();
+  await audioReady(s.genre);
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
   setArrangementBypass(true);
   reloadLayer(layer);
 
-  const bars = layer === "chord" ? s.chordPattern.length_bars : 2;
+  const fromBar = layer === "fx" ? fxPreviewStartBar(s.chordPattern) : 0;
+  const endBar  = layer === "chord" ? s.chordPattern.length_bars
+                : layer === "fx"    ? s.chordPattern.length_bars + 1
+                : 2;
+  endEventId = transport.scheduleOnce(time => {
+    Tone.getDraw().schedule(() => {
+      stop();
+      onEnded?.();
+    }, time);
+  }, `${endBar}m`);
+
+  transport.start(undefined, `${fromBar}m`);
+}
+
+// ===== ジャンルのサンプル試聴 =====
+
+export interface SampleSong {
+  chordPattern: ChordProgression;
+  drumPattern:  DrumPattern;
+  melodyNotes:  MelodyNote[];
+}
+
+// サンプルで鳴らすパート（ジャンルの特徴が出るようシグネチャーも鳴らす。FX は除く）
+const SAMPLE_LAYERS: LayerName[] = ["drum", "chord", "bass", "pad", "signature", "melody"];
+
+// サンプル中だけ差し替えている曲の内容。stop() で AppState に戻す（null = サンプルを鳴らしていない）
+let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"> | null = null;
+
+// ジャンルのサンプルを1周（4小節未満の進行は4小節）だけ鳴らす。全パートをアレンジに関係なく同時に鳴らす。
+// 各パートは AppState から読むので、鳴らしている間だけパターンとメロディを差し替え、止めたら元に戻す
+export async function playSample(sample: SampleSong, onEnded?: () => void): Promise<void> {
+  await Tone.start();
+  stopMetronome();  // BPM のクリック音と重ねない
+  stop();
+  applyMixPreset(getState().genre);
+  await audioReady(getState().genre);
+  stop();  // 待っている間にほかの再生が始まっていたら止める
+
+  const s = getState();
+  sampleRestore = { chordPattern: s.chordPattern, drumPattern: s.drumPattern, melodyNotes: s.melodyNotes };
+  withoutHistory(() => setState({ ...sample }));  // 一時的な差し替えなので元に戻す履歴には残さない
+
+  const transport = Tone.getTransport();
+  transport.bpm.value = s.bpm;
+  setArrangementBypass(true);
+  SAMPLE_LAYERS.forEach(reloadLayer);
+
+  const bars = Math.max(4, sample.chordPattern.length_bars);
   endEventId = transport.scheduleOnce(time => {
     Tone.getDraw().schedule(() => {
       stop();
@@ -70,6 +134,15 @@ export async function preview(layer: "chord" | "drum", onEnded?: () => void): Pr
   }, `${bars}m`);
 
   transport.start();
+}
+
+export function isSamplePlaying(): boolean {
+  return sampleRestore !== null;
+}
+
+// サンプルを鳴らしているときだけ止める（画面の切り替えなど）
+export function stopSample(): void {
+  if (isSamplePlaying()) stop();
 }
 
 // 停止して、前回読み込んだ Part をすべて破棄する
@@ -84,6 +157,11 @@ export function stop(): void {
   setArrangementBypass(false);
   disposeAllLayers();
   transport.position = 0;
+  if (sampleRestore) {
+    const restore = sampleRestore;
+    withoutHistory(() => setState(restore));
+    sampleRestore = null;
+  }
 }
 
 export function isPlaying(): boolean {
@@ -124,6 +202,8 @@ export async function renderWav(): Promise<Blob> {
 
   // 各パートの Synth はモジュールに1つずつなので、再生を止めてから書き出し用に作り直す
   stop();
+  // ドラムの音源は通常のコンテキストで読み込んでおく（AudioBuffer は書き出し用のコンテキストでも使える）
+  if (s.drumSource === "sample") await prepareDrumSamples(s.genre);
 
   const buffer = await Tone.Offline(async () => {
     applyMixPreset(s.genre);
@@ -140,10 +220,10 @@ export async function renderWav(): Promise<Blob> {
     const { initFxSynth: initF,    loadFx: loadF }               = await import("./FxPlayer");
 
     if (s.parts.drum)   loadDrum(drumPattern);
-    if (s.parts.chord)  { initC();  loadC(chordPattern, s.key, 4); }
+    if (s.parts.chord)  { initC();  loadC(chordPattern, s.key); }
     if (s.parts.bass)   { initB();  loadB(chordPattern, s.key, 2); }
-    if (s.parts.arp)    { initAr(); loadAr(chordPattern, s.key, 5, "8n"); }
-    if (s.parts.pad)    { initP();  loadP(chordPattern, s.key, 4); }
+    if (s.parts.arp)    { initAr(); loadAr(chordPattern, s.key); }
+    if (s.parts.pad)    { initP();  loadP(chordPattern, s.key); }
     if (s.parts.signature) { initS(); loadS(chordPattern, s.key); }
     if (s.parts.melody) { initM();  loadMel(s.melodyNotes, `${chordPattern.length_bars}m`); }
     if (s.parts.fx)     { initF();  loadF(chordPattern); }

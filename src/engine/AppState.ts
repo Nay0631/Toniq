@@ -1,9 +1,10 @@
 import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import type { LayerName } from "./LayerManager";
+import type { DrumSource } from "./SynthFactory";
 
 // 表示中の画面
-export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz";
+export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings";
 
 // 画面内のタブ
 export type Tab = "settings" | "arranger" | "pianoroll";
@@ -18,6 +19,9 @@ export type MelodyInstrument =
 // コードの音色
 export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
 
+// FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
+export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
+
 // ピアノロールで入力する音符の長さ
 export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
 
@@ -27,10 +31,21 @@ export type MusicListSort = "newest" | "oldest" | "name";
 // 音楽クイズの音名の表記（CDE／ドレミ）
 export type QuizNoteNames = "cde" | "doremi";
 
+// 画面の配色（ライト／ダーク）
+export type Theme = "light" | "dark";
+
+// 配色の選び方（system = OS の設定に合わせる）
+export type ThemeMode = Theme | "system";
+
+// カスタムモードの画面のスキン（default = ほかの画面と同じ見た目、flat = フラットなプラグイン風、studio = 少し暗い制作スタジオ（DAW）風、pop = 色分けしたポップなグルーヴボックス風）
+export type Skin = "default" | "flat" | "studio" | "pop";
+
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
   start:  number;
   length: number;
+  fx?:    FxType;  // FX のブロックだけ：このブロックで鳴らす種類（なし・"auto" = 曲の設定 AppState.fxType）
+  drum?:  string;  // ドラムのブロックだけ：このブロックで鳴らすパターンの ID（なし = 曲の設定 AppState.drumPattern）
 }
 
 // パートごとのブロックの並び（開始小節順・重なりなし）
@@ -41,6 +56,15 @@ export interface AppState {
   // 表示中の画面とタブ
   screen: Screen;
   tab:    Tab;
+
+  // 画面の配色（曲の内容ではないので SONG_FIELDS には入れない。端末ごとに Theme.ts が保存する）
+  theme: Theme;
+  // 配色の選び方（設定画面。theme はこれと OS の設定から決まる実際の配色）
+  themeMode: ThemeMode;
+  // カスタムモードのスキン（theme と同じく端末ごとに Theme.ts が保存する）
+  skin: Skin;
+  // 用語のツールチップを出すか（設定画面。端末ごとに Glossary.ts が保存する。SONG_FIELDS には入れない）
+  tooltips: boolean;
 
   // 曲を生成済みか（シンプルモードの設定画面／生成結果画面の切り替え）
   generated: boolean;
@@ -82,8 +106,11 @@ export interface AppState {
   melodyInstrument: MelodyInstrument;
   chordRhythm:      ChordRhythm;
   chordInstrument:  ChordInstrument;
+  fxType:           FxType;  // FX / SE の種類
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
+  // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替えなので曲には保存しない
+  drumSource:       DrumSource;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
@@ -122,6 +149,10 @@ export interface AppState {
 export const defaultState: AppState = {
   screen:      "menu",
   tab:         "settings",
+  theme:       "light",
+  themeMode:   "system",
+  skin:        "default",
+  tooltips:    true,
   generated:   false,
   songId:      null,
 
@@ -150,8 +181,10 @@ export const defaultState: AppState = {
   melodyInstrument: "auto",
   chordRhythm:      "whole",
   chordInstrument:  "soft",
+  fxType:           "auto",
   scaleLock:        true,
   drumCategory:     "EDM",
+  drumSource:       "synth",
 
   arrangement: null,
   startBar:    0,
@@ -183,6 +216,17 @@ export const defaultState: AppState = {
   },
 };
 
+// 曲として保存する AppState の項目（画面・タブ・ピアノロールの入力設定などの表示上の状態は含めない）。
+// ミュージックリスト（SongLibrary.ts）・曲ファイル・元に戻す／やり直す（History.ts）で使う
+export const SONG_FIELDS = [
+  "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
+  "chordPattern", "drumPattern", "melodyNotes", "melodyMethod", "melodyVersion",
+  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "scaleLock", "drumCategory",
+  "arrangement", "parts", "volumes",
+] as const;
+
+export type SongFields = Pick<AppState, typeof SONG_FIELDS[number]>;
+
 // 状態をシングルトンで保持
 let state: AppState = { ...defaultState, parts: { ...defaultState.parts } };
 
@@ -190,7 +234,15 @@ export function getState(): AppState {
   return state;
 }
 
+// 状態が変わる直前に呼ぶ関数（History.ts が元に戻す／やり直すの履歴を取るのに使う）
+let beforeChange: ((prev: AppState, partial: Partial<AppState>) => void) | null = null;
+
+export function onBeforeSetState(fn: (prev: AppState, partial: Partial<AppState>) => void): void {
+  beforeChange = fn;
+}
+
 export function setState(partial: Partial<AppState>): void {
+  beforeChange?.(state, partial);
   state = { ...state, ...partial };
 }
 

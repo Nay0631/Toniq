@@ -43,6 +43,13 @@ const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
     3: ["drum", "bass", "chord", "pad", "melody", "signature", "fx"],
     4: ["drum", "bass", "chord", "pad", "melody", "arp", "signature", "fx"],
   },
+  // トランス：ビルドアップ → ブレイクダウン（ドラム・ベースを抜いてパッドとメロディだけ）→ ドロップで全部そろう
+  "トランス": {
+    1: ["drum", "bass"],
+    2: ["drum", "bass", "arp", "signature", "fx"],
+    3: ["pad", "chord", "signature", "melody", "fx"],
+    4: ["drum", "bass", "chord", "arp", "pad", "signature", "melody", "fx"],
+  },
   // アンビエント：パッドとコードから始め、ドラムは最後に薄く足す
   "アンビエント": {
     1: ["pad", "chord"],
@@ -133,6 +140,17 @@ export function arrangementGate(part: LayerName): (time: number) => boolean {
     if (bypass) return true;
     const bar = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
     return isArrangedAt(part, bar);
+  };
+}
+
+// arrangementGate と同じ判定で、発音時刻にあるブロックを返す（ブロックごとに鳴らし分けるパート用。FX の種類など）
+// ブロックの外なら undefined、試聴中（判定を外しているとき）は null
+export function arrangementBlockAt(part: LayerName): (time: number) => ArrangeBlock | null | undefined {
+  const transport = Tone.getTransport();
+  return time => {
+    if (bypass) return null;
+    const bar = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
+    return findBlock(getArrangement()[part], bar);
   };
 }
 
