@@ -41,6 +41,7 @@ export type Skin = "default" | "flat" | "studio" | "pop";
 export interface ArrangeBlock {
   start:  number;
   length: number;
+  fx?:    FxType;  // FX のブロックだけ：このブロックで鳴らす種類（なし・"auto" = 曲の設定 AppState.fxType）
 }
 
 // パートごとのブロックの並び（開始小節順・重なりなし）

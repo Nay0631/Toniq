@@ -143,6 +143,17 @@ export function arrangementGate(part: LayerName): (time: number) => boolean {
   };
 }
 
+// arrangementGate と同じ判定で、発音時刻にあるブロックを返す（ブロックごとに鳴らし分けるパート用。FX の種類など）
+// ブロックの外なら undefined、試聴中（判定を外しているとき）は null
+export function arrangementBlockAt(part: LayerName): (time: number) => ArrangeBlock | null | undefined {
+  const transport = Tone.getTransport();
+  return time => {
+    if (bypass) return null;
+    const bar = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
+    return findBlock(getArrangement()[part], bar);
+  };
+}
+
 // ===== 周回の表示 =====
 
 interface LoopArrangerParams {

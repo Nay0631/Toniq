@@ -1,8 +1,8 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { createVolumeNode } from "./VolumeManager";
-import { arrangementGate } from "./LoopArranger";
-import { getState, FxType } from "./AppState";
+import { arrangementBlockAt, getArrangement } from "./LoopArranger";
+import { getState, FxType, ArrangeBlock } from "./AppState";
 
 // FX / SE：ループの継ぎ目を演出する効果音
 // 種類は AppState.fxType（"auto" ならジャンルの標準 GENRE_FX）。音色は Synth を作り直したとき（再生開始時）に反映される
@@ -36,13 +36,44 @@ function fadeOut(param: Tone.Param<any>, time: number, len = 0.03) {
   param.linearRampToValueAtTime(0, time + len);
 }
 
-// ノイズのライザー：白色ノイズをバンドパスで掃き上げ、左右に揺らしながら音量を上げる
+// 左右で別々のノイズ（モノラルのノイズより横に大きく広がる）
+function stereoNoise(level: number, type: "white" | "pink" = "white") {
+  const merge = new Tone.Merge();
+  const left  = new Tone.Noise({ type, volume: level });
+  const right = new Tone.Noise({ type, volume: level });
+  left.connect(merge, 0, 0);
+  right.connect(merge, 0, 1);
+  return {
+    output: merge,
+    start: (time: number) => { left.start(time); right.start(time); return { stop: (t: number) => { left.stop(t); right.stop(t); } }; },
+    nodes: [left, right, merge] as Tone.ToneAudioNode[],
+  };
+}
+
+// 広がり：左右で揺れのずれたコーラス → 左右に跳ねるディレイ → out
+// 音の後ろの響きはミキサーのリバーブ送り（ジャンルのリバーブと FX 用のロングリバーブ）で付ける
+interface SpaceOptions {
+  chorus:    number;          // コーラスの量（0 = かけない）
+  delay:     number;          // ディレイの量
+  delayTime: Tone.Unit.Time;
+  feedback?: number;
+}
+
+function space(out: Tone.ToneAudioNode, o: SpaceOptions) {
+  const delay = new Tone.PingPongDelay({ delayTime: o.delayTime, feedback: o.feedback ?? 0.35, wet: o.delay }).connect(out);
+  if (o.chorus <= 0) return { input: delay as Tone.ToneAudioNode, nodes: [delay] as Tone.ToneAudioNode[] };
+  const chorus = new Tone.Chorus({ frequency: 0.6, delayTime: 5, depth: 0.7, spread: 180, wet: o.chorus }).connect(delay).start();
+  return { input: chorus as Tone.ToneAudioNode, nodes: [chorus, delay] as Tone.ToneAudioNode[] };
+}
+
+// ノイズのライザー：左右別々のノイズをバンドパスで掃き上げ、左右に揺らしながら音量を上げる
 function noiseRiser(out: Tone.ToneAudioNode, level: number) {
-  const panner = new Tone.AutoPanner({ frequency: 0.5, depth: 0.6 }).connect(out).start();
+  const panner = new Tone.AutoPanner({ frequency: 0.5, depth: 0.4 }).connect(out).start();
   const amp    = new Tone.Gain(0).connect(panner);
   const band   = new Tone.Filter({ type: "bandpass", frequency: 400, Q: 1.4 }).connect(amp);
   const low    = new Tone.Filter({ type: "highpass", frequency: 150, Q: 0.7 }).connect(band);
-  const noise  = new Tone.Noise({ type: "white", volume: level }).connect(low);
+  const noise  = stereoNoise(level);
+  noise.output.connect(low);
 
   const rise = (time: number, dur: number) => {
     const end = time + dur;
@@ -56,7 +87,7 @@ function noiseRiser(out: Tone.ToneAudioNode, level: number) {
     fadeOut(amp.gain, end - 0.03);
     noise.start(time).stop(end + 0.01);
   };
-  return { rise, nodes: [noise, low, band, amp, panner] as Tone.ToneAudioNode[] };
+  return { rise, nodes: [...noise.nodes, low, band, amp, panner] as Tone.ToneAudioNode[] };
 }
 
 // 音程のライザー：重ねたノコギリ波の音程を2オクターブ上げ、トレモロを速めていく
@@ -85,29 +116,30 @@ function pitchRiser(out: Tone.ToneAudioNode, level: number) {
 }
 
 // インパクト：低く沈むブーム＋明るさが閉じていくノイズの一撃
-function impactHit(out: Tone.ToneAudioNode, level: number) {
-  const dist  = new Tone.Distortion({ distortion: 0.25, wet: 0.4 }).connect(out);
+// ブームは中央に置いたまま（低音は広げるとぼやける）dry に出し、ノイズだけ wide（広がりの入口）に通す
+function impactHit(dry: Tone.ToneAudioNode, wide: Tone.ToneAudioNode, level: number) {
+  const dist  = new Tone.Distortion({ distortion: 0.25, wet: 0.4 }).connect(dry);
   const boom  = new Tone.MembraneSynth({
     pitchDecay: 0.25,
     octaves:    5,
     envelope:   { attack: 0.002, decay: 1.4, sustain: 0, release: 0.6 },
     volume:     level,
   }).connect(dist);
-  const close = new Tone.Filter({ type: "lowpass", frequency: 6000, Q: 0.8 }).connect(out);
-  const burst = new Tone.NoiseSynth({
-    noise:    { type: "white" },
-    envelope: { attack: 0.002, decay: 0.9, sustain: 0, release: 0.3 },
-    volume:   level - 8,
-  }).connect(close);
+  const amp   = new Tone.Gain(0).connect(wide);
+  const close = new Tone.Filter({ type: "lowpass", frequency: 7000, Q: 0.8 }).connect(amp);
+  const burst = stereoNoise(level - 8);
+  burst.output.connect(close);
 
   const hit = (time: number) => {
+    const len = 1.2;
     boom.triggerAttackRelease(42, 1.2, time);
     close.frequency.cancelScheduledValues(time);
-    close.frequency.setValueAtTime(6000, time);
-    close.frequency.exponentialRampToValueAtTime(400, time + 0.9);
-    burst.triggerAttackRelease(0.9, time);
+    close.frequency.setValueAtTime(7000, time);
+    close.frequency.exponentialRampToValueAtTime(350, time + len);
+    curve(amp.gain, time, len, x => Math.pow(1 - x, 3));
+    burst.start(time).stop(time + len + 0.01);
   };
-  return { hit, nodes: [boom, dist, burst, close] as Tone.ToneAudioNode[] };
+  return { hit, nodes: [boom, dist, ...burst.nodes, close, amp] as Tone.ToneAudioNode[] };
 }
 
 // ===== 種類ごとの定義 =====
@@ -117,12 +149,13 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
   riser: {
     label: "ライザー",
     create: out => {
-      const n = noiseRiser(out, -16);
-      const p = pitchRiser(out, -22);
+      const sp = space(out, { chorus: 0.5, delay: 0.25, delayTime: "8n." });
+      const n = noiseRiser(sp.input, -16);
+      const p = pitchRiser(sp.input, -22);
       return {
         rise:    (time, dur) => { n.rise(time, dur); p.rise(time, dur); },
         riseLen: "bars",
-        nodes:   [...n.nodes, ...p.nodes],
+        nodes:   [...n.nodes, ...p.nodes, ...sp.nodes],
       };
     },
   },
@@ -131,14 +164,15 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
   build: {
     label: "ライザー＋インパクト",
     create: out => {
-      const n = noiseRiser(out, -16);
-      const p = pitchRiser(out, -22);
-      const i = impactHit(out, -10);
+      const sp = space(out, { chorus: 0.5, delay: 0.25, delayTime: "8n." });
+      const n = noiseRiser(sp.input, -16);
+      const p = pitchRiser(sp.input, -22);
+      const i = impactHit(out, sp.input, -10);
       return {
         rise:    (time, dur) => { n.rise(time, dur); p.rise(time, dur); },
         riseLen: "bars",
         hit:     i.hit,
-        nodes:   [...n.nodes, ...p.nodes, ...i.nodes],
+        nodes:   [...n.nodes, ...p.nodes, ...i.nodes, ...sp.nodes],
       };
     },
   },
@@ -147,8 +181,9 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
   impact: {
     label: "インパクト",
     create: out => {
-      const i = impactHit(out, -9);
-      return { hit: i.hit, nodes: i.nodes };
+      const sp = space(out, { chorus: 0.4, delay: 0.2, delayTime: "4n", feedback: 0.3 });
+      const i = impactHit(out, sp.input, -9);
+      return { hit: i.hit, nodes: [...i.nodes, ...sp.nodes] };
     },
   },
 
@@ -156,11 +191,13 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
   downlifter: {
     label: "ダウンリフター",
     create: out => {
-      const panner = new Tone.AutoPanner({ frequency: 0.3, depth: 0.5 }).connect(out).start();
+      const sp     = space(out, { chorus: 0.5, delay: 0.3, delayTime: "4n." });
+      const panner = new Tone.AutoPanner({ frequency: 0.3, depth: 0.4 }).connect(sp.input).start();
       const amp    = new Tone.Gain(0).connect(panner);
       const band   = new Tone.Filter({ type: "bandpass", frequency: 9000, Q: 1.2 }).connect(amp);
-      const noise  = new Tone.Noise({ type: "white", volume: -15 }).connect(band);
-      const toneAmp = new Tone.Gain(0).connect(out);
+      const noise  = stereoNoise(-15);
+      noise.output.connect(band);
+      const toneAmp = new Tone.Gain(0).connect(sp.input);
       const osc     = new Tone.Oscillator({ type: "triangle", frequency: 700, volume: -16 }).connect(toneAmp);
 
       const hit = (time: number) => {
@@ -177,7 +214,7 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
         noise.start(time).stop(end + 0.01);
         osc.start(time).stop(time + dur * 0.6 + 0.01);
       };
-      return { hit, nodes: [noise, band, amp, panner, osc, toneAmp] };
+      return { hit, nodes: [...noise.nodes, band, amp, panner, osc, toneAmp, ...sp.nodes] };
     },
   },
 
@@ -185,10 +222,13 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
   reverse: {
     label: "リバースシンバル",
     create: out => {
-      const amp   = new Tone.Gain(0).connect(out);
+      // 切れたあとにディレイの返しが左右に残る
+      const sp    = space(out, { chorus: 0.4, delay: 0.2, delayTime: "8n", feedback: 0.4 });
+      const amp   = new Tone.Gain(0).connect(sp.input);
       const high  = new Tone.Filter({ type: "highpass", frequency: 3500, Q: 0.7 }).connect(amp);
-      const noise = new Tone.Noise({ type: "white", volume: -18 }).connect(high);
-      const metalAmp = new Tone.Gain(0).connect(out);
+      const noise = stereoNoise(-18);
+      noise.output.connect(high);
+      const metalAmp = new Tone.Gain(0).connect(sp.input);
       const metal = new Tone.MetalSynth({
         envelope:        { attack: 0.001, decay: 4, release: 0.05 },
         harmonicity:     5.1,
@@ -208,7 +248,7 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
         metal.triggerAttackRelease(dur + 0.1, time);
         noise.start(time).stop(end + 0.01);
       };
-      return { rise, riseLen: "2n", nodes: [noise, high, amp, metal, metalAmp] };
+      return { rise, riseLen: "2n", nodes: [...noise.nodes, high, amp, metal, metalAmp, ...sp.nodes] };
     },
   },
 
@@ -216,9 +256,11 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
   chip: {
     label: "チップSE",
     create: out => {
-      const amp = new Tone.Gain(0).connect(out);
+      // 8bit らしく、コーラスはかけずに左右に跳ねるディレイだけで広げる
+      const sp  = space(out, { chorus: 0, delay: 0.3, delayTime: "8n.", feedback: 0.4 });
+      const amp = new Tone.Gain(0).connect(sp.input);
       const osc = new Tone.Oscillator({ type: "square", frequency: 220, volume: -20 }).connect(amp);
-      const zapAmp = new Tone.Gain(0).connect(out);
+      const zapAmp = new Tone.Gain(0).connect(sp.input);
       const zap    = new Tone.Oscillator({ type: "square", frequency: 1600, volume: -20 }).connect(zapAmp);
 
       const rise = (time: number, dur: number) => {
@@ -243,7 +285,7 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
         curve(zapAmp.gain, time, len, x => 1 - x);
         zap.start(time).stop(time + len + 0.01);
       };
-      return { rise, riseLen: "2n", hit, nodes: [osc, amp, zap, zapAmp] };
+      return { rise, riseLen: "2n", hit, nodes: [osc, amp, zap, zapAmp, ...sp.nodes] };
     },
   },
 };
@@ -260,16 +302,28 @@ const GENRE_FX: Record<string, Exclude<FxType, "auto">> = {
   "アンビエント": "downlifter",
 };
 
-// 今の設定で鳴らす FX の種類（"auto" はジャンルから決める）
-export function resolveFxType(): Exclude<FxType, "auto"> {
+type FxKind = Exclude<FxType, "auto">;
+
+// 選択肢（アレンジャーのブロックの種類選び用）
+export const FX_OPTIONS: { value: FxKind; label: string }[] =
+  (Object.keys(FX_DEFS) as FxKind[]).map(value => ({ value, label: FX_DEFS[value].label }));
+
+// 曲の設定で鳴らす FX の種類（"auto" はジャンルから決める）
+export function resolveFxType(): FxKind {
   const s = getState();
   if (s.fxType !== "auto" && FX_DEFS[s.fxType]) return s.fxType;
   return GENRE_FX[s.genre] ?? "riser";
 }
 
-// アレンジャーなどの表示名
-export function fxLabel(): string {
-  return FX_DEFS[resolveFxType()].label;
+// ブロックで鳴らす種類（ブロックに指定がなければ曲の設定）
+export function blockFxType(block?: ArrangeBlock | null): FxKind {
+  const fx = block?.fx;
+  return fx && fx !== "auto" && FX_DEFS[fx] ? fx : resolveFxType();
+}
+
+// アレンジャーなどの表示名（ブロックを渡すとそのブロックの種類）
+export function fxLabel(block?: ArrangeBlock | null): string {
+  return FX_DEFS[blockFxType(block)].label;
 }
 
 // 試聴で鳴らし始める小節（ライザーの頭）。ループの頭のヒットまで聴けるよう、呼び出し側で1小節先まで鳴らす
@@ -283,42 +337,65 @@ function riseBars(progression: ChordProgression): number {
 
 // ===== 読み込み =====
 
-let fxPart:  Tone.Part | null = null;
-let fxVoice: FxVoice   | null = null;
+// 種類ごとの音源。曲の中で使う種類だけ作る（ブロックごとに種類が違ってもよい）
+let fxPart: Tone.Part   | null = null;
+let fxOut:  Tone.Volume | null = null;  // 現在のオーディオコンテキスト用の Volume ノード
+const fxVoices = new Map<FxKind, FxVoice>();
 
-export function initFxSynth() {
-  const vol = createVolumeNode("fx");  // 現在のオーディオコンテキスト用のノード
-  fxVoice = FX_DEFS[resolveFxType()].create(vol);
+function voiceFor(kind: FxKind): FxVoice | null {
+  if (!fxOut) return null;
+  let voice = fxVoices.get(kind);
+  if (!voice) {
+    voice = FX_DEFS[kind].create(fxOut);
+    fxVoices.set(kind, voice);
+  }
+  return voice;
 }
 
+// 曲の設定とアレンジの各ブロックで使う種類の音源を先に作っておく
+// （WAV書き出しでは鳴らしている途中に作れないため。再生中にアレンジで新しい種類を選んだときは鳴らす直前に作る）
+function prepareVoices() {
+  voiceFor(resolveFxType());
+  getArrangement().fx.forEach(b => voiceFor(blockFxType(b)));
+}
+
+export function initFxSynth() {
+  disposeVoices();
+  fxOut = createVolumeNode("fx");
+  prepareVoices();
+}
+
+// hit = ループの頭、bars / 2n = rise の始まり（種類の riseLen に合うものだけ鳴らす）
 interface FxEvent {
   time: string;
-  kind: "rise" | "hit";
+  kind: "hit" | "bars" | "2n";
 }
 
 export function loadFx(progression: ChordProgression) {
   if (fxPart) { fxPart.dispose(); fxPart = null; }
-  if (!fxVoice) initFxSynth();
-  const voice = fxVoice!;
+  if (!fxOut) initFxSynth();
+  else prepareVoices();
 
-  const len    = progression.length_bars;
-  const events: FxEvent[] = [];
-  if (voice.hit) events.push({ time: "0:0:0", kind: "hit" });
-  if (voice.rise) {
-    const start = voice.riseLen === "2n" ? `${len - 1}:2:0` : `${len - riseBars(progression)}:0:0`;
-    events.push({ time: start, kind: "rise" });
-  }
+  const len  = progression.length_bars;
+  const rise = riseBars(progression);
+  const events: FxEvent[] = [
+    { time: "0:0:0",                kind: "hit"  },
+    { time: `${len - rise}:0:0`,    kind: "bars" },
+    { time: `${len - 1}:2:0`,       kind: "2n"   },
+  ];
 
-  const arranged = arrangementGate("fx");
+  // 鳴らすかどうかと種類は、発音時刻にあるブロックで決める（再生中のアレンジの編集もすぐ反映される）
+  const blockAt = arrangementBlockAt("fx");
   fxPart = new Tone.Part((time, event: FxEvent) => {
-    if (!arranged(time) || !fxVoice) return;
+    const block = blockAt(time);
+    if (block === undefined) return;
+    const voice = voiceFor(blockFxType(block));
+    if (!voice) return;
     if (event.kind === "hit") {
-      fxVoice.hit?.(time);
-    } else {
-      const dur = voice.riseLen === "2n"
-        ? Tone.Time("2n").toSeconds()
-        : Tone.Time(`${riseBars(progression)}m`).toSeconds();
-      fxVoice.rise?.(time, dur);
+      voice.hit?.(time);
+    } else if (voice.rise && event.kind === (voice.riseLen ?? "bars")) {
+      const dur = event.kind === "2n" ? Tone.Time("2n").toSeconds() : Tone.Time(`${rise}m`).toSeconds();
+      voice.rise(time, dur);
     }
   }, events);
 
@@ -327,9 +404,14 @@ export function loadFx(progression: ChordProgression) {
   fxPart.start(0);
 }
 
+function disposeVoices() {
+  fxVoices.forEach(v => v.nodes.forEach(n => n.dispose()));
+  fxVoices.clear();
+}
+
 export function disposeFx() {
   fxPart?.dispose();
-  fxVoice?.nodes.forEach(n => n.dispose());
-  fxPart  = null;
-  fxVoice = null;
+  fxPart = null;
+  disposeVoices();
+  fxOut = null;
 }

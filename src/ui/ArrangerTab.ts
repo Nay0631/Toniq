@@ -1,9 +1,9 @@
-import { getState, setState, ArrangeBlock, Arrangement } from "../engine/AppState";
+import { getState, setState, ArrangeBlock, Arrangement, FxType } from "../engine/AppState";
 import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArranger";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
 import { signatureLabel } from "../engine/SignaturePlayer";
-import { fxLabel } from "../engine/FxPlayer";
+import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
 import { render } from "./Router";
 
 // アレンジャーのレーン（上から表示する順）
@@ -63,6 +63,16 @@ function rulerStep(bars: number): number {
   return bars <= 8 ? 1 : bars <= 32 ? 2 : 4;
 }
 
+// FX のブロックの種類選び（"" = 曲の設定。設定タブの「FX / SE」の種類）
+function fxSelect(b: ArrangeBlock): string {
+  const current = b.fx && b.fx !== "auto" ? b.fx : "";
+  const options = [
+    { value: "", label: `標準（${fxLabel()}）` },
+    ...FX_OPTIONS,
+  ].map(o => `<option value="${o.value}"${o.value === current ? " selected" : ""}>${o.label}</option>`).join("");
+  return `<select class="arr-block-label arr-fx-select" aria-label="このブロックの FX の種類" title="このブロックで鳴らす FX の種類">${options}</select>`;
+}
+
 function blockStyle(b: ArrangeBlock, bars: number): string {
   const end = Math.min(b.start + b.length, bars);
   return `left:${(b.start / bars) * 100}%;width:${((end - b.start) / bars) * 100}%`;
@@ -72,6 +82,8 @@ export function renderArranger(): void {
   const root = $("c-arranger");
   const s = getState();
   if (!root || !s.chordPattern || drag) return;
+  // FX の種類を選んでいる途中に描き直すとドロップダウンが閉じるので待つ（選び終えると blur して描き直す）
+  if (document.activeElement?.closest(".arr-fx-select")) return;
 
   const bars        = s.bars;
   const arrangement = getArrangement();
@@ -91,9 +103,9 @@ export function renderArranger(): void {
       ? `<div class="arr-empty">クリックして配置…</div>`
       : blocks.map(b => `
           <div class="arr-block arr-${name}" tabindex="0" data-start="${b.start}" style="${blockStyle(b, bars)}"
-               title="${b.start + 1}〜${b.start + b.length}小節（ドラッグで移動・端で長さを変更・Delete で削除）">
+               title="${b.start + 1}〜${b.start + b.length}小節（ドラッグで移動・端で長さを変更・右クリック／Delete で削除）">
             <span class="arr-handle arr-handle-left"></span>
-            <span class="arr-block-label">${labels.block}</span>
+            ${name === "fx" ? fxSelect(b) : `<span class="arr-block-label">${labels.block}</span>`}
             <button class="arr-del" aria-label="削除">×</button>
             <span class="arr-handle arr-handle-right"></span>
           </div>`).join("");
@@ -267,7 +279,7 @@ export function initArranger(onSeek: () => void): void {
 
   root.addEventListener("pointerdown", e => {
     const target = e.target as HTMLElement;
-    if (e.button !== 0 || target.closest(".arr-del, [data-arr-toggle]")) return;
+    if (e.button !== 0 || target.closest(".arr-del, .arr-fx-select, [data-arr-toggle]")) return;
 
     // 小節番号の目盛りをクリック：その小節を再生開始位置にする
     const ticks = target.closest<HTMLElement>(".arr-ticks");
@@ -316,9 +328,37 @@ export function initArranger(onSeek: () => void): void {
     }
   });
 
-  // フォーカス中のブロックは Delete / Backspace で削除
+  // ブロックを右クリックで削除（ピアノロールと同じ操作。ブラウザの右クリックメニューは出さない）
+  root.addEventListener("contextmenu", e => {
+    const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
+    if (!block) return;
+    e.preventDefault();
+    if (drag) return;
+    const part = block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName;
+    removeBlock(part, Number(block.dataset.start));
+    renderArranger();
+  });
+
+  // FX のブロックの種類を変える（再生中も次に鳴らすところから反映される）
+  root.addEventListener("change", e => {
+    const select = (e.target as HTMLElement).closest<HTMLSelectElement>(".arr-fx-select");
+    if (!select) return;
+    const start = Number(select.closest<HTMLElement>(".arr-block")!.dataset.start);
+    const fx    = select.value as FxType | "";
+    editArrangement(a => {
+      const block = a.fx.find(b => b.start === start);
+      if (!block) return;
+      if (fx) block.fx = fx;
+      else delete block.fx;
+    });
+    select.blur();
+    renderArranger();
+  });
+
+  // フォーカス中のブロックは Delete / Backspace で削除（種類のセレクトを操作中は除く）
   root.addEventListener("keydown", e => {
     if (e.key !== "Delete" && e.key !== "Backspace") return;
+    if ((e.target as HTMLElement).closest(".arr-fx-select")) return;
     const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
     if (!block) return;
     const part = block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName;

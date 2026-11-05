@@ -962,6 +962,31 @@ button {
   text-overflow: ellipsis;
 }
 
+/* FX のブロックの種類選び：ラベルと同じ見た目で、▾ を付けたセレクト */
+.arr-fx-select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 100%;
+  padding: 0 14px 0 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+                    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 6px center, right 2px center;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.arr-fx-select:focus-visible { outline: 2px solid var(--custom); outline-offset: -2px; }
+
+.arr-fx-select option {
+  color: var(--text);
+  background: var(--surface);
+}
+
 .arr-drum, .mix-drum   { background: #b7d3f2; }
 .arr-bass, .mix-bass   { background: #a6e0c8; }
 .arr-chord, .mix-chord  { background: #b3a9ef; }

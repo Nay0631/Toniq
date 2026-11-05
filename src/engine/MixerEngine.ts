@@ -21,6 +21,13 @@ const REVERB_SENDS: Record<string, number> = {
   fx:     0.7,
 };
 
+// ロングリバーブ：FX / SE だけを送る長い響き（ライザーやインパクトの余韻を後ろに大きく残す）
+// ジャンルのリバーブ（短め・薄め）とは別に持ち、ジャンルによらず同じ響きにする
+const LONG_REVERB = { decay: 5.5, preDelay: 0.04, wet: 0.55 };  // wet = 戻りの量
+const LONG_REVERB_SENDS: Record<string, number> = {
+  fx: 0.8,
+};
+
 // マスター：入口 → EQ → コンプ → 持ち上げ → リミッター → スピーカー
 // リバーブ：送り → 低域カット → リバーブ → 戻り → マスター入口
 interface Mixer {
@@ -32,7 +39,9 @@ interface Mixer {
   reverbIn:   Tone.Filter;
   reverb:     Tone.Reverb;
   reverbOut:  Tone.Gain;
-  meter:      Tone.Meter | null;  // マスターのレベルメーター（再生用のコンテキストだけ）
+  longIn:     Tone.Filter;  // ロングリバーブの送り先（低域カット）
+  longReverb: Tone.Reverb;
+  meter:     Tone.Meter | null;  // マスターのレベルメーター（再生用のコンテキストだけ）
 }
 
 // オーディオコンテキストごとに1つ持つ（WAV書き出しの Tone.Offline は別コンテキスト）
@@ -54,11 +63,16 @@ function getMixer(): Mixer {
   const reverb    = new Tone.Reverb({ decay: 1.5, preDelay: 0.02, wet: 1 }).connect(reverbOut);
   const reverbIn  = new Tone.Filter({ type: "highpass", frequency: 250 }).connect(reverb);
 
+  // ロングリバーブ：送り → 低域カット → リバーブ → 戻り → マスター入口
+  const longOut    = new Tone.Gain(LONG_REVERB.wet).connect(input);
+  const longReverb = new Tone.Reverb({ decay: LONG_REVERB.decay, preDelay: LONG_REVERB.preDelay, wet: 1 }).connect(longOut);
+  const longIn     = new Tone.Filter({ type: "highpass", frequency: 350 }).connect(longReverb);
+
   // リミッターのあと（スピーカーに出る音）を測る。メーターは音を出さない枝分かれ
   const meter = ctx instanceof Tone.OfflineContext ? null : new Tone.Meter({ smoothing: 0.6 });
   if (meter) limiter.connect(meter);
 
-  const mixer = { input, eq, compressor, makeup, limiter, reverbIn, reverb, reverbOut, meter };
+  const mixer = { input, eq, compressor, makeup, limiter, reverbIn, reverb, reverbOut, longIn, longReverb, meter };
   mixers.set(ctx, mixer);
   console.log("Mixer初期化完了");
   return mixer;
@@ -78,6 +92,8 @@ export function connectToMixer(node: Tone.ToneAudioNode, part: string): void {
   node.connect(mixer.input);
   const amount = REVERB_SENDS[part] ?? 0;
   if (amount > 0) node.connect(new Tone.Gain(amount).connect(mixer.reverbIn));
+  const long = LONG_REVERB_SENDS[part] ?? 0;
+  if (long > 0) node.connect(new Tone.Gain(long).connect(mixer.longIn));
 }
 
 // 現在のコンテキストのミキサーにジャンルの設定を当てる
@@ -107,5 +123,6 @@ export function applyMixPreset(genre: string) {
 
 // リバーブの響きのデータができるまで待つ（WAV書き出しで曲の頭から響かせるため）
 export async function mixerReady(): Promise<void> {
-  await getMixer().reverb.ready;
+  const mixer = getMixer();
+  await Promise.all([mixer.reverb.ready, mixer.longReverb.ready]);
 }
