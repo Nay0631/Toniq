@@ -73,55 +73,40 @@
   --key-border:      #cfcfca;
   --key-label:       #9a9a94;
 
-  /* カスタムモードのシンセサイザー風パーツ（.hw）
-     hw = 金属パネル、lcd = 液晶表示、led = ランプ、knob / fader = つまみ */
-  --hw-face:       #dde1e6;
-  --hw-face-2:     #c8cdd4;
-  --hw-brush:      rgba(255, 255, 255, 0.3);  /* ヘアライン加工の筋 */
-  --hw-edge:       #a3aab4;
-  --hw-highlight:  rgba(255, 255, 255, 0.8);
-  --hw-shade:      rgba(20, 30, 45, 0.2);
-  --hw-inset:      rgba(0, 0, 0, 0.55);
-  --hw-silk:       #262b33;  /* パネルに印刷された文字 */
-  --hw-silk-sub:   #5c6470;
-  --hw-strip:      #eef0f3;  /* モジュールの見出しの帯 */
-  --hw-strip-2:    #d6dbe1;
-  --hw-key:        #f6f7f9;  /* ボタンの上面 */
-  --hw-key-2:      #d3d8de;
-  --hw-well:       #b9bfc8;  /* 一段沈んだ所（ミキサーの台など） */
-  --hw-gloss:      rgba(255, 255, 255, 0.4);
-  --hw-accent:      #12a597;  /* ノブの弧・フェーダーの光る部分 */
-  --hw-accent-glow: rgba(18, 165, 151, 0.55);
-  /* ミキサーのチャンネルストリップ（どちらのテーマでも暗い面） */
-  --strip-bg:      #343a44;
-  --strip-bg-2:    #262b33;
-  --strip-edge:    #1a1e24;
-  --strip-text:    #e8ebef;
-  --strip-sub:     #9aa3af;
-  --meter-low:     #3fdc7e;
-  --meter-mid:     #f2d23c;
-  --meter-high:    #ff5640;
-  --meter-off:     #1a1e23;
-  --lcd-bg:        #141b18;
-  --lcd-bg-2:      #1f2924;
-  --lcd-edge:      #0b0f0d;
-  --lcd-text:      #ffffff;
-  --lcd-dim:       #7e8792;
-  --lcd-glow:      rgba(255, 255, 255, 0.35);
-  --lcd-hover:     #26332d;
-  --led-on:        #47e08c;
-  --led-glow:      rgba(71, 224, 140, 0.75);
-  --led-off:       #57605a;
-  --knob-cap:      #2a2a2f;
-  --knob-knurl:    #3a3a40;
-  --knob-shine:    rgba(255, 255, 255, 0.28);
-  --knob-skirt:    #18181b;
-  --knob-pointer:  #f4f4f2;
-  --knob-track:    rgba(0, 0, 0, 0.16);
-  --fader-slot:    #1b1b1e;
-  --fader-cap:     #f6f6f4;
-  --fader-cap-2:   #b9b9b4;
-  --fader-line:    #2a2a2f;
+  /* カスタムモードのプラグイン風パーツ（.hw）
+     区切り線で仕切ったフラットなグレーの面、白いノブと細い色の弧、黒い帯 */
+  --hw-bg:         #d5d5d5;  /* 面 */
+  --hw-bg-2:       #cbcbcb;  /* 一段濃い面（マスター・アレンジャーの見出し） */
+  --hw-line:       #b2b2b2;  /* 区切り線 */
+  --hw-text:       #262626;
+  --hw-label:      #575757;  /* ノブ・項目の名前 */
+  --hw-faint:      #8a8a8a;
+  --hw-box:        #bdbdbd;  /* 値の箱・平らなボタン */
+  --hw-box-hover:  #afafaf;
+  --hw-bar:        #2a2a2a;  /* 黒い帯（情報バー・タブ・目盛り・ミキサーの見出し） */
+  --hw-bar-2:      #3a3a3a;
+  --hw-bar-text:   #f2f2f2;
+  --hw-bar-sub:    #9b9b9b;
+  --hw-sel:        #2c2c2c;  /* 選択中のボタン */
+  --hw-sel-text:   #ffffff;
+  --hw-green:      #4ea82a;  /* ノブの弧・フェーダー */
+  --hw-orange:     #ef921b;  /* 選択中の枠・再生開始位置 */
+  --hw-shadow:     rgba(0, 0, 0, 0.28);
+  --knob-face:     #f7f7f7;
+  --knob-face-2:   #dadada;
+  --knob-edge:     #a6a6a6;
+  --knob-mark:     #222222;  /* ノブの指示線 */
+  --knob-arc-bg:   rgba(0, 0, 0, 0.1);
+  --slider-track:  #3a3a3a;
+  --slider-cap:    #f4f4f4;
+  --slider-cap-2:  #cfcfcf;
+  --meter-low:     #57b832;
+  --meter-mid:     #e8bd1a;
+  --meter-high:    #e9503a;
+  --meter-off:     #bcbcbc;
+  --track-bg:      #e0e0e0;  /* アレンジャーのトラック */
+  --track-grid:    #cdcdcd;
+  --track-grid-loop: #a9a9a9;
 
   --radius:        12px;
   --font: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
@@ -194,52 +179,38 @@
   --key-border:      #0f0f11;
   --key-label:       #6e6e69;
 
-  --hw-face:       #2b2d33;
-  --hw-face-2:     #212328;
-  --hw-brush:      rgba(255, 255, 255, 0.02);
-  --hw-edge:       #3d4049;
-  --hw-highlight:  rgba(255, 255, 255, 0.06);
-  --hw-shade:      rgba(0, 0, 0, 0.5);
-  --hw-inset:      rgba(0, 0, 0, 0.7);
-  --hw-silk:       #d9dce1;
-  --hw-silk-sub:   #8b919b;
-  --hw-strip:      #1d1f24;
-  --hw-strip-2:    #17191d;
-  --hw-key:        #3e414a;
-  --hw-key-2:      #2c2f36;
-  --hw-well:       #151619;
-  --hw-gloss:      rgba(255, 255, 255, 0.3);
-  --hw-accent:      #35dccb;
-  --hw-accent-glow: rgba(53, 220, 203, 0.55);
-  --strip-bg:      #2a2d34;
-  --strip-bg-2:    #1d1f24;
-  --strip-edge:    #0e0f12;
-  --strip-text:    #e3e6ea;
-  --strip-sub:     #8b919b;
-  --meter-low:     #42e584;
-  --meter-mid:     #f5d742;
-  --meter-high:    #ff5b45;
-  --meter-off:     #121417;
-  --lcd-bg:        #0c110f;
-  --lcd-bg-2:      #151d19;
-  --lcd-edge:      #050706;
-  --lcd-text:      #ffffff;
-  --lcd-dim:       #6b737d;
-  --lcd-glow:      rgba(255, 255, 255, 0.35);
-  --lcd-hover:     #1c2722;
-  --led-on:        #4ff096;
-  --led-glow:      rgba(79, 240, 150, 0.8);
-  --led-off:       #3b403d;
-  --knob-cap:      #1c1c20;
-  --knob-knurl:    #2c2c32;
-  --knob-shine:    rgba(255, 255, 255, 0.18);
-  --knob-skirt:    #0c0c0e;
-  --knob-pointer:  #f4f4f2;
-  --knob-track:    rgba(255, 255, 255, 0.09);
-  --fader-slot:    #0d0d0f;
-  --fader-cap:     #9c9c98;
-  --fader-cap-2:   #5c5c60;
-  --fader-line:    #1a1a1d;
+  --hw-bg:         #2e2e30;
+  --hw-bg-2:       #28282a;
+  --hw-line:       #434346;
+  --hw-text:       #ececec;
+  --hw-label:      #a9a9a9;
+  --hw-faint:      #727276;
+  --hw-box:        #414144;
+  --hw-box-hover:  #4c4c50;
+  --hw-bar:        #18181a;
+  --hw-bar-2:      #242426;
+  --hw-bar-text:   #f2f2f2;
+  --hw-bar-sub:    #8d8d91;
+  --hw-sel:        #e9e9e9;
+  --hw-sel-text:   #1a1a1a;
+  --hw-green:      #6cc63f;
+  --hw-orange:     #f5a33a;
+  --hw-shadow:     rgba(0, 0, 0, 0.6);
+  --knob-face:     #46464a;
+  --knob-face-2:   #2c2c2f;
+  --knob-edge:     #141416;
+  --knob-mark:     #f2f2f2;
+  --knob-arc-bg:   rgba(255, 255, 255, 0.09);
+  --slider-track:  #111113;
+  --slider-cap:    #c4c4c4;
+  --slider-cap-2:  #8c8c8c;
+  --meter-low:     #62c93a;
+  --meter-mid:     #f0c62a;
+  --meter-high:    #f05a42;
+  --meter-off:     #1e1e20;
+  --track-bg:      #262628;
+  --track-grid:    #333336;
+  --track-grid-loop: #4b4b4f;
 }
 
 * { box-sizing: border-box; }
@@ -1068,213 +1039,212 @@ button {
   .arranger-hint { display: none; }
 }
 
-/* ── シンセサイザー風パーツ（カスタムモードの設定・アレンジャー） ──
-   .hw の中だけで、パネル・液晶・LED・ノブ・フェーダーの見た目にする */
+/* ── プラグイン風パーツ（カスタムモード） ──────────────
+   区切り線で仕切ったフラットなグレーの面に、白いノブ（細い色の弧）・下線付きのドロップダウン・
+   グレーの値の箱を並べる。情報バー・タブ・小節の目盛り・ミキサーの見出しは黒い帯にする。
+   .hw = 設定タブ／アレンジャータブ、.hw-bar = 情報バー、.hw-tabs = タブ */
 
-/* 液晶表示（数値・選択中の値） */
-.lcd,
-.hw-bar .info {
-  font-family: "Consolas", "Menlo", var(--font);
-  color: var(--lcd-text);
-  background: linear-gradient(180deg, var(--lcd-bg-2), var(--lcd-bg));
-  border: 1px solid var(--lcd-edge);
-  border-radius: 6px;
-  box-shadow: inset 0 2px 6px var(--hw-inset), 0 1px 0 var(--hw-highlight);
-  text-shadow: 0 0 6px var(--lcd-glow);
+/* カスタムモードを表示しているときはページ全体を面の色にする */
+body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
+
+/* 値の箱（BPM・ミキサーの値など） */
+.lcd {
+  color: var(--hw-text);
+  background: var(--hw-box);
+  border-radius: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* 情報バー：液晶のステータス表示 */
-.hw-bar .info {
-  flex: 0 1 auto;
-  padding: 8px 16px;
+/* ── 情報バー・タブ：黒い帯 ── */
+.hw-bar {
+  background: var(--hw-bar);
+  border-bottom-color: var(--hw-bar);
+  color: var(--hw-bar-text);
+}
+
+.hw-bar .info { color: var(--hw-bar-sub); }
+.hw-bar .info-item { border-left-color: var(--hw-bar-2); }
+.hw-bar .info-item b { color: var(--hw-bar-text); }
+.hw-bar .info-item:last-child:not([hidden]) { color: var(--hw-orange); }
+
+.hw-bar .btn {
+  color: var(--hw-bar-text);
+  background: var(--hw-bar-2);
+  border: 1px solid var(--hw-bar-2);
+  border-radius: 3px;
+}
+
+.hw-bar .btn:hover { border-color: var(--hw-bar-sub); }
+.hw-bar .btn-play { border-color: var(--hw-orange); }
+.hw-bar .btn-play:hover { background: var(--hw-bar); }
+
+.hw-tabs {
+  gap: 2px;
+  padding: 6px 20px;
+  background: var(--hw-bar-2);
+  border-bottom-color: var(--hw-bar);
+}
+
+.hw-tabs button {
+  margin: 0;
+  padding: 5px 16px;
   font-size: 13px;
-  color: var(--lcd-dim);
-  text-shadow: none;
+  color: var(--hw-bar-sub);
+  border: 1px solid transparent;
+  border-radius: 2px;
 }
 
-.hw-bar .info-item { border-left-color: var(--lcd-dim); }
-.hw-bar .info-item b { color: var(--lcd-text); text-shadow: 0 0 6px var(--lcd-glow); }
-.hw-bar .info-item:last-child:not([hidden]) { color: var(--lcd-text); }
-.hw-bar .infobar-actions { margin-left: auto; }
+.hw-tabs button:hover { color: var(--hw-bar-text); }
 
-/* モジュール：ヘアライン加工のパネル */
+[data-screen="custom"] .hw-tabs button.is-active {
+  color: var(--hw-bar-text);
+  background: var(--hw-bar);
+  border-color: var(--hw-orange);
+}
+
+/* ── モジュール：区切り線だけで仕切ったフラットな面 ── */
 .hw .card {
-  background:
-    repeating-linear-gradient(90deg, var(--hw-brush) 0 1px, transparent 1px 3px),
-    linear-gradient(180deg, var(--hw-face), var(--hw-face-2));
-  border: 1px solid var(--hw-edge);
-  border-radius: 8px;
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 3px 10px var(--hw-shade);
-  overflow: hidden;
+  background: var(--hw-bg);
+  border: 1px solid var(--hw-line);
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--hw-text);
 }
 
-.hw .panel { padding: 18px 20px; }
+.hw .panel { padding: 14px 20px 18px; }
 
-/* モジュールの見出し：パネル幅いっぱいの帯と、点灯した LED */
+/* 3列は1枚の面にし、列の間は縦の区切り線 */
+.hw .custom-grid {
+  gap: 0;
+  align-items: stretch;
+  border: 1px solid var(--hw-line);
+}
+
+.hw .custom-grid > .card { border: none; border-right: 1px solid var(--hw-line); }
+.hw .custom-grid > .card:last-child { border-right: none; }
+
+/* 縦に続くモジュールは上の線を重ねない */
+.hw .mixer-panel,
+.hw .arranger-bottom { margin-top: 0; }
+.hw .mixer-panel { border-top: none; }
+.hw .arranger-bottom { gap: 0; align-items: stretch; }
+.hw .arranger-bottom > .card { border-top: none; }
+.hw .arranger-bottom > .card + .card { border-left: none; }
+
+/* 見出し：小さめのグレーの文字 */
 .hw .panel-title {
-  margin: 18px -20px 14px;
-  padding: 7px 20px;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  color: var(--hw-silk);
-  background: linear-gradient(180deg, var(--hw-strip), var(--hw-strip-2));
-  border-top: 1px solid var(--hw-edge);
-  border-bottom: 1px solid var(--hw-edge);
-  box-shadow: inset 0 1px 0 var(--hw-highlight);
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--hw-label);
 }
 
-.hw .panel > .panel-title:first-child { margin-top: -18px; border-top: none; }
+.hw .panel-title svg { width: 15px; height: 15px; color: var(--hw-faint); }
 
-.hw .panel-title::before {
-  content: "";
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--hw-accent);
-  box-shadow: 0 0 6px var(--hw-accent-glow);
+/* モジュール内の区切り：端から端までの横線 */
+.hw .panel-divider {
+  margin: 16px -20px 14px;
+  border-top: 1px solid var(--hw-line);
 }
-
-.hw .panel-title svg { width: 16px; height: 16px; color: var(--hw-silk-sub); }
-
-/* 見出しの帯で区切るので、区切り線は使わない */
-.hw .panel-divider { display: none; }
 
 .hw .form-label,
-.hw .export-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--hw-silk-sub);
-}
+.hw .export-label { font-size: 12px; color: var(--hw-label); }
 
 .hw .pill-row,
-.hw .swap-desc { color: var(--hw-silk); }
+.hw .swap-desc { color: var(--hw-text); }
 .hw .pill-note,
-.hw .hint { color: var(--hw-silk-sub); }
+.hw .hint { color: var(--hw-faint); }
 
-/* セレクト：液晶の表示窓（右端の ▾ は背景のグラデーションで描く） */
+/* ドロップダウン：下線付きの文字（右端の ▾ は背景のグラデーションで描く） */
 .hw .select {
   appearance: none;
-  padding: 8px 30px 8px 12px;
-  font-family: "Consolas", "Menlo", var(--font);
+  padding: 4px 20px 4px 0;
   font-size: 14px;
-  color: var(--lcd-text);
+  font-weight: 500;
+  color: var(--hw-text);
   background:
-    linear-gradient(45deg, transparent 50%, var(--lcd-text) 50%) calc(100% - 17px) 52% / 5px 5px no-repeat,
-    linear-gradient(135deg, var(--lcd-text) 50%, transparent 50%) calc(100% - 12px) 52% / 5px 5px no-repeat,
-    linear-gradient(180deg, var(--lcd-bg-2), var(--lcd-bg));
-  border: 1px solid var(--lcd-edge);
-  border-radius: 6px;
-  box-shadow: inset 0 2px 6px var(--hw-inset), 0 1px 0 var(--hw-highlight);
-  text-shadow: 0 0 6px var(--lcd-glow);
+    linear-gradient(45deg, transparent 50%, var(--hw-text) 50%) calc(100% - 9px) 55% / 4px 4px no-repeat,
+    linear-gradient(135deg, var(--hw-text) 50%, transparent 50%) calc(100% - 5px) 55% / 4px 4px no-repeat;
+  border: none;
+  border-bottom: 1px solid var(--hw-text);
+  border-radius: 0;
   cursor: pointer;
 }
 
-.hw .select:hover { background-color: var(--lcd-hover); }
-.hw .select:focus { outline: 2px solid var(--custom); outline-offset: 1px; border-color: var(--lcd-edge); }
-.hw .select option { color: var(--lcd-text); background: var(--lcd-bg); }
-.hw .select option:disabled { color: var(--lcd-dim); }
+.hw .select:hover { border-bottom-color: var(--hw-orange); }
+.hw .select:focus { outline: none; border-bottom: 2px solid var(--hw-orange); padding-bottom: 3px; }
+.hw .select option { color: var(--hw-text); background: var(--hw-bg); }
+.hw .select option:disabled { color: var(--hw-faint); }
 
-/* ボタン：押し込めるハードウェアのキー */
+/* ボタン：平らなグレーの箱 */
 .hw .btn {
-  color: var(--hw-silk);
-  font-weight: 700;
-  background: linear-gradient(180deg, var(--hw-key), var(--hw-key-2));
-  border: 1px solid var(--hw-edge);
-  border-radius: 6px;
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 2px 0 var(--hw-edge), 0 3px 6px var(--hw-shade);
-  transition: transform 0.05s, box-shadow 0.05s;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--hw-text);
+  background: var(--hw-box);
+  border: 1px solid transparent;
+  border-radius: 2px;
 }
 
-.hw .btn:hover { border-color: var(--hw-silk-sub); }
-.hw .btn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: inset 0 1px 3px var(--hw-shade), 0 0 0 var(--hw-edge);
-}
+.hw .btn:hover { background: var(--hw-box-hover); border-color: transparent; }
+.hw .btn:active:not(:disabled) { background: var(--hw-line); }
+.hw #c-tap.is-active { color: var(--hw-text); border-color: var(--hw-orange); }
 
-.hw #c-tap.is-active { color: var(--custom); border-color: var(--custom); }
-
-/* ON/OFF：LED 付きのボタン */
+/* ON/OFF：選択中は濃い箱 */
 .hw .pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 60px;
-  padding: 4px 10px;
-  font-family: "Consolas", "Menlo", var(--font);
-  letter-spacing: 0.06em;
-  color: var(--hw-silk-sub);
-  background: linear-gradient(180deg, var(--hw-key), var(--hw-key-2));
-  border: 1px solid var(--hw-edge);
-  border-radius: 5px;
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 2px 0 var(--hw-edge);
+  min-width: 46px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hw-faint);
+  background: var(--hw-box);
+  border: none;
+  border-radius: 2px;
 }
 
-.hw .pill::before {
-  content: "";
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--led-off);
-  box-shadow: inset 0 1px 1px var(--hw-inset);
-  transition: background 0.1s, box-shadow 0.1s;
-}
+.hw .pill.is-on { color: var(--hw-sel-text); background: var(--hw-sel); }
 
-.hw .pill.is-on { color: var(--hw-silk); background: linear-gradient(180deg, var(--hw-key), var(--hw-key-2)); border-color: var(--hw-edge); }
-.hw .pill.is-on::before {
-  background: var(--led-on);
-  box-shadow: 0 0 6px var(--led-glow), 0 0 2px var(--led-on);
-}
-
-.hw .pill:active { transform: translateY(2px); box-shadow: inset 0 1px 3px var(--hw-shade); }
-
-/* スケールロック：スライドスイッチ（ON で LED のように光る） */
+/* スケールロック：小さなスイッチ */
 .hw .toggle {
-  width: 44px;
-  height: 22px;
-  border-radius: 4px;
-  background: var(--fader-slot);
-  box-shadow: inset 0 2px 4px var(--hw-inset), 0 1px 0 var(--hw-highlight);
+  width: 36px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--hw-box);
 }
 
 .hw .toggle span {
-  width: 20px;
-  height: 16px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, var(--fader-cap), var(--fader-cap-2));
-  box-shadow: 0 1px 2px var(--hw-shade);
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 14px;
+  border-radius: 1px;
+  background: var(--hw-sel);
 }
 
-.hw .toggle.is-on {
-  background: var(--fader-slot);
-  box-shadow: inset 0 2px 4px var(--hw-inset), 0 0 0 1px var(--led-on), 0 0 8px var(--led-glow);
-}
+.hw .toggle.is-on { background: var(--hw-green); }
+.hw .toggle.is-on span { transform: translateX(16px); background: var(--slider-cap); }
 
-.hw .toggle.is-on span { transform: translateX(18px); }
-
-/* BPM の数値 */
+/* BPM：大きいノブと値の箱 */
 .hw .bpm-number {
-  padding: 4px 12px;
-  font-size: 26px;
+  padding: 3px 10px;
+  font-size: 20px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.3;
   text-align: right;
 }
 
 .hw .bpm-number::after {
   content: "BPM";
   margin-left: 6px;
-  font-size: 11px;
-  color: var(--lcd-dim);
-  text-shadow: none;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--hw-label);
 }
 
-/* ノブ：外周の目盛りと値の弧（SVG）、刻み付きのキャップ（値に合わせて回す） */
+/* ── ノブ：白い面と指示線、外側に細い色の弧（Controls.ts の attachKnob） ── */
 .knob {
-  --size: 64px;
+  --size: 60px;
   --p: 0;
   position: relative;
   flex: none;
@@ -1285,8 +1255,8 @@ button {
   touch-action: none;
 }
 
-.knob-lg { --size: 78px; }
-.knob:focus-visible { outline: 2px solid var(--custom); outline-offset: 4px; }
+.knob-lg { --size: 84px; }
+.knob:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 3px; }
 
 .knob-ring {
   position: absolute;
@@ -1296,46 +1266,33 @@ button {
   overflow: visible;
 }
 
-.knob-tick  { stroke: var(--hw-silk-sub); stroke-width: 1.6; stroke-linecap: round; }
+.knob-tick { display: none; }
 .knob-track,
-.knob-value { fill: none; stroke-width: 6; stroke-linecap: round; }
-.knob-track { stroke: var(--knob-track); }
-.knob-value { stroke: var(--hw-accent); filter: drop-shadow(0 0 3px var(--hw-accent-glow)); }
+.knob-value { fill: none; stroke-width: 4; }
+.knob-track { stroke: var(--knob-arc-bg); }
+.knob-value { stroke: var(--hw-green); }
 
 .knob-cap {
   position: absolute;
-  inset: 19%;
+  inset: 15%;
   border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, var(--knob-cap) 0 55%, transparent 56%),
-    repeating-conic-gradient(var(--knob-cap) 0 6deg, var(--knob-knurl) 6deg 12deg);
-  box-shadow: 0 0 0 2px var(--knob-skirt), 0 4px 8px var(--hw-shade), 0 1px 0 2px var(--hw-highlight);
+  background: radial-gradient(circle at 50% 30%, var(--knob-face), var(--knob-face-2));
+  box-shadow: 0 0 0 1px var(--knob-edge), 0 3px 5px var(--hw-shadow);
   transform: rotate(calc(-135deg + var(--p) * 270deg));
-}
-
-/* 上から光が当たっているように見せるハイライト（回さない） */
-.knob::after {
-  content: "";
-  position: absolute;
-  inset: 19%;
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 25%, var(--knob-shine), transparent 60%);
-  pointer-events: none;
 }
 
 .knob-pointer {
   position: absolute;
   left: 50%;
-  top: 7%;
+  top: 5%;
   width: 3px;
-  height: 32%;
+  height: 42%;
   margin-left: -1.5px;
   border-radius: 2px;
-  background: var(--knob-pointer);
-  box-shadow: 0 0 3px var(--knob-pointer);
+  background: var(--knob-mark);
 }
 
-/* フェーダー：溝（光るレベル）とつまみ */
+/* ── フェーダー：細い溝と小さなつまみ（Controls.ts の attachFader） ── */
 .fader {
   --p: 0;
   position: relative;
@@ -1344,24 +1301,18 @@ button {
   height: 128px;
   cursor: ns-resize;
   touch-action: none;
-  /* 溝の左右の目盛り（つまみの動く範囲を 10 等分） */
-  background:
-    linear-gradient(var(--fader-tick, var(--hw-silk-sub)) 0 1px, transparent 1px) 2px 8px / 5px calc((100% - 16px) / 10) repeat-y,
-    linear-gradient(var(--fader-tick, var(--hw-silk-sub)) 0 1px, transparent 1px) calc(100% - 2px) 8px / 5px calc((100% - 16px) / 10) repeat-y;
 }
 
-.fader:focus-visible { outline: 2px solid var(--custom); outline-offset: 2px; border-radius: 4px; }
+.fader:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 2px; }
 
 .fader-slot {
   position: absolute;
-  top: 8px;
-  bottom: 8px;
+  top: 7px;
+  bottom: 7px;
   left: 50%;
-  width: 5px;
-  margin-left: -2.5px;
-  border-radius: 3px;
-  background: var(--fader-slot);
-  box-shadow: inset 0 1px 2px var(--hw-inset), 0 1px 0 var(--hw-highlight);
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--slider-track);
 }
 
 .fader-fill {
@@ -1370,161 +1321,135 @@ button {
   right: 0;
   bottom: 0;
   height: calc(var(--p) * 100%);
-  border-radius: 3px;
-  background: var(--hw-accent);
-  box-shadow: 0 0 6px var(--hw-accent-glow);
+  background: var(--hw-green);
 }
 
 .fader-cap {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--p) * (100% - 16px));
-  width: 26px;
-  height: 16px;
-  margin-left: -13px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, var(--fader-cap), var(--fader-cap-2));
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 2px 4px var(--hw-shade), 0 0 0 1px var(--hw-edge);
+  bottom: calc(var(--p) * (100% - 14px));
+  width: 22px;
+  height: 14px;
+  margin-left: -11px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--slider-cap), var(--slider-cap-2));
+  box-shadow: 0 0 0 1px var(--knob-edge), 0 2px 3px var(--hw-shadow);
   cursor: grab;
 }
 
 .fader-cap::after {
   content: "";
   position: absolute;
-  top: 7px;
+  top: 6px;
   left: 3px;
   right: 3px;
   height: 2px;
-  background: var(--fader-line);
+  background: var(--slider-track);
 }
 
 .fader.is-dragging .fader-cap,
 .knob.is-dragging { cursor: grabbing; }
 
-/* ── ミキサー（MixerPanel.ts）：沈んだ台の上に暗いチャンネルストリップを並べる ──
-   左から dB 目盛り、8パート、マスター。各ストリップは パートの色と名前／電源／フェーダー＋メーター／値 */
+/* ── ミキサー（MixerPanel.ts） ──
+   上端の黒い帯にパートの色と名前を並べ、その下に電源・フェーダー＋メーター・値。左端に dB 目盛り、右端にマスター */
 .mixer-panel { margin-top: 20px; }
+.hw .mixer-panel { padding: 0; }
+.hw .mixer-panel > .panel-title { margin: 0; padding: 10px 20px; }
 
 .mixer {
-  --fader-tick: var(--strip-sub);
-  --body-h: 176px;
+  --body-h: 168px;
   display: grid;
-  grid-template-columns: 30px repeat(8, minmax(68px, 1fr)) minmax(84px, 1.15fr);
-  gap: 6px;
-  padding: 10px;
+  grid-template-columns: 34px repeat(8, minmax(68px, 1fr)) minmax(84px, 1.15fr);
   overflow-x: auto;
-  background: var(--hw-well);
-  border-radius: 6px;
-  box-shadow: inset 0 2px 6px var(--hw-shade), 0 1px 0 var(--hw-highlight);
+  border-top: 1px solid var(--hw-line);
 }
 
 .mixer-ch {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: stretch;
+  gap: 10px;
   min-width: 0;
-  padding-bottom: 10px;
-  color: var(--strip-text);
-  background: linear-gradient(180deg, var(--strip-bg), var(--strip-bg-2));
-  border: 1px solid var(--strip-edge);
-  border-radius: 5px;
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 2px 4px var(--hw-shade);
-  overflow: hidden;
+  padding-bottom: 12px;
+  color: var(--hw-text);
+  border-right: 1px solid var(--hw-line);
 }
 
-/* 見出し：上端にパートの色（アレンジャーのブロックと同じ色）と名前 */
+.mixer-master { background: var(--hw-bg-2); border-right: none; }
+
+/* 黒い帯：パートの色（アレンジャーのブロックと同じ）＋名前 */
 .mixer-ch-head {
-  display: flex;
-  flex-direction: column;
-  height: 30px;
-}
-
-.mixer-color { height: 4px; flex: none; }
-
-.mixer-ch-name {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 6px;
+  background: var(--hw-bar);
+  color: var(--hw-bar-text);
+}
+
+.mixer-color { flex: none; width: 8px; height: 8px; border-radius: 2px; }
+
+.mixer-ch-name {
+  min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  font-weight: 600;
 }
+
+.mixer-scale .mixer-ch-name { color: var(--hw-bar-sub); font-size: 11px; }
+.mixer-master .mixer-ch-name { color: var(--hw-orange); }
 
 /* 電源ボタン（パートの ON/OFF） */
 .mixer-power,
 .mixer-power-space {
-  height: 22px;
-  margin: 0 8px;
   flex: none;
+  height: 22px;
+  margin: 0 10px;
 }
 
 .mixer-power {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
   padding: 0;
-  font-family: "Consolas", "Menlo", var(--font);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--strip-sub);
-  background: linear-gradient(180deg, var(--strip-bg), var(--strip-bg-2));
-  border: 1px solid var(--strip-edge);
-  border-radius: 4px;
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 1px 2px var(--hw-shade);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--hw-faint);
+  background: var(--hw-box);
+  border: none;
+  border-radius: 2px;
 }
 
-.mixer-power:hover { color: var(--strip-text); }
-.mixer-power:active { transform: translateY(1px); box-shadow: inset 0 1px 3px var(--hw-inset); }
-.mixer-power:focus-visible { outline: 2px solid var(--custom); outline-offset: 1px; }
-
-.mixer-power-led {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--led-off);
-  box-shadow: inset 0 1px 1px var(--hw-inset);
-}
-
-.mixer-power[aria-pressed="true"] { color: var(--strip-text); }
-.mixer-power[aria-pressed="true"] .mixer-power-led {
-  background: var(--led-on);
-  box-shadow: 0 0 6px var(--led-glow), 0 0 2px var(--led-on);
-}
+.mixer-power:hover { background: var(--hw-box-hover); }
+.mixer-power:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
+.mixer-power-led { display: none; }
+.mixer-power[aria-pressed="true"] { color: var(--hw-sel-text); background: var(--hw-sel); }
 
 /* フェーダーとメーター */
 .mixer-body {
   position: relative;
   display: flex;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   height: var(--body-h);
-  padding: 0 6px;
 }
 
-.mixer-body .fader { flex: none; width: 34px; height: 100%; }
+.mixer-body .fader { flex: none; width: 28px; height: 100%; }
 
 .mixer-ch.is-off .fader,
-.mixer-ch.is-off .mixer-ch-name,
-.mixer-ch.is-off .mixer-value { opacity: 0.45; }
+.mixer-ch.is-off .mixer-value,
+.mixer-ch.is-off .meter { opacity: 0.4; }
 
-/* レベルメーター：下から緑→黄→赤。消えている部分は暗く覆い、細い横線で区切って LED の粒に見せる */
+/* レベルメーター：下から緑→黄→赤。消えている部分は覆う */
 .meter {
   --lv: 0;
   --pk: 0;
   position: relative;
   flex: none;
-  width: 7px;
-  margin: 8px 0;  /* フェーダーの動く範囲とそろえる */
-  border-radius: 1px;
+  width: 5px;
+  margin: 7px 0;  /* フェーダーの動く範囲とそろえる */
   background: linear-gradient(0deg, var(--meter-low) 0 62%, var(--meter-mid) 80%, var(--meter-high) 94%);
-  box-shadow: 0 0 0 1px var(--strip-edge);
   overflow: hidden;
 }
 
@@ -1535,7 +1460,6 @@ button {
   right: 0;
   height: calc((1 - var(--lv)) * 100%);
   background: var(--meter-off);
-  opacity: 0.86;
 }
 
 .meter-peak {
@@ -1544,145 +1468,107 @@ button {
   right: 0;
   bottom: calc(var(--pk) * 100% - 2px);
   height: 2px;
-  background: var(--strip-text);
+  background: var(--hw-text);
   display: none;
 }
 
 .meter.has-peak .meter-peak { display: block; }
 
-.meter::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(0deg, transparent 0 3px, var(--meter-off) 3px 4px);
-}
-
-/* 値（音量 0〜100／マスターは dB） */
+/* 値の箱（音量 0〜100／マスターは dB） */
 .mixer-value,
 .mixer-value-space {
   flex: none;
   height: 22px;
-  margin: 0 8px;
+  margin: 0 10px;
 }
 
 .mixer-value {
-  padding: 0;
   font-size: 12px;
-  line-height: 20px;
+  font-weight: 600;
+  line-height: 22px;
   text-align: center;
-  font-variant-numeric: tabular-nums;
 }
 
-/* dB 目盛り（ストリップの枠なしで台の上に印刷） */
-.mixer-scale {
-  color: var(--hw-silk-sub);
-  background: none;
-  border-color: transparent;
-  box-shadow: none;
-}
-
-.mixer-scale .mixer-ch-name { color: var(--hw-silk-sub); }
-
-.mixer-scale-label {
-  position: absolute;
-  right: 2px;
-  bottom: calc(8px + (100% - 16px) * var(--v));
-  transform: translateY(50%);
-  font-family: "Consolas", "Menlo", var(--font);
-  font-size: 10px;
-}
-
-/* マスター：太いメーター2本（L/R の見た目） */
-.mixer-master {
-  border-color: var(--hw-accent);
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 0 0 1px var(--hw-accent-glow), 0 2px 4px var(--hw-shade);
-}
-
-.mixer-master .mixer-ch-name { color: var(--strip-text); }
-.mixer-master .mixer-body { gap: 5px; }
-.mixer-master .meter { width: 12px; }
+.mixer-master .meter { width: 9px; }
 .mixer-master .mixer-value::after {
   content: " dB";
   font-size: 10px;
-  color: var(--lcd-dim);
-  text-shadow: none;
+  color: var(--hw-label);
+}
+
+/* dB 目盛り */
+.mixer-scale-label {
+  position: absolute;
+  right: 4px;
+  bottom: calc(7px + (100% - 14px) * var(--v));
+  transform: translateY(50%);
+  font-size: 10px;
+  color: var(--hw-faint);
 }
 
 /* セレクトの ◀ ▶（Controls.ts の attachStepper） */
-.stepper { display: inline-flex; }
+.stepper { display: inline-flex; gap: 2px; }
 
 .stepper-btn {
-  width: 28px;
+  width: 26px;
   padding: 0;
   font-size: 10px;
   color: var(--text-sub);
   background: var(--surface);
   border: 1px solid var(--border);
+  border-radius: 6px;
 }
-
-.stepper-btn:first-child { border-radius: 8px 0 0 8px; border-right: none; }
-.stepper-btn:last-child  { border-radius: 0 8px 8px 0; }
 
 .hw .stepper-btn {
-  color: var(--hw-silk);
-  background: linear-gradient(180deg, var(--hw-key), var(--hw-key-2));
-  border-color: var(--hw-edge);
-  box-shadow: inset 0 1px 0 var(--hw-highlight), 0 2px 0 var(--hw-edge);
+  color: var(--hw-label);
+  background: var(--hw-box);
+  border: none;
+  border-radius: 2px;
 }
 
-.hw .stepper-btn:first-child { border-radius: 5px 0 0 5px; }
-.hw .stepper-btn:last-child  { border-radius: 0 5px 5px 0; }
-.hw .stepper-btn:hover { color: var(--hw-silk); }
-.hw .stepper-btn:active { transform: translateY(2px); box-shadow: inset 0 1px 3px var(--hw-shade); }
+.hw .stepper-btn:hover { color: var(--hw-text); background: var(--hw-box-hover); }
 
-/* ── アレンジャーのシンセ風 ── */
+/* ── アレンジャー ── */
 .hw .arranger-card { padding: 0; }
+.hw .arranger-toolbar { border-bottom-color: var(--hw-line); }
+.hw .arranger-hint { color: var(--hw-faint); }
+.hw .arranger-mode { color: var(--hw-label); background: var(--hw-box); border-radius: 2px; }
+.hw .arranger-mode.is-edited { color: var(--hw-sel-text); background: var(--hw-sel); }
 
-.hw .arranger-toolbar { border-bottom-color: var(--hw-edge); }
-.hw .arranger-hint { color: var(--hw-silk-sub); }
-
-.hw .arranger-mode {
-  font-family: "Consolas", "Menlo", var(--font);
-  color: var(--lcd-dim);
-  background: linear-gradient(180deg, var(--lcd-bg-2), var(--lcd-bg));
-  border: 1px solid var(--lcd-edge);
-  border-radius: 4px;
-  box-shadow: inset 0 1px 4px var(--hw-inset);
+.hw .arranger {
+  --head-w: 156px;
+  --grid: var(--track-grid);
+  --grid-loop: var(--track-grid-loop);
 }
-
-.hw .arranger-mode.is-edited { color: var(--lcd-text); background: linear-gradient(180deg, var(--lcd-bg-2), var(--lcd-bg)); text-shadow: 0 0 6px var(--lcd-glow); }
-
-/* パネルの内側に一段沈めて収める。見出しはパート名が折り返さない幅にする */
-.hw .arranger { --head-w: 156px; margin: 0 14px 14px; border: 1px solid var(--hw-edge); border-radius: 6px; overflow: hidden; }
 
 @media (max-width: 720px) {
   .hw .arranger { --head-w: 110px; }
 }
 
 .hw .arr-ruler,
-.hw .arr-lane { border-bottom-color: var(--hw-edge); }
-.hw .arr-head { border-right-color: var(--hw-edge); }
-.hw .arr-name { color: var(--hw-silk); }
-.hw .arr-sub  { color: var(--hw-silk-sub); }
-.hw .arr-lane.is-off .arr-name { color: var(--hw-silk-sub); }
-.hw .arr-head .pill { min-width: 50px; padding: 3px 6px; font-size: 11px; }
-.hw .arr-name { white-space: nowrap; }
+.hw .arr-lane { border-bottom-color: var(--hw-line); }
+.hw .arr-head { border-right-color: var(--hw-line); }
+.hw .arr-name { color: var(--hw-text); white-space: nowrap; }
+.hw .arr-sub  { color: var(--hw-faint); }
+.hw .arr-lane.is-off .arr-name { color: var(--hw-faint); }
+.hw .arr-head .pill { min-width: 44px; padding: 2px 6px; }
 
-/* 小節番号の目盛りと再生開始位置：液晶 */
-.hw .arr-ruler { background: linear-gradient(180deg, var(--lcd-bg-2), var(--lcd-bg)); }
-.hw .arr-ruler-head { color: var(--lcd-dim); font-family: "Consolas", "Menlo", var(--font); border-right-color: var(--lcd-edge); }
-.hw .arr-ruler-head b { color: var(--lcd-text); text-shadow: 0 0 6px var(--lcd-glow); }
-.hw .arr-ticks { color: var(--lcd-text); font-family: "Consolas", "Menlo", var(--font); text-shadow: 0 0 6px var(--lcd-glow); }
-.hw .arr-ticks:hover { background: var(--lcd-hover); }
-.hw .arr-ticks .arr-start-marker { border-bottom-color: var(--lcd-text); }
-
-.hw .arr-track { box-shadow: inset 0 2px 4px var(--hw-shade); }
-
-/* ブロック：つややかなパッド（パートの識別色はそのまま） */
-.hw .arr-block {
-  background-image: linear-gradient(180deg, var(--hw-gloss), transparent 55%);
-  box-shadow: inset 0 -2px 0 var(--hw-shade), 0 1px 3px var(--hw-shade);
+/* 小節の目盛り：黒い帯に小節線 */
+.hw .arr-ruler { background: var(--hw-bar); border-bottom-color: var(--hw-bar); }
+.hw .arr-ruler-head { color: var(--hw-bar-sub); border-right-color: var(--hw-bar-2); }
+.hw .arr-ruler-head b { color: var(--hw-orange); }
+.hw .arr-ticks {
+  color: var(--hw-bar-text);
+  background: repeating-linear-gradient(to right, var(--hw-bar-2) 0 1px, transparent 1px calc(100% / var(--bars)));
 }
+.hw .arr-ticks:hover { background-color: var(--hw-bar-2); }
+.hw .arr-ticks .arr-start-marker { border-bottom-color: var(--hw-orange); }
+.hw .arr-start-line { border-left-color: var(--hw-orange); }
+
+.hw .arr-track { background-color: var(--track-bg); }
+
+/* ブロック：平らな色の帯（パートの識別色はそのまま） */
+.hw .arr-block { border-radius: 2px; }
 
 /* ── ピアノロール ───────────────────────── */
 .pianoroll {
