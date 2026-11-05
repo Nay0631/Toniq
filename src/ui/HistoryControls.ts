@@ -2,6 +2,7 @@ import { getState } from "../engine/AppState";
 import { undo, redo, canUndo, canRedo, onHistoryChange, resetHistory, withoutHistory, TrackedField } from "../engine/History";
 import { reloadLayer, setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { applyAllVolumes } from "../engine/VolumeManager";
+import { applySwing } from "../engine/Groove";
 import * as Playback from "../engine/Playback";
 import { restartIfPlaying as restartCustom } from "./CustomScreen";
 import { restartIfPlaying as restartSimple } from "./SimpleScreen";
@@ -10,7 +11,9 @@ import { onRender, render } from "./Router";
 // 元に戻す／やり直す（シンプルモード・カスタムモードの情報バーのボタンと Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）
 
 // 再生し直さなくても反映できる項目（アレンジは再生中も AppState を見ている）
-const LIGHT_FIELDS: TrackedField[] = ["arrangement", "volumes", "parts", "melodyNotes", "melodyMethod", "melodyVersion"];
+const LIGHT_FIELDS: TrackedField[] = [
+  "arrangement", "volumes", "parts", "melodyNotes", "melodyMethod", "melodyVersion", "swing", "sidechain",
+];
 
 function renderButtons(): void {
   document.querySelectorAll<HTMLButtonElement>("[data-undo]").forEach(btn => { btn.disabled = !canUndo(); });
@@ -20,6 +23,7 @@ function renderButtons(): void {
 // 戻した内容を音と画面にそろえる
 async function applyChanges(changed: TrackedField[], before: Record<LayerName, boolean>): Promise<void> {
   if (changed.includes("volumes")) applyAllVolumes();
+  if (changed.includes("swing"))   applySwing();  // サイドチェインはキックのたびに AppState を読むのでそのままでよい
 
   if (Playback.isPlaying()) {
     if (changed.every(f => LIGHT_FIELDS.includes(f))) {

@@ -58,6 +58,7 @@ src/engine/
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
   LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE、各パートが鳴る小節の判定 arrangementGate、周回表示）
+  Groove.ts               グルーヴ（スウィング applySwing・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
@@ -112,9 +113,12 @@ src/engine/
   - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。
   - 音源はジャンルのドラムバス（高域カット→歪み→コンプ→持ち上げ）を通る。音源の音量は `SynthFactory.ts` の `SAMPLE_TRIM_DB` で下げており、`mix_presets.json` の `gain` はシンセのドラムで測った値のまま。
-- 音の流れ：各パートの Volume ノード（`VolumeManager.createVolumeNode`）→ `connectToMixer` でマスター入口とリバーブ送りにつなぐ。リバーブはマスターに直接かけず送りで混ぜる（送り量はパートごとに `MixerEngine.ts` の `REVERB_SENDS`、全体量は `mix_presets.json` の `reverb.wet`。ベースは送らない）。FX / SE はさらに、ジャンルによらない長い響きのロングリバーブ（`LONG_REVERB` / `LONG_REVERB_SENDS`）にも送る。ミキサーはコンテキストごとに1つで作り直さない。WAV書き出しと再生開始前は `mixerReady()` でリバーブの準備を待つ。
+- 音の流れ：各パートの Volume ノード（`VolumeManager.createVolumeNode`）→ サイドチェイン用の Gain → `connectToMixer` でマスター入口とリバーブ送りにつなぐ（パートのレベルメーターはサイドチェインの後ろで測る）。リバーブはマスターに直接かけず送りで混ぜる（送り量はパートごとに `MixerEngine.ts` の `REVERB_SENDS`、全体量は `mix_presets.json` の `reverb.wet`。ベースは送らない）。FX / SE はさらに、ジャンルによらない長い響きのロングリバーブ（`LONG_REVERB` / `LONG_REVERB_SENDS`）にも送る。ミキサーはコンテキストごとに1つで作り直さない。WAV書き出しと再生開始前は `mixerReady()` でリバーブの準備を待つ。
 - コード・パッド・アルペジオのボイシングは `voiceProgression(progression, key, VOICING_RANGES.*)`（`degree_resolver.ts`）で決める。最低音を範囲内に収め、前のコードから一番近い転回形を選ぶ（ループの継ぎ目も考慮。進行の `inversion` は動きが同じくらいなら優先）。パッドは `spread`（開離配置）。MIDI書き出しも同じボイシングを使う。各 Player は自前のリバーブを持たず（ローパス・コーラス・ディレイなどだけ）、エフェクトのノードは `dispose*` で一緒に破棄する。強さ（ベロシティ）は拍の位置で付けて少し揺らし、和音は数msずつずらして鳴らす（ストラム）。
 - `mix_presets.json` の `gain` は全ジャンルでクリップしない（ピーク −1dB 以下）ように測って決めた値。音源やパートを大きく変えたら測り直す。
+- グルーヴ（`Groove.ts`）：量は `AppState.swing` / `sidechain`（0〜100、`SONG_FIELDS` に含む。`null` = ジャンルの標準で、`mix_presets.json` の `swing` / `sidechain`）。カスタムモードの基本設定の「グルーヴ」のノブで決め、「標準」で `null` に戻す。シンプルモード・ジャンルのサンプルはジャンルの標準で鳴る。ジャンルを足すときは `mix_presets.json` に `swing` / `sidechain` も入れる。
+  - スウィング：`applySwing()` が Transport の `swing`（`swingSubdivision` は `16n`。100 で `SWING_MAX` = 0.67 ≒ 3連のシャッフル）を設定する。再生・試聴・サンプル・WAV書き出し（Offline の Transport）の開始時と、量を変えたとき（再生中もすぐ反映）に呼ぶ。16分音符の裏拍に当たる全パートのイベントがずれる。MIDI書き出しには反映しない。
+  - サイドチェイン：ドラムのキックが鳴るたびに `sidechainHit(time, velocity)` が、`SIDECHAIN_PARTS`（ベース・パッド 1、コード 0.8、アルペジオ・シグネチャー 0.6。メロディ・ドラム・FX は沈めない）のサイドチェイン用 Gain を数msで下げ（100 で 0.2 倍 ≒ −14dB）、拍の6割で戻す。量はキックのたびに AppState から読むので再生中の変更もすぐ反映される。ドラムが OFF・キックがない小節では沈まない。音量を下げるだけなので `gain` の測り直しは要らない。
 - メロディ生成の規則（`MelodyGenerator.ts`）：
   - 音はペンタトニックの5音が基本。残りの2音（アクセント音）は、1拍目・3拍目の頭以外で、休符を挟まず次の音が続く位置にだけ経過音・刺繍音として置き、次の音で解決先へ順次進行させる。コード構成音になるアクセント音は普通の音として扱う。
   - リズムは `melody_params.json` の `rhythmPatterns`（16ステップ表記。`x` = 発音、`-` = 伸ばす、`.` = 休符）から小節ごとに選ぶ。各小節の最初の音はコード構成音。

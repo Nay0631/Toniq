@@ -31,6 +31,24 @@ function currentMeters(): Record<string, Tone.Meter> | null {
   return meters;
 }
 
+// サイドチェイン用のゲイン（Volume の後ろ。Groove.ts がキックに合わせて一瞬下げる）。Volume と同じくコンテキストごと
+const ducksByContext = new WeakMap<Tone.BaseContext, Record<string, Tone.Gain>>();
+
+function currentDucks(): Record<string, Tone.Gain> {
+  const ctx = Tone.getContext();
+  let ducks = ducksByContext.get(ctx);
+  if (!ducks) {
+    ducks = {};
+    ducksByContext.set(ctx, ducks);
+  }
+  return ducks;
+}
+
+// 現在のコンテキストのサイドチェイン用のゲイン（まだ鳴らしていないパートは含まない）
+export function duckGains(): Record<string, Tone.Gain> {
+  return currentDucks();
+}
+
 // 0〜100の値をdBに変換
 function toDb(value: number): number {
   if (value <= 0) return -Infinity;
@@ -46,14 +64,19 @@ export function createVolumeNode(part: string): Tone.Volume {
   const volumes = state.volumes as Record<string, number>;
   const db      = toDb(volumes[part] ?? 75);
   const node    = new Tone.Volume(db);
-  connectToMixer(node, part);  // マスター（EQ・コンプ・リミッター）とリバーブ送りへ
+  // Volume → サイドチェインのゲイン → マスター（EQ・コンプ・リミッター）とリバーブ送りへ
+  // （リバーブにも沈んだ音を送るので、響きも一緒にうねる）
+  const duck = new Tone.Gain(1);
+  node.connect(duck);
+  connectToMixer(duck, part);
   nodes[part] = node;
+  currentDucks()[part] = duck;
 
-  // 音量を通ったあとのレベルを測る（メーターは音を出さない枝分かれ）
+  // 音量とサイドチェインを通ったあとのレベルを測る（メーターは音を出さない枝分かれ）
   const meters = currentMeters();
   if (meters && !meters[part]) {
     meters[part] = new Tone.Meter({ smoothing: 0.6 });
-    node.connect(meters[part]);
+    duck.connect(meters[part]);
   }
   return node;
 }
@@ -99,6 +122,9 @@ export function disposeVolumeNodes(): void {
   const nodes = currentNodes();
   Object.values(nodes).forEach(node => node.dispose());
   Object.keys(nodes).forEach(key => delete nodes[key]);
+  const ducks = currentDucks();
+  Object.values(ducks).forEach(duck => duck.dispose());
+  Object.keys(ducks).forEach(key => delete ducks[key]);
   const meters = currentMeters();
   if (meters) {
     Object.values(meters).forEach(meter => meter.dispose());

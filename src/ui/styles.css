@@ -3079,3 +3079,22 @@ span[data-term],
   .settings-row { flex-direction: column; align-items: flex-start; gap: 12px; }
   .settings-options { justify-content: flex-start; }
 }
+
+/* ===== グルーヴ（カスタムモードの基本設定。スウィング・サイドチェインのノブ） ===== */
+.groove-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.groove-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.groove-label { font-size: 13px; font-weight: 600; }
+.groove-value { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+.groove-auto.is-active { border-color: var(--custom); color: var(--custom); }

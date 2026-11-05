@@ -4,55 +4,71 @@
     "eq":        { "low": 3, "mid": -2, "high": 3 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.15 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4
+    "gain":      -4,
+    "swing":     0,
+    "sidechain": 55
   },
   "8bit": {
     "reverb":    { "decay": 0.5, "wet": 0.1 },
     "eq":        { "low": 2, "mid": 1, "high": 3 },
     "compressor":{ "threshold": -14, "ratio": 2.5, "attack": 0.01, "release": 0.1 },
     "limiter":   { "threshold": -1 },
-    "gain":      -5
+    "gain":      -5,
+    "swing":     0,
+    "sidechain": 0
   },
   "ローファイ": {
     "reverb":    { "decay": 3.0, "wet": 0.35 },
     "eq":        { "low": 2, "mid": -3, "high": -4 },
     "compressor":{ "threshold": -18, "ratio": 2.5, "attack": 0.02, "release": 0.3 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4
+    "gain":      -4,
+    "swing":     45,
+    "sidechain": 15
   },
   "ゲームBGM": {
     "reverb":    { "decay": 2.0, "wet": 0.25 },
     "eq":        { "low": 2, "mid": 0, "high": 2 },
     "compressor":{ "threshold": -14, "ratio": 2.5, "attack": 0.01, "release": 0.2 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4
+    "gain":      -4,
+    "swing":     0,
+    "sidechain": 0
   },
   "テクノ": {
     "reverb":    { "decay": 1.2, "wet": 0.15 },
     "eq":        { "low": 3, "mid": -1, "high": 2 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.12 },
     "limiter":   { "threshold": -1 },
-    "gain":      -3
+    "gain":      -3,
+    "swing":     10,
+    "sidechain": 40
   },
   "ハウス": {
     "reverb":    { "decay": 1.8, "wet": 0.2 },
     "eq":        { "low": 3, "mid": -1, "high": 2 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.15 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4
+    "gain":      -4,
+    "swing":     25,
+    "sidechain": 45
   },
   "トランス": {
     "reverb":    { "decay": 2.5, "wet": 0.25 },
     "eq":        { "low": 3, "mid": -2, "high": 3 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.15 },
     "limiter":   { "threshold": -1 },
-    "gain":      -5
+    "gain":      -5,
+    "swing":     0,
+    "sidechain": 50
   },
   "アンビエント": {
     "reverb":    { "decay": 6.0, "wet": 0.45 },
     "eq":        { "low": 0, "mid": -1, "high": 1 },
     "compressor":{ "threshold": -20, "ratio": 2, "attack": 0.05, "release": 0.5 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4
+    "gain":      -4,
+    "swing":     0,
+    "sidechain": 0
   }
 }

@@ -7,6 +7,7 @@ import { signatureLabel } from "../engine/SignaturePlayer";
 import { tap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, toggleMetronome } from "../engine/Metronome";
 import { exportMidi } from "../engine/MidiExporter";
+import { applySwing, swingAmount, sidechainAmount } from "../engine/Groove";
 import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
@@ -64,6 +65,18 @@ function setChordPattern(next: ChordProgression): void {
     setState({ melodyVersion: s.melodyVersion + 1 });
     makeMelody();
   }
+}
+
+// グルーヴのノブ（スウィング・サイドチェイン）
+const GROOVE = [
+  { key: "swing",     id: "c-swing",     label: "スウィング",     amount: swingAmount },
+  { key: "sidechain", id: "c-sidechain", label: "サイドチェイン", amount: sidechainAmount },
+] as const;
+
+// グルーヴの量を変える。サイドチェインはキックのたびに AppState を読むので、スウィングだけ Transport に当て直す
+function setGroove(key: "swing" | "sidechain", value: number | null): void {
+  setState(key === "swing" ? { swing: value } : { sidechain: value });
+  if (key === "swing") applySwing();
 }
 
 // 再生中に曲の内容が変わったら先頭から再生し直す
@@ -168,6 +181,15 @@ function render(): void {
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
   if (document.activeElement !== bpmRange) bpmRange.value = String(s.bpm);
   $("c-bpm-value")!.textContent = `${s.bpm}`;
+
+  // グルーヴ（null = ジャンルの標準の量を表示し、「標準」ボタンを押した状態にする）
+  for (const g of GROOVE) {
+    const input = $(g.id) as HTMLInputElement;
+    const value = g.amount();
+    if (document.activeElement !== input) input.value = String(value);
+    $(`${g.id}-value`)!.textContent = `${value}`;
+    $(`${g.id}-auto`)!.classList.toggle("is-active", s[g.key] === null);
+  }
   syncControls();
   $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   const metronomeOn = isMetronomeOn();
@@ -271,6 +293,20 @@ export function initCustomScreen(): void {
     setBpm(parseInt(bpmRange.value));
     render();
   });
+
+  // グルーヴ：ノブで量を決める（再生中もすぐ反映される）。「標準」でジャンルの標準の量（null）に戻す
+  for (const g of GROOVE) {
+    const input = $(g.id) as HTMLInputElement;
+    attachKnob(input, g.label);
+    input.addEventListener("input", () => {
+      setGroove(g.key, parseInt(input.value));
+      render();
+    });
+    $(`${g.id}-auto`)?.addEventListener("click", () => {
+      setGroove(g.key, null);
+      render();
+    });
+  }
 
   // 今の BPM の速さをクリック音で確かめる（鳴らしたままノブを回すとすぐ反映される）
   $("c-metronome")?.addEventListener("click", () => {

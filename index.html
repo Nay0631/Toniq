@@ -364,6 +364,31 @@
                 <option value="soft">ソフトサイン（アンビエント）</option>
               </select>
             </label>
+
+            <hr class="panel-divider">
+
+            <!-- グルーヴ（Groove.ts）。「標準」はジャンルの標準の量（mix_presets.json）を使う -->
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 15c2 0 2-6 4-6s2 6 4 6 2-6 4-6 2 6 4 6 2-3 2-3"/>
+              </svg>
+              <span data-term="groove">グルーヴ</span>
+            </div>
+            <div class="groove-grid">
+              <div class="groove-item">
+                <span class="groove-label" data-term="swing">スウィング</span>
+                <!-- range はノブ（Controls.ts）に置き換わる -->
+                <input type="range" class="range" id="c-swing" min="0" max="100" step="1" aria-label="スウィング">
+                <span class="lcd groove-value" id="c-swing-value"></span>
+                <button class="btn btn-small groove-auto" id="c-swing-auto" title="ジャンルの標準の量にする">標準</button>
+              </div>
+              <div class="groove-item">
+                <span class="groove-label" data-term="sidechain">サイドチェイン</span>
+                <input type="range" class="range" id="c-sidechain" min="0" max="100" step="1" aria-label="サイドチェイン">
+                <span class="lcd groove-value" id="c-sidechain-value"></span>
+                <button class="btn btn-small groove-auto" id="c-sidechain-auto" title="ジャンルの標準の量にする">標準</button>
+              </div>
+            </div>
           </div>
 
           <!-- スケール・キー／コード進行 -->

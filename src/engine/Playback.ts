@@ -9,6 +9,7 @@ import { stopMetronome } from "./Metronome";
 import { prepareDrumSamples } from "./DrumSamples";
 import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
+import { applySwing } from "./Groove";
 
 // 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
 async function audioReady(genre: string): Promise<void> {
@@ -68,6 +69,7 @@ export async function play(options: PlayOptions = {}): Promise<void> {
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
+  applySwing();
 
   // ON のパートはすべて先頭で読み込み、どの小節で鳴らすかは各パートがアレンジを見て決める
   reloadAllLayers();
@@ -100,6 +102,7 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
+  applySwing();
   setArrangementBypass(true);
   reloadLayer(layer);
 
@@ -147,6 +150,7 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
+  applySwing();  // サンプルはジャンルの標準のスウィング（曲の設定が null のとき）
   setArrangementBypass(true);
   SAMPLE_LAYERS.forEach(reloadLayer);
 
@@ -236,6 +240,7 @@ export async function renderWav(): Promise<Blob> {
     applyMixPreset(s.genre);
     await mixerReady();
     Tone.getTransport().bpm.value = s.bpm;
+    applySwing();  // 書き出し用の Transport にも同じスウィングをかける
 
     const { loadDrumPattern: loadDrum }                          = await import("./DrumEngine");
     const { initChordSynth: initC, loadChordProgression: loadC } = await import("./ChordPlayer");
