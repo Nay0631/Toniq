@@ -1,7 +1,6 @@
 import { getState, setState, AppState, defaultState } from "./AppState";
 import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset } from "./SimpleModeResolver";
-import { generateMelody } from "./MelodyGenerator";
 
 // ミュージックリスト：保存した曲を localStorage に置く
 const STORAGE_KEY = "toniq.songs";
@@ -138,6 +137,6 @@ export function newSong(): void {
     chordPattern: result.chordPattern,
     drumPattern:  result.drumPattern,
   });
-  setState({ melodyNotes: generateMelody(result.chordPattern, s.key, s.genre) });
+  // メロディは空のまま（自動生成ボタンを押したときに初めて作る）
   applyAllVolumes();
 }

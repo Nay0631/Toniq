@@ -4,8 +4,7 @@ import { initArpSynth }                             from "./engine/ArpPlayer";
 import { initPadSynth }                             from "./engine/PadPlayer";
 import { initMelodySynth }                          from "./engine/MelodyPlayer";
 import { initFxSynth }                              from "./engine/FxPlayer";
-import { generateMelody }                           from "./engine/MelodyGenerator";
-import { getState, setState }                      from "./engine/AppState";
+import { setState }                                 from "./engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset } from "./engine/SimpleModeResolver";
 import { initRouter } from "./ui/Router";
 import { initSimpleScreen } from "./ui/SimpleScreen";
@@ -36,8 +35,7 @@ window.addEventListener("load", () => {
   initMelodySynth();
   initFxSynth();
 
-  // メロディ生成
-  setState({ melodyNotes: generateMelody(getState().chordPattern!, getState().key, getState().genre) });
+  // メロディは起動時には作らない（自動生成ボタンを押したときに初めて作る）
 
   initSimpleScreen();
   initCustomScreen();

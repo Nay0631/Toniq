@@ -36,6 +36,7 @@ function laneLabels(part: LayerName): { sub: string; block: string } {
     }
     case "melody": {
       if (s.melodyMethod === "manual") return { sub: "ピアノロール", block: "ピアノロール" };
+      if (s.melodyNotes.length === 0) return { sub: "未作成", block: "未作成" };
       const phrase = `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`;
       return { sub: phrase, block: phrase };
     }
