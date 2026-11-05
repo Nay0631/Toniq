@@ -439,6 +439,15 @@
               </div>
             </div>
 
+            <!-- テスト中：ドラムを Tone.js のシンセで鳴らすか、ワンショット音源（public/samples/drums）で鳴らすか -->
+            <label class="form-row">
+              <span class="form-label">音源</span>
+              <select class="select" id="c-drum-source">
+                <option value="synth">Tone.js シンセ</option>
+                <option value="sample">サンプル音源</option>
+              </select>
+            </label>
+
             <hr class="panel-divider">
 
             <div class="panel-title">

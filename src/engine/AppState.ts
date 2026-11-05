@@ -1,6 +1,7 @@
 import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import type { LayerName } from "./LayerManager";
+import type { DrumSource } from "./SynthFactory";
 
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz";
@@ -95,6 +96,8 @@ export interface AppState {
   chordInstrument:  ChordInstrument;
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
+  // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替えなので曲には保存しない
+  drumSource:       DrumSource;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
@@ -165,6 +168,7 @@ export const defaultState: AppState = {
   chordInstrument:  "soft",
   scaleLock:        true,
   drumCategory:     "EDM",
+  drumSource:       "synth",
 
   arrangement: null,
   startBar:    0,

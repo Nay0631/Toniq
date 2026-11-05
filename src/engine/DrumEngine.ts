@@ -34,7 +34,8 @@ export function loadDrumPattern(pattern: DrumPattern) {
 
   drumVol = createVolumeNode("drum");  // 現在のオーディオコンテキスト用のノード
   const tracks = Object.entries(pattern.tracks);
-  kit = createDrumKit(getState().genre, tracks.map(([name]) => name));
+  const { genre, drumSource } = getState();
+  kit = createDrumKit(genre, tracks.map(([name]) => name), drumSource);
   kit.output.connect(drumVol);
   const voices = kit.voices;
   const arranged = arrangementGate("drum");

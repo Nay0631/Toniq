@@ -55,7 +55,8 @@ src/engine/
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループ末尾のライザーSE）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
-  SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）
+  SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。ワンショット音源で鳴らす音色もここ
+  DrumSamples.ts          ドラムのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止）、再生位置、WAVレンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）。オーディオコンテキストごとに保持
   MixerEngine.ts          マスター（入口→EQ→コンプ→持ち上げ→リミッター）とリバーブ送り。オーディオコンテキストごとに保持
@@ -100,6 +101,10 @@ src/engine/
   - `chord_progressions.json` / `drum_patterns.json` の `genre` タグにも新ジャンルを付ける。シンプルモードの差し替え候補は、`easy_mode_table.json` の ID に加えてジャンル・雰囲気のタグが一致するものから選ばれる。下の既知の問題にある、例外になるコード進行はタグに含めない。
   - 4/4・16ステップの前提で表せないジャンル（スウィング・3連符、32分のハイハットロール、3拍子など）は今の仕組みでは作れない。
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
+- ドラムの音源（テスト中）：`AppState.drumSource` が `"synth"`（Tone.js のシンセ、初期値）か `"sample"`（ワンショット音源）。カスタムモードのドラム欄の「音源」で切り替える。曲の内容ではないので `SONG_FIELDS` には入れない。
+  - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
+  - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。
+  - 音源はジャンルのドラムバス（高域カット→歪み→コンプ→持ち上げ）を通る。音源の音量は `SynthFactory.ts` の `SAMPLE_TRIM_DB` で下げており、`mix_presets.json` の `gain` はシンセのドラムで測った値のまま。
 - 音の流れ：各パートの Volume ノード（`VolumeManager.createVolumeNode`）→ `connectToMixer` でマスター入口とリバーブ送りにつなぐ。リバーブはマスターに直接かけず送りで混ぜる（送り量はパートごとに `MixerEngine.ts` の `REVERB_SENDS`、全体量は `mix_presets.json` の `reverb.wet`。ベースは送らない）。ミキサーはコンテキストごとに1つで作り直さない。WAV書き出しと再生開始前は `mixerReady()` でリバーブの準備を待つ。
 - `mix_presets.json` の `gain` は全ジャンルでクリップしない（ピーク −1dB 以下）ように測って決めた値。音源やパートを大きく変えたら測り直す。
 - メロディ生成の規則（`MelodyGenerator.ts`）：

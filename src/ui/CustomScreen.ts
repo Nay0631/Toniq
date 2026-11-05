@@ -7,6 +7,7 @@ import { tap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, toggleMetronome } from "../engine/Metronome";
 import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
+import type { DrumSource } from "../engine/SynthFactory";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
@@ -200,6 +201,7 @@ function render(): void {
 
   // ドラム
   $select("c-drum-category").value = s.drumCategory;
+  $select("c-drum-source").value   = s.drumSource;
   fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
 
   // パッド / アルペジオ / シグネチャー
@@ -378,6 +380,13 @@ export function initCustomScreen(): void {
   $select("c-drum").addEventListener("change", async e => {
     const next = drums.find(d => d.id === (e.target as HTMLSelectElement).value);
     if (next) setState({ drumPattern: next });
+    render();
+    await restartIfPlaying();
+  });
+
+  // ドラムの音源（テスト中の切り替え）：キットは読み込み時に作られるので、再生中なら再生し直す
+  $select("c-drum-source").addEventListener("change", async e => {
+    setState({ drumSource: (e.target as HTMLSelectElement).value as DrumSource });
     render();
     await restartIfPlaying();
   });

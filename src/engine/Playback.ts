@@ -6,6 +6,15 @@ import { applyMixPreset, mixerReady } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
 import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
+import { prepareDrumSamples } from "./DrumSamples";
+
+// 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
+async function audioReady(genre: string): Promise<void> {
+  await Promise.all([
+    mixerReady(),
+    getState().drumSource === "sample" ? prepareDrumSamples(genre) : Promise.resolve(),
+  ]);
+}
 
 let endEventId: number | null = null;
 
@@ -24,7 +33,7 @@ export async function play(options: PlayOptions = {}): Promise<void> {
   stopMetronome();  // BPM のクリック音と重ねない
   stop();
   applyMixPreset(s.genre);
-  await mixerReady();
+  await audioReady(s.genre);
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
@@ -59,7 +68,7 @@ export async function preview(layer: "chord" | "drum", onEnded?: () => void): Pr
   stopMetronome();  // BPM のクリック音と重ねない
   stop();
   applyMixPreset(s.genre);
-  await mixerReady();
+  await audioReady(s.genre);
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
@@ -98,7 +107,7 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
   stopMetronome();  // BPM のクリック音と重ねない
   stop();
   applyMixPreset(getState().genre);
-  await mixerReady();
+  await audioReady(getState().genre);
   stop();  // 待っている間にほかの再生が始まっていたら止める
 
   const s = getState();
@@ -186,6 +195,8 @@ export async function renderWav(): Promise<Blob> {
 
   // 各パートの Synth はモジュールに1つずつなので、再生を止めてから書き出し用に作り直す
   stop();
+  // ドラムの音源は通常のコンテキストで読み込んでおく（AudioBuffer は書き出し用のコンテキストでも使える）
+  if (s.drumSource === "sample") await prepareDrumSamples(s.genre);
 
   const buffer = await Tone.Offline(async () => {
     applyMixPreset(s.genre);
