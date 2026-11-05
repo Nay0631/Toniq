@@ -3,6 +3,7 @@ import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArran
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
 import { signatureLabel } from "../engine/SignaturePlayer";
+import { fxLabel } from "../engine/FxPlayer";
 import { render } from "./Router";
 
 // アレンジャーのレーン（上から表示する順）
@@ -50,7 +51,10 @@ function laneLabels(part: LayerName): { sub: string; block: string } {
       const label = signatureLabel(s.genre);
       return { sub: label, block: label };
     }
-    case "fx":   return { sub: "ライザーSE", block: "ライザーSE" };
+    case "fx": {
+      const label = fxLabel();
+      return { sub: label, block: label };
+    }
   }
 }
 

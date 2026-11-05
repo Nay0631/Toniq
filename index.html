@@ -471,6 +471,31 @@
               <span>シグネチャー<span class="pill-note" id="c-signature-label"></span></span>
               <button class="pill" data-part-toggle="signature"></button>
             </div>
+
+            <hr class="panel-divider">
+
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <path d="M3 20c6 0 12-6 18-16"/><path d="M16 4h5v5"/>
+              </svg>
+              FX / SE
+            </div>
+
+            <div class="form-row">
+              <span class="form-label">種類</span>
+              <div class="select-with-btn">
+                <select class="select" id="c-fx-type" aria-label="FX の種類">
+                  <option value="auto">ジャンルの標準</option>
+                  <option value="riser">ライザー</option>
+                  <option value="build">ライザー＋インパクト</option>
+                  <option value="impact">インパクト</option>
+                  <option value="downlifter">ダウンリフター</option>
+                  <option value="reverse">リバースシンバル</option>
+                  <option value="chip">チップSE（8bit）</option>
+                </select>
+                <button class="btn btn-small" id="c-fx-preview">▷ 試聴</button>
+              </div>
+            </div>
           </div>
         </div>
 

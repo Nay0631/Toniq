@@ -10,7 +10,7 @@ const STORAGE_KEY = "toniq.songs";
 const SONG_FIELDS = [
   "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
   "chordPattern", "drumPattern", "melodyNotes", "melodyMethod", "melodyVersion",
-  "melodyInstrument", "chordRhythm", "chordInstrument", "scaleLock", "drumCategory",
+  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "scaleLock", "drumCategory",
   "arrangement", "parts", "volumes",
 ] as const;
 
@@ -111,6 +111,7 @@ export function loadSong(id: string): boolean {
   const loaded = structuredClone(fields) as SongFields;
   setState({
     ...loaded,
+    fxType:      loaded.fxType ?? defaultState.fxType,  // FX の種類がなかったころの曲はジャンルの標準
     // あとから増えたパート（シグネチャーなど）は、古い曲では初期値で補う
     parts:       { ...defaultState.parts,   ...loaded.parts },
     volumes:     { ...defaultState.volumes, ...loaded.volumes },

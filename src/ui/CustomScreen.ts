@@ -1,4 +1,5 @@
-import { getState, setState, ChordRhythm, ChordInstrument, MelodyInstrument } from "../engine/AppState";
+import { getState, setState, ChordRhythm, ChordInstrument, MelodyInstrument, FxType } from "../engine/AppState";
+import { fxLabel } from "../engine/FxPlayer";
 import { resolveTempoPreset } from "../engine/SimpleModeResolver";
 import { generateMelody } from "../engine/MelodyGenerator";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
@@ -202,6 +203,11 @@ function render(): void {
   // ドラム
   $select("c-drum-category").value = s.drumCategory;
   $select("c-drum-source").value   = s.drumSource;
+
+  // FX / SE（「ジャンルの標準」には今のジャンルで鳴る種類を添える）
+  const fxSelect = $select("c-fx-type");
+  fxSelect.options[0].textContent = s.fxType === "auto" ? `ジャンルの標準（${fxLabel()}）` : "ジャンルの標準";
+  fxSelect.value = s.fxType;
   fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
 
   // パッド / アルペジオ / シグネチャー
@@ -393,6 +399,19 @@ export function initCustomScreen(): void {
 
   $("c-drum-preview")?.addEventListener("click", async () => {
     await Playback.preview("drum", render);
+    render();
+  });
+
+  // ===== FX / SE =====
+  // 種類：Synth は再生開始時に作り直されるので、再生中なら再生し直す
+  $select("c-fx-type").addEventListener("change", async e => {
+    setState({ fxType: (e.target as HTMLSelectElement).value as FxType });
+    render();
+    await restartIfPlaying();
+  });
+
+  $("c-fx-preview")?.addEventListener("click", async () => {
+    await Playback.preview("fx", render);
     render();
   });
 

@@ -19,6 +19,9 @@ export type MelodyInstrument =
 // コードの音色
 export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
 
+// FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
+export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
+
 // ピアノロールで入力する音符の長さ
 export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
 
@@ -94,6 +97,7 @@ export interface AppState {
   melodyInstrument: MelodyInstrument;
   chordRhythm:      ChordRhythm;
   chordInstrument:  ChordInstrument;
+  fxType:           FxType;  // FX / SE の種類
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
   // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替えなので曲には保存しない
@@ -166,6 +170,7 @@ export const defaultState: AppState = {
   melodyInstrument: "auto",
   chordRhythm:      "whole",
   chordInstrument:  "soft",
+  fxType:           "auto",
   scaleLock:        true,
   drumCategory:     "EDM",
   drumSource:       "synth",

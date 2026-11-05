@@ -7,6 +7,7 @@ import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./Loo
 import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
 import { prepareDrumSamples } from "./DrumSamples";
+import { fxPreviewStartBar } from "./FxPlayer";
 
 // 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
 async function audioReady(genre: string): Promise<void> {
@@ -60,7 +61,8 @@ export async function play(options: PlayOptions = {}): Promise<void> {
 
 // 1つのパートだけを試聴する（コード進行は1周、ドラムは2小節）。曲の再生中なら止めてから鳴らす
 // アレンジに関係なく鳴らすので、試聴中はアレンジの判定を外す
-export async function preview(layer: "chord" | "drum", onEnded?: () => void): Promise<void> {
+// FX はループの終わりの盛り上げ（ライザーなど）から次のループの頭の1小節まで鳴らす
+export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => void): Promise<void> {
   await Tone.start();
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
@@ -75,15 +77,18 @@ export async function preview(layer: "chord" | "drum", onEnded?: () => void): Pr
   setArrangementBypass(true);
   reloadLayer(layer);
 
-  const bars = layer === "chord" ? s.chordPattern.length_bars : 2;
+  const fromBar = layer === "fx" ? fxPreviewStartBar(s.chordPattern) : 0;
+  const endBar  = layer === "chord" ? s.chordPattern.length_bars
+                : layer === "fx"    ? s.chordPattern.length_bars + 1
+                : 2;
   endEventId = transport.scheduleOnce(time => {
     Tone.getDraw().schedule(() => {
       stop();
       onEnded?.();
     }, time);
-  }, `${bars}m`);
+  }, `${endBar}m`);
 
-  transport.start();
+  transport.start(undefined, `${fromBar}m`);
 }
 
 // ===== ジャンルのサンプル試聴 =====
