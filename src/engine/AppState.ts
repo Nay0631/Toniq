@@ -27,6 +27,9 @@ export type MusicListSort = "newest" | "oldest" | "name";
 // 音楽クイズの音名の表記（CDE／ドレミ）
 export type QuizNoteNames = "cde" | "doremi";
 
+// 画面の配色（ライト／ダーク）
+export type Theme = "light" | "dark";
+
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
   start:  number;
@@ -41,6 +44,9 @@ export interface AppState {
   // 表示中の画面とタブ
   screen: Screen;
   tab:    Tab;
+
+  // 画面の配色（曲の内容ではないので SONG_FIELDS には入れない。端末ごとに Theme.ts が保存する）
+  theme: Theme;
 
   // 曲を生成済みか（シンプルモードの設定画面／生成結果画面の切り替え）
   generated: boolean;
@@ -122,6 +128,7 @@ export interface AppState {
 export const defaultState: AppState = {
   screen:      "menu",
   tab:         "settings",
+  theme:       "light",
   generated:   false,
   songId:      null,
 

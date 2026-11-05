@@ -1,22 +1,148 @@
-/* デザイントークン（ゴール画面に合わせた配色） */
+/* デザイントークン（ゴール画面に合わせた配色）
+   色はすべてここで定義し、各スタイルでは var(--…) で参照する（色を直書きしない）。
+   ダークモードは <html data-theme="dark"> のとき下のブロックで上書きする（Theme.ts） */
 :root {
+  color-scheme: light;
+
+  /* 下地・面・枠 */
   --bg:            #f7f7f5;
   --surface:       #ffffff;
+  --surface-sunken: #fbfbfa;  /* アレンジャーのトラックなど一段沈んだ面 */
   --border:        #e3e3df;
-  --text:          #1f1f1f;
-  --text-muted:    #6b6b66;
+  --border-strong: #c9c9c4;  /* ホバー時の枠など */
+  --hover:         #efefeb;  /* 行・タブのホバー */
+  --hover-overlay: rgba(0, 0, 0, 0.05);
+  --shadow:        rgba(0, 0, 0, 0.08);
+  --btn-soft:       #e6e6e1;
+  --btn-soft-hover: #dcdcd6;
+  --toggle-off:    #d4d4cf;
 
+  /* 文字 */
+  --text:          #1f1f1f;
+  --text-sub:      #55554f;  /* 本文より少し弱い文字 */
+  --text-muted:    #6b6b66;
+  --text-faint:    #b3b3ad;
+
+  /* 画面ごとのアクセント（-soft = 淡い背景、-ink = 淡い背景の上の文字、-line = 淡い枠） */
   --simple:        #2e9a6e;
   --simple-soft:   #e3f3ec;
+  --simple-ink:    #1f6e4e;
+  --simple-line:   #9fd5bd;
+  --simple-pale:   #a9d8c3;
+  --simple-strong: #237a56;
   --custom:        #5b4fcf;
   --custom-soft:   #ecebfd;
+  --custom-ink:    #3f35a8;
+  --custom-line:   #c6c1f3;
   --list:          #4a78c2;
   --list-soft:     #e4ecf8;
+  --list-ink:      #2c5596;
   --quiz:          #b8742a;
   --quiz-soft:     #fbeedf;
+  --quiz-ink:      #8a5418;
+  --quiz-line:     #ecd2b0;
+  --quiz-strong:   #9a5f1f;
+  --quiz-hover:    #fffaf3;
+  --quiz-selected:     #f3c890;
+  --quiz-selected-ink: #6b3f0e;
+
+  /* 状態色 */
+  --danger:        #c4483b;
+  --danger-ink:    #a33a2f;
+  --danger-soft:   #fbe9e6;
+  --playhead:      #d9502f;
+  --star:          #e0a526;
+  --star-stroke:   #b8862a;
+  --star-soft:     #fdf6e3;
+
+  /* アレンジャー・ピアノロールの罫線 */
+  --arr-grid:      #e9e9e5;
+  --arr-grid-loop: #d6d6d1;
+  --grid-bar:      #c9c9c4;
+  --grid-beat:     #e3e3df;
+  --grid-16:       #f0f0ec;
+  --line-soft:     #efefeb;
+  --row-alt:       #f6f6f3;  /* ピアノロールの黒鍵の行 */
+  --row-out:       #ecece8;  /* スケール外の行 */
+  --note-color:    #4d8fdc;
+  --note-out:      #8aa7c9;
+
+  /* クイズの鍵盤（白鍵） */
+  --key-white:       #ffffff;
+  --key-white-hover: #f3f3ef;
+  --key-border:      #cfcfca;
+  --key-label:       #9a9a94;
 
   --radius:        12px;
   --font: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
+}
+
+/* ダークモード */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg:            #161618;
+  --surface:       #212124;
+  --surface-sunken: #1b1b1e;
+  --border:        #34343a;
+  --border-strong: #4c4c54;
+  --hover:         #2b2b30;
+  --hover-overlay: rgba(255, 255, 255, 0.07);
+  --shadow:        rgba(0, 0, 0, 0.45);
+  --btn-soft:       #2f2f34;
+  --btn-soft-hover: #3a3a40;
+  --toggle-off:    #4a4a52;
+
+  --text:          #e9e9e6;
+  --text-sub:      #c3c3be;
+  --text-muted:    #9a9a95;
+  --text-faint:    #5f5f66;
+
+  --simple:        #3fb784;
+  --simple-soft:   #1a3529;
+  --simple-ink:    #86dcb4;
+  --simple-line:   #2e6b51;
+  --simple-pale:   #2c5747;
+  --simple-strong: #2d8c63;
+  --custom:        #8a80ee;
+  --custom-soft:   #2a2750;
+  --custom-ink:    #c0baff;
+  --custom-line:   #4c4596;
+  --list:          #6f9ae0;
+  --list-soft:     #1f2c42;
+  --list-ink:      #aac5f2;
+  --quiz:          #d99a4f;
+  --quiz-soft:     #382a19;
+  --quiz-ink:      #f2c38c;
+  --quiz-line:     #6b4c26;
+  --quiz-strong:   #a8692a;
+  --quiz-hover:    #2c241b;
+  --quiz-selected:     #7a5322;
+  --quiz-selected-ink: #ffe3c2;
+
+  --danger:        #e0675a;
+  --danger-ink:    #f2a097;
+  --danger-soft:   #3d211e;
+  --playhead:      #f06a48;
+  --star:          #e8b23a;
+  --star-stroke:   #c99a3c;
+  --star-soft:     #3a3018;
+
+  --arr-grid:      #2c2c31;
+  --arr-grid-loop: #43434a;
+  --grid-bar:      #4a4a52;
+  --grid-beat:     #323238;
+  --grid-16:       #27272c;
+  --line-soft:     #2a2a2f;
+  --row-alt:       #1c1c1f;
+  --row-out:       #141416;
+  --note-color:    #5b9be6;
+  --note-out:      #4f6580;
+
+  --key-white:       #dcdcd8;
+  --key-white-hover: #c9c9c5;
+  --key-border:      #0f0f11;
+  --key-label:       #6e6e69;
 }
 
 * { box-sizing: border-box; }
@@ -57,6 +183,28 @@ button {
   font-weight: 700;
   margin: 0;
 }
+
+/* ライト／ダークの切り替えボタン（ヘッダー右端） */
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-left: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+.theme-toggle svg { width: 18px; height: 18px; }
+
+/* ライトでは月（ダークへ）、ダークでは太陽（ライトへ）を出す */
+.theme-toggle .icon-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
+:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 
 /* ── パンくず ─────────────────────────── */
 .breadcrumb {
@@ -120,8 +268,8 @@ button {
 }
 
 .menu-card:hover {
-  border-color: #cfcfca;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 14px var(--shadow);
 }
 
 .menu-icon {
@@ -235,14 +383,14 @@ button {
   transition: border-color 0.15s, background 0.15s;
 }
 
-.btn:hover { border-color: #c9c9c4; }
+.btn:hover { border-color: var(--border-strong); }
 .btn:disabled { opacity: 0.6; cursor: default; }
 
 .btn-large  { padding: 16px 24px; font-size: 18px; font-weight: 700; }
 .btn-small  { padding: 7px 12px; font-size: 13px; background: var(--bg); }
 .btn-play   { padding: 10px 26px; font-size: 16px; font-weight: 700; }
 .btn-square { width: 42px; height: 42px; padding: 0; }
-.btn-custom { background: var(--custom-soft); border-color: #c6c1f3; color: var(--custom); font-weight: 700; }
+.btn-custom { background: var(--custom-soft); border-color: var(--custom-line); color: var(--custom); font-weight: 700; }
 .btn-custom:hover { border-color: var(--custom); }
 
 .icon-stop {
@@ -268,7 +416,7 @@ button {
 .field-label {
   margin-bottom: 12px;
   font-weight: 600;
-  color: #44443f;
+  color: var(--text-sub);
 }
 
 .chips {
@@ -283,14 +431,14 @@ button {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
-  color: #55554f;
+  color: var(--text-sub);
 }
 
-.chip:hover { border-color: #c9c9c4; }
+.chip:hover { border-color: var(--border-strong); }
 
-.chips-mood  .chip.is-active { background: var(--simple-soft); border-color: var(--simple); color: #1f6e4e; font-weight: 600; }
-.chips-genre .chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: #3f35a8; font-weight: 600; }
-.chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: #2c5596; font-weight: 600; }
+.chips-mood  .chip.is-active { background: var(--simple-soft); border-color: var(--simple); color: var(--simple-ink); font-weight: 600; }
+.chips-genre .chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
+.chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
 
 .bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
 
@@ -311,7 +459,7 @@ button {
   border-radius: var(--radius);
 }
 
-.method-card.is-active { background: var(--custom-soft); border: 1.5px solid var(--custom); color: #3f35a8; }
+.method-card.is-active { background: var(--custom-soft); border: 1.5px solid var(--custom); color: var(--custom-ink); }
 .method-icon  { font-size: 22px; }
 .method-title { font-size: 16px; font-weight: 700; }
 .method-desc  { font-size: 13px; color: var(--text-muted); }
@@ -352,7 +500,7 @@ button {
   flex: 1;
   min-width: 1px;
   border-radius: 2px;
-  background: #a9d8c3;
+  background: var(--simple-pale);
 }
 
 .wave span.played { background: var(--simple); }
@@ -363,7 +511,7 @@ button {
   bottom: -8px;
   width: 2px;
   margin-left: -1px;
-  background: #d9502f;
+  background: var(--playhead);
 }
 
 .wave-ticks {
@@ -388,7 +536,7 @@ button {
 }
 
 .layer-name { display: flex; align-items: center; gap: 8px; font-weight: 700; }
-.layer-desc { min-height: 1.5em; font-size: 13px; color: #55554f; }
+.layer-desc { min-height: 1.5em; font-size: 13px; color: var(--text-sub); }
 
 .dot { width: 10px; height: 10px; border-radius: 50%; }
 .dot-melody { background: #b3a9ef; }
@@ -428,7 +576,7 @@ button {
   gap: 10px;
   margin-bottom: 16px;
   font-weight: 700;
-  color: #44443f;
+  color: var(--text-sub);
 }
 
 .panel-title svg { width: 18px; height: 18px; color: var(--text-muted); }
@@ -457,6 +605,7 @@ button {
   font: inherit;
   font-size: 15px;
   padding: 9px 12px;
+  color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -499,7 +648,7 @@ button {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: #d4d4cf;
+  background: var(--toggle-off);
   transition: background 0.15s;
 }
 
@@ -524,7 +673,7 @@ button {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
-  color: #55554f;
+  color: var(--text-sub);
 }
 
 .pill {
@@ -538,7 +687,7 @@ button {
   border-radius: 999px;
 }
 
-.pill.is-on { color: #1f6e4e; background: var(--simple-soft); border-color: transparent; }
+.pill.is-on { color: var(--simple-ink); background: var(--simple-soft); border-color: transparent; }
 
 /* パート別音量 */
 .volume-list { display: flex; flex-direction: column; gap: 8px; }
@@ -548,7 +697,7 @@ button {
   grid-template-columns: 72px minmax(0, 1fr) 30px;
   align-items: center;
   gap: 12px;
-  color: #55554f;
+  color: var(--text-sub);
 }
 
 .volume-value { text-align: right; font-variant-numeric: tabular-nums; }
@@ -597,8 +746,8 @@ button {
 /* レーン見出しの幅。再生位置の線はトラック部分にだけ重ねる */
 .arranger {
   --head-w: 132px;
-  --grid:   #e9e9e5;
-  --grid-loop: #d6d6d1;
+  --grid:   var(--arr-grid);
+  --grid-loop: var(--arr-grid-loop);
   position: relative;
   user-select: none;
 }
@@ -630,7 +779,7 @@ button {
   height: 30px;
   font-size: 12px;
   font-weight: 600;
-  color: #55554f;
+  color: var(--text-sub);
 }
 
 .arr-ticks { cursor: pointer; }
@@ -674,7 +823,7 @@ button {
   background:
     repeating-linear-gradient(to right, var(--grid-loop) 0 1px, transparent 1px calc(100% * var(--loop) / var(--bars))),
     repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px calc(100% / var(--bars)));
-  background-color: #fbfbfa;
+  background-color: var(--surface-sunken);
   cursor: copy;
 }
 
@@ -689,7 +838,7 @@ button {
   padding: 0 12px;
   font-size: 12px;
   color: var(--text-muted);
-  border: 1.5px dashed #d4d4cf;
+  border: 1.5px dashed var(--border-strong);
   border-radius: 8px;
   pointer-events: none;
 }
@@ -730,6 +879,7 @@ button {
 .arr-pad    { background: #93b6ea; }
 .arr-arp    { background: #f0b7d4; }
 .arr-fx     { background: #eba283; }
+.arr-signature { background: #9fd8d6; }
 
 .arr-handle {
   position: absolute;
@@ -775,7 +925,7 @@ button {
   bottom: 0;
   width: 2px;
   margin-left: -1px;
-  background: #d9502f;
+  background: var(--playhead);
 }
 
 .arranger-bottom {
@@ -830,7 +980,7 @@ button {
   --keys-w:    56px;
   --row-h:     22px;
   --ruler-h:   42px;
-  --note:      #4d8fdc;
+  --note:      var(--note-color);
   overflow: hidden;
   user-select: none;
 }
@@ -881,7 +1031,7 @@ button {
 .pr-seg button.is-active { background: var(--mode); color: #fff; font-weight: 700; }
 
 .pr-lock { color: var(--text-muted); }
-.pr-lock.is-on { color: #1f6e4e; background: var(--simple-soft); border-color: #9fd5bd; }
+.pr-lock.is-on { color: var(--simple-ink); background: var(--simple-soft); border-color: var(--simple-line); }
 
 /* 縦にスクロールする本体。目盛りは上に固定する */
 .pr-scroll {
@@ -919,7 +1069,7 @@ button {
   position: absolute;
   top: 4px;
   padding-left: 5px;
-  border-left: 1px solid #c9c9c4;
+  border-left: 1px solid var(--border-strong);
   font-size: 12px;
   font-weight: 700;
   line-height: 16px;
@@ -966,13 +1116,13 @@ button {
   font-weight: 700;
   line-height: var(--row-h);
   text-align: right;
-  color: #55554f;
-  border-bottom: 1px solid #efefeb;
+  color: var(--text-sub);
+  border-bottom: 1px solid var(--line-soft);
   cursor: pointer;
 }
 
-.pr-key.is-black { background: #f4f4f1; }
-.pr-key.is-out   { color: #b3b3ad; font-weight: 400; }
+.pr-key.is-black { background: var(--row-alt); }
+.pr-key.is-out   { color: var(--text-faint); font-weight: 400; }
 .pr-key.is-tonic { color: var(--simple); }
 .pr-key:hover    { background: var(--mode-soft); }
 
@@ -991,9 +1141,9 @@ button {
   z-index: 1;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, #c9c9c4 1px, transparent 1px),
-    linear-gradient(to right, #e3e3df 1px, transparent 1px),
-    linear-gradient(to right, #f0f0ec 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-bar) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-beat) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-16) 1px, transparent 1px);
   background-size:
     calc(100% / var(--bars)) 100%,
     calc(100% / var(--bars) / 4) 100%,
@@ -1002,11 +1152,11 @@ button {
 
 .pr-row {
   height: var(--row-h);
-  border-bottom: 1px solid #efefeb;
+  border-bottom: 1px solid var(--line-soft);
 }
 
-.pr-row.is-black { background: #f6f6f3; }
-.pianoroll.is-locked .pr-row.is-out { background: #ecece8; }
+.pr-row.is-black { background: var(--row-alt); }
+.pianoroll.is-locked .pr-row.is-out { background: var(--row-out); }
 .pianoroll.is-locked .pr-key.is-out { cursor: not-allowed; }
 
 .pr-note {
@@ -1024,8 +1174,8 @@ button {
   cursor: grab;
 }
 
-.pr-note.is-selected { background: var(--custom); box-shadow: 0 0 0 2px #c6c1f3; }
-.pr-note.is-out      { background: #8aa7c9; }
+.pr-note.is-selected { background: var(--custom); box-shadow: 0 0 0 2px var(--custom-line); }
+.pr-note.is-out      { background: var(--note-out); }
 .pr-note.is-dragging { cursor: grabbing; opacity: 0.85; z-index: 4; }
 
 .pr-note-label {
@@ -1057,7 +1207,7 @@ button {
 }
 
 .pr-cursor   { background: var(--mode); opacity: 0.35; }
-.pr-playhead { background: #d9502f; }
+.pr-playhead { background: var(--playhead); }
 
 /* ステータスバー */
 .pr-status {
@@ -1078,7 +1228,7 @@ button {
 .pr-key-chip {
   padding: 1px 8px;
   font-weight: 700;
-  color: #1f6e4e;
+  color: var(--simple-ink);
   background: var(--simple-soft);
   border-radius: 999px;
 }
@@ -1145,10 +1295,10 @@ button {
 }
 
 .ml-tool svg { width: 16px; height: 16px; }
-.ml-tool.is-active { background: #fdf6e3; border-color: #e0a526; }
-.ml-tool.is-active .icon-star { fill: #e0a526; }
+.ml-tool.is-active { background: var(--star-soft); border-color: var(--star); }
+.ml-tool.is-active .icon-star { fill: var(--star); }
 
-.icon-star { fill: none; stroke: #b8862a; stroke-width: 1.8; stroke-linejoin: round; }
+.icon-star { fill: none; stroke: var(--star-stroke); stroke-width: 1.8; stroke-linejoin: round; }
 
 .ml-genres { margin-bottom: 16px; }
 
@@ -1185,7 +1335,7 @@ button {
 }
 
 .song-row:hover,
-.song-row.is-menu-open { background: #efefeb; }
+.song-row.is-menu-open { background: var(--hover); }
 
 .song-play {
   flex-shrink: 0;
@@ -1195,12 +1345,12 @@ button {
   height: 46px;
   border: none;
   border-radius: 50%;
-  background: #e6e6e1;
+  background: var(--btn-soft);
   color: var(--text);
 }
 
 .song-play svg { width: 18px; height: 18px; }
-.song-play:hover { background: #dcdcd6; }
+.song-play:hover { background: var(--btn-soft-hover); }
 .song-row.is-playing .song-play { background: var(--list); color: #fff; }
 
 .song-main { flex: 1; min-width: 0; }
@@ -1267,11 +1417,11 @@ button {
   color: var(--text-muted);
 }
 
-.song-icon-btn:hover { background: rgba(0, 0, 0, 0.05); color: var(--text); }
+.song-icon-btn:hover { background: var(--hover-overlay); color: var(--text); }
 .song-icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
 
-.song-fav .icon-star { fill: none; stroke: #9a9a94; }
-.song-fav.is-on .icon-star { fill: #e0a526; stroke: #b8862a; }
+.song-fav .icon-star { fill: none; stroke: var(--text-muted); }
+.song-fav.is-on .icon-star { fill: var(--star); stroke: var(--star-stroke); }
 
 .song-more { position: relative; }
 
@@ -1284,7 +1434,7 @@ button {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 20px var(--shadow);
   z-index: 10;
 }
 
@@ -1299,7 +1449,7 @@ button {
 }
 
 .song-menu button:hover { background: var(--bg); }
-.song-menu button.is-danger { color: #c4442a; }
+.song-menu button.is-danger { color: var(--danger); }
 
 @media (max-width: 640px) {
   .musiclist-toolbar { flex-wrap: wrap; }
@@ -1341,9 +1491,9 @@ button {
   color: var(--text-muted);
 }
 
-.quiz-notation button.is-active { background: var(--quiz-soft); border-color: var(--quiz); color: #8a5418; font-weight: 600; }
+.quiz-notation button.is-active { background: var(--quiz-soft); border-color: var(--quiz); color: var(--quiz-ink); font-weight: 600; }
 
-.quiz-categories .chip.is-active { background: var(--quiz-soft); border-color: var(--quiz); color: #8a5418; font-weight: 600; }
+.quiz-categories .chip.is-active { background: var(--quiz-soft); border-color: var(--quiz); color: var(--quiz-ink); font-weight: 600; }
 
 .quiz-modes {
   display: flex;
@@ -1361,8 +1511,8 @@ button {
   color: var(--text-muted);
 }
 
-.quiz-mode:hover { color: var(--text); background: #efefeb; }
-.quiz-mode.is-active { color: #8a5418; background: var(--surface); border-color: var(--border); font-weight: 600; }
+.quiz-mode:hover { color: var(--text); background: var(--hover); }
+.quiz-mode.is-active { color: var(--quiz-ink); background: var(--surface); border-color: var(--border); font-weight: 600; }
 
 .quiz-card {
   padding: 18px 28px 24px;
@@ -1432,9 +1582,9 @@ button {
   padding: 8px 16px;
   font-size: 13px;
   background: var(--quiz-soft);
-  border: 1px solid #ecd2b0;
+  border: 1px solid var(--quiz-line);
   border-radius: 999px;
-  color: #8a5418;
+  color: var(--quiz-ink);
 }
 
 .quiz-sound:hover { border-color: var(--quiz); }
@@ -1461,26 +1611,26 @@ button {
   padding-bottom: 8px;
   font-size: 11px;
   font-weight: 600;
-  border: 1px solid #cfcfca;
+  border: 1px solid var(--key-border);
   border-radius: 0 0 6px 6px;
   user-select: none;
   transition: background 0.12s;
 }
 
-.quiz-key.is-white { width: 44px; height: 140px; background: #fff; color: #9a9a94; z-index: 1; }
+.quiz-key.is-white { width: 44px; height: 140px; background: var(--key-white); color: var(--key-label); z-index: 1; }
 .quiz-key.is-black { width: 28px; height: 86px; background: #2a2a28; border-color: #1a1a18; color: #a5a59e; font-size: 10px; z-index: 2; }
 
 .quiz-piano.is-input .quiz-key { cursor: pointer; }
-.quiz-piano.is-input .quiz-key.is-white:hover { background: #f3f3ef; }
+.quiz-piano.is-input .quiz-key.is-white:hover { background: var(--key-white-hover); }
 .quiz-piano.is-input .quiz-key.is-black:hover { background: #3c3c39; }
 .quiz-piano.is-done .quiz-key { pointer-events: none; }
 
-.quiz-key.is-root     { background: var(--quiz) !important; border-color: #9a5f1f !important; color: #fff !important; }
-.quiz-key.is-target   { background: var(--simple) !important; border-color: #237a56 !important; color: #fff !important; }
-.quiz-key.is-selected { background: #f3c890 !important; border-color: var(--quiz) !important; color: #6b3f0e !important; }
-.quiz-key.is-correct  { background: var(--simple) !important; border-color: #237a56 !important; color: #fff !important; }
-.quiz-key.is-wrong    { background: #c4483b !important; border-color: #a33a2f !important; color: #fff !important; }
-.quiz-key.is-missed   { background: #fbe9e6 !important; border: 2px dashed #c4483b !important; color: #a33a2f !important; }
+.quiz-key.is-root     { background: var(--quiz) !important; border-color: var(--quiz-strong) !important; color: #fff !important; }
+.quiz-key.is-target   { background: var(--simple) !important; border-color: var(--simple-strong) !important; color: #fff !important; }
+.quiz-key.is-selected { background: var(--quiz-selected) !important; border-color: var(--quiz) !important; color: var(--quiz-selected-ink) !important; }
+.quiz-key.is-correct  { background: var(--simple) !important; border-color: var(--simple-strong) !important; color: #fff !important; }
+.quiz-key.is-wrong    { background: var(--danger) !important; border-color: var(--danger-ink) !important; color: #fff !important; }
+.quiz-key.is-missed   { background: var(--danger-soft) !important; border: 2px dashed var(--danger) !important; color: var(--danger-ink) !important; }
 
 /* 選択肢 */
 .quiz-choices {
@@ -1502,18 +1652,18 @@ button {
   transition: border-color 0.15s, background 0.15s;
 }
 
-.quiz-choice:hover:not(:disabled) { border-color: var(--quiz); background: #fffaf3; }
+.quiz-choice:hover:not(:disabled) { border-color: var(--quiz); background: var(--quiz-hover); }
 .quiz-choice:disabled { cursor: default; }
-.quiz-choice.is-correct { background: var(--simple-soft); border-color: var(--simple); color: #1f6e4e; }
-.quiz-choice.is-wrong   { background: #fbe9e6; border-color: #c4483b; color: #a33a2f; }
+.quiz-choice.is-correct { background: var(--simple-soft); border-color: var(--simple); color: var(--simple-ink); }
+.quiz-choice.is-wrong   { background: var(--danger-soft); border-color: var(--danger); color: var(--danger-ink); }
 
 .quiz-decide {
   width: 100%;
   margin-top: 14px;
   font-weight: 700;
   background: var(--quiz-soft);
-  border-color: #ecd2b0;
-  color: #8a5418;
+  border-color: var(--quiz-line);
+  color: var(--quiz-ink);
 }
 
 .quiz-decide:hover:not(:disabled) { border-color: var(--quiz); }
@@ -1525,13 +1675,13 @@ button {
 }
 
 .quiz-feedback.is-good { color: var(--simple); }
-.quiz-feedback.is-bad  { color: #c4483b; }
+.quiz-feedback.is-bad  { color: var(--danger); }
 
 .quiz-explain {
   margin: -4px 0 14px;
   font-size: 13px;
   line-height: 1.6;
-  color: #55554f;
+  color: var(--text-sub);
 }
 
 .quiz-explain:empty { display: none; }
@@ -1577,7 +1727,7 @@ button {
 }
 
 .quiz-option input { margin: 0; accent-color: var(--quiz); }
-.quiz-option:has(input:checked) { background: var(--quiz-soft); border-color: #ecd2b0; color: #8a5418; }
+.quiz-option:has(input:checked) { background: var(--quiz-soft); border-color: var(--quiz-line); color: var(--quiz-ink); }
 
 .quiz-settings-empty { margin: 0; font-size: 13px; color: var(--text-muted); }
 
@@ -1588,7 +1738,7 @@ button {
   line-height: 1.6;
   background: var(--quiz-soft);
   border-radius: 8px;
-  color: #8a5418;
+  color: var(--quiz-ink);
 }
 
 @media (max-width: 600px) {
