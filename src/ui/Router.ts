@@ -9,6 +9,7 @@ const SCREEN_TITLES: Record<Screen, string> = {
   custom:    "カスタムモード",
   musiclist: "ミュージックリスト",
   quiz:      "音楽クイズ",
+  settings:  "設定",
 };
 
 // 各画面モジュールが登録する描画関数

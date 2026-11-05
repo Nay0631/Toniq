@@ -64,7 +64,7 @@ function generate(): void {
 }
 
 // 再生中に曲の内容が変わったら先頭から再生し直す
-async function restartIfPlaying(): Promise<void> {
+export async function restartIfPlaying(): Promise<void> {
   if (Playback.isPlaying()) await startPlayback();
 }
 

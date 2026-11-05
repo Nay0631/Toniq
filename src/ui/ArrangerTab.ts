@@ -144,7 +144,7 @@ export function renderArranger(): void {
       <div class="arr-lane${on ? "" : " is-off"}">
         <div class="arr-head">
           <div>
-            <div class="arr-name">${label}</div>
+            <div class="arr-name" data-term="${name}">${label}</div>
             <div class="arr-sub">${sub}</div>
           </div>
           <button class="pill${on ? " is-on" : ""}" data-arr-toggle="${name}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>

@@ -84,8 +84,10 @@ function build(list: HTMLElement): void {
         ${meterHtml()}
       </span>
       <span class="lcd mixer-value"></span>`;
-    ch.querySelector(".mixer-ch-name")!.textContent = p.label;
-    ch.title = p.label;
+    const chName = ch.querySelector<HTMLElement>(".mixer-ch-name")!;
+    chName.textContent  = p.label;
+    chName.dataset.term = p.name;  // 用語のツールチップ（パート名は Glossary.ts の TERMS のキーと同じ）
+    // （名前に用語の説明を出すので、チャンネル全体の title は付けない）
     list.appendChild(ch);
     attachFader(ch.querySelector<HTMLInputElement>("input")!, `${p.label}の音量`);
   }

@@ -8,6 +8,7 @@ import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./Lay
 import { stopMetronome } from "./Metronome";
 import { prepareDrumSamples } from "./DrumSamples";
 import { fxPreviewStartBar } from "./FxPlayer";
+import { withoutHistory } from "./History";
 
 // 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
 async function audioReady(genre: string): Promise<void> {
@@ -117,7 +118,7 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
 
   const s = getState();
   sampleRestore = { chordPattern: s.chordPattern, drumPattern: s.drumPattern, melodyNotes: s.melodyNotes };
-  setState({ ...sample });
+  withoutHistory(() => setState({ ...sample }));  // 一時的な差し替えなので元に戻す履歴には残さない
 
   const transport = Tone.getTransport();
   transport.bpm.value = s.bpm;
@@ -157,7 +158,8 @@ export function stop(): void {
   disposeAllLayers();
   transport.position = 0;
   if (sampleRestore) {
-    setState(sampleRestore);
+    const restore = sampleRestore;
+    withoutHistory(() => setState(restore));
     sampleRestore = null;
   }
 }

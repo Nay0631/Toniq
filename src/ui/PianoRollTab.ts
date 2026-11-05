@@ -150,13 +150,13 @@ const TRASH_ICON = `
 function buildSkeleton(root: HTMLElement): void {
   root.innerHTML = `
     <div class="pr-toolbar">
-      <div class="pr-seg" role="group" aria-label="入力する音符の長さ">
+      <div class="pr-seg" role="group" aria-label="入力する音符の長さ" data-term="noteLength">
         ${LENGTHS.map(l => `<button data-pr-length="${l.value}">${l.label}</button>`).join("")}
       </div>
       <span class="pr-sep"></span>
-      <button class="btn btn-small pr-lock" data-pr-lock>${LOCK_ICON}スケールロック</button>
+      <button class="btn btn-small pr-lock" data-pr-lock data-term="scaleLock">${LOCK_ICON}スケールロック</button>
       <span class="pr-sep"></span>
-      <span class="pr-label">オクターブ</span>
+      <span class="pr-label" data-term="octave">オクターブ</span>
       <button class="btn btn-small btn-icon" data-pr-octave="-1" aria-label="オクターブを下げる">−</button>
       <b class="pr-octave" data-pr-octave-value></b>
       <button class="btn btn-small btn-icon" data-pr-octave="1" aria-label="オクターブを上げる">＋</button>
