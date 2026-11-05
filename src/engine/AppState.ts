@@ -21,6 +21,12 @@ export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square"
 // ピアノロールで入力する音符の長さ
 export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
 
+// ミュージックリストの並び順
+export type MusicListSort = "newest" | "oldest" | "name";
+
+// 音楽クイズの音名の表記（CDE／ドレミ）
+export type QuizNoteNames = "cde" | "doremi";
+
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
   start:  number;
@@ -38,6 +44,19 @@ export interface AppState {
 
   // 曲を生成済みか（シンプルモードの設定画面／生成結果画面の切り替え）
   generated: boolean;
+
+  // ミュージックリストのどの曲を編集中か（null = 未保存の曲。保存すると新しく追加される）
+  songId: string | null;
+
+  // ミュージックリストの絞り込み（曲名の検索・ジャンル（"" = すべて）・お気に入りだけ）と並び順
+  musicListQuery:     string;
+  musicListGenre:     string;
+  musicListFavorites: boolean;
+  musicListSort:      MusicListSort;
+
+  // 音楽クイズで選んでいる出題モード（QuizModes.ts の id）と音名の表記
+  quizMode:      string;
+  quizNoteNames: QuizNoteNames;
 
   // モード
   mode:   "simple" | "custom";
@@ -102,7 +121,17 @@ export const defaultState: AppState = {
   screen:      "menu",
   tab:         "settings",
   generated:   false,
-  mode:        "simple",
+  songId:      null,
+
+  musicListQuery:     "",
+  musicListGenre:     "",
+  musicListFavorites: false,
+  musicListSort:      "newest",
+
+  quizMode:      "doremi_cde",
+  quizNoteNames: "cde",
+
+  mode:      "simple",
   genre:       "EDM",
   mood:        "明るい",
   key:         "A",

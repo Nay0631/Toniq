@@ -1,5 +1,6 @@
 import * as Tone from "tone";
 import { getState, setState } from "./AppState";
+import { connectToMixer } from "./MixerEngine";
 
 // 各パートのVolumeノードをオーディオコンテキストごとに管理
 // （WAV書き出しの Tone.Offline は別コンテキストなので、再生用のノードとは分ける）
@@ -30,7 +31,8 @@ export function createVolumeNode(part: string): Tone.Volume {
   const state   = getState();
   const volumes = state.volumes as Record<string, number>;
   const db      = toDb(volumes[part] ?? 75);
-  const node    = new Tone.Volume(db).toDestination();
+  const node    = new Tone.Volume(db);
+  connectToMixer(node, part);  // マスター（EQ・コンプ・リミッター）とリバーブ送りへ
   nodes[part] = node;
   return node;
 }

@@ -2,60 +2,96 @@ import * as Tone from "tone";
 import mixPresets from "../data/mix_presets.json";
 
 interface MixPreset {
-  reverb:     { decay: number; wet: number };
+  reverb:     { decay: number; wet: number };  // wet = リバーブ送りの全体量
   eq:         { low: number; mid: number; high: number };
   compressor: { threshold: number; ratio: number; attack: number; release: number };
   limiter:    { threshold: number };
+  gain:       number;  // コンプ後の持ち上げ（dB）。コンプで下がった音量を戻す
 }
 
-// マスターエフェクト
-let masterReverb:     Tone.Reverb     | null = null;
-let masterCompressor: Tone.Compressor | null = null;
-let masterLimiter:    Tone.Limiter    | null = null;
+// パートごとのリバーブ送りの量（0〜1）。低音は響かせるとぼやけるので送らない
+const REVERB_SENDS: Record<string, number> = {
+  drum:   0.15,
+  chord:  0.5,
+  bass:   0,
+  arp:    0.6,
+  pad:    0.8,
+  melody: 0.5,
+  fx:     0.7,
+};
 
-export function initMixer() {
-  // 既存のDestinationはそのまま維持し
-  // マスター処理はDestination手前に挿入する
-  masterLimiter    = new Tone.Limiter(-2).toDestination();
-  masterCompressor = new Tone.Compressor({
-    threshold: -18, ratio: 6, attack: 0.003, release: 0.15
-  }).connect(masterLimiter);
-  masterReverb     = new Tone.Reverb({ decay: 1.5, wet: 0.2 }).connect(masterCompressor);
+// マスター：入口 → EQ → コンプ → 持ち上げ → リミッター → スピーカー
+// リバーブ：送り → 低域カット → リバーブ → 戻り → マスター入口
+interface Mixer {
+  input:      Tone.Gain;
+  eq:         Tone.EQ3;
+  compressor: Tone.Compressor;
+  makeup:     Tone.Gain<"decibels">;
+  limiter:    Tone.Limiter;
+  reverbIn:   Tone.Filter;
+  reverb:     Tone.Reverb;
+  reverbOut:  Tone.Gain;
+}
 
+// オーディオコンテキストごとに1つ持つ（WAV書き出しの Tone.Offline は別コンテキスト）
+// 各パートの Volume ノードはコンテキストごとに使い回すので、ミキサーも作り直さない
+const mixers = new WeakMap<Tone.BaseContext, Mixer>();
+
+function getMixer(): Mixer {
+  const ctx = Tone.getContext();
+  const existing = mixers.get(ctx);
+  if (existing) return existing;
+
+  const limiter    = new Tone.Limiter(-1).toDestination();
+  const makeup     = new Tone.Gain(0, "decibels").connect(limiter);
+  const compressor = new Tone.Compressor().connect(makeup);
+  const eq         = new Tone.EQ3().connect(compressor);
+  const input      = new Tone.Gain(1).connect(eq);
+
+  const reverbOut = new Tone.Gain(0).connect(input);
+  const reverb    = new Tone.Reverb({ decay: 1.5, preDelay: 0.02, wet: 1 }).connect(reverbOut);
+  const reverbIn  = new Tone.Filter({ type: "highpass", frequency: 250 }).connect(reverb);
+
+  const mixer = { input, eq, compressor, makeup, limiter, reverbIn, reverb, reverbOut };
+  mixers.set(ctx, mixer);
   console.log("Mixer初期化完了");
+  return mixer;
 }
 
+// パートの出口をマスターにつなぎ、リバーブ送りも作る（VolumeManager から呼ぶ）
+export function connectToMixer(node: Tone.ToneAudioNode, part: string): void {
+  const mixer = getMixer();
+  node.connect(mixer.input);
+  const amount = REVERB_SENDS[part] ?? 0;
+  if (amount > 0) node.connect(new Tone.Gain(amount).connect(mixer.reverbIn));
+}
+
+// 現在のコンテキストのミキサーにジャンルの設定を当てる
 export function applyMixPreset(genre: string) {
   const presets = mixPresets as Record<string, MixPreset>;
   const preset  = presets[genre] ?? presets["ローファイ"];
+  const mixer   = getMixer();
 
-  if (!masterReverb || !masterCompressor || !masterLimiter) {
-    console.warn("Mixerが初期化されていません");
-    return;
-  }
+  // decay を変えると響きのデータを作り直すので、変わったときだけ設定する
+  if (mixer.reverb.decay !== preset.reverb.decay) mixer.reverb.decay = preset.reverb.decay;
+  mixer.reverbOut.gain.value = preset.reverb.wet;
 
-  masterReverb.decay         = preset.reverb.decay;
-  masterReverb.wet.value     = preset.reverb.wet;
+  mixer.eq.low.value  = preset.eq.low;
+  mixer.eq.mid.value  = preset.eq.mid;
+  mixer.eq.high.value = preset.eq.high;
 
-  masterCompressor.threshold.value = preset.compressor.threshold;
-  masterCompressor.ratio.value     = preset.compressor.ratio;
-  masterCompressor.attack.value    = preset.compressor.attack;
-  masterCompressor.release.value   = preset.compressor.release;
+  mixer.compressor.threshold.value = preset.compressor.threshold;
+  mixer.compressor.ratio.value     = preset.compressor.ratio;
+  mixer.compressor.attack.value    = preset.compressor.attack;
+  mixer.compressor.release.value   = preset.compressor.release;
 
-  masterLimiter.threshold.value = preset.limiter.threshold;
+  mixer.makeup.gain.value       = preset.gain;
+  mixer.limiter.threshold.value = preset.limiter.threshold;
 
   console.log(`ミックスプリセット適用: ${genre}`, preset);
 }
 
-export function getMasterReverb(): Tone.Reverb | null {
-  return masterReverb;
-}
-
-export function disposeMixer() {
-  masterReverb?.dispose();
-  masterCompressor?.dispose();
-  masterLimiter?.dispose();
-  masterReverb     = null;
-  masterCompressor = null;
-  masterLimiter    = null;
+// リバーブの響きのデータができるまで待つ（WAV書き出しで曲の頭から響かせるため）
+export async function mixerReady(): Promise<void> {
+  await getMixer().reverb.ready;
 }

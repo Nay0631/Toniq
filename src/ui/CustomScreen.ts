@@ -16,7 +16,7 @@ import { startPianoRollPlayhead } from "./PianoRollTab";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
-const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ"];
+const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "アンビエント"];
 
 // パート別音量の並び（UI 表示名）
 const VOLUME_PARTS: { name: LayerName; label: string }[] = [
@@ -55,12 +55,19 @@ function makeMelody(): void {
   setState({ melodyNotes });
 }
 
+// 自動生成したメロディがあるか（空のときはまだ作っていないので、設定を変えても勝手に作らない）
+function hasAutoMelody(): boolean {
+  const s = getState();
+  return s.melodyMethod === "auto" && s.melodyNotes.length > 0;
+}
+
 // コード進行を変えたら、スケールや長さが変わることがあるので自動生成のメロディは作り直す
 function setChordPattern(next: ChordProgression): void {
   const s = getState();
   if (next.id === s.chordPattern?.id) return;
+  const regenerate = hasAutoMelody();
   setState({ chordPattern: next });
-  if (s.melodyMethod === "auto") {
+  if (regenerate) {
     setState({ melodyVersion: s.melodyVersion + 1 });
     makeMelody();
   }
@@ -251,9 +258,11 @@ function render(): void {
   }
   $("c-arr-chord")!.textContent = chordText;
   $("c-arr-drum")!.textContent  = s.drumPattern ? drumLabel(s.drumPattern) : "";
-  $("c-arr-melody")!.textContent = s.melodyMethod === "auto"
-    ? `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`
-    : "ピアノロールで入力";
+  $("c-arr-melody")!.textContent = s.melodyMethod === "manual"
+    ? "ピアノロールで入力"
+    : s.melodyNotes.length > 0
+      ? `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`
+      : "未作成（↻ で自動生成）";
 }
 
 // ===== イベント =====
@@ -273,16 +282,6 @@ export function initCustomScreen(): void {
   $("c-stop")?.addEventListener("click", () => {
     Playback.stop();
     render();
-  });
-
-  // 生成する：自動生成ならメロディを新しいフレーズにして、今の設定で先頭から再生する
-  $("c-generate")?.addEventListener("click", async () => {
-    const s = getState();
-    if (s.melodyMethod === "auto") {
-      setState({ melodyVersion: s.melodyVersion + 1 });
-      makeMelody();
-    }
-    await startPlayback();
   });
 
   // ===== 基本設定 =====
@@ -327,7 +326,7 @@ export function initCustomScreen(): void {
   $select("c-key").addEventListener("change", async e => {
     setState({ key: (e.target as HTMLSelectElement).value });
     // メロディは音名で持っているので、自動生成ならキーに合わせて作り直す
-    if (getState().melodyMethod === "auto") makeMelody();
+    if (hasAutoMelody()) makeMelody();
     render();
     await restartIfPlaying();
   });
