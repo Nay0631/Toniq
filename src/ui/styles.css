@@ -73,7 +73,7 @@
   --key-border:      #cfcfca;
   --key-label:       #9a9a94;
 
-  /* カスタムモードのプラグイン風パーツ（.hw）
+  /* カスタムモードのパーツ（.hw）。ここの値はフラットスキン。ほかのスキンは下の [data-skin] で上書きする
      区切り線で仕切ったフラットなグレーの面、白いノブと細い色の弧、黒い帯 */
   --hw-bg:         #d5d5d5;  /* 面 */
   --hw-bg-2:       #cbcbcb;  /* 一段濃い面（マスター・アレンジャーの見出し） */
@@ -1039,7 +1039,7 @@ button {
   .arranger-hint { display: none; }
 }
 
-/* ── プラグイン風パーツ（カスタムモード） ──────────────
+/* ── カスタムモードのパーツ（フラットスキンの形。ほかのスキンは後ろで上書き） ──────────────
    区切り線で仕切ったフラットなグレーの面に、白いノブ（細い色の弧）・下線付きのドロップダウン・
    グレーの値の箱を並べる。情報バー・タブ・小節の目盛り・ミキサーの見出しは黒い帯にする。
    .hw = 設定タブ／アレンジャータブ、.hw-bar = 情報バー、.hw-tabs = タブ */
@@ -1596,10 +1596,10 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .skin-switch button:hover { color: var(--hw-bar-text); }
 .skin-switch button.is-active { color: var(--hw-sel-text); background: var(--hw-sel); font-weight: 600; }
 
-/* ── DAW スキン（<html data-skin="daw">） ──────────────
+/* ── スタジオスキン（<html data-skin="studio">。制作スタジオ／DAW 風） ──────────────
    少し暗いグレーの面に、アンバーの選択色と水色の値の色。ブロックはクリップ風（色の付いた見出し＋暗い本体）。
-   ライトは中間の暗さ、ダークはさらに暗くする。トークンの意味はプラグイン風と同じ（--hw-green は「値の色」） */
-:root[data-skin="daw"] {
+   ライトは中間の暗さ、ダークはさらに暗くする。トークンの意味はフラットと同じ（--hw-green は「値の色」） */
+:root[data-skin="studio"] {
   --hw-bg:         #3c3f45;
   --hw-bg-2:       #33363b;
   --hw-line:       #24262a;
@@ -1637,7 +1637,7 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   --clip-edge:     rgba(0, 0, 0, 0.35);
 }
 
-:root[data-theme="dark"][data-skin="daw"] {
+:root[data-theme="dark"][data-skin="studio"] {
   --hw-bg:         #2a2c30;
   --hw-bg-2:       #232529;
   --hw-line:       #16171a;
@@ -1656,7 +1656,7 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 }
 
 /* モジュールの見出し：デバイスのタイトルバーのような帯 */
-[data-skin="daw"] .hw .panel-title {
+[data-skin="studio"] .hw .panel-title {
   margin: -14px -20px 14px;
   padding: 8px 20px;
   font-size: 12px;
@@ -1667,31 +1667,31 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   border-bottom: 1px solid var(--hw-line);
 }
 
-[data-skin="daw"] .hw .panel-divider + .panel-title { margin-top: -14px; }
-[data-skin="daw"] .hw .panel-divider { margin-bottom: 14px; }
-[data-skin="daw"] .hw .mixer-panel > .panel-title { margin: 0; }
+[data-skin="studio"] .hw .panel-divider + .panel-title { margin-top: -14px; }
+[data-skin="studio"] .hw .panel-divider { margin-bottom: 14px; }
+[data-skin="studio"] .hw .mixer-panel > .panel-title { margin: 0; }
 
 /* ドロップダウン：暗い箱 */
-[data-skin="daw"] .hw .select {
+[data-skin="studio"] .hw .select {
   padding: 5px 24px 5px 9px;
   background-color: var(--hw-box);
   border: 1px solid var(--hw-line);
   border-radius: 3px;
 }
 
-[data-skin="daw"] .hw .select:hover { border-color: var(--hw-faint); }
-[data-skin="daw"] .hw .select:focus { border: 1px solid var(--hw-orange); padding-bottom: 5px; }
+[data-skin="studio"] .hw .select:hover { border-color: var(--hw-faint); }
+[data-skin="studio"] .hw .select:focus { border: 1px solid var(--hw-orange); padding-bottom: 5px; }
 
-[data-skin="daw"] .hw .btn,
-[data-skin="daw"] .hw .pill,
-[data-skin="daw"] .hw .stepper-btn,
-[data-skin="daw"] .mixer-power { border-radius: 3px; }
+[data-skin="studio"] .hw .btn,
+[data-skin="studio"] .hw .pill,
+[data-skin="studio"] .hw .stepper-btn,
+[data-skin="studio"] .mixer-power { border-radius: 3px; }
 
-[data-skin="daw"] .hw .btn { background: var(--hw-bg-2); border-color: var(--hw-line); }
-[data-skin="daw"] .hw .btn:hover { background: var(--hw-box-hover); }
+[data-skin="studio"] .hw .btn { background: var(--hw-bg-2); border-color: var(--hw-line); }
+[data-skin="studio"] .hw .btn:hover { background: var(--hw-box-hover); }
 
 /* アレンジャーのブロック：色の付いた見出しと、暗い本体（クリップ風） */
-[data-skin="daw"] .hw .arr-block {
+[data-skin="studio"] .hw .arr-block {
   align-items: flex-start;
   padding-top: 1px;
   font-size: 11px;
@@ -1702,7 +1702,452 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   box-shadow: inset 0 0 0 1px var(--clip-edge);
 }
 
-[data-skin="daw"] .hw .arr-del { width: 14px; height: 14px; margin-right: 4px; font-size: 10px; }
+[data-skin="studio"] .hw .arr-del { width: 14px; height: 14px; margin-right: 4px; font-size: 10px; }
+
+/* ── ポップスキン（<html data-skin="pop">） ──────────────
+   クリーム色の地に角の丸いモジュールを並べる、色分けしたグルーヴボックス風。
+   モジュールごとの色（--mod）でノブ・ON ボタン・弧を、パートごとの色（--part）でミキサーとアレンジャーのブロックを塗る。
+   ラベルは等幅フォント。帯（情報バー・タブ・目盛り）も明るくし、選択中は黒い丸みのある箱 */
+:root[data-skin="pop"] {
+  --hw-bg:         #ece7dc;
+  --hw-bg-2:       #e3ddd0;
+  --hw-line:       #d8d1c2;
+  --hw-text:       #1c1c1c;
+  --hw-label:      #6b665c;
+  --hw-faint:      #9e988b;
+  --hw-box:        #e6e1d6;
+  --hw-box-hover:  #dad4c6;
+  --hw-bar:        #f8f6f1;
+  --hw-bar-2:      #e9e4d9;
+  --hw-bar-text:   #1c1c1c;
+  --hw-bar-sub:    #7d786e;
+  --hw-sel:        #1c1c1c;
+  --hw-sel-text:   #ffffff;
+  --hw-green:      #ff6a2b;
+  --hw-orange:     #ff6a2b;
+  --hw-shadow:     rgba(70, 50, 20, 0.16);
+  --knob-face:     #ff6a2b;
+  --knob-face-2:   #ff6a2b;
+  --knob-edge:     rgba(0, 0, 0, 0.12);
+  --knob-mark:     #ffffff;
+  --knob-arc-bg:   rgba(0, 0, 0, 0.08);
+  --slider-track:  #dcd5c6;
+  --slider-cap:    #ffffff;
+  --slider-cap-2:  #ffffff;
+  --meter-low:     #1fb36b;
+  --meter-mid:     #f5b700;
+  --meter-high:    #ff4b3e;
+  --meter-off:     #e2dccf;
+  --track-bg:      #f8f6f1;
+  --track-grid:    #ebe6dc;
+  --track-grid-loop: #d3cbbb;
+  --pop-card:      #f8f6f1;  /* モジュールの面 */
+  --pop-press:     rgba(0, 0, 0, 0.14);  /* 色付きの部品の下の影（押せる厚み） */
+  /* モジュール・パートの色（白い文字を乗せられる濃さ） */
+  --pop-orange:    #ff6a2b;
+  --pop-blue:      #2f7bff;
+  --pop-green:     #16a864;
+  --pop-purple:    #8b5cf6;
+  --pop-pink:      #f0457f;
+  --pop-teal:      #0f9fb5;
+  --pop-indigo:    #5459d6;
+  --pop-red:       #e5443a;
+}
+
+:root[data-theme="dark"][data-skin="pop"] {
+  --hw-bg:         #161618;
+  --hw-bg-2:       #1f1f22;
+  --hw-line:       #2d2d31;
+  --hw-text:       #f3f1ec;
+  --hw-label:      #a49f96;
+  --hw-faint:      #6f6c66;
+  --hw-box:        #2b2b2f;
+  --hw-box-hover:  #36363b;
+  --hw-bar:        #202024;
+  --hw-bar-2:      #2b2b2f;
+  --hw-bar-text:   #f3f1ec;
+  --hw-bar-sub:    #918d86;
+  --hw-sel:        #f3f1ec;
+  --hw-sel-text:   #161618;
+  --hw-shadow:     rgba(0, 0, 0, 0.5);
+  --knob-edge:     rgba(0, 0, 0, 0.4);
+  --knob-arc-bg:   rgba(255, 255, 255, 0.09);
+  --slider-track:  #0c0c0e;
+  --meter-off:     #2b2b2f;
+  --track-bg:      #1b1b1e;
+  --track-grid:    #26262a;
+  --track-grid-loop: #3b3b40;
+  --pop-card:      #202024;
+  --pop-press:     rgba(0, 0, 0, 0.45);
+  --pop-orange:    #ff7a3d;
+  --pop-blue:      #4a8dff;
+  --pop-green:     #22b872;
+  --pop-purple:    #9a70fa;
+  --pop-pink:      #f5568c;
+  --pop-teal:      #1aaec4;
+  --pop-indigo:    #6a6fe6;
+  --pop-red:       #ee5248;
+}
+
+/* モジュールの色：設定タブは左からオレンジ・青・緑、ミキサーは紫、アレンジャーはオレンジ */
+[data-skin="pop"] .hw .card { --mod: var(--pop-orange); }
+[data-skin="pop"] .hw .custom-grid > .card:nth-child(2) { --mod: var(--pop-blue); }
+[data-skin="pop"] .hw .custom-grid > .card:nth-child(3) { --mod: var(--pop-green); }
+[data-skin="pop"] .hw .mixer-panel { --mod: var(--pop-purple); }
+
+/* パートの色（ミキサーのチャンネルとアレンジャーのブロック） */
+[data-skin="pop"] [data-part="melody"],    [data-skin="pop"] .arr-melody    { --part: var(--pop-pink); }
+[data-skin="pop"] [data-part="chord"],     [data-skin="pop"] .arr-chord     { --part: var(--pop-purple); }
+[data-skin="pop"] [data-part="drum"],      [data-skin="pop"] .arr-drum      { --part: var(--pop-blue); }
+[data-skin="pop"] [data-part="bass"],      [data-skin="pop"] .arr-bass      { --part: var(--pop-green); }
+[data-skin="pop"] [data-part="pad"],       [data-skin="pop"] .arr-pad       { --part: var(--pop-teal); }
+[data-skin="pop"] [data-part="arp"],       [data-skin="pop"] .arr-arp       { --part: var(--pop-orange); }
+[data-skin="pop"] [data-part="signature"], [data-skin="pop"] .arr-signature { --part: var(--pop-indigo); }
+[data-skin="pop"] [data-part="fx"],        [data-skin="pop"] .arr-fx        { --part: var(--pop-red); }
+
+/* 等幅のラベル */
+[data-skin="pop"] .hw .panel-title,
+[data-skin="pop"] .hw .form-label,
+[data-skin="pop"] .hw .export-label,
+[data-skin="pop"] .hw .pill,
+[data-skin="pop"] .hw-bar .info,
+[data-skin="pop"] .mixer-ch-name,
+[data-skin="pop"] .mixer-power,
+[data-skin="pop"] .mixer-value,
+[data-skin="pop"] .hw .arr-ticks,
+[data-skin="pop"] .hw .bpm-number {
+  font-family: "JetBrains Mono", "Consolas", "Menlo", var(--font);
+}
+
+/* ── 帯とタブ：明るい帯、選択中は黒い丸みのある箱 ── */
+[data-skin="pop"] .hw-bar { border-bottom-color: var(--hw-line); }
+[data-skin="pop"] .hw-bar .info-item { border-left-color: var(--hw-line); }
+[data-skin="pop"] .hw-bar .info-item:last-child:not([hidden]) { color: var(--hw-orange); }
+[data-skin="pop"] .hw-bar .btn { border-radius: 999px; background: var(--hw-bar-2); border-color: var(--hw-bar-2); }
+[data-skin="pop"] .hw-bar .btn-play { color: var(--hw-sel-text); background: var(--hw-sel); border-color: var(--hw-sel); }
+[data-skin="pop"] .hw-bar .btn-play:hover { background: var(--hw-sel); opacity: 0.85; }
+[data-skin="pop"] .skin-switch button { border-radius: 999px; }
+
+[data-skin="pop"] .hw-tabs { padding: 8px 20px; background: var(--hw-bg); border-bottom-color: var(--hw-line); }
+[data-skin="pop"] .hw-tabs button { border-radius: 999px; padding: 6px 18px; }
+[data-skin="pop"] [data-screen="custom"] .hw-tabs button.is-active {
+  color: var(--hw-sel-text);
+  background: var(--hw-sel);
+  border-color: var(--hw-sel);
+}
+
+/* ── モジュール：間を空けた角の丸い面 ── */
+[data-skin="pop"] .hw .card {
+  background: var(--pop-card);
+  border: none;
+  border-radius: 18px;
+  box-shadow: 0 2px 0 var(--hw-line);
+  overflow: hidden;
+}
+
+[data-skin="pop"] .hw .custom-grid { gap: 16px; border: none; align-items: start; }
+[data-skin="pop"] .hw .custom-grid > .card { border: none; }
+[data-skin="pop"] .hw .mixer-panel,
+[data-skin="pop"] .hw .arranger-bottom { margin-top: 16px; }
+[data-skin="pop"] .hw .arranger-bottom { gap: 16px; align-items: start; }
+
+/* 見出し：モジュールの色の丸＋等幅の文字 */
+[data-skin="pop"] .hw .panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--hw-text);
+}
+
+[data-skin="pop"] .hw .panel-title::before {
+  content: "";
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mod);
+}
+
+[data-skin="pop"] .hw .panel-title svg { display: none; }
+[data-skin="pop"] .hw .panel-divider { border-top: 2px dotted var(--hw-line); }
+
+/* ドロップダウン・ボタン：丸みのある箱 */
+[data-skin="pop"] .hw .select {
+  padding: 7px 30px 7px 14px;
+  background-color: var(--hw-box);
+  border: none;
+  border-radius: 999px;
+}
+
+[data-skin="pop"] .hw .select:hover { background-color: var(--hw-box-hover); }
+[data-skin="pop"] .hw .select:focus { border: none; padding-bottom: 7px; outline: 2px solid var(--mod); outline-offset: 1px; }
+
+[data-skin="pop"] .hw .btn,
+[data-skin="pop"] .hw .stepper-btn { border-radius: 999px; }
+[data-skin="pop"] .hw .stepper-btn { width: 30px; height: 30px; }
+[data-skin="pop"] .hw .bpm-number { border-radius: 10px; }
+[data-skin="pop"] .lcd { border-radius: 8px; }
+
+/* ON/OFF：ON はモジュールの色に白い文字 */
+[data-skin="pop"] .hw .pill { border-radius: 999px; min-width: 52px; }
+[data-skin="pop"] .hw .pill.is-on { color: #fff; background: var(--mod); box-shadow: 0 2px 0 var(--pop-press); }
+
+/* スイッチ：丸いつまみ */
+[data-skin="pop"] .hw .toggle { width: 40px; height: 22px; border-radius: 999px; }
+[data-skin="pop"] .hw .toggle span { top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--slider-cap); box-shadow: 0 1px 2px var(--hw-shadow); }
+[data-skin="pop"] .hw .toggle.is-on { background: var(--mod); }
+[data-skin="pop"] .hw .toggle.is-on span { transform: translateX(18px); }
+
+/* ノブ：モジュールの色で塗りつぶした面に白い指示線、弧もモジュールの色 */
+[data-skin="pop"] .hw .knob-cap {
+  inset: 17%;
+  background: var(--mod);
+  box-shadow: 0 3px 0 var(--pop-press);
+}
+
+[data-skin="pop"] .hw .knob-value { stroke: var(--mod); stroke-linecap: round; }
+[data-skin="pop"] .hw .knob-track { stroke-linecap: round; }
+[data-skin="pop"] .hw .knob-pointer { width: 4px; margin-left: -2px; top: 9%; height: 32%; }
+
+/* ── ミキサー：パートの色の丸いつまみ ── */
+[data-skin="pop"] .mixer { border-top: none; padding: 0 8px 4px; }
+[data-skin="pop"] .mixer-ch { border-right: none; }
+[data-skin="pop"] .mixer-master { background: transparent; }
+[data-skin="pop"] .mixer-ch-head { background: transparent; color: var(--hw-text); }
+[data-skin="pop"] .mixer-scale .mixer-ch-name { color: var(--hw-faint); }
+[data-skin="pop"] .mixer-color { width: 10px; height: 10px; border-radius: 50%; background: var(--part); }
+[data-skin="pop"] .mixer-power { border-radius: 999px; }
+[data-skin="pop"] .mixer-power[aria-pressed="true"] { color: #fff; background: var(--part); box-shadow: 0 2px 0 var(--pop-press); }
+[data-skin="pop"] .mixer-value { border-radius: 8px; }
+
+[data-skin="pop"] .mixer-ch .fader-slot { width: 6px; margin-left: -3px; border-radius: 3px; }
+[data-skin="pop"] .mixer-ch .fader-fill { border-radius: 3px; background: var(--part); }
+[data-skin="pop"] .mixer-ch .fader-cap {
+  width: 22px;
+  height: 22px;
+  margin-left: -11px;
+  bottom: calc(var(--p) * (100% - 14px) - 4px);  /* 中心を溝の上端〜下端に合わせる */
+  border-radius: 50%;
+  background: var(--slider-cap);
+  box-shadow: 0 0 0 4px var(--part), 0 3px 0 4px var(--pop-press);
+}
+
+[data-skin="pop"] .mixer-ch .fader-cap::after { display: none; }
+[data-skin="pop"] .meter { width: 6px; border-radius: 3px; }
+
+/* ── アレンジャー：明るい帯と丸みのある色のブロック ── */
+[data-skin="pop"] .hw .arranger-card { --mod: var(--pop-orange); }
+[data-skin="pop"] .hw .arranger-mode { border-radius: 999px; padding: 4px 12px; }
+[data-skin="pop"] .hw .arranger-mode.is-edited { color: #fff; background: var(--mod); }
+[data-skin="pop"] .hw .arr-ruler { border-bottom-color: var(--hw-line); }
+[data-skin="pop"] .hw .arr-ruler-head { border-right-color: var(--hw-line); }
+[data-skin="pop"] .hw .arr-ticks { background: repeating-linear-gradient(to right, var(--hw-line) 0 1px, transparent 1px calc(100% / var(--bars))); }
+[data-skin="pop"] .hw .arr-ticks:hover { background-color: var(--hw-bar-2); }
+[data-skin="pop"] .hw .arr-head .pill.is-on { background: var(--hw-sel); color: var(--hw-sel-text); box-shadow: none; }
+
+/* ── デフォルトスキン（<html data-skin="default">） ──────────────
+   メニュー・シンプルモード・ミュージックリストと同じ見た目（白いカード、角丸、枠線、カスタムモードの紫のアクセント）。
+   トークンはアプリ共通のトークンを指すので、ライト／ダークの切り替えにそのまま追従する */
+:root[data-skin="default"] {
+  --hw-bg:         var(--bg);
+  --hw-bg-2:       var(--surface-sunken);
+  --hw-line:       var(--border);
+  --hw-text:       var(--text);
+  --hw-label:      var(--text-muted);
+  --hw-faint:      var(--text-muted);
+  --hw-box:        var(--bg);
+  --hw-box-hover:  var(--hover);
+  --hw-bar:        var(--surface);
+  --hw-bar-2:      var(--hover);
+  --hw-bar-text:   var(--text);
+  --hw-bar-sub:    var(--text-muted);
+  --hw-sel:        var(--custom);
+  --hw-sel-text:   #ffffff;  /* アクセント色の上の白文字 */
+  --hw-green:      var(--custom);
+  --hw-orange:     var(--custom);
+  --hw-shadow:     var(--shadow);
+  --knob-face:     var(--surface);
+  --knob-face-2:   var(--btn-soft);
+  --knob-edge:     var(--border-strong);
+  --knob-mark:     var(--text);
+  --knob-arc-bg:   var(--border);
+  --slider-track:  var(--toggle-off);
+  --slider-cap:    var(--surface);
+  --slider-cap-2:  var(--btn-soft);
+  --meter-low:     var(--simple);
+  --meter-mid:     var(--star);
+  --meter-high:    var(--danger);
+  --meter-off:     var(--line-soft);
+  --track-bg:      var(--surface-sunken);
+  --track-grid:    var(--arr-grid);
+  --track-grid-loop: var(--arr-grid-loop);
+}
+
+/* 情報バー・タブ：ほかの画面と同じ白い帯と下線のタブ */
+[data-skin="default"] .hw-bar { border-bottom-color: var(--border); }
+[data-skin="default"] .hw-bar .info-item { border-left-color: var(--border); }
+[data-skin="default"] .hw-bar .btn,
+[data-skin="default"] .hw-bar .btn-play {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+[data-skin="default"] .hw-bar .btn:hover { border-color: var(--border-strong); background: var(--surface); }
+[data-skin="default"] .skin-switch button { border-radius: 999px; }
+[data-skin="default"] .skin-switch button:not(.is-active) { background: var(--bg); }
+
+[data-skin="default"] .hw-tabs {
+  gap: 8px;
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom-color: var(--border);
+}
+
+[data-skin="default"] .hw-tabs button {
+  margin-bottom: -1px;
+  padding: 12px 18px;
+  font-size: 14px;
+  color: var(--text-muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+}
+
+[data-skin="default"] [data-screen="custom"] .hw-tabs button.is-active {
+  color: var(--custom);
+  background: transparent;
+  border-color: transparent;
+  border-bottom-color: var(--custom);
+}
+
+/* カード：白い面・枠線・角丸、間隔を空けて並べる */
+[data-skin="default"] .hw .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+[data-skin="default"] .hw .panel { padding: 20px 22px; }
+[data-skin="default"] .hw .custom-grid { gap: 20px; border: none; align-items: start; }
+[data-skin="default"] .hw .custom-grid > .card { border: 1px solid var(--border); }
+[data-skin="default"] .hw .mixer-panel { margin-top: 20px; padding: 0; border-top: 1px solid var(--border); }
+[data-skin="default"] .hw .arranger-bottom { gap: 20px; margin-top: 20px; align-items: start; }
+[data-skin="default"] .hw .arranger-bottom > .card { border: 1px solid var(--border); }
+
+[data-skin="default"] .hw .panel-title {
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-sub);
+}
+
+[data-skin="default"] .hw .panel-title svg { width: 18px; height: 18px; color: var(--text-muted); }
+[data-skin="default"] .hw .mixer-panel > .panel-title { padding: 16px 22px 12px; }
+[data-skin="default"] .hw .panel-divider { margin: 18px 0; }
+[data-skin="default"] .hw .form-label,
+[data-skin="default"] .hw .export-label { font-size: 13px; }
+
+/* セレクト・ボタン：ほかの画面と同じ枠付きの箱 */
+[data-skin="default"] .hw .select {
+  appearance: auto;
+  padding: 9px 12px;
+  font-size: 15px;
+  font-weight: 400;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+[data-skin="default"] .hw .select:hover { border-color: var(--border-strong); }
+[data-skin="default"] .hw .select:focus { outline: 2px solid var(--custom-soft); border: 1px solid var(--custom); padding-bottom: 9px; }
+
+[data-skin="default"] .hw .btn {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 400;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+[data-skin="default"] .hw .btn-small { padding: 7px 12px; font-size: 13px; background: var(--bg); }
+[data-skin="default"] .hw .btn-icon { width: 32px; height: 32px; padding: 0; font-size: 15px; }
+[data-skin="default"] .hw .btn:hover { background: var(--surface); border-color: var(--border-strong); }
+[data-skin="default"] .hw .btn-small:hover { background: var(--bg); }
+[data-skin="default"] .hw .btn:active:not(:disabled) { background: var(--hover); }
+[data-skin="default"] .hw #c-tap.is-active { color: var(--custom); border-color: var(--custom); }
+
+[data-skin="default"] .hw .stepper-btn {
+  width: 32px;
+  color: var(--text-sub);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+[data-skin="default"] .hw .stepper-btn:hover { background: var(--surface); border-color: var(--border-strong); }
+
+[data-skin="default"] .lcd {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* ON/OFF：ほかの画面と同じ丸い札（ON は緑） */
+[data-skin="default"] .hw .pill {
+  min-width: 52px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+[data-skin="default"] .hw .pill.is-on { color: var(--simple-ink); background: var(--simple-soft); border-color: transparent; }
+[data-skin="default"] .hw .arr-head .pill { min-width: 44px; padding: 2px 8px; font-size: 11px; }
+
+/* スイッチ：ほかの画面と同じ丸いスイッチ */
+[data-skin="default"] .hw .toggle { width: 40px; height: 22px; border-radius: 999px; background: var(--toggle-off); }
+[data-skin="default"] .hw .toggle span { top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--key-white); }
+[data-skin="default"] .hw .toggle.is-on { background: var(--simple); }
+[data-skin="default"] .hw .toggle.is-on span { transform: translateX(18px); }
+
+/* ノブ・フェーダー：丸みを付ける */
+[data-skin="default"] .hw .knob-value,
+[data-skin="default"] .hw .knob-track { stroke-linecap: round; }
+[data-skin="default"] .fader-slot,
+[data-skin="default"] .fader-fill { border-radius: 2px; }
+[data-skin="default"] .fader-cap { border-radius: 4px; }
+
+/* ミキサー：白い見出しに区切り線 */
+[data-skin="default"] .mixer-ch-head { border-bottom: 1px solid var(--border); }
+[data-skin="default"] .mixer-master .mixer-ch-name { color: var(--custom); }
+[data-skin="default"] .mixer-power { border-radius: 999px; }
+[data-skin="default"] .mixer-value { border-radius: 6px; }
+
+/* アレンジャー：ほかの画面と同じ目盛りとブロック */
+[data-skin="default"] .hw .arranger-mode { padding: 3px 10px; font-size: 12px; font-weight: 700; border-radius: 999px; }
+[data-skin="default"] .hw .arranger-mode.is-edited { color: var(--custom); background: var(--custom-soft); }
+[data-skin="default"] .hw .arr-ruler { border-bottom-color: var(--border); }
+[data-skin="default"] .hw .arr-ruler-head { border-right-color: var(--border); }
+[data-skin="default"] .hw .arr-ticks { color: var(--text-sub); font-weight: 600; }
+[data-skin="default"] .hw .arr-ticks:hover { background-color: var(--custom-soft); }
+[data-skin="default"] .hw .arr-block { border-radius: 8px; }
+
+[data-skin="pop"] .hw .arr-block {
+  color: #fff;
+  background-color: var(--part);
+  border-radius: 12px;
+  box-shadow: 0 3px 0 var(--pop-press);
+}
+
+[data-skin="pop"] .hw .arr-lane.is-off .arr-block { opacity: 0.55; }
+[data-skin="pop"] .hw .arr-head .pill { min-width: 44px; }
 
 /* ── ピアノロール ───────────────────────── */
 .pianoroll {

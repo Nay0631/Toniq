@@ -1,6 +1,6 @@
 import { getState, setState, Theme, Skin } from "../engine/AppState";
 
-// 画面の配色（ライト／ダーク）と、カスタムモードのスキン（プラグイン風／DAW 風）の切り替え。
+// 画面の配色（ライト／ダーク）と、カスタムモードのスキン（デフォルト／フラット／スタジオ／ポップ）の切り替え。
 // どちらも曲データとは別に localStorage に保存する（配色が未保存なら OS の設定に合わせる）。
 // 起動直後のちらつきを防ぐため、index.html の <head> でも同じキーを読んで先に data-theme / data-skin を付けている。
 const STORAGE_KEY = "toniq.theme";
@@ -14,11 +14,18 @@ function loadTheme(): Theme {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+// 旧名で保存されたスキン（plugin → flat、daw → studio）も読めるようにする
+const SKIN_ALIASES: Record<string, Skin> = {
+  default: "default", flat: "flat", studio: "studio", pop: "pop",
+  plugin:  "flat",    daw:  "studio",
+};
+
 function loadSkin(): Skin {
   try {
-    if (localStorage.getItem(SKIN_KEY) === "daw") return "daw";
-  } catch { /* 保存領域が使えないときは標準のスキン */ }
-  return "plugin";
+    const saved = localStorage.getItem(SKIN_KEY);
+    if (saved && SKIN_ALIASES[saved]) return SKIN_ALIASES[saved];
+  } catch { /* 保存領域が使えないときはデフォルトのスキン */ }
+  return "default";
 }
 
 // AppState.theme を <html data-theme> とボタンの表示に反映する

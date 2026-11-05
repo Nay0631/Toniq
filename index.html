@@ -15,7 +15,9 @@
       document.documentElement.dataset.theme = t;
       var skin = null;
       try { skin = localStorage.getItem("toniq.skin"); } catch (e) {}
-      document.documentElement.dataset.skin = skin === "daw" ? "daw" : "plugin";
+      // 旧名（plugin / daw）は新しい名前に読み替える。未保存ならデフォルト
+      var skins = { "default": "default", flat: "flat", studio: "studio", pop: "pop", plugin: "flat", daw: "studio" };
+      document.documentElement.dataset.skin = (skin && skins[skin]) || "default";
     })();
   </script>
 </head>
@@ -248,8 +250,10 @@
         <!-- スキンの切り替え（Theme.ts。<html data-skin>） -->
         <div class="skin-switch" role="group" aria-label="画面のスキン">
           <span class="skin-switch-label">スキン</span>
-          <button type="button" data-skin-option="plugin">プラグイン</button>
-          <button type="button" data-skin-option="daw">DAW</button>
+          <button type="button" data-skin-option="default">デフォルト</button>
+          <button type="button" data-skin-option="flat">フラット</button>
+          <button type="button" data-skin-option="studio">スタジオ</button>
+          <button type="button" data-skin-option="pop">ポップ</button>
         </div>
         <div class="infobar-actions">
           <button class="btn" data-new-song>＋ 新規作成</button>
