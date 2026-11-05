@@ -30,6 +30,9 @@ export type QuizNoteNames = "cde" | "doremi";
 // 画面の配色（ライト／ダーク）
 export type Theme = "light" | "dark";
 
+// カスタムモードの画面のスキン（plugin = フラットなプラグイン風、daw = 少し暗い DAW 風）
+export type Skin = "plugin" | "daw";
+
 // アレンジャーのブロック（小節は 0 始まり）
 export interface ArrangeBlock {
   start:  number;
@@ -47,6 +50,8 @@ export interface AppState {
 
   // 画面の配色（曲の内容ではないので SONG_FIELDS には入れない。端末ごとに Theme.ts が保存する）
   theme: Theme;
+  // カスタムモードのスキン（theme と同じく端末ごとに Theme.ts が保存する）
+  skin: Skin;
 
   // 曲を生成済みか（シンプルモードの設定画面／生成結果画面の切り替え）
   generated: boolean;
@@ -129,6 +134,7 @@ export const defaultState: AppState = {
   screen:      "menu",
   tab:         "settings",
   theme:       "light",
+  skin:        "plugin",
   generated:   false,
   songId:      null,
 

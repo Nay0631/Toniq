@@ -1570,6 +1570,140 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 /* ブロック：平らな色の帯（パートの識別色はそのまま） */
 .hw .arr-block { border-radius: 2px; }
 
+/* ── スキン切り替え（情報バー。Theme.ts） ── */
+.skin-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 8px;
+}
+
+.skin-switch-label {
+  margin-right: 6px;
+  font-size: 12px;
+  color: var(--hw-bar-sub);
+}
+
+.skin-switch button {
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--hw-bar-sub);
+  background: var(--hw-bar-2);
+  border: none;
+  border-radius: 2px;
+}
+
+.skin-switch button:hover { color: var(--hw-bar-text); }
+.skin-switch button.is-active { color: var(--hw-sel-text); background: var(--hw-sel); font-weight: 600; }
+
+/* ── DAW スキン（<html data-skin="daw">） ──────────────
+   少し暗いグレーの面に、アンバーの選択色と水色の値の色。ブロックはクリップ風（色の付いた見出し＋暗い本体）。
+   ライトは中間の暗さ、ダークはさらに暗くする。トークンの意味はプラグイン風と同じ（--hw-green は「値の色」） */
+:root[data-skin="daw"] {
+  --hw-bg:         #3c3f45;
+  --hw-bg-2:       #33363b;
+  --hw-line:       #24262a;
+  --hw-text:       #e7e9ec;
+  --hw-label:      #a4a9b1;
+  --hw-faint:      #737982;
+  --hw-box:        #2a2d32;
+  --hw-box-hover:  #4a4e56;
+  --hw-bar:        #1e2024;
+  --hw-bar-2:      #2b2e33;
+  --hw-bar-text:   #eef0f2;
+  --hw-bar-sub:    #8d939c;
+  --hw-sel:        #ffb238;
+  --hw-sel-text:   #1b1b1b;
+  --hw-green:      #5cb8ff;
+  --hw-orange:     #ffb238;
+  --hw-shadow:     rgba(0, 0, 0, 0.5);
+  --knob-face:     #5c6068;
+  --knob-face-2:   #3b3f46;
+  --knob-edge:     #1b1d20;
+  --knob-mark:     #f4f4f4;
+  --knob-arc-bg:   rgba(255, 255, 255, 0.1);
+  --slider-track:  #16171a;
+  --slider-cap:    #cdd0d5;
+  --slider-cap-2:  #8e929a;
+  --meter-low:     #4cd964;
+  --meter-mid:     #ffd23f;
+  --meter-high:    #ff5a4a;
+  --meter-off:     #1c1e22;
+  --track-bg:      #2c2f34;
+  --track-grid:    #373a40;
+  --track-grid-loop: #52565d;
+  --clip-body:     rgba(0, 0, 0, 0.45);  /* クリップの本体（パートの色に重ねる） */
+  --clip-line:     rgba(255, 255, 255, 0.08);
+  --clip-edge:     rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"][data-skin="daw"] {
+  --hw-bg:         #2a2c30;
+  --hw-bg-2:       #232529;
+  --hw-line:       #16171a;
+  --hw-box:        #1c1e21;
+  --hw-box-hover:  #3a3d43;
+  --hw-bar:        #131416;
+  --hw-bar-2:      #1d1e21;
+  --knob-face:     #4a4d54;
+  --knob-face-2:   #2b2d32;
+  --knob-edge:     #0e0f11;
+  --meter-off:     #151619;
+  --track-bg:      #1f2124;
+  --track-grid:    #2a2c30;
+  --track-grid-loop: #3e4147;
+  --clip-body:     rgba(0, 0, 0, 0.5);
+}
+
+/* モジュールの見出し：デバイスのタイトルバーのような帯 */
+[data-skin="daw"] .hw .panel-title {
+  margin: -14px -20px 14px;
+  padding: 8px 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--hw-text);
+  background: var(--hw-bg-2);
+  border-bottom: 1px solid var(--hw-line);
+}
+
+[data-skin="daw"] .hw .panel-divider + .panel-title { margin-top: -14px; }
+[data-skin="daw"] .hw .panel-divider { margin-bottom: 14px; }
+[data-skin="daw"] .hw .mixer-panel > .panel-title { margin: 0; }
+
+/* ドロップダウン：暗い箱 */
+[data-skin="daw"] .hw .select {
+  padding: 5px 24px 5px 9px;
+  background-color: var(--hw-box);
+  border: 1px solid var(--hw-line);
+  border-radius: 3px;
+}
+
+[data-skin="daw"] .hw .select:hover { border-color: var(--hw-faint); }
+[data-skin="daw"] .hw .select:focus { border: 1px solid var(--hw-orange); padding-bottom: 5px; }
+
+[data-skin="daw"] .hw .btn,
+[data-skin="daw"] .hw .pill,
+[data-skin="daw"] .hw .stepper-btn,
+[data-skin="daw"] .mixer-power { border-radius: 3px; }
+
+[data-skin="daw"] .hw .btn { background: var(--hw-bg-2); border-color: var(--hw-line); }
+[data-skin="daw"] .hw .btn:hover { background: var(--hw-box-hover); }
+
+/* アレンジャーのブロック：色の付いた見出しと、暗い本体（クリップ風） */
+[data-skin="daw"] .hw .arr-block {
+  align-items: flex-start;
+  padding-top: 1px;
+  font-size: 11px;
+  border-radius: 3px;
+  background-image:
+    linear-gradient(180deg, transparent 0 16px, var(--clip-body) 16px),
+    repeating-linear-gradient(90deg, transparent 0 11px, var(--clip-line) 11px 12px);
+  box-shadow: inset 0 0 0 1px var(--clip-edge);
+}
+
+[data-skin="daw"] .hw .arr-del { width: 14px; height: 14px; margin-right: 4px; font-size: 10px; }
+
 /* ── ピアノロール ───────────────────────── */
 .pianoroll {
   --mode:      var(--custom);

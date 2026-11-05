@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Toniq</title>
-  <!-- 配色を描画前に決めてちらつきを防ぐ（キーと判定は src/ui/Theme.ts と同じ） -->
+  <!-- 配色・スキンを描画前に決めてちらつきを防ぐ（キーと判定は src/ui/Theme.ts と同じ） -->
   <script>
     (function () {
       var t = null;
@@ -13,6 +13,9 @@
         t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
       }
       document.documentElement.dataset.theme = t;
+      var skin = null;
+      try { skin = localStorage.getItem("toniq.skin"); } catch (e) {}
+      document.documentElement.dataset.skin = skin === "daw" ? "daw" : "plugin";
     })();
   </script>
 </head>
@@ -241,6 +244,12 @@
           <span class="info-item">拍子 <b>4/4</b></span>
           <span class="info-item">小節 <b id="c-info-bars"></b></span>
           <span class="info-item" id="c-info-loop"></span>
+        </div>
+        <!-- スキンの切り替え（Theme.ts。<html data-skin>） -->
+        <div class="skin-switch" role="group" aria-label="画面のスキン">
+          <span class="skin-switch-label">スキン</span>
+          <button type="button" data-skin-option="plugin">プラグイン</button>
+          <button type="button" data-skin-option="daw">DAW</button>
         </div>
         <div class="infobar-actions">
           <button class="btn" data-new-song>＋ 新規作成</button>
