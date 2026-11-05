@@ -90,6 +90,21 @@
     "accentProbability": 0.15,
     "instrument": "pluck"
   },
+  "トランス": {
+    "rhythmPatterns": [
+      "x-x-x-x-x---x-x-",
+      "x--x--x-x-x-x---",
+      "x---x-x-x--x--x-",
+      "x-x-x---x-------",
+      "x--x--x---x-x-x-"
+    ],
+    "phraseForms": ["AAAB", "ABAB", "AABA"],
+    "maxLeap": 7,
+    "preferStepwise": false,
+    "octaveRange": [4, 5],
+    "accentProbability": 0.2,
+    "instrument": "supersaw"
+  },
   "アンビエント": {
     "rhythmPatterns": [
       "x---------------",

@@ -20,7 +20,7 @@ import { initMixer, renderMixer } from "./MixerPanel";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
-const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "アンビエント"];
+const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント"];
 
 const chords = chordDB as unknown as ChordProgression[];
 const drums  = drumDB  as unknown as DrumPattern[];

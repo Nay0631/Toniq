@@ -17,6 +17,7 @@ export const DRUM_SAMPLE_DIRS: Record<string, string> = {
   ゲームBGM:    "gamebgm",
   テクノ:       "techno",
   ハウス:       "house",
+  トランス:     "trance",
   アンビエント: "ambient",
 };
 

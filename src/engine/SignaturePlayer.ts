@@ -231,6 +231,37 @@ const housePiano: SignatureDef = {
   },
 };
 
+// トランス：厚いのこぎり波（スーパーソウ）のコードを16分で刻むトランスゲート（x = 発音、. = 休み）
+const GATE_PATTERNS = ["xx.xx.x.xx.xx.x.", "xx.xx.x.xxx.x.xx"];
+const tranceGate: SignatureDef = {
+  label: "トランスゲート",
+  create: out => {
+    const reverb = new Tone.Reverb({ decay: 2.5, wet: 0.3 }).connect(out);
+    const delay  = new Tone.PingPongDelay({ delayTime: "8n.", feedback: 0.2, wet: 0.15 }).connect(reverb);
+    const filter = new Tone.Filter({ type: "lowpass", frequency: 4500, Q: 0.7 }).connect(delay);
+    const synth  = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: "fatsawtooth", count: 3, spread: 30 } as any,
+      envelope:   { attack: 0.003, decay: 0.08, sustain: 0.5, release: 0.04 },
+      volume:     -26,
+    }).connect(filter);
+    return {
+      trigger: (e, time) => synth.triggerAttackRelease(e.notes!, e.dur!, time),
+      nodes:   [synth, filter, delay, reverb],
+    };
+  },
+  events: (notes, bar, bars) => {
+    const chord = [...notes, shiftOctave(notes[0], 1)];
+    const ev: SignatureEvent[] = [];
+    for (let b = 0; b < bars; b++) {
+      const pattern = GATE_PATTERNS[(bar + b) % GATE_PATTERNS.length];
+      [...pattern].forEach((c, step) => {
+        if (c === "x") ev.push({ time: t(bar + b, step), notes: chord, dur: "32n" });
+      });
+    }
+    return ev;
+  },
+};
+
 // アンビエント：ゆっくりうねる風のようなノイズ
 const ambientWind: SignatureDef = {
   label: "ウィンド",
@@ -262,6 +293,7 @@ const SIGNATURES: Record<string, SignatureDef> = {
   "ゲームBGM": gameBell,
   "テクノ":    technoAcid,
   "ハウス":    housePiano,
+  "トランス":  tranceGate,
   "アンビエント": ambientWind,
 };
 

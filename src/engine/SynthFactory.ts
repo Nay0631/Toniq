@@ -69,6 +69,13 @@ const DRUM_KITS: Record<string, DrumKitParams> = {
     hat:   { decay: 0.04, openDecay: 0.4, freq: 8500 },
     bus:   { lowpass: 17000, drive: 0.15, compress: -14, makeup: 4 },
   },
+  // トランス：低く伸びるキックに、明るく短いハイハット
+  トランス: {
+    kick:  { note: "B0", octaves: 5, pitchDecay: 0.045, decay: 0.5, wave: "sine", click: 0.45 },
+    snare: { tone: 190, decay: 0.15, noiseFreq: 2000 },
+    hat:   { decay: 0.035, openDecay: 0.22, freq: 9500 },
+    bus:   { lowpass: 17000, drive: 0.18, compress: -15, makeup: 3 },
+  },
   // アンビエント：アタックを丸め、高域を落として奥で鳴らす
   アンビエント: {
     kick:  { note: "D1", octaves: 2.5, pitchDecay: 0.03, decay: 0.4, wave: "sine", click: 0.05 },
