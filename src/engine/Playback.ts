@@ -1,8 +1,10 @@
 import * as Tone from "tone";
-import { getState } from "./AppState";
+import { AppState, getState, setState } from "./AppState";
+import { ChordProgression, DrumPattern } from "../data/types";
+import { MelodyNote } from "./MelodyGenerator";
 import { applyMixPreset, mixerReady } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
-import { disposeAllLayers, reloadLayer, reloadAllLayers } from "./LayerManager";
+import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
 
 let endEventId: number | null = null;
@@ -75,6 +77,59 @@ export async function preview(layer: "chord" | "drum", onEnded?: () => void): Pr
   transport.start();
 }
 
+// ===== ジャンルのサンプル試聴 =====
+
+export interface SampleSong {
+  chordPattern: ChordProgression;
+  drumPattern:  DrumPattern;
+  melodyNotes:  MelodyNote[];
+}
+
+// サンプルで鳴らすパート（ジャンルの特徴が出るようシグネチャーも鳴らす。FX は除く）
+const SAMPLE_LAYERS: LayerName[] = ["drum", "chord", "bass", "pad", "signature", "melody"];
+
+// サンプル中だけ差し替えている曲の内容。stop() で AppState に戻す（null = サンプルを鳴らしていない）
+let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"> | null = null;
+
+// ジャンルのサンプルを1周（4小節未満の進行は4小節）だけ鳴らす。全パートをアレンジに関係なく同時に鳴らす。
+// 各パートは AppState から読むので、鳴らしている間だけパターンとメロディを差し替え、止めたら元に戻す
+export async function playSample(sample: SampleSong, onEnded?: () => void): Promise<void> {
+  await Tone.start();
+  stopMetronome();  // BPM のクリック音と重ねない
+  stop();
+  applyMixPreset(getState().genre);
+  await mixerReady();
+  stop();  // 待っている間にほかの再生が始まっていたら止める
+
+  const s = getState();
+  sampleRestore = { chordPattern: s.chordPattern, drumPattern: s.drumPattern, melodyNotes: s.melodyNotes };
+  setState({ ...sample });
+
+  const transport = Tone.getTransport();
+  transport.bpm.value = s.bpm;
+  setArrangementBypass(true);
+  SAMPLE_LAYERS.forEach(reloadLayer);
+
+  const bars = Math.max(4, sample.chordPattern.length_bars);
+  endEventId = transport.scheduleOnce(time => {
+    Tone.getDraw().schedule(() => {
+      stop();
+      onEnded?.();
+    }, time);
+  }, `${bars}m`);
+
+  transport.start();
+}
+
+export function isSamplePlaying(): boolean {
+  return sampleRestore !== null;
+}
+
+// サンプルを鳴らしているときだけ止める（画面の切り替えなど）
+export function stopSample(): void {
+  if (isSamplePlaying()) stop();
+}
+
 // 停止して、前回読み込んだ Part をすべて破棄する
 export function stop(): void {
   const transport = Tone.getTransport();
@@ -87,6 +142,10 @@ export function stop(): void {
   setArrangementBypass(false);
   disposeAllLayers();
   transport.position = 0;
+  if (sampleRestore) {
+    setState(sampleRestore);
+    sampleRestore = null;
+  }
 }
 
 export function isPlaying(): boolean {

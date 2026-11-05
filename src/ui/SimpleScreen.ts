@@ -16,6 +16,17 @@ const $ = (id: string) => document.getElementById(id);
 const $$ = (selector: string) =>
   document.querySelectorAll<HTMLElement>(`[data-screen="simple"] ${selector}`);
 
+// ジャンル選択の下に出す、初心者向けの一言の説明
+const GENRE_DESCRIPTIONS: Record<string, string> = {
+  "EDM":         "クラブやフェスで流れる、ノリのよい電子音楽。サビで盛り上がる",
+  "8bit":        "昔のゲーム機のような、ピコピコした懐かしい音",
+  "ローファイ":   "レコードのノイズが混ざった、ゆったりした作業用 BGM の定番",
+  "ゲームBGM":   "ゲームのフィールドや街で流れるような、メロディが主役の曲",
+  "テクノ":       "同じフレーズをくり返す、機械的でクールなダンス音楽",
+  "ハウス":       "4つ打ちのキックとピアノが気持ちよい、明るいダンス音楽",
+  "アンビエント": "リズムが控えめで、空間に広がるような癒やしの音",
+};
+
 // ===== 状態の更新 =====
 
 // 曲の長さ：アレンジが全パートそろうまでの周回分
@@ -54,6 +65,15 @@ function generate(): void {
 // 再生中に曲の内容が変わったら先頭から再生し直す
 async function restartIfPlaying(): Promise<void> {
   if (Playback.isPlaying()) await startPlayback();
+}
+
+// 選んでいるジャンル・雰囲気で短いサンプル曲を組んで鳴らす（曲の内容は変えない）
+async function playGenreSample(): Promise<void> {
+  const s = getState();
+  const { chordPattern, drumPattern } = resolveSimpleMode(s.genre, s.mood);
+  const melodyNotes = generateMelody(chordPattern, s.key, s.genre);
+  await Playback.playSample({ chordPattern, drumPattern, melodyNotes }, render);
+  render();
 }
 
 async function startPlayback(): Promise<void> {
@@ -162,6 +182,10 @@ function render(): void {
   const metronomeOn = isMetronomeOn();
   $("s-metronome")!.textContent = metronomeOn ? "■ クリックを止める" : "♪ クリックで試聴";
   $("s-metronome")!.classList.toggle("is-active", metronomeOn);
+  const sampleOn = Playback.isSamplePlaying();
+  $("s-sample")!.textContent = sampleOn ? "■ サンプルを止める" : `▷ ${s.genre} のサンプルを聴く`;
+  $("s-sample")!.classList.toggle("is-active", sampleOn);
+  $("s-genre-desc")!.textContent = GENRE_DESCRIPTIONS[s.genre] ?? "";
   $$("[data-melody-method]").forEach(el =>
     el.classList.toggle("is-active", el.dataset.melodyMethod === s.melodyMethod));
 
@@ -202,13 +226,25 @@ export function initSimpleScreen(): void {
       const bpm = s.tempoPreset === "custom" ? s.bpm : resolveTempoPreset(genre, s.tempoPreset);
       setState({ genre, bpm });
       render();
+      // サンプルを鳴らしていれば、選び直したジャンルのサンプルに切り替える
+      if (Playback.isSamplePlaying()) void playGenreSample();
     }));
+
+  $("s-sample")?.addEventListener("click", () => {
+    if (Playback.isSamplePlaying()) {
+      Playback.stop();
+      render();
+    } else {
+      void playGenreSample();
+    }
+  });
 
   $$("[data-tempo]").forEach(el =>
     el.addEventListener("click", () => {
       const preset = el.dataset.tempo as "ゆっくり" | "普通" | "速い";
       resetTap();
       setState({ tempoPreset: preset, bpm: resolveTempoPreset(getState().genre, preset) });
+      if (Playback.isSamplePlaying()) Playback.applyBpm();  // サンプルのテンポもすぐ変える
       render();
     }));
 
@@ -222,6 +258,7 @@ export function initSimpleScreen(): void {
   $("s-tap")?.addEventListener("click", () => {
     // tap() が AppState.bpm と tempoPreset を更新する
     if (tap() === null) setState({ tempoPreset: "custom" });
+    if (Playback.isSamplePlaying()) Playback.applyBpm();
     render();
   });
 

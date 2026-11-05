@@ -1,5 +1,6 @@
 import { getState, setState, applySimpleToCustom, Screen, Tab } from "../engine/AppState";
 import { stopMetronome } from "../engine/Metronome";
+import { stopSample } from "../engine/Playback";
 
 // 画面ごとのパンくず表示（メニュー画面は表示しない）
 const SCREEN_TITLES: Record<Screen, string> = {
@@ -20,6 +21,7 @@ export function onRender(fn: () => void): void {
 // 画面を切り替える。表示状態は AppState.screen だけで管理する
 export function showScreen(screen: Screen): void {
   stopMetronome();  // BPM のクリック音は画面を離れたら止める
+  stopSample();     // ジャンルのサンプルも止める（差し替えていたパターンを元に戻す）
   if (screen === "custom" && getState().mode === "simple") {
     // シンプルモードで決めた値をカスタムモードへ引き継ぐ
     applySimpleToCustom();

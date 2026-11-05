@@ -521,6 +521,17 @@ button {
 
 .bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
 
+/* ジャンルのサンプル試聴と説明 */
+.genre-sample {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 12px;
+}
+.genre-desc { color: var(--text-sub); font-size: 14px; }
+#s-sample.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
+
 .method-cards {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
