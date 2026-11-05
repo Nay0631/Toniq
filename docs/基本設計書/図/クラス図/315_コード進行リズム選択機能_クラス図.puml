@@ -1,0 +1,37 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "CustomScreen" as B1 <<boundary>> {
+  {method} <U+002B> restartIfPlaying()
+}
+class "Playback" as C1 <<control>> {
+  {method} <U+002B> play(options)
+}
+class "LayerManager" as C2 <<control>> {
+  {method} <U+002B> reloadAllLayers()
+}
+class "ChordPlayer" as C3 <<control>> {
+  {field} <U+002D> RHYTHM_STEPS
+  {field} <U+002D> chordPart : Tone.Part
+  {method} <U+002B> initChordSynth()
+  {method} <U+002B> loadChordProgression(progression, key)
+  {method} <U+002B> disposeChord()
+}
+class "degree_resolver" as C4 <<control>> {
+  {method} <U+002B> voiceProgression(progression, key, range)
+}
+class "AppState" as E1 <<entity>> {
+  {field} <U+002B> chordRhythm : ChordRhythm
+  {method} <U+002B> getState() : AppState
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+B1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> C4
+C3 --> E1
+
+@enduml

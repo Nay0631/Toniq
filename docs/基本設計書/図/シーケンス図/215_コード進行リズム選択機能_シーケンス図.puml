@@ -1,0 +1,53 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 215_コード進行リズム選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":CustomScreen" as L2
+entity ":AppState" as L3
+control ":Playback" as L4
+control ":LayerManager" as L5
+control ":ChordPlayer" as L6
+control ":degree_resolver" as L7
+entity ":Tone.Transport" as L8
+
+L1 -> L2 : コードのリズムを選ぶ()
+activate L2
+L2 -> L3 : setState(chordRhythm)
+activate L3
+deactivate L3
+L2 -> L2 : render()
+activate L2
+deactivate L2
+L2 -> L2 : restartIfPlaying()
+activate L2
+opt 再生中
+  L2 -> L4 : play(fromBar, onLoopChange, onEnded)
+  activate L4
+  L4 -> L5 : reloadAllLayers()
+  activate L5
+  L5 -> L6 : loadChordProgression(chordPattern, key)
+  activate L6
+  L6 -> L3 : getState()
+  activate L3
+  deactivate L3
+  L6 -> L7 : voiceProgression(progression, key, VOICING_RANGES.chord)
+  activate L7
+  deactivate L7
+  L6 -> L6 : リズムの間隔でコードを刻んで並べる()
+  activate L6
+  deactivate L6
+  L6 -> L8 : コードの Part を登録する()
+  activate L8
+  deactivate L8
+  deactivate L6
+  deactivate L5
+  L4 -> L8 : start(fromBar)
+  activate L8
+  deactivate L8
+  deactivate L4
+end
+deactivate L2
+deactivate L2
+
+@enduml

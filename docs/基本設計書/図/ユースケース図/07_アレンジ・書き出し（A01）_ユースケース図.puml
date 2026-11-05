@@ -1,0 +1,19 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** 07_アレンジ・書き出し（A01）_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "楽曲生成システム Toniq" {
+  usecase "パート配置機能" as UC1
+  usecase "パート別音量調節機能" as UC2
+  usecase "MIDIエクスポート機能" as UC3
+  usecase "WAVエクスポート機能" as UC4
+}
+
+A1 -- UC1
+A1 -- UC2
+A1 -- UC3
+A1 -- UC4
+
+@enduml

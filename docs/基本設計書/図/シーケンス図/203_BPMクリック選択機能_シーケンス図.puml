@@ -1,0 +1,44 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 203_BPMクリック選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":CustomScreen" as L2
+control ":TapTempo" as L3
+entity ":AppState" as L4
+control ":Playback" as L5
+
+note over L2 : シンプルモード画面（SimpleScreen）の\n「タップで調整」ボタンも同じ流れ\n（サンプル再生中ならテンポに反映する）
+
+L1 -> L2 : タップボタンを押下する()
+activate L2
+L2 -> L3 : tap()
+activate L3
+L3 -> L3 : タップの時刻を記録する()
+activate L3
+deactivate L3
+opt 前回のタップから2秒以上空いた
+  L3 -> L3 : 記録を消す()
+  activate L3
+  deactivate L3
+end
+opt タップが2回以上
+  L3 -> L3 : 直近8回の間隔の平均からBPMを求める()
+  activate L3
+  deactivate L3
+  L3 -> L4 : setState(bpm, tempoPreset)
+  activate L4
+  deactivate L4
+end
+deactivate L3
+opt BPMが求まり、再生中
+  L2 -> L5 : applyBpm()
+  activate L5
+  deactivate L5
+end
+L2 -> L2 : render()
+activate L2
+deactivate L2
+deactivate L2
+
+@enduml

@@ -1,0 +1,24 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 102_テンポ選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面\n（テンポのチップ）" as B1
+control "タップの記録を消す" as C1
+control "ジャンルとテンポから\nBPMを求める" as C2
+control "テンポとBPMを更新する" as C3
+control "サンプル再生中の\nテンポに反映する" as C4
+entity "テンポプリセット\n（tempo_presets.json）" as E1
+entity "曲の状態\n（AppState）" as E2
+entity "再生\n（Tone.Transport）" as E3
+
+A1 --> B1
+B1 --> C1
+B1 --> C2
+C2 --> E1
+C2 --> C3
+C3 --> E2
+C3 --> C4
+C4 --> E3
+
+@enduml

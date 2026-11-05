@@ -1,0 +1,43 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "SimpleScreen" as B1 <<boundary>> {
+  {method} <U+002B> restartIfPlaying()
+}
+class "CustomScreen" as B2 <<boundary>> {
+  {method} <U+002B> restartIfPlaying()
+}
+class "Controls" as B3 <<boundary>> {
+  {method} <U+002B> attachStepper(select, label)
+}
+class "SimpleModeResolver" as C1 <<control>> {
+  {method} <U+002B> rerollDrum(genre, mood, currentId)
+}
+class "Playback" as C2 <<control>> {
+  {method} <U+002B> play(options)
+}
+class "easy_mode_table.json" as E1 <<entity>> {
+  {field} <U+002B> drum_ids : string[]
+}
+class "drum_patterns.json" as E2 <<entity>> {
+  {field} <U+002B> id : string
+  {field} <U+002B> genre : string[]
+  {field} <U+002B> mood : string[]
+}
+class "AppState" as E3 <<entity>> {
+  {field} <U+002B> drumPattern
+  {method} <U+002B> setState(partial)
+}
+
+B2 --> B3
+B1 --> C1
+B1 --> C2
+B2 --> C2
+C1 --> E1
+C1 --> E2
+B2 --> E2
+B1 --> E3
+B2 --> E3
+
+@enduml

@@ -1,0 +1,25 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 213_雰囲気選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":SimpleScreen" as L2
+entity ":AppState" as L3
+
+L1 -> L2 : 雰囲気のチップを押下する()
+activate L2
+L2 -> L3 : setState(mood)
+activate L3
+deactivate L3
+L2 -> L2 : render()
+activate L2
+L2 -> L3 : getState()
+activate L3
+deactivate L3
+L2 -> L2 : 選択中の雰囲気を表示する()
+activate L2
+deactivate L2
+deactivate L2
+deactivate L2
+
+@enduml

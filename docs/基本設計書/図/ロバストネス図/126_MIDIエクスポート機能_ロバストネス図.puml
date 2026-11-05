@@ -1,0 +1,31 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 126_MIDIエクスポート機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面\n（MIDIで書き出すボタン）" as B1
+boundary "カスタムモード画面\n（MIDI ボタン）" as B2
+control "テンポ・拍子を書く" as C1
+control "メロディのトラックを作る" as C2
+control "コードのトラックを作る\n（再生と同じボイシング）" as C3
+control "ベースのトラックを作る\n（ルート音）" as C4
+control "アルペジオのトラックを作る" as C5
+control "MIDI ファイルを保存する" as C6
+entity "曲の状態\n（AppState）" as E1
+entity "コード進行DB\n（chord_progressions.json）" as E2
+entity "MIDI ファイル\n（toniq_export.mid）" as E3
+
+A1 --> B1
+A1 --> B2
+B1 --> C1
+B2 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> E2
+C3 --> C4
+C4 --> C5
+C5 --> C6
+C6 --> E3
+
+@enduml

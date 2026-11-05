@@ -1,0 +1,37 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "SimpleScreen" as B1 <<boundary>> {
+  {method} <U+002B> initSimpleScreen()
+  {method} <U+002D> render()
+}
+class "TapTempo" as C1 <<control>> {
+  {method} <U+002B> resetTap()
+}
+class "SimpleModeResolver" as C2 <<control>> {
+  {method} <U+002B> resolveTempoPreset(genre, preset) : number
+}
+class "Playback" as C3 <<control>> {
+  {method} <U+002B> isSamplePlaying() : boolean
+  {method} <U+002B> applyBpm()
+}
+class "tempo_presets.json" as E1 <<entity>> {
+  {field} <U+002B> ゆっくり : number
+  {field} <U+002B> 普通 : number
+  {field} <U+002B> 速い : number
+}
+class "AppState" as E2 <<entity>> {
+  {field} <U+002B> genre : string
+  {field} <U+002B> tempoPreset : string
+  {field} <U+002B> bpm : number
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+B1 --> C2
+B1 --> C3
+C2 --> E1
+B1 --> E2
+
+@enduml

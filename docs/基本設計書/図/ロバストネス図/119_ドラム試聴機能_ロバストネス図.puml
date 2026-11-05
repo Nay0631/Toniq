@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 119_ドラム試聴機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面\n（ドラムの試聴ボタン）" as B1
+control "ほかの再生・クリック音を止める" as C1
+control "ドラムの音源を準備する\n（ワンショット音源なら読み込む）" as C2
+control "ジャンルのドラムキットで\nパターンを読み込む" as C3
+control "2小節分だけ鳴らす" as C4
+entity "ドラム音源\n（public/samples/drums）" as E1
+entity "曲の状態\n（AppState）" as E2
+entity "ドラムパターンDB\n（drum_patterns.json）" as E3
+entity "再生\n（Tone.Transport）" as E4
+
+A1 --> B1
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C2 --> C3
+C3 --> E2
+C3 --> E3
+C3 --> C4
+C4 --> E4
+
+@enduml

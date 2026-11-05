@@ -1,0 +1,17 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** 06_ピアノロール（P01）_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "楽曲生成システム Toniq" {
+  usecase "メロディ入力機能" as UC1
+  usecase "スケールロック機能" as UC2
+  usecase "ノーツ選択機能" as UC3
+}
+
+A1 -- UC1
+A1 -- UC2
+A1 -- UC3
+
+@enduml

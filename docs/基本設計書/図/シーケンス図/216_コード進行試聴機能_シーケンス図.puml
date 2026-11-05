@@ -1,0 +1,61 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 216_コード進行試聴機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":CustomScreen" as L2
+control ":Playback" as L3
+control ":MixerEngine" as L4
+control ":LoopArranger" as L5
+control ":LayerManager" as L6
+control ":ChordPlayer" as L7
+control ":degree_resolver" as L8
+entity ":Tone.Transport" as L9
+
+L1 -> L2 : コード進行の試聴ボタンを押下する()
+activate L2
+L2 -> L3 : preview("chord", onEnded)
+activate L3
+L3 -> L3 : stop()
+activate L3
+deactivate L3
+L3 -> L4 : applyMixPreset(genre)
+activate L4
+deactivate L4
+L3 -> L4 : mixerReady()
+activate L4
+deactivate L4
+L3 -> L5 : setArrangementBypass(true)
+activate L5
+deactivate L5
+L3 -> L6 : reloadLayer("chord")
+activate L6
+L6 -> L7 : loadChordProgression(chordPattern, key)
+activate L7
+L7 -> L8 : voiceProgression(progression, key, VOICING_RANGES.chord)
+activate L8
+L8 -> L8 : resolveChord(degree, type, inversion, key, scale, octave)
+activate L8
+deactivate L8
+deactivate L8
+deactivate L7
+deactivate L6
+L3 -> L9 : scheduleOnce(stop, 進行1周の小節)
+activate L9
+deactivate L9
+L3 -> L9 : start()
+activate L9
+deactivate L9
+deactivate L3
+L2 -> L2 : render()
+activate L2
+deactivate L2
+deactivate L2
+L9 -> L3 : stop()
+activate L3
+L3 -> L2 : render()
+activate L2
+deactivate L2
+deactivate L3
+
+@enduml

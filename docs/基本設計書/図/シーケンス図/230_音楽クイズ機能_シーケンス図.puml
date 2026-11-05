@@ -1,0 +1,71 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 230_音楽クイズ機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":QuizScreen" as L2
+entity ":AppState" as L3
+control ":QuizModes" as L4
+control ":QuizAudio" as L5
+
+L1 -> L2 : カテゴリ・出題モードを押下する()
+activate L2
+L2 -> L2 : selectMode(id)
+activate L2
+L2 -> L3 : setState(quizMode)
+activate L3
+deactivate L3
+deactivate L2
+L2 -> L2 : render()
+activate L2
+opt 出題中の問題と違うモード
+  L2 -> L2 : nextQuestion()
+  activate L2
+  L2 -> L5 : stopQuizSound()
+  activate L5
+  deactivate L5
+  L2 -> L4 : question()
+  activate L4
+  deactivate L4
+  L2 -> L2 : renderQuestion()
+  activate L2
+  deactivate L2
+  deactivate L2
+end
+deactivate L2
+deactivate L2
+
+L1 -> L2 : 音の再生ボタンを押下する()
+activate L2
+L2 -> L5 : playNotes(midis) / playMelody(midis)
+activate L5
+deactivate L5
+deactivate L2
+
+L1 -> L2 : 選択肢・鍵盤で回答する()
+activate L2
+L2 -> L2 : 正解と比べる()
+activate L2
+deactivate L2
+L2 -> L2 : finish(correct, correctText)
+activate L2
+L2 -> L2 : 正解数・連続正解を数える()
+activate L2
+deactivate L2
+L2 -> L2 : 正誤と解説を表示する()
+activate L2
+deactivate L2
+deactivate L2
+deactivate L2
+
+L1 -> L2 : 次の問題ボタンを押下する()
+activate L2
+L2 -> L2 : nextQuestion()
+activate L2
+L2 -> L4 : question()
+activate L4
+deactivate L4
+deactivate L2
+deactivate L2
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "SimpleScreen" as B1 <<boundary>> {
+  {method} <U+002B> initSimpleScreen()
+}
+class "CustomScreen" as B2 <<boundary>> {
+  {method} <U+002B> initCustomScreen()
+}
+class "Playback" as C1 <<control>> {
+  {method} <U+002B> renderWav() : Blob
+  {method} <U+002B> downloadBlob(blob, filename)
+  {method} <U+002B> stop()
+  {method} <U+002D> audioBufferToWav(buffer)
+}
+class "DrumSamples" as C2 <<control>> {
+  {method} <U+002B> prepareDrumSamples(genre)
+}
+class "MixerEngine" as C3 <<control>> {
+  {method} <U+002B> applyMixPreset(genre)
+  {method} <U+002B> mixerReady()
+}
+class "各パートのPlayer" as C4 <<control>> {
+  {method} <U+002B> init*Synth()
+  {method} <U+002B> load*()
+}
+class "LayerManager" as C5 <<control>> {
+  {method} <U+002B> disposeAllLayers()
+}
+class "AppState" as E1 <<entity>> {
+  {field} <U+002B> parts
+  {field} <U+002B> drumSource : DrumSource
+  {field} <U+002B> bars : number
+}
+class "WAVファイル" as E2 <<entity>> {
+  {field} <U+002B> 16bit PCM ステレオ
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> C2
+C1 --> C3
+C1 --> C4
+C1 --> C5
+C1 --> E1
+C1 --> E2
+
+@enduml

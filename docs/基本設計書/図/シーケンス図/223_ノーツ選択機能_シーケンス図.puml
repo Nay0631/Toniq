@@ -1,0 +1,85 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 223_ノーツ選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":PianoRollTab" as L2
+control ":MelodyPlayer" as L3
+control ":degree_resolver" as L4
+entity ":AppState" as L5
+control ":LayerManager" as L6
+
+L1 -> L2 : 音符を押下する()
+activate L2
+L2 -> L2 : startDrag(e, grid)
+activate L2
+L2 -> L2 : 音を選択する()
+activate L2
+deactivate L2
+L2 -> L3 : previewMelodyNote(note)
+activate L3
+deactivate L3
+deactivate L2
+deactivate L2
+
+L1 -> L2 : ドラッグする()
+activate L2
+L2 -> L2 : moveDrag(e)
+activate L2
+alt 音を移動（音符の中をドラッグ）
+  opt スケールロックが有効
+    L2 -> L2 : snapToScale(midi, dir)
+    activate L2
+    L2 -> L4 : SCALE_TONES を参照する(scale)
+    activate L4
+    deactivate L4
+    deactivate L2
+  end
+  L2 -> L3 : previewMelodyNote(note)
+  activate L3
+  deactivate L3
+else 長さを変更（右端をドラッグ）
+  L2 -> L2 : 長さを求める()
+  activate L2
+  deactivate L2
+end
+deactivate L2
+deactivate L2
+
+L1 -> L2 : 離す()
+activate L2
+L2 -> L2 : endDrag()
+activate L2
+opt 位置・高さ・長さが変わった
+  L2 -> L2 : placeNote(others, next)
+  activate L2
+  deactivate L2
+  L2 -> L2 : writeNotes(notes)
+  activate L2
+  L2 -> L5 : setState(melodyNotes, melodyMethod)
+  activate L5
+  deactivate L5
+  opt 再生中
+    L2 -> L6 : reloadLayer("melody")
+    activate L6
+    deactivate L6
+  end
+  deactivate L2
+end
+deactivate L2
+deactivate L2
+
+L1 -> L2 : 右クリック・Delete キーで削除する()
+activate L2
+L2 -> L2 : removeNote(start)
+activate L2
+L2 -> L2 : writeNotes(notes)
+activate L2
+L2 -> L5 : setState(melodyNotes, melodyMethod)
+activate L5
+deactivate L5
+deactivate L2
+deactivate L2
+deactivate L2
+
+@enduml

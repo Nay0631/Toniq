@@ -1,0 +1,75 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 206_ジャンル選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":SimpleScreen" as L2
+boundary ":CustomScreen" as L3
+control ":SimpleModeResolver" as L4
+entity ":tempo_presets.json" as L5
+entity ":AppState" as L6
+control ":Playback" as L7
+control ":MixerEngine" as L8
+entity ":mix_presets.json" as L9
+
+alt シンプルモード画面
+  L1 -> L2 : ジャンルのチップを押下する()
+  activate L2
+  opt テンポがプリセット（ゆっくり・普通・速い）
+    L2 -> L4 : resolveTempoPreset(genre, tempoPreset)
+    activate L4
+    L4 -> L5 : ジャンルとテンポのBPMを取得する()
+    activate L5
+    deactivate L5
+    deactivate L4
+  end
+  L2 -> L6 : setState(genre, bpm)
+  activate L6
+  deactivate L6
+  L2 -> L2 : render()
+  activate L2
+  deactivate L2
+  L2 -> L7 : isSamplePlaying()
+  activate L7
+  deactivate L7
+  opt ジャンルのサンプルを再生中
+    L2 -> L2 : playGenreSample()
+    activate L2
+    deactivate L2
+  end
+  deactivate L2
+else カスタムモード画面
+  L1 -> L3 : ジャンルを選ぶ()
+  activate L3
+  opt テンポがプリセット（ゆっくり・普通・速い）
+    L3 -> L4 : resolveTempoPreset(genre, tempoPreset)
+    activate L4
+    L4 -> L5 : ジャンルとテンポのBPMを取得する()
+    activate L5
+    deactivate L5
+    deactivate L4
+  end
+  L3 -> L6 : setState(genre, bpm, drumCategory)
+  activate L6
+  deactivate L6
+  L3 -> L3 : render()
+  activate L3
+  deactivate L3
+  L3 -> L3 : restartIfPlaying()
+  activate L3
+  opt 再生中
+    L3 -> L7 : play(fromBar, onLoopChange, onEnded)
+    activate L7
+    L7 -> L8 : applyMixPreset(genre)
+    activate L8
+    L8 -> L9 : ジャンルのミックス設定を取得する()
+    activate L9
+    deactivate L9
+    deactivate L8
+    deactivate L7
+  end
+  deactivate L3
+  deactivate L3
+end
+
+@enduml

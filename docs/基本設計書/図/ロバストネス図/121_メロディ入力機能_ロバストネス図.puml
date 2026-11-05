@@ -1,0 +1,29 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 121_メロディ入力機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ピアノロール\n（グリッドのクリック・ドラッグ）" as B1
+boundary "ピアノロール\n（パソコンのキーボード A〜K）" as B2
+control "置ける音か確かめる\n（音域・スケールロック）" as C1
+control "置いた音を試聴する" as C2
+control "音を置く\n（重なる音は手前で切る）" as C3
+control "メロディを更新し\n「自分で入力」にする" as C4
+control "再生中ならメロディだけ\n読み込み直す" as C5
+entity "スケールの音\n（SCALE_TONES）" as E1
+entity "曲の状態\n（AppState）" as E2
+entity "再生\n（Tone.Transport）" as E3
+
+A1 --> B1
+A1 --> B2
+B1 --> C1
+B2 --> C1
+C1 --> E1
+C1 --> C2
+C1 --> C3
+C3 --> C4
+C4 --> E2
+C4 --> C5
+C5 --> E3
+
+@enduml

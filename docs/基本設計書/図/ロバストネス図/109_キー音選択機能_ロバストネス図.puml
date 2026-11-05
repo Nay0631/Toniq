@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 109_キー音選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面\n（ルート音ドロップダウン）" as B1
+control "キーを更新する" as C1
+control "自動生成のメロディを\nキーに合わせて作り直す" as C2
+control "ディグリーを実音に変換して\nコード名を表示する" as C3
+control "再生中なら再生し直す" as C4
+entity "曲の状態\n（AppState）" as E1
+entity "メロディ生成パラメータ\n（melody_params.json）" as E2
+entity "コード進行DB\n（chord_progressions.json）" as E3
+entity "再生\n（Tone.Transport）" as E4
+
+A1 --> B1
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> E2
+C1 --> C3
+C3 --> E3
+C1 --> C4
+C4 --> E4
+
+@enduml

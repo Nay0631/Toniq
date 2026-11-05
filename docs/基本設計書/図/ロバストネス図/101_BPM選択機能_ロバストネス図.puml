@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 101_BPM選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面\n（BPMノブ）" as B1
+control "BPMを20〜240に丸める" as C1
+control "BPMを更新する" as C2
+control "再生中のテンポに反映する" as C3
+entity "曲の状態\n（AppState）" as E1
+entity "再生\n（Tone.Transport）" as E2
+
+A1 --> B1
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C2 --> C3
+C3 --> E2
+
+@enduml

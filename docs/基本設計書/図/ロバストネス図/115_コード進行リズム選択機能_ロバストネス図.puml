@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 115_コード進行リズム選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面\n（リズムドロップダウン）" as B1
+control "コードのリズムを更新する" as C1
+control "再生中なら再生し直す" as C2
+control "コードをリズムの間隔で\n刻んで並べる" as C3
+entity "曲の状態\n（AppState）" as E1
+entity "再生\n（Tone.Transport）" as E2
+
+A1 --> B1
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> E2
+
+@enduml

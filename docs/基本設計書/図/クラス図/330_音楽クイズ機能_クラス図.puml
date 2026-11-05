@@ -1,0 +1,49 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "QuizScreen" as B1 <<boundary>> {
+  {field} <U+002D> question : Question
+  {field} <U+002D> answered : boolean
+  {field} <U+002D> scores
+  {method} <U+002B> initQuizScreen()
+  {method} <U+002D> selectMode(id)
+  {method} <U+002D> nextQuestion()
+  {method} <U+002D> finish(correct, correctText)
+}
+class "QuizModes" as C1 <<control>> {
+  {field} <U+002B> QUIZ_CATEGORIES : QuizCategory[]
+  {field} <U+002B> QUIZ_MODES : QuizMode[]
+}
+class "QuizMode" as C2 <<control>> {
+  {field} <U+002B> id : string
+  {field} <U+002B> title : string
+  {field} <U+002B> settings : QuizSetting[]
+  {method} <U+002B> question() : Question
+}
+class "QuizAudio" as C3 <<control>> {
+  {method} <U+002B> playNotes(midis)
+  {method} <U+002B> playMelody(midis, gap)
+  {method} <U+002B> stopQuizSound()
+}
+class "Question" as E1 <<entity>> {
+  {field} <U+002B> label : string
+  {field} <U+002B> prompt : string
+  {field} <U+002B> answer : QuizAnswer
+  {field} <U+002B> explain : string
+  {field} <U+002B> sounds : QuizSound[]
+}
+class "AppState" as E2 <<entity>> {
+  {field} <U+002B> quizMode : string
+  {field} <U+002B> noteNames : NoteNames
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+C1 --> C2
+C2 --> E1
+B1 --> C3
+C2 --> C3
+B1 --> E2
+
+@enduml

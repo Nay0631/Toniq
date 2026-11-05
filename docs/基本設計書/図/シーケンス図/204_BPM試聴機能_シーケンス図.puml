@@ -1,0 +1,49 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 204_BPM試聴機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":CustomScreen" as L2
+control ":Playback" as L3
+control ":Metronome" as L4
+entity ":AppState" as L5
+entity ":AudioContext" as L6
+
+note over L2 : シンプルモード画面（SimpleScreen）の\n「クリックで試聴」ボタンも同じ流れ
+
+L1 -> L2 : 試聴ボタンを押下する()
+activate L2
+L2 -> L4 : isMetronomeOn()
+activate L4
+deactivate L4
+opt クリック音が止まっている
+  L2 -> L3 : stop()
+  activate L3
+  deactivate L3
+end
+L2 -> L4 : toggleMetronome()
+activate L4
+alt 止まっている
+  L4 -> L4 : startMetronome()
+  activate L4
+  loop 25msごと（止めるまで）
+    L4 -> L5 : getState()
+    activate L5
+    deactivate L5
+    L4 -> L6 : 次の拍のクリック音を予約する(bpm)
+    activate L6
+    deactivate L6
+  end
+  deactivate L4
+else 鳴っている
+  L4 -> L4 : stopMetronome()
+  activate L4
+  deactivate L4
+end
+L4 -> L2 : render()
+activate L2
+deactivate L2
+deactivate L4
+deactivate L2
+
+@enduml

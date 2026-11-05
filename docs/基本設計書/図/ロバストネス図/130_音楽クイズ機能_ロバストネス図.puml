@@ -1,0 +1,30 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 130_音楽クイズ機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "音楽クイズ画面\n（カテゴリ・出題モード）" as B1
+boundary "音楽クイズ画面\n（音の再生ボタン）" as B2
+boundary "音楽クイズ画面\n（選択肢・鍵盤で回答）" as B3
+control "出題モードを選ぶ" as C1
+control "問題を作る" as C2
+control "問題の音を鳴らす" as C3
+control "採点する" as C4
+control "正解数・連続正解を数え、\n解説を表示する" as C5
+entity "曲の状態\n（AppState）" as E1
+entity "出題モード\n（QUIZ_CATEGORIES）" as E2
+entity "クイズ用の音声\n（AudioContext）" as E3
+
+A1 --> B1
+A1 --> B2
+A1 --> B3
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> E2
+B2 --> C3
+C3 --> E3
+B3 --> C4
+C4 --> C5
+
+@enduml

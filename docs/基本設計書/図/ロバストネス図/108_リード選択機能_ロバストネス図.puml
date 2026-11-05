@@ -1,0 +1,22 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 108_リード選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面\n（メロディの音色ドロップダウン）" as B1
+control "メロディの音色を更新する" as C1
+control "再生中なら再生し直す" as C2
+control "メロディの音源を\n選んだ音色で作り直す" as C3
+entity "曲の状態\n（AppState）" as E1
+entity "メロディ生成パラメータ\n（melody_params.json）" as E2
+entity "再生\n（Tone.Transport）" as E3
+
+A1 --> B1
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> E2
+C3 --> E3
+
+@enduml
