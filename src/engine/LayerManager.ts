@@ -6,11 +6,12 @@ import { loadChordProgression, disposeChord } from "./ChordPlayer";
 import { loadBassLine, disposeBass }          from "./BassPlayer";
 import { loadArpPattern, disposeArp }         from "./ArpPlayer";
 import { loadPadPattern, disposePad }         from "./PadPlayer";
+import { loadSignature, disposeSignature }     from "./SignaturePlayer";
 import { loadMelody, disposeMelody }          from "./MelodyPlayer";
 import { loadFx, disposeFx }                  from "./FxPlayer";
 import { getState, setState }                 from "./AppState";
 
-export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "melody" | "fx";
+export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "fx";
 
 // ===== レイヤーON/OFF =====
 export function setLayerEnabled(layer: LayerName, enabled: boolean) {
@@ -37,6 +38,7 @@ function disposeLayer(layer: LayerName) {
     case "bass":   disposeBass();    break;
     case "arp":    disposeArp();     break;
     case "pad":    disposePad();     break;
+    case "signature": disposeSignature(); break;
     case "melody": disposeMelody();  break;
     case "fx":     disposeFx();      break;
   }
@@ -62,6 +64,9 @@ export function reloadLayer(layer: LayerName) {
       break;
     case "pad":
       loadPadPattern(s.chordPattern, s.key, 4);
+      break;
+    case "signature":
+      loadSignature(s.chordPattern, s.key);
       break;
     case "melody":
       loadMelody(s.melodyNotes, `${s.chordPattern.length_bars}m`);
@@ -106,6 +111,7 @@ export function replaceChordProgression(
   disposeBass();
   disposeArp();
   disposePad();
+  disposeSignature();
   disposeFx();
 
   // Transport動作中でも正しく再開始できるよう少し遅延して再ロード
@@ -115,6 +121,7 @@ export function replaceChordProgression(
     loadBassLine(newProgression, key, 2);
     loadArpPattern(newProgression, key, 5, "8n");
     loadPadPattern(newProgression, key, 4);
+    if (getState().parts.signature) loadSignature(newProgression, key);
     if (getState().parts.fx) loadFx(newProgression);
     console.log(`コード進行差し替え完了: ${newProgression.name}`);
   }, 50);
@@ -133,14 +140,14 @@ export function replaceMelody(newNotes: MelodyNote[]) {
 
 // ===== 全レイヤーを一括破棄（停止時に前回の Part を残さない） =====
 export function disposeAllLayers() {
-  (["drum","chord","bass","arp","pad","melody","fx"] as LayerName[]).forEach(disposeLayer);
+  (["drum","chord","bass","arp","pad","signature","melody","fx"] as LayerName[]).forEach(disposeLayer);
 }
 
 // ===== 全レイヤーを一括再ロード =====
 export function reloadAllLayers() {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
-  (["drum","chord","bass","arp","pad","melody","fx"] as LayerName[]).forEach(layer => {
+  (["drum","chord","bass","arp","pad","signature","melody","fx"] as LayerName[]).forEach(layer => {
     if (s.parts[layer]) reloadLayer(layer);
   });
 }

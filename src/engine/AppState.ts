@@ -101,6 +101,7 @@ export interface AppState {
     bass:    boolean;
     arp:     boolean;
     pad:     boolean;
+    signature: boolean;
     melody:  boolean;
     fx:      boolean;
   };
@@ -111,6 +112,7 @@ export interface AppState {
     bass:    number;
     arp:     number;
     pad:     number;
+    signature: number;
     melody:  number;
     fx:      number;
   };
@@ -164,6 +166,7 @@ export const defaultState: AppState = {
     bass:   true,
     arp:    false,  // アルペジオは初期状態で OFF
     pad:    true,
+    signature: false,  // シグネチャーも初期状態で OFF
     melody: true,
     fx:     true,
   },
@@ -174,6 +177,7 @@ export const defaultState: AppState = {
     bass:   70,
     arp:    60,
     pad:    50,
+    signature: 60,
     melody: 75,
     fx:     55,
   },

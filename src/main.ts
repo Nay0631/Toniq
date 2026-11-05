@@ -2,6 +2,7 @@ import { initChordSynth }                           from "./engine/ChordPlayer";
 import { initBassSynth }                            from "./engine/BassPlayer";
 import { initArpSynth }                             from "./engine/ArpPlayer";
 import { initPadSynth }                             from "./engine/PadPlayer";
+import { initSignatureSynth }                       from "./engine/SignaturePlayer";
 import { initMelodySynth }                          from "./engine/MelodyPlayer";
 import { initFxSynth }                              from "./engine/FxPlayer";
 import { setState }                                 from "./engine/AppState";
@@ -32,6 +33,7 @@ window.addEventListener("load", () => {
   initBassSynth();
   initArpSynth();
   initPadSynth();
+  initSignatureSynth();
   initMelodySynth();
   initFxSynth();
 

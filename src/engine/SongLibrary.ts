@@ -1,6 +1,7 @@
 import { getState, setState, AppState, defaultState } from "./AppState";
 import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset } from "./SimpleModeResolver";
+import { emptyArrangement } from "./LoopArranger";
 
 // ミュージックリスト：保存した曲を localStorage に置く
 const STORAGE_KEY = "toniq.songs";
@@ -107,8 +108,13 @@ export function loadSong(id: string): boolean {
 
   const fields = {} as Record<string, unknown>;
   SONG_FIELDS.forEach(f => { fields[f] = song[f]; });
+  const loaded = structuredClone(fields) as SongFields;
   setState({
-    ...structuredClone(fields) as SongFields,
+    ...loaded,
+    // あとから増えたパート（シグネチャーなど）は、古い曲では初期値で補う
+    parts:       { ...defaultState.parts,   ...loaded.parts },
+    volumes:     { ...defaultState.volumes, ...loaded.volumes },
+    arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
     songId:    song.id,
     generated: true,  // シンプルモードで開いたときは生成結果の画面を出す
     startBar:  0,

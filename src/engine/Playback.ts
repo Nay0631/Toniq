@@ -135,6 +135,7 @@ export async function renderWav(): Promise<Blob> {
     const { initBassSynth: initB,  loadBassLine: loadB }         = await import("./BassPlayer");
     const { initArpSynth: initAr,  loadArpPattern: loadAr }      = await import("./ArpPlayer");
     const { initPadSynth: initP,   loadPadPattern: loadP }       = await import("./PadPlayer");
+    const { initSignatureSynth: initS, loadSignature: loadS }   = await import("./SignaturePlayer");
     const { initMelodySynth: initM, loadMelody: loadMel }        = await import("./MelodyPlayer");
     const { initFxSynth: initF,    loadFx: loadF }               = await import("./FxPlayer");
 
@@ -143,6 +144,7 @@ export async function renderWav(): Promise<Blob> {
     if (s.parts.bass)   { initB();  loadB(chordPattern, s.key, 2); }
     if (s.parts.arp)    { initAr(); loadAr(chordPattern, s.key, 5, "8n"); }
     if (s.parts.pad)    { initP();  loadP(chordPattern, s.key, 4); }
+    if (s.parts.signature) { initS(); loadS(chordPattern, s.key); }
     if (s.parts.melody) { initM();  loadMel(s.melodyNotes, `${chordPattern.length_bars}m`); }
     if (s.parts.fx)     { initF();  loadF(chordPattern); }
     Tone.getTransport().start();

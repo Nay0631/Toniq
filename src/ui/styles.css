@@ -518,7 +518,7 @@ button {
 .toggle-green.is-on { background: var(--simple); }
 .toggle.is-on span { transform: translateX(18px); }
 
-/* パッド / アルペジオの ON/OFF */
+/* パッド / アルペジオ / シグネチャーの ON/OFF */
 .pill-row {
   display: flex;
   align-items: center;
@@ -1595,4 +1595,11 @@ button {
   .quiz-card { padding: 16px; }
   .quiz-prompt { font-size: 26px; }
   .quiz-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* シグネチャーのジャンル別の鳴り方 */
+.pill-note {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
 }
