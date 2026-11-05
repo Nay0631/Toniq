@@ -1,5 +1,21 @@
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
+import { getState } from "../engine/AppState";
+
+// 音名の表記（AppState.noteNames）。単音の名前だけを変え、コード名・キー名は CDE 表記のまま
+const CDE    = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const DOREMI = ["ド", "ド#", "レ", "レ#", "ミ", "ファ", "ファ#", "ソ", "ソ#", "ラ", "ラ#", "シ"];
+
+export function toDoremi(note: string): string {
+  return DOREMI[CDE.indexOf(note)] ?? note;
+}
+
+// "C#" や "C#4"（オクターブ付き）を今の表記にする（ドレミなら "ド#4"）
+export function displayNote(note: string): string {
+  if (getState().noteNames !== "doremi") return note;
+  const m = /^([A-G]#?)(-?\d+)?$/.exec(note);
+  return m ? toDoremi(m[1]) + (m[2] ?? "") : note;
+}
 
 export const SCALE_LABELS: Record<string, string> = {
   major:    "メジャー",

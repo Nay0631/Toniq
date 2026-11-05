@@ -8,7 +8,7 @@ import { previewMelodyNote } from "../engine/MelodyPlayer";
 import * as Playback from "../engine/Playback";
 import { NOTE_INDEX, SCALE_TONES } from "../data/degree_resolver";
 import { onRender, render } from "./Router";
-import { SCALE_LABELS, chordSpans } from "./format";
+import { SCALE_LABELS, chordSpans, displayNote } from "./format";
 
 // 表示する音域（MIDI ノート番号。C3〜C7）
 const LOW  = 48;
@@ -240,7 +240,7 @@ export function renderPianoRoll(): void {
       scale.has(pc) ? "" : "is-out",
       pc === tonic ? "is-tonic" : "",
     ].join(" ");
-    keys.push(`<div class="pr-key ${cls}" data-midi="${midi}">${midiToNote(midi)}</div>`);
+    keys.push(`<div class="pr-key ${cls}" data-midi="${midi}">${displayNote(midiToNote(midi))}</div>`);
     rows.push(`<div class="pr-row ${cls}"></div>`);
   }
   q(root, ".pr-keys").innerHTML = keys.join("");
@@ -250,8 +250,8 @@ export function renderPianoRoll(): void {
     notes.map(n => `
       <div class="pr-note${n.start === selected ? " is-selected" : ""}${scale.has(n.midi % 12) ? "" : " is-out"}"
            data-start="${n.start}" style="left:${pct(n.start)};width:${pct(n.units)};top:${rowTop(n.midi)}"
-           title="${midiToNote(n.midi)}（ドラッグで移動・右端で長さを変更・右クリックで削除）">
-        <span class="pr-note-label">${midiToNote(n.midi)}</span>
+           title="${displayNote(midiToNote(n.midi))}（ドラッグで移動・右端で長さを変更・右クリックで削除）">
+        <span class="pr-note-label">${displayNote(midiToNote(n.midi))}</span>
         <span class="pr-note-handle"></span>
       </div>`).join("") +
     `<div class="pr-cursor" style="left:${pct(cursor)}"></div>

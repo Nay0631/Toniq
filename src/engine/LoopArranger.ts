@@ -181,11 +181,13 @@ export function startLoopArranger(params: LoopArrangerParams) {
   const firstLoop = Math.floor(fromBar / loopBars) + 1;
   notifyLoop(firstLoop, loopBars, onLoopChange);
 
-  let loop = firstLoop;
-  repeatId = Tone.getTransport().scheduleRepeat(time => {
-    const next = ++loop;
+  // 周回は発音時刻の小節から求める（ループ再生で曲の先頭に戻ったときも 1 周目から数え直す）
+  const transport = Tone.getTransport();
+  repeatId = transport.scheduleRepeat(time => {
+    const bar  = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
+    const next = Math.floor(bar / loopBars) + 1;
     Tone.getDraw().schedule(() => notifyLoop(next, loopBars, onLoopChange), time);
-  }, `${loopBars}m`, `${firstLoop * loopBars}m`);
+  }, `${loopBars}m`, 0);  // 0 から刻む（途中から再生しても、ループで戻った先頭の周回を知らせる）
 }
 
 export function stopLoopArranger() {

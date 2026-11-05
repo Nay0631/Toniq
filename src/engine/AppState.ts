@@ -28,8 +28,8 @@ export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
 // ミュージックリストの並び順
 export type MusicListSort = "newest" | "oldest" | "name";
 
-// 音楽クイズの音名の表記（CDE／ドレミ）
-export type QuizNoteNames = "cde" | "doremi";
+// 音名の表記（CDE／ドレミ）。ピアノロール・ルート音・音楽クイズの単音に使う
+export type NoteNames = "cde" | "doremi";
 
 // 画面の配色（ライト／ダーク）
 export type Theme = "light" | "dark";
@@ -78,9 +78,12 @@ export interface AppState {
   musicListFavorites: boolean;
   musicListSort:      MusicListSort;
 
-  // 音楽クイズで選んでいる出題モード（QuizModes.ts の id）と音名の表記
+  // 音楽クイズで選んでいる出題モード（QuizModes.ts の id）
   quizMode:      string;
-  quizNoteNames: QuizNoteNames;
+
+  // 端末ごとの設定（設定画面。Preferences.ts が localStorage に保存する。曲には保存しない）
+  noteNames:     NoteNames;  // 音名の表記（音楽クイズの切り替えとも共通）
+  loopPlayback:  boolean;    // ON なら曲の終わりで止めずに先頭へ戻って繰り返す
 
   // モード
   mode:   "simple" | "custom";
@@ -109,7 +112,8 @@ export interface AppState {
   fxType:           FxType;  // FX / SE の種類
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
-  // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替えなので曲には保存しない
+  // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
+  // 設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
   drumSource:       DrumSource;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
@@ -162,7 +166,8 @@ export const defaultState: AppState = {
   musicListSort:      "newest",
 
   quizMode:      "doremi_cde",
-  quizNoteNames: "cde",
+  noteNames:     "cde",
+  loopPlayback:  false,
 
   mode:      "simple",
   genre:       "EDM",

@@ -17,6 +17,7 @@ import { initTheme } from "./ui/Theme";
 import { initHistoryControls } from "./ui/HistoryControls";
 import { initGlossary } from "./ui/Glossary";
 import { initSettingsScreen } from "./ui/SettingsScreen";
+import { initPreferences } from "./ui/Preferences";
 import "./ui/styles.css";
 
 
@@ -44,6 +45,7 @@ window.addEventListener("load", () => {
   // メロディは起動時には作らない（自動生成ボタンを押したときに初めて作る）
 
   initTheme();
+  initPreferences();  // 音名の表記・ループ再生・ドラムの音源（各画面の初期化より先に読む）
   initSimpleScreen();
   initCustomScreen();
   initPianoRoll();
