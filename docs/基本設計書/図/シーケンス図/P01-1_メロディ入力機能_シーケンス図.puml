@@ -1,0 +1,53 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd P01-1_メロディ入力機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ピアノロール画面" as L2
+control ":音符編集" as L3
+control ":スケール判定" as L4
+entity ":アプリの状態" as L5
+entity ":スケールマスタ" as L6
+control ":メロディ演奏" as L7
+control ":パート管理" as L8
+
+L1 -> L2 : グリッドの空いている所を押下する() : void
+activate L2
+L2 -> L3 : 音を置く() : void
+activate L3
+L3 -> L4 : 置ける音か確かめる() : void
+activate L4
+L4 -> L5 : キー・スケール・スケールロックを取得する() : void
+activate L5
+deactivate L5
+L4 -> L6 : スケールの7音を取得する() : void
+activate L6
+deactivate L6
+deactivate L4
+alt 置ける音
+  L3 -> L7 : 置いた音を試聴する() : void
+  activate L7
+  deactivate L7
+  L3 -> L3 : 重なる音を手前で切る() : void
+  activate L3
+  deactivate L3
+  L3 -> L5 : メロディを更新し「自分で入力」にする() : void
+  activate L5
+  deactivate L5
+  opt 再生中
+    L3 -> L8 : メロディを読み込み直す() : void
+    activate L8
+    deactivate L8
+  end
+  L3 -> L2 : 音符を表示する() : void
+  activate L2
+  deactivate L2
+else 音域外・スケール外
+  L3 -> L3 : 置かずに終わる() : void
+  activate L3
+  deactivate L3
+end
+deactivate L3
+deactivate L2
+
+@enduml

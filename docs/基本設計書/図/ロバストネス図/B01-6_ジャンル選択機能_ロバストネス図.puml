@@ -1,0 +1,29 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-6_ジャンル選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "ジャンル設定" as C1
+control "パターン選出" as C2
+control "ジャンル試聴" as C3
+control "再生" as C4
+control "ミックス" as C5
+entity "テンポマスタ" as E1
+entity "アプリの状態" as E2
+entity "ミックス設定マスタ" as E3
+
+A1 --> B1 : ジャンルのチップを押下する
+A1 --> B2 : ジャンルを選ぶ
+B1 --> C1 : ジャンルを設定する
+B2 --> C1 : ジャンルを設定する
+C1 --> C2 : テンポがプリセットならBPMを求める
+C2 --> E1 : BPMを取得する
+C1 --> E2 : ジャンル・BPM・ドラムのカテゴリを更新する
+C1 --> C3 : サンプル再生中なら新しいジャンルで鳴らし直す
+C1 --> C4 : 再生中なら再生し直す
+C4 --> C5 : ミックスをジャンルに合わせる
+C5 --> E3 : ミックス設定を取得する
+
+@enduml

@@ -1,0 +1,21 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** K01-2_スケール選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "スケール設定" as C1
+control "メロディ生成" as C2
+control "再生" as C3
+entity "コード進行マスタ" as E1
+entity "アプリの状態" as E2
+
+A1 --> B1 : スケールを選ぶ
+B1 --> C1 : スケールを設定する
+C1 --> E1 : そのスケールのコード進行を取得する
+C1 --> C1 : 同じ雰囲気の進行がない（スケールの先頭の進行にする）
+C1 --> E2 : コード進行を更新する
+C1 --> C2 : 自動生成のメロディがあれば作り直す
+C1 --> C3 : 再生中なら再生し直す
+
+@enduml

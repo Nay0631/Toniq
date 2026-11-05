@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** U01-2_スキン選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "設定画面" as B1
+boundary "カスタムモード画面" as B2
+control "見た目設定" as C1
+entity "アプリの状態" as E1
+entity "端末の設定データ" as E2
+
+A1 --> B1 : スキンを押下する
+A1 --> B2 : 情報バーのスキンを押下する
+B1 --> C1 : スキンを選ぶ
+B2 --> C1 : スキンを選ぶ
+C1 --> E1 : スキンを更新する
+C1 --> E2 : スキンを保存する
+C1 --> B2 : カスタムモードの見た目を変える
+
+@enduml

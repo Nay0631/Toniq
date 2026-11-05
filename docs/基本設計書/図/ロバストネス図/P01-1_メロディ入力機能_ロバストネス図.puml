@@ -1,0 +1,25 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** P01-1_メロディ入力機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ピアノロール画面" as B1
+control "音符編集" as C1
+control "スケール判定" as C2
+control "メロディ演奏" as C3
+control "パート管理" as C4
+entity "アプリの状態" as E1
+entity "スケールマスタ" as E2
+
+A1 --> B1 : グリッドの空いている所を押下する・キー（A〜K）を押す
+B1 --> C1 : 音を置く
+C1 --> C2 : 置ける音か確かめる
+C2 --> E1 : キー・スケール・スケールロックを取得する
+C2 --> E2 : スケールの7音を取得する
+C1 --> C1 : 音域外・スケール外（置かない）
+C1 --> C3 : 置いた音を試聴する
+C1 --> E1 : メロディを更新し「自分で入力」にする
+C1 --> C4 : 再生中ならメロディを読み込み直す
+C1 --> B1 : 音符を表示する
+
+@enduml

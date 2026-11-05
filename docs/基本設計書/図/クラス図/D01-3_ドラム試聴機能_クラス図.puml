@@ -1,0 +1,41 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> ドラムの試聴ボタンを押下する() : void
+}
+class "再生" as C1 <<control>> {
+  {method} <U+002B> ドラムを試聴する() : void
+  {method} <U+002D> ほかの再生を止める() : void
+  {method} <U+002D> 2小節で止める予約をして鳴らす() : void
+}
+class "ドラム音源読み込み" as C2 <<control>> {
+  {method} <U+002B> 音源を読み込む() : void
+}
+class "ドラム演奏" as C3 <<control>> {
+  {method} <U+002B> ドラムを読み込む() : void
+}
+class "ドラムキット作成" as C4 <<control>> {
+  {method} <U+002B> ジャンルのドラムキットを作る() : void
+}
+class "ドラム音源ファイル" as E1 <<entity>> {
+  {field} <U+002B> ジャンルのフォルダ
+  {field} <U+002B> トラックごとの音
+  {method} <U+002B> ジャンルの音源を取得する() : void
+}
+class "アプリの状態" as E2 <<entity>> {
+  {field} <U+002B> ドラムパターン
+  {field} <U+002B> ドラムの音源
+  {method} <U+002B> ドラムパターンを取得する() : void
+}
+
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C1 --> C3
+C3 --> E2
+C3 --> C4
+C4 --> C2
+
+@enduml

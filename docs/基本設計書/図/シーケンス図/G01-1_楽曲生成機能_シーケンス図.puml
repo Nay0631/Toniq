@@ -1,0 +1,80 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd G01-1_楽曲生成機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":シンプルモード画面" as L2
+boundary ":アレンジ画面" as L3
+control ":楽曲生成" as L4
+control ":再生" as L5
+control ":パターン選出" as L6
+entity ":シンプルモード表マスタ" as L7
+control ":アレンジ管理" as L8
+control ":メロディ生成" as L9
+entity ":メロディ設定マスタ" as L10
+entity ":アプリの状態" as L11
+control ":メロディ再生成" as L12
+
+alt シンプルモード画面（生成する）
+  L1 -> L2 : 生成するボタンを押下する() : void
+  activate L2
+  L2 -> L4 : 楽曲を生成する() : void
+  activate L4
+  L4 -> L5 : 再生・クリック音を止める() : void
+  activate L5
+  deactivate L5
+  L4 -> L6 : コード進行とドラムを選ぶ() : void
+  activate L6
+  L6 -> L7 : ジャンル×雰囲気の候補を取得する() : void
+  activate L7
+  deactivate L7
+  deactivate L6
+  L4 -> L8 : 全パートがそろう周回数を求める() : void
+  activate L8
+  deactivate L8
+  opt メロディが自動生成
+    L4 -> L9 : メロディを作る() : void
+    activate L9
+    L9 -> L10 : 生成パラメータを取得する() : void
+    activate L10
+    deactivate L10
+    deactivate L9
+  end
+  L4 -> L11 : 曲の内容を更新し生成済みにする() : void
+  activate L11
+  deactivate L11
+  L4 -> L2 : 生成結果を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L4
+  deactivate L2
+else アレンジ画面（メロディの差し替え）
+  L1 -> L3 : メロディの差し替えボタンを押下する() : void
+  activate L3
+  L3 -> L12 : メロディを作り直す() : void
+  activate L12
+  alt メロディが自動生成
+    L12 -> L9 : メロディを作る() : void
+    activate L9
+    L9 -> L10 : 生成パラメータを取得する() : void
+    activate L10
+    deactivate L10
+    deactivate L9
+    L12 -> L11 : メロディを更新する() : void
+    activate L11
+    deactivate L11
+    opt 再生中
+      L12 -> L5 : 再生し直す() : void
+      activate L5
+      deactivate L5
+    end
+  else 自分で入力
+    L12 -> L12 : ピアノロールを開く() : void
+    activate L12
+    deactivate L12
+  end
+  deactivate L12
+  deactivate L3
+end
+
+@enduml

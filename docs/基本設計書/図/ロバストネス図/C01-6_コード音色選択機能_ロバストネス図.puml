@@ -1,0 +1,19 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** C01-6_コード音色選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "コード音色設定" as C1
+control "再生" as C2
+control "コード演奏" as C3
+entity "アプリの状態" as E1
+
+A1 --> B1 : コードの音色を選ぶ
+B1 --> C1 : コードの音色を設定する
+C1 --> E1 : コードの音色を更新する
+C1 --> C2 : 再生中なら再生し直す
+C2 --> C3 : コードの音源を作り直す
+C3 --> E1 : 音色を取得する
+
+@enduml

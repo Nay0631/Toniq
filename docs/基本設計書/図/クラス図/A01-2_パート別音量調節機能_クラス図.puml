@@ -1,0 +1,31 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ミキサー" as B1 <<boundary>> {
+  {method} <U+002B> フェーダーを動かす() : void
+  {method} <U+002B> 電源ボタンを押下する() : void
+  {method} <U+002B> 音量の数値を表示する() : void
+}
+class "音量管理" as C1 <<control>> {
+  {field} <U+002D> パートの音量ノード
+  {method} <U+002B> パートの音量を変える() : void
+  {method} <U+002D> dB に変換して再生中の音量に反映する() : void
+}
+class "パート管理" as C2 <<control>> {
+  {method} <U+002B> パートを ON/OFF する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> パートごとの音量（0〜100）
+  {field} <U+002B> パートの ON/OFF
+  {method} <U+002B> 音量を更新する() : void
+  {method} <U+002B> パートの ON/OFF を更新する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> B1
+B1 --> C2
+C2 --> E1
+
+@enduml

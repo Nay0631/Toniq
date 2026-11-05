@@ -1,0 +1,43 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-8_曲ファイル読み込み機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+control ":曲ファイル読み込み" as L3
+entity ":曲ファイル" as L4
+control ":曲の管理" as L5
+entity ":楽曲データ" as L6
+
+L1 -> L2 : ファイルを読み込むボタンを押下してファイルを選ぶ() : void
+activate L2
+L2 -> L3 : 選んだファイルを読み込む() : void
+activate L3
+loop 選んだファイルごと
+  L3 -> L4 : 中身を取得する() : void
+  activate L4
+  deactivate L4
+  L3 -> L5 : 曲を追加する() : void
+  activate L5
+  alt Toniq の曲ファイル
+    loop ファイルの中の曲ごと
+      opt 鳴らせる曲
+        L5 -> L6 : 足りない項目を補い、新しい ID で追加する() : void
+        activate L6
+        deactivate L6
+      end
+    end
+  else 曲ファイルでない
+    L5 -> L5 : 読み込めない理由を返す() : void
+    activate L5
+    deactivate L5
+  end
+  deactivate L5
+end
+L3 -> L2 : 追加した曲数・読み込めなかった曲数を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

@@ -1,0 +1,13 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** H01_履歴_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "楽曲生成システム Toniq" {
+  usecase "元に戻す・やり直す機能" as UC1
+}
+
+A1 -- UC1
+
+@enduml

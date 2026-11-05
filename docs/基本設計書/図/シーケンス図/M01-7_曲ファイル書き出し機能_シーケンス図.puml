@@ -1,0 +1,37 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-7_曲ファイル書き出し機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+control ":曲ファイル書き出し" as L3
+control ":曲の管理" as L4
+entity ":楽曲データ" as L5
+entity ":曲ファイル" as L6
+
+L1 -> L2 : 「ファイルに書き出す」・すべて書き出すを押下する() : void
+activate L2
+L2 -> L3 : 曲ファイルに書き出す() : void
+activate L3
+L3 -> L4 : 曲を取り出す() : void
+activate L4
+L4 -> L5 : 保存した曲を取得する() : void
+activate L5
+deactivate L5
+deactivate L4
+alt 書き出す曲がある
+  L3 -> L4 : ファイルの形にする() : void
+  activate L4
+  deactivate L4
+  L3 -> L6 : 保存する() : void
+  activate L6
+  deactivate L6
+else 曲が1つもない
+  L3 -> L2 : 「書き出す曲がありません」を表示する() : void
+  activate L2
+  deactivate L2
+end
+deactivate L3
+deactivate L2
+
+@enduml

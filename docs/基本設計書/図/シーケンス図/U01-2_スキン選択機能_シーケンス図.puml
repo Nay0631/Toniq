@@ -1,0 +1,30 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd U01-2_スキン選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":設定画面" as L2
+control ":見た目設定" as L3
+entity ":アプリの状態" as L4
+entity ":端末の設定データ" as L5
+boundary ":カスタムモード画面" as L6
+
+note over L2 : カスタムモード画面の情報バーのスキンも同じ流れ
+
+L1 -> L2 : スキンを押下する() : void
+activate L2
+L2 -> L3 : スキンを選ぶ() : void
+activate L3
+L3 -> L4 : スキンを更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : スキンを保存する() : void
+activate L5
+deactivate L5
+L3 -> L6 : カスタムモードの見た目を変える() : void
+activate L6
+deactivate L6
+deactivate L3
+deactivate L2
+
+@enduml

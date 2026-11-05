@@ -1,0 +1,55 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> WAVで書き出すボタンを押下する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> WAV ボタンを押下する() : void
+  {method} <U+002D> ボタンを「レンダリング中…」にする() : void
+}
+class "再生" as C1 <<control>> {
+  {method} <U+002B> WAV で書き出す() : void
+  {method} <U+002D> 再生を止める() : void
+  {method} <U+002D> 16bit PCM の WAV に変換する() : void
+}
+class "ドラム音源読み込み" as C2 <<control>> {
+  {method} <U+002B> 音源を読み込む() : void
+}
+class "ミックス" as C3 <<control>> {
+  {method} <U+002B> ミックスをジャンルに合わせる() : void
+}
+class "各パートの演奏" as C4 <<control>> {
+  {method} <U+002B> 曲全体をオフラインで鳴らす() : void
+}
+class "ドラム音源ファイル" as E1 <<entity>> {
+  {field} <U+002B> ジャンルのフォルダ
+  {method} <U+002B> ジャンルの音源を取得する() : void
+}
+class "アプリの状態" as E2 <<entity>> {
+  {field} <U+002B> パートの ON/OFF
+  {field} <U+002B> 曲の内容
+  {method} <U+002B> ON のパートと曲の内容を取得する() : void
+}
+class "ミックス設定マスタ" as E3 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> リバーブ・EQ・コンプ・リミッター・音量
+  {method} <U+002B> ミックス設定を取得する() : void
+}
+class "WAVファイル" as E4 <<entity>> {
+  {field} <U+002B> 16bit PCM ステレオ
+  {method} <U+002B> 保存する() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> C2
+C2 --> E1
+C1 --> C3
+C3 --> E3
+C1 --> E2
+C1 --> C4
+C1 --> E4
+
+@enduml

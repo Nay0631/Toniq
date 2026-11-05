@@ -1,0 +1,34 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** L01-1_楽曲再生機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+boundary "ミュージックリスト画面" as B3
+control "楽曲切り替え" as C1
+control "曲の管理" as C2
+control "再生" as C3
+control "各パートの演奏" as C4
+control "アレンジ管理" as C5
+entity "楽曲データ" as E1
+entity "アプリの状態" as E2
+
+A1 --> B1 : 再生ボタンを押下する
+A1 --> B2 : 再生ボタンを押下する
+A1 --> B3 : 曲の再生ボタンを押下する
+B3 --> C1 : 選んだ曲を今の曲にする
+C1 --> C1 : 未保存の曲を捨てる確認で取り消した（読み込まない）
+C1 --> C2 : 保存した曲を読み込む
+C2 --> E1 : 曲の内容を取得する
+C2 --> E2 : 曲の内容を反映する
+B1 --> C3 : 再生する
+B2 --> C3 : 再生する
+C1 --> C3 : 再生する
+C3 --> E2 : 曲の内容を取得する
+C3 --> C4 : ON のパートを読み込む
+C3 --> C5 : 周回を数える
+C3 --> C3 : 小節数で止める（ループ再生なら先頭へ戻る）
+C3 --> B3 : 再生位置を表示する
+
+@enduml

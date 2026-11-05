@@ -1,0 +1,71 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd L01-1_楽曲再生機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+boundary ":ミュージックリスト画面" as L3
+control ":楽曲切り替え" as L4
+control ":曲の管理" as L5
+entity ":楽曲データ" as L6
+entity ":アプリの状態" as L7
+control ":再生" as L8
+control ":各パートの演奏" as L9
+control ":アレンジ管理" as L10
+
+note over L2 : シンプルモード画面の再生ボタンも同じ流れ
+
+alt モード画面で再生
+  L1 -> L2 : 再生ボタンを押下する() : void
+  activate L2
+  L2 -> L8 : 再生する() : void
+  activate L8
+  L8 -> L7 : 曲の内容を取得する() : void
+  activate L7
+  deactivate L7
+  L8 -> L9 : ON のパートを読み込む() : void
+  activate L9
+  deactivate L9
+  L8 -> L10 : 周回を数える() : void
+  activate L10
+  deactivate L10
+  L8 -> L8 : 小節数で止める予約をする() : void
+  activate L8
+  deactivate L8
+  deactivate L8
+  deactivate L2
+else ミュージックリストで再生
+  L1 -> L3 : 曲の再生ボタンを押下する() : void
+  activate L3
+  L3 -> L4 : 選んだ曲を今の曲にする() : void
+  activate L4
+  opt 今の曲と別の曲
+    opt 今の曲がリストに保存されていない
+      L4 -> L1 : 失われてよいか確認する() : void
+      activate L1
+      deactivate L1
+    end
+    L4 -> L5 : 保存した曲を読み込む() : void
+    activate L5
+    L5 -> L6 : 曲の内容を取得する() : void
+    activate L6
+    deactivate L6
+    L5 -> L7 : 曲の内容を反映する() : void
+    activate L7
+    deactivate L7
+    deactivate L5
+  end
+  L4 -> L8 : 再生する() : void
+  activate L8
+  L8 -> L9 : ON のパートを読み込む() : void
+  activate L9
+  deactivate L9
+  L8 -> L3 : 再生位置を表示する() : void
+  activate L3
+  deactivate L3
+  deactivate L8
+  deactivate L4
+  deactivate L3
+end
+
+@enduml

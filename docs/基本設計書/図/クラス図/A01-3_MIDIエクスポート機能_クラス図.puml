@@ -1,0 +1,45 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> MIDIで書き出すボタンを押下する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> MIDI ボタンを押下する() : void
+}
+class "MIDI書き出し" as C1 <<control>> {
+  {method} <U+002B> MIDI で書き出す() : void
+  {method} <U+002D> テンポ・拍子とメロディのトラックを書く() : void
+  {method} <U+002D> コード・ベースのトラックを書く() : void
+  {method} <U+002D> アルペジオのトラックを書く() : void
+}
+class "コード変換" as C2 <<control>> {
+  {method} <U+002B> コードのボイシングとルート音を求める() : void
+}
+class "アルペジオ演奏" as C3 <<control>> {
+  {method} <U+002B> アルペジオの音を並べる() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> コード進行・メロディ・キー・BPM
+  {method} <U+002B> コード進行・メロディ・キー・BPMを取得する() : void
+}
+class "スケールマスタ" as E2 <<entity>> {
+  {field} <U+002B> スケール
+  {field} <U+002B> 音程
+  {method} <U+002B> スケールの音程を取得する() : void
+}
+class "MIDIファイル" as E3 <<entity>> {
+  {field} <U+002B> Melody・Chord・Bass・Arpeggio のトラック
+  {method} <U+002B> 保存する() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> E2
+C1 --> C3
+C1 --> E3
+
+@enduml

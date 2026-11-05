@@ -1,0 +1,17 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** G01_楽曲生成_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "楽曲生成システム Toniq" {
+  usecase "楽曲生成機能" as UC1
+  usecase "コード進行選択機能" as UC2
+  usecase "ドラムパターン選択機能" as UC3
+}
+
+A1 -- UC1
+UC1 ..> UC2 : <<include>>
+UC1 ..> UC3 : <<include>>
+
+@enduml

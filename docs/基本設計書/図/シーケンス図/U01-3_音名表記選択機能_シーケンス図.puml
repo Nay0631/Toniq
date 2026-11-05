@@ -1,0 +1,34 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd U01-3_音名表記選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":音楽クイズ画面" as L2
+control ":端末の設定" as L3
+entity ":アプリの状態" as L4
+entity ":端末の設定データ" as L5
+boundary ":ピアノロール画面" as L6
+control ":クイズ出題" as L7
+
+note over L2 : 設定画面の「音名の表記」も同じ流れ（新しい問題は出さない）
+
+L1 -> L2 : 音名の表記を押下する() : void
+activate L2
+L2 -> L3 : 音名の表記を選ぶ() : void
+activate L3
+L3 -> L4 : 音名の表記を更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 音名の表記を保存する() : void
+activate L5
+deactivate L5
+L3 -> L6 : 鍵盤・音符の音名を表示し直す() : void
+activate L6
+deactivate L6
+deactivate L3
+L2 -> L7 : 新しい問題を出す() : void
+activate L7
+deactivate L7
+deactivate L2
+
+@enduml

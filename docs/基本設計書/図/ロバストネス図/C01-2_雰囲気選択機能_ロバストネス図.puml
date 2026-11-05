@@ -1,0 +1,15 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** C01-2_雰囲気選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+control "雰囲気選択" as C1
+entity "アプリの状態" as E1
+
+A1 --> B1 : 雰囲気のチップを押下する
+B1 --> C1 : 雰囲気を選択する
+C1 --> E1 : 雰囲気を更新する
+C1 --> B1 : 選択中の雰囲気を表示する
+
+@enduml

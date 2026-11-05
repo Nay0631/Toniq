@@ -1,0 +1,40 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd U01-5_ドラム音源選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":設定画面" as L2
+control ":端末の設定" as L3
+entity ":アプリの状態" as L4
+entity ":端末の設定データ" as L5
+control ":ドラム音源読み込み" as L6
+entity ":ドラム音源ファイル" as L7
+control ":パート管理" as L8
+
+L1 -> L2 : ドラムの音源を押下する() : void
+activate L2
+L2 -> L3 : ドラムの音源を選ぶ() : void
+activate L3
+L3 -> L4 : ドラムの音源を更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : ドラムの音源を保存する() : void
+activate L5
+deactivate L5
+opt サンプル音源
+  L3 -> L6 : 音源を読み込む() : void
+  activate L6
+  L6 -> L7 : ジャンルの音源を取得する() : void
+  activate L7
+  deactivate L7
+  deactivate L6
+end
+opt 再生中
+  L3 -> L8 : ドラムを読み込み直す() : void
+  activate L8
+  deactivate L8
+end
+deactivate L3
+deactivate L2
+
+@enduml

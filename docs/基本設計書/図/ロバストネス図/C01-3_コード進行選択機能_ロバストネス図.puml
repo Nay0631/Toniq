@@ -1,0 +1,28 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** C01-3_コード進行選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "コード進行設定" as C1
+control "パターン選出" as C2
+control "メロディ生成" as C3
+control "再生" as C4
+entity "シンプルモード表マスタ" as E1
+entity "コード進行マスタ" as E2
+entity "アプリの状態" as E3
+
+A1 --> B1 : コードの再抽選ボタンを押下する
+A1 --> B2 : コード進行を選ぶ（◀▶）
+B1 --> C1 : コード進行を再抽選する
+B2 --> C1 : 選んだコード進行に切り替える
+C1 --> C2 : 今の進行以外から選ぶ（再抽選のとき）
+C2 --> E1 : ジャンル×雰囲気の候補を取得する
+C2 --> E2 : 候補のコード進行を取得する
+C1 --> E2 : 選んだコード進行を取得する
+C1 --> E3 : コード進行を更新する
+C1 --> C3 : 自動生成のメロディを作り直す
+C1 --> C4 : 再生中なら再生し直す
+
+@enduml

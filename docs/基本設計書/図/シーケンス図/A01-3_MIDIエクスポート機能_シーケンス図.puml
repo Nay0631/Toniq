@@ -1,0 +1,47 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-3_MIDIエクスポート機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":MIDI書き出し" as L3
+entity ":アプリの状態" as L4
+control ":コード変換" as L5
+entity ":スケールマスタ" as L6
+control ":アルペジオ演奏" as L7
+entity ":MIDIファイル" as L8
+
+note over L2 : シンプルモード画面の「MIDIで書き出す」も同じ流れ
+
+L1 -> L2 : MIDI ボタンを押下する() : void
+activate L2
+L2 -> L3 : MIDI で書き出す() : void
+activate L3
+L3 -> L4 : コード進行・メロディ・キー・BPMを取得する() : void
+activate L4
+deactivate L4
+L3 -> L3 : テンポ・拍子とメロディのトラックを書く() : void
+activate L3
+deactivate L3
+L3 -> L5 : コードのボイシングとルート音を求める() : void
+activate L5
+L5 -> L6 : スケールの音程を取得する() : void
+activate L6
+deactivate L6
+deactivate L5
+L3 -> L3 : コード・ベースのトラックを書く() : void
+activate L3
+deactivate L3
+L3 -> L7 : アルペジオの音を並べる() : void
+activate L7
+deactivate L7
+L3 -> L3 : アルペジオのトラックを書く() : void
+activate L3
+deactivate L3
+L3 -> L8 : 保存する() : void
+activate L8
+deactivate L8
+deactivate L3
+deactivate L2
+
+@enduml

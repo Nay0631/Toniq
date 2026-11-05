@@ -1,0 +1,55 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> サンプルを聴くボタンを押下する() : void
+  {method} <U+002B> サンプルを止めるボタンを押下する() : void
+}
+class "ジャンル試聴" as C1 <<control>> {
+  {method} <U+002B> サンプルを鳴らす() : void
+}
+class "パターン選出" as C2 <<control>> {
+  {method} <U+002B> コード進行とドラムを選ぶ() : void
+}
+class "メロディ生成" as C3 <<control>> {
+  {method} <U+002B> メロディを生成する() : void
+}
+class "再生" as C4 <<control>> {
+  {method} <U+002B> サンプルを1周再生する() : void
+  {method} <U+002B> 停止する() : void
+}
+class "シンプルモード表マスタ" as E1 <<entity>> {
+  {field} <U+002B> ジャンル×雰囲気
+  {field} <U+002B> コード進行の候補・ドラムの候補
+  {method} <U+002B> ジャンル×雰囲気の候補を取得する() : void
+}
+class "コード進行マスタ" as E2 <<entity>> {
+  {method} <U+002B> コード進行を取得する() : void
+}
+class "ドラムパターンマスタ" as E3 <<entity>> {
+  {method} <U+002B> ドラムパターンを取得する() : void
+}
+class "メロディ設定マスタ" as E4 <<entity>> {
+  {method} <U+002B> 生成パラメータを取得する() : void
+}
+class "アプリの状態" as E5 <<entity>> {
+  {field} <U+002B> コード進行
+  {field} <U+002B> ドラムパターン
+  {field} <U+002B> メロディ
+  {method} <U+002B> 曲の内容を一時的に差し替える() : void
+  {method} <U+002B> 曲の内容を元に戻す() : void
+}
+
+B1 --> C1
+B1 --> C4
+C1 --> C2
+C2 --> E1
+C2 --> E2
+C2 --> E3
+C1 --> C3
+C3 --> E4
+C1 --> C4
+C4 --> E5
+
+@enduml

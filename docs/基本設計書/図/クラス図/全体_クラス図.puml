@@ -1,0 +1,91 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>>
+class "カスタムモード画面" as B2 <<boundary>>
+class "アレンジ画面" as B3 <<boundary>>
+class "ピアノロール画面" as B4 <<boundary>>
+class "ミキサー" as B5 <<boundary>>
+class "ミュージックリスト画面" as B6 <<boundary>>
+class "音楽クイズ画面" as B7 <<boundary>>
+class "設定画面" as B8 <<boundary>>
+class "パターン選出" as C1 <<control>>
+class "メロディ生成" as C2 <<control>>
+class "タップテンポ" as C3 <<control>>
+class "クリック音" as C4 <<control>>
+class "再生" as C5 <<control>>
+class "パート管理" as C6 <<control>>
+class "アレンジ管理" as C7 <<control>>
+class "各パートの演奏" as C8 <<control>>
+class "ドラム音源読み込み" as C9 <<control>>
+class "音量管理" as C10 <<control>>
+class "ミックス" as C11 <<control>>
+class "コード変換" as C12 <<control>>
+class "MIDI書き出し" as C13 <<control>>
+class "曲の管理" as C14 <<control>>
+class "履歴管理" as C15 <<control>>
+class "見た目設定・端末の設定・用語の説明" as C16 <<control>>
+class "クイズ出題・クイズの音" as C17 <<control>>
+class "画面の中の処理\n（BPM設定・楽曲生成・音符編集 ほか）" as C18 <<control>>
+class "アプリの状態" as E1 <<entity>>
+class "コード進行マスタ・ドラムパターンマスタ・\nシンプルモード表マスタ・テンポマスタ" as E2 <<entity>>
+class "メロディ設定マスタ・ベース設定マスタ・\nアルペジオ設定マスタ・ミックス設定マスタ" as E3 <<entity>>
+class "スケールマスタ・標準アレンジマスタ" as E4 <<entity>>
+class "クイズ問題マスタ" as E5 <<entity>>
+class "楽曲データ・曲ファイル" as E6 <<entity>>
+class "端末の設定データ" as E7 <<entity>>
+class "ドラム音源ファイル" as E8 <<entity>>
+class "MIDIファイル・WAVファイル" as E9 <<entity>>
+
+B1 --> C18
+B2 --> C18
+B3 --> C18
+B4 --> C18
+B5 --> C10
+B5 --> C6
+B6 --> C14
+B6 --> C18
+B7 --> C17
+B8 --> C16
+B1 --> C15
+B2 --> C15
+C18 --> C1
+C18 --> C2
+C18 --> C3
+C18 --> C4
+C18 --> C5
+C18 --> C6
+C18 --> C7
+C18 --> C13
+C18 --> C14
+C18 --> E1
+C1 --> E2
+C2 --> E3
+C2 --> E4
+C5 --> C8
+C5 --> C7
+C5 --> C9
+C5 --> C11
+C5 --> E9
+C6 --> C8
+C7 --> E4
+C8 --> C12
+C8 --> C10
+C8 --> E3
+C9 --> E8
+C11 --> E3
+C12 --> E4
+C13 --> C12
+C13 --> E9
+C14 --> E6
+C14 --> E1
+C15 --> E1
+C16 --> E1
+C16 --> E7
+C17 --> E5
+C3 --> E1
+C4 --> E1
+C10 --> E1
+
+@enduml

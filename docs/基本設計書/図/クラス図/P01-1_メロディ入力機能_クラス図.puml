@@ -1,0 +1,46 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ピアノロール画面" as B1 <<boundary>> {
+  {method} <U+002B> グリッドの空いている所を押下する() : void
+  {method} <U+002B> キーを押す() : void
+  {method} <U+002B> 音符を表示する() : void
+}
+class "音符編集" as C1 <<control>> {
+  {method} <U+002B> 音を置く() : void
+  {method} <U+002D> 重なる音を手前で切る() : void
+}
+class "スケール判定" as C2 <<control>> {
+  {method} <U+002B> 置ける音か確かめる() : void
+}
+class "メロディ演奏" as C3 <<control>> {
+  {method} <U+002B> 置いた音を試聴する() : void
+}
+class "パート管理" as C4 <<control>> {
+  {method} <U+002B> メロディを読み込み直す() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> メロディ
+  {field} <U+002B> メロディの入力方法
+  {field} <U+002B> 音符の長さ・オクターブ
+  {field} <U+002B> スケールロック（ピアノロール）
+  {method} <U+002B> キー・スケール・スケールロックを取得する() : void
+  {method} <U+002B> メロディを更新し「自分で入力」にする() : void
+}
+class "スケールマスタ" as E2 <<entity>> {
+  {field} <U+002B> スケール
+  {field} <U+002B> ペンタトニックの5音・アクセントの2音
+  {method} <U+002B> スケールの7音を取得する() : void
+}
+
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C2 --> E2
+C1 --> C3
+C1 --> E1
+C1 --> C4
+C1 --> B1
+
+@enduml

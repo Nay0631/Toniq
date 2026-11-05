@@ -1,0 +1,30 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-6_再生開始位置選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":再生開始位置設定" as L3
+entity ":アプリの状態" as L4
+control ":再生" as L5
+
+L1 -> L2 : 小節の目盛りを押下する() : void
+activate L2
+L2 -> L3 : 再生開始位置を設定する() : void
+activate L3
+L3 -> L4 : 再生開始位置を更新する() : void
+activate L4
+deactivate L4
+alt 再生中
+  L3 -> L5 : その位置から再生し直す() : void
+  activate L5
+  deactivate L5
+else 止まっている
+  L3 -> L2 : 再生ボタンの表示を「○小節目から」にする() : void
+  activate L2
+  deactivate L2
+end
+deactivate L3
+deactivate L2
+
+@enduml

@@ -1,0 +1,18 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** U01-1_配色選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "設定画面" as B1
+control "見た目設定" as C1
+entity "アプリの状態" as E1
+entity "端末の設定データ" as E2
+
+A1 --> B1 : 配色（ライト・ダーク・OS に合わせる）を押下する
+B1 --> C1 : 配色を選ぶ
+C1 --> E1 : 配色を更新する
+C1 --> E2 : 配色を保存する
+C1 --> C1 : OS に合わせるなら OS の配色の変化に追従する
+C1 --> B1 : 画面の配色を変える
+
+@enduml

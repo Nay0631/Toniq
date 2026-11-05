@@ -1,0 +1,40 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-3_楽曲検索機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+control ":楽曲の絞り込み" as L3
+entity ":アプリの状態" as L4
+control ":曲の管理" as L5
+entity ":楽曲データ" as L6
+
+L1 -> L2 : 曲名を入力する・条件を押下する() : void
+activate L2
+L2 -> L3 : 絞り込みの条件を変える() : void
+activate L3
+L3 -> L4 : 検索語・ジャンル・お気に入り・並び順を更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 曲の一覧を取得する() : void
+activate L5
+L5 -> L6 : 保存した曲を取得する() : void
+activate L6
+deactivate L6
+deactivate L5
+L3 -> L3 : 条件で絞り込んで並べる() : void
+activate L3
+deactivate L3
+alt 条件に合う曲がある
+  L3 -> L2 : 絞り込んだ一覧を表示する() : void
+  activate L2
+  deactivate L2
+else 条件に合う曲がない
+  L3 -> L2 : 「条件に合う曲がありません」を表示する() : void
+  activate L2
+  deactivate L2
+end
+deactivate L3
+deactivate L2
+
+@enduml
