@@ -3,7 +3,6 @@ import { resolveTempoPreset } from "../engine/SimpleModeResolver";
 import { generateMelody } from "../engine/MelodyGenerator";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { signatureLabel } from "../engine/SignaturePlayer";
-import { setVolume } from "../engine/VolumeManager";
 import { tap } from "../engine/TapTempo";
 import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
@@ -14,22 +13,12 @@ import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { startPianoRollPlayhead } from "./PianoRollTab";
+import { attachKnob, attachStepper, syncControls } from "./Controls";
+import { initMixer, renderMixer } from "./MixerPanel";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
 const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "アンビエント"];
-
-// パート別音量の並び（UI 表示名）
-const VOLUME_PARTS: { name: LayerName; label: string }[] = [
-  { name: "melody", label: "メロディ" },
-  { name: "chord",  label: "コード" },
-  { name: "drum",   label: "ドラム" },
-  { name: "bass",   label: "ベース" },
-  { name: "pad",    label: "パッド" },
-  { name: "arp",    label: "アルペジオ" },
-  { name: "signature", label: "シグネチャー" },
-  { name: "fx",     label: "FX/SE" },
-];
 
 const chords = chordDB as unknown as ChordProgression[];
 const drums  = drumDB  as unknown as DrumPattern[];
@@ -156,38 +145,6 @@ function fillSelect<T extends { id: string }>(
   if (current) select.value = current.id;
 }
 
-// 設定タブとアレンジャータブに同じ音量リストがある
-const VOLUME_LISTS = ["c-volume-list", "c-arr-volume-list"];
-
-function renderVolumeList(listId: string): void {
-  const s    = getState();
-  const list = $(listId);
-  if (!list) return;
-
-  // スライダー操作中に作り直すとドラッグが切れるので、行は最初の1回だけ作る
-  if (list.children.length === 0) {
-    for (const p of VOLUME_PARTS) {
-      const row = document.createElement("label");
-      row.className = "volume-row";
-      row.dataset.part = p.name;
-      row.innerHTML = `
-        <span class="volume-name"></span>
-        <input type="range" class="range" min="0" max="100" step="1">
-        <span class="volume-value"></span>`;
-      row.querySelector(".volume-name")!.textContent = p.label;
-      list.appendChild(row);
-    }
-  }
-
-  for (const p of VOLUME_PARTS) {
-    const row   = list.querySelector<HTMLElement>(`[data-part="${p.name}"]`)!;
-    const range = row.querySelector<HTMLInputElement>("input")!;
-    row.classList.toggle("is-off", !s.parts[p.name]);
-    if (document.activeElement !== range) range.value = String(s.volumes[p.name]);
-    row.querySelector(".volume-value")!.textContent = String(s.volumes[p.name]);
-  }
-}
-
 function render(): void {
   const s = getState();
   if (s.screen !== "custom") return;
@@ -209,6 +166,7 @@ function render(): void {
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
   if (document.activeElement !== bpmRange) bpmRange.value = String(s.bpm);
   $("c-bpm-value")!.textContent = `${s.bpm}`;
+  syncControls();
   $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
 
   // 小節数：選択肢にない値（シンプルモードから引き継いだ値など）も表示できるようにする
@@ -250,7 +208,7 @@ function render(): void {
     el.setAttribute("aria-pressed", String(on));
   });
 
-  VOLUME_LISTS.forEach(renderVolumeList);
+  renderMixer();
 
   // アレンジャー
   renderArranger();
@@ -281,6 +239,10 @@ export function initCustomScreen(): void {
   $select("c-drum-category").innerHTML = DRUM_CATEGORIES
     .map(g => `<option value="${g}">${g}</option>`).join("");
 
+  // コード進行・ドラムパターンは ◀ ▶ で順に聴き比べられるようにする
+  attachStepper($select("c-chord"), "コード進行");
+  attachStepper($select("c-drum"),  "ドラムパターン");
+
   // 情報バー
   $("c-play")?.addEventListener("click", startPlayback);
   $("c-stop")?.addEventListener("click", () => {
@@ -290,6 +252,7 @@ export function initCustomScreen(): void {
 
   // ===== 基本設定 =====
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
+  attachKnob(bpmRange, "BPM", "lg");
   bpmRange.addEventListener("input", () => {
     setBpm(parseInt(bpmRange.value));
     render();
@@ -421,17 +384,8 @@ export function initCustomScreen(): void {
       render();
     }));
 
-  // ===== パート別音量 =====
-  VOLUME_LISTS.forEach(id => {
-    renderVolumeList(id);
-    $(id)?.addEventListener("input", e => {
-      const input = e.target as HTMLInputElement;
-      const row   = input.closest<HTMLElement>("[data-part]");
-      if (!row) return;
-      setVolume(row.dataset.part!, parseInt(input.value));
-      row.querySelector(".volume-value")!.textContent = input.value;
-    });
-  });
+  // ===== ミキサー（パート別音量。設定タブとアレンジャータブ） =====
+  initMixer(["c-mixer", "c-arr-mixer"], render);
 
   // ===== アレンジャー =====
   // 再生開始位置を変えたら、再生中ならその位置から再生し直す

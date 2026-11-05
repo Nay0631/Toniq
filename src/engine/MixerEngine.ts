@@ -32,6 +32,7 @@ interface Mixer {
   reverbIn:   Tone.Filter;
   reverb:     Tone.Reverb;
   reverbOut:  Tone.Gain;
+  meter:      Tone.Meter | null;  // マスターのレベルメーター（再生用のコンテキストだけ）
 }
 
 // オーディオコンテキストごとに1つ持つ（WAV書き出しの Tone.Offline は別コンテキスト）
@@ -53,10 +54,22 @@ function getMixer(): Mixer {
   const reverb    = new Tone.Reverb({ decay: 1.5, preDelay: 0.02, wet: 1 }).connect(reverbOut);
   const reverbIn  = new Tone.Filter({ type: "highpass", frequency: 250 }).connect(reverb);
 
-  const mixer = { input, eq, compressor, makeup, limiter, reverbIn, reverb, reverbOut };
+  // リミッターのあと（スピーカーに出る音）を測る。メーターは音を出さない枝分かれ
+  const meter = ctx instanceof Tone.OfflineContext ? null : new Tone.Meter({ smoothing: 0.6 });
+  if (meter) limiter.connect(meter);
+
+  const mixer = { input, eq, compressor, makeup, limiter, reverbIn, reverb, reverbOut, meter };
   mixers.set(ctx, mixer);
   console.log("Mixer初期化完了");
   return mixer;
+}
+
+// マスターの今のレベル（dB）。ミキサーをまだ作っていなければ -Infinity
+export function getMasterLevel(): number {
+  const meter = mixers.get(Tone.getContext())?.meter;
+  if (!meter) return -Infinity;
+  const v = meter.getValue();
+  return Array.isArray(v) ? Math.max(...v) : v;
 }
 
 // パートの出口をマスターにつなぎ、リバーブ送りも作る（VolumeManager から呼ぶ）

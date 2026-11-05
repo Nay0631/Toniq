@@ -234,7 +234,7 @@
     <!-- カスタムモード画面 -->
     <section class="screen screen-mode" data-screen="custom" hidden>
       <!-- 情報バー -->
-      <div class="infobar">
+      <div class="infobar hw-bar">
         <div class="info">
           <span class="info-item">BPM <b id="c-info-bpm"></b></span>
           <span class="info-item">キー <b id="c-info-key"></b></span>
@@ -257,7 +257,8 @@
         <button data-tab="pianoroll">ピアノロール</button>
       </nav>
 
-      <div class="screen-body screen-body-wide" data-tab-panel="settings">
+      <!-- 設定タブ・アレンジャータブは .hw でシンセサイザー風の見た目にする -->
+      <div class="screen-body screen-body-wide hw" data-tab-panel="settings">
         <div class="custom-grid">
           <!-- 基本設定 -->
           <div class="card panel">
@@ -271,9 +272,12 @@
             <div class="form-row">
               <span class="form-label">BPM</span>
               <div class="bpm-control">
+                <!-- range はノブ（Controls.ts）に置き換わる -->
                 <input type="range" class="range" id="c-bpm-range" min="40" max="220" step="1" aria-label="BPM">
-                <span class="bpm-number" id="c-bpm-value"></span>
-                <button class="btn btn-small" id="c-tap">タップ</button>
+                <div class="bpm-readout">
+                  <span class="lcd bpm-number" id="c-bpm-value"></span>
+                  <button class="btn btn-small" id="c-tap">タップ</button>
+                </div>
               </div>
             </div>
 
@@ -437,12 +441,18 @@
               <span>シグネチャー<span class="pill-note" id="c-signature-label"></span></span>
               <button class="pill" data-part-toggle="signature"></button>
             </div>
-
-            <hr class="panel-divider">
-
-            <div class="panel-title panel-title-plain">パート別音量</div>
-            <div class="volume-list" id="c-volume-list"></div>
           </div>
+        </div>
+
+        <!-- ミキサー（パート別音量。中身は MixerPanel.ts で作る） -->
+        <div class="card panel mixer-panel">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M6 4v16M12 4v16M18 4v16"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/>
+            </svg>
+            ミキサー
+          </div>
+          <div class="mixer" id="c-mixer"></div>
         </div>
 
         <div class="export-row">
@@ -452,7 +462,7 @@
         </div>
       </div>
 
-      <div class="screen-body screen-body-wide" data-tab-panel="arranger" hidden>
+      <div class="screen-body screen-body-wide hw" data-tab-panel="arranger" hidden>
         <div class="card arranger-card">
           <div class="arranger-toolbar">
             <span class="arranger-mode" id="c-arr-mode"></span>
@@ -461,6 +471,16 @@
             <button class="btn btn-small" id="c-arr-reset">↺ 標準に戻す</button>
           </div>
           <div class="arranger" id="c-arranger"></div>
+        </div>
+
+        <div class="card panel mixer-panel">
+          <div class="panel-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+              <path d="M6 4v16M12 4v16M18 4v16"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/>
+            </svg>
+            ミキサー
+          </div>
+          <div class="mixer" id="c-arr-mixer"></div>
         </div>
 
         <div class="arranger-bottom">
@@ -481,11 +501,6 @@
               <span class="swap-desc" id="c-arr-melody"></span>
               <button class="btn btn-small btn-icon" id="c-arr-melody-reroll" aria-label="メロディを差し替え" title="差し替え">↻</button>
             </div>
-          </div>
-
-          <div class="card panel">
-            <div class="panel-title panel-title-plain">パート別音量</div>
-            <div class="volume-list" id="c-arr-volume-list"></div>
           </div>
 
           <div class="card panel">

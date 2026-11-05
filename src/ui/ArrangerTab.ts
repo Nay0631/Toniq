@@ -3,6 +3,7 @@ import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArran
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
 import { signatureLabel } from "../engine/SignaturePlayer";
+import { render } from "./Router";
 
 // アレンジャーのレーン（上から表示する順）
 const LANES: { name: LayerName; label: string }[] = [
@@ -299,7 +300,7 @@ export function initArranger(onSeek: () => void): void {
     if (toggle) {
       const part = toggle.dataset.arrToggle as LayerName;
       setLayerEnabled(part, !getState().parts[part]);
-      renderArranger();
+      render();  // ミキサーの電源ボタンなど、アレンジャー以外の表示もそろえる
       return;
     }
     const del = target.closest(".arr-del");

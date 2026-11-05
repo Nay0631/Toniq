@@ -23,11 +23,13 @@ src/main.ts             エントリ。初期状態の解決と各画面の初�
 src/ui/
   Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab
   SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、書き出し）
-  CustomScreen.ts         カスタムモード画面の設定タブ（基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオ・パート別音量の3列）とアレンジャータブ下部（差し替え・音量・書き出し）
+  CustomScreen.ts         カスタムモード画面の設定タブ（基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオの3列＋ミキサー）とアレンジャータブ下部（ミキサー・差し替え・書き出し）
   ArrangerTab.ts          アレンジャーのタイムライン（パートごとのブロックの配置・移動・長さ変更・削除、再生位置）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通）
   MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・⋮メニュー）と両モードの「♪ 保存」ボタン
   QuizScreen.ts           音楽クイズ画面（カテゴリ・出題モードの切り替え、出題・採点、鍵盤／選択肢での回答、出題設定）
+  Controls.ts             シンセサイザー風のノブ（attachKnob）・縦フェーダー（attachFader）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
+  MixerPanel.ts           ミキサー（設定タブとアレンジャータブ）。パートごとのチャンネルストリップ（電源＝ON/OFF・フェーダー・レベルメーター）とマスターのメーター
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   Theme.ts                ライト／ダークの切り替え（ヘッダー右端のボタン、<html data-theme>、localStorage の toniq.theme）
   styles.css              デザイントークン（ライト＋ダーク）と共通スタイル
@@ -124,6 +126,8 @@ src/engine/
 - 両モードの情報バーの「＋ 新規作成」は、確認のうえ再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
 - 配色（ライト／ダーク）は `AppState.theme` に置き、`Theme.ts` が `<html data-theme>` に反映して localStorage の `toniq.theme` に保存する（未保存なら OS の設定に合わせる。曲の内容ではないので `SONG_FIELDS` には入れない）。`index.html` の `<head>` でも同じキーを読んで描画前に `data-theme` を付ける。
 - `styles.css` では色を直書きせず、`:root` のトークン（`var(--…)`）を使う。トークンを足すときは `:root[data-theme="dark"]` にもダーク用の値を足す。例外はパートの識別色（`.arr-*` / `.dot-*` のパステル）とアクセント色の上の白文字・クイズの黒鍵で、どちらのテーマでも同じ色を使う。
+- カスタムモードの設定タブ・アレンジャータブ（`.hw`）と情報バー（`.hw-bar`）はシンセサイザーのプラグイン風の見た目（LED 付きの見出しの帯・液晶表示のセレクト・LED 付き ON/OFF・ノブ・フェーダー）。色は `--hw-*` / `--lcd-*` / `--led-*` / `--knob-*` / `--fader-*` / `--strip-*` / `--meter-*` のトークンを使う。BPM はノブ、コード進行・ドラムパターンは ◀▶ で切り替え（`Controls.ts`）。AppState から range の値を書き換えたら `syncControls()` で見た目をそろえる。
+- ミキサー（`MixerPanel.ts`）は両タブの全幅に置く。電源ボタンは `setLayerEnabled` でパートを ON/OFF する。レベルメーターは再生中だけ動き、パートは `VolumeManager.getPartLevels()`（各 Volume ノードの後ろの Tone.Meter）、マスターは `MixerEngine.getMasterLevel()`（リミッターの後ろ）を読む。メーターは再生用のコンテキストだけに作る（WAV書き出しの Tone.Offline では作らない）。チャンネル上端の色はアレンジャーのブロックと同じパートの識別色（`.mix-*`）。
 - メニューへの導線は、メニュー以外のすべての画面の上部に出るパンくずの「メニューに戻る」ボタン。ヘッダーの「⋯」メニューとシンプル／カスタムの切り替えボタンは廃止した。
 - カスタムモードには「生成する」ボタンを置かない（設定の変更はその場で反映され、メロディの作り直しはアレンジャータブの「レイヤー差し替え」で行う）。情報バーの主ボタンは「▷ 再生」。
 - ミュージックリストの絞り込み・並び順（`musicListQuery` / `musicListGenre` / `musicListFavorites` / `musicListSort`）は AppState に置く。⋮ メニューを開いている曲・名前を変更中の曲は表示上の一時的な状態としてモジュール内に持つ。お気に入りは曲データ（`SavedSong.favorite`）に保存する。
