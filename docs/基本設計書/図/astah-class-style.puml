@@ -1,0 +1,54 @@
+' astah 風の見た目の共通設定（クラス図用）
+' 各クラス図の先頭で相対パスで !include して使う。
+' 例: !include ../../astah-class-style.puml
+' ※ このファイル単体では図にならないよう、@startuml / @enduml は書かない。
+
+' 影なし
+skinparam shadowing false
+
+' クラスは左から右へ並べる（astah の図と同じく、画面 → 処理 の向き）
+left to right direction
+
+' 線はまっすぐ引く（曲線にしない）
+skinparam linetype polyline
+
+' クラス名の左の「C」の丸アイコンを出さない
+hide circle
+
+' 属性・操作の可視性は記号のアイコンではなく「+」などの文字で書く
+' （astah と同じ「+ 操作名()」にするため、.puml 側では <U+002B> のように文字コードで書く。
+'   「+ 」とそのまま書くと PlantUML が可視性として読み取り、後ろの空白が消える）
+skinparam classAttributeIconSize 0
+
+' 図の枠（mainframe pkg）の「pkg」は .puml 側で **pkg** と太字にする
+
+' ステレオタイプは «» ではなく << >> で書く
+skinparam guillemet false
+
+' 背景は白
+skinparam BackgroundColor white
+
+' クラスは薄い黄色、枠線は太い黒、ステレオタイプは普通の文字
+skinparam class {
+  BackgroundColor #FFFFCC
+  BorderColor black
+  BorderThickness 2
+  StereotypeFontStyle plain
+  AttributeFontStyle plain
+  ArrowColor black
+  ArrowThickness 1
+}
+
+' パッケージも同じ色づかいにする
+skinparam package {
+  BackgroundColor white
+  BorderColor black
+}
+
+' 図全体の枠（mainframe）と区切り線は黒
+skinparam DiagramBorderColor black
+skinparam DiagramBorderThickness 1
+
+' クラス名は太字。
+' ※ この行は必ずファイルの最後に置く。skinparam class { ... } の中や、それより前に書くと太字にならない。
+skinparam classFontStyle bold
