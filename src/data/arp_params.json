@@ -1,0 +1,74 @@
+{
+  "EDM": {
+    "instrument": "pluck",
+    "step": "16n",
+    "pattern": "updown",
+    "octaves": 2,
+    "gate": 0.5,
+    "cutoff": 5000,
+    "delay": { "time": "8n.", "feedback": 0.3, "wet": 0.25 }
+  },
+  "テクノ": {
+    "instrument": "blip",
+    "step": "16n",
+    "pattern": "pedal",
+    "octaves": 1,
+    "gate": 0.35,
+    "cutoff": 3500,
+    "delay": { "time": "8n.", "feedback": 0.35, "wet": 0.2 }
+  },
+  "8bit": {
+    "instrument": "square",
+    "step": "16n",
+    "pattern": "up",
+    "octaves": 2,
+    "gate": 0.7,
+    "cutoff": 7000,
+    "delay": { "time": "8n", "feedback": 0.1, "wet": 0.1 }
+  },
+  "ローファイ": {
+    "instrument": "keys",
+    "step": "8n",
+    "pattern": "updown",
+    "octaves": 1,
+    "gate": 0.9,
+    "cutoff": 1800,
+    "delay": { "time": "4n", "feedback": 0.2, "wet": 0.2 }
+  },
+  "ゲームBGM": {
+    "instrument": "bell",
+    "step": "8n",
+    "pattern": "up",
+    "octaves": 2,
+    "gate": 0.8,
+    "cutoff": 6000,
+    "delay": { "time": "8n.", "feedback": 0.2, "wet": 0.15 }
+  },
+  "ハウス": {
+    "instrument": "keys",
+    "step": "16n",
+    "pattern": "pedal",
+    "octaves": 1,
+    "gate": 0.5,
+    "cutoff": 3500,
+    "delay": { "time": "8n.", "feedback": 0.25, "wet": 0.2 }
+  },
+  "トランス": {
+    "instrument": "pluck",
+    "step": "16n",
+    "pattern": "up",
+    "octaves": 2,
+    "gate": 0.45,
+    "cutoff": 6000,
+    "delay": { "time": "8n.", "feedback": 0.4, "wet": 0.3 }
+  },
+  "アンビエント": {
+    "instrument": "bell",
+    "step": "8n",
+    "pattern": "updown",
+    "octaves": 2,
+    "gate": 1.0,
+    "cutoff": 3000,
+    "delay": { "time": "4n.", "feedback": 0.45, "wet": 0.35 }
+  }
+}

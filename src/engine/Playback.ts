@@ -213,10 +213,10 @@ export async function renderWav(): Promise<Blob> {
     const { initFxSynth: initF,    loadFx: loadF }               = await import("./FxPlayer");
 
     if (s.parts.drum)   loadDrum(drumPattern);
-    if (s.parts.chord)  { initC();  loadC(chordPattern, s.key, 4); }
+    if (s.parts.chord)  { initC();  loadC(chordPattern, s.key); }
     if (s.parts.bass)   { initB();  loadB(chordPattern, s.key, 2); }
-    if (s.parts.arp)    { initAr(); loadAr(chordPattern, s.key, 5, "8n"); }
-    if (s.parts.pad)    { initP();  loadP(chordPattern, s.key, 4); }
+    if (s.parts.arp)    { initAr(); loadAr(chordPattern, s.key); }
+    if (s.parts.pad)    { initP();  loadP(chordPattern, s.key); }
     if (s.parts.signature) { initS(); loadS(chordPattern, s.key); }
     if (s.parts.melody) { initM();  loadMel(s.melodyNotes, `${chordPattern.length_bars}m`); }
     if (s.parts.fx)     { initF();  loadF(chordPattern); }

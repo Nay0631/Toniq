@@ -45,6 +45,7 @@ src/data/               楽曲データとデータ型
   tempo_presets.json      ジャンル別テンポプリセット（ゆっくり/普通/速い）
   melody_params.json      ジャンル別メロディ生成パラメータ（リズムテンプレート・フレーズ形式・アクセント音の頻度・標準の音色 instrument など）
   bass_params.json        ジャンル別ベース設定（16ステップのパターン・音色）
+  arp_params.json         ジャンル別アルペジオ設定（音色・刻み・パターン・オクターブ数・音の長さ・ローパス・ディレイ）
   mix_presets.json        ジャンル別マスターエフェクト設定（リバーブ送り量・EQ・コンプ・リミッター・持ち上げ gain）
 src/engine/
   AppState.ts             アプリ状態の唯一の保持場所
@@ -95,8 +96,8 @@ src/engine/
 
 - パート名は `"drum" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "fx"`（`LayerName`）で統一。UI 表示名はドラム／コード／ベース／アルペジオ／パッド／シグネチャー／メロディ／FX/SE。パート別音量の UI にはアルペジオ・シグネチャーも含める。
 - 各パートモジュールは `init*Synth()` / `load*()` / `dispose*()` の形にそろえる。`load*` は既存の Part を破棄してから作り直す。
-- ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ` / `ハウス` / `トランス` / `アンビエント`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `bass_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
-- ジャンルは今後も追加・削除がありうる。追加するときは上の5つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE` にそろえて追加する。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。シグネチャーの鳴り方は `SignaturePlayer.ts` の `SIGNATURES`（なければローファイの定義で鳴る）。
+- ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ` / `ハウス` / `トランス` / `アンビエント`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `bass_params` / `arp_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
+- ジャンルは今後も追加・削除がありうる。追加するときは上の6つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE` にそろえて追加する。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。シグネチャーの鳴り方は `SignaturePlayer.ts` の `SIGNATURES`（なければローファイの定義で鳴る）。
   - UI のジャンル一覧は `index.html` の3か所（シンプルモードのチップ `data-genre`、カスタムモードの `#c-genre`、曲一覧の `data-ml-genre`）と `CustomScreen.ts` の `APP_GENRES`（ドラムのカテゴリの並び順）、`SimpleScreen.ts` の `GENRE_DESCRIPTIONS`（ジャンルの一言の説明）にも足す。
   - `chord_progressions.json` / `drum_patterns.json` の `genre` タグにも新ジャンルを付ける。シンプルモードの差し替え候補は、`easy_mode_table.json` の ID に加えてジャンル・雰囲気のタグが一致するものから選ばれる。下の既知の問題にある、例外になるコード進行はタグに含めない。
   - 4/4・16ステップの前提で表せないジャンル（スウィング・3連符、32分のハイハットロール、3拍子など）は今の仕組みでは作れない。
@@ -106,6 +107,7 @@ src/engine/
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。
   - 音源はジャンルのドラムバス（高域カット→歪み→コンプ→持ち上げ）を通る。音源の音量は `SynthFactory.ts` の `SAMPLE_TRIM_DB` で下げており、`mix_presets.json` の `gain` はシンセのドラムで測った値のまま。
 - 音の流れ：各パートの Volume ノード（`VolumeManager.createVolumeNode`）→ `connectToMixer` でマスター入口とリバーブ送りにつなぐ。リバーブはマスターに直接かけず送りで混ぜる（送り量はパートごとに `MixerEngine.ts` の `REVERB_SENDS`、全体量は `mix_presets.json` の `reverb.wet`。ベースは送らない）。ミキサーはコンテキストごとに1つで作り直さない。WAV書き出しと再生開始前は `mixerReady()` でリバーブの準備を待つ。
+- コード・パッド・アルペジオのボイシングは `voiceProgression(progression, key, VOICING_RANGES.*)`（`degree_resolver.ts`）で決める。最低音を範囲内に収め、前のコードから一番近い転回形を選ぶ（ループの継ぎ目も考慮。進行の `inversion` は動きが同じくらいなら優先）。パッドは `spread`（開離配置）。MIDI書き出しも同じボイシングを使う。各 Player は自前のリバーブを持たず（ローパス・コーラス・ディレイなどだけ）、エフェクトのノードは `dispose*` で一緒に破棄する。強さ（ベロシティ）は拍の位置で付けて少し揺らし、和音は数msずつずらして鳴らす（ストラム）。
 - `mix_presets.json` の `gain` は全ジャンルでクリップしない（ピーク −1dB 以下）ように測って決めた値。音源やパートを大きく変えたら測り直す。
 - メロディ生成の規則（`MelodyGenerator.ts`）：
   - 音はペンタトニックの5音が基本。残りの2音（アクセント音）は、1拍目・3拍目の頭以外で、休符を挟まず次の音が続く位置にだけ経過音・刺繍音として置き、次の音で解決先へ順次進行させる。コード構成音になるアクセント音は普通の音として扱う。
@@ -113,6 +115,7 @@ src/engine/
   - `phraseForms`（例 `"AAAB"`。1文字 = 1小節）で同じ文字の小節は同じモチーフを使う。最初の音が新しいコードの構成音になるようスケール上でずらして繰り返す（音域に収まらなければ同じリズムで音を選び直す）。形式より長い進行は形式を繰り返す。
   - 音価は `4n` などのほか付点（`8n.` など）や `0:拍:16分` 表記も出る。MIDI書き出しは `MidiExporter.ts` の `durationToBeats` で変換する。
 - ベース（`BassPlayer.ts`）はジャンルごとに `bass_params.json` のパターンと音色で鳴らす。パターンは16ステップ表記（`R` = ルート、`F` = 5度、`O` = 1オクターブ上、`-` = 伸ばす、`.` = 休符）。`patterns` を小節ごとに順に使い、コード進行1周の最後の小節は `fill`。5度はコードの構成音から取る。音色はジャンルで決まり、Synth を作り直したとき（再生開始時）に反映される。
+- アルペジオ（`ArpPlayer.ts`）はジャンルごとに `arp_params.json` で鳴らす。`instrument`（`pluck` / `square` / `keys` / `bell` / `blip`。定義は `ArpPlayer.ts` の `INSTRUMENTS`）、`step`（`16n` / `8n` / `4n`）、`pattern`（`up` / `down` / `updown` / `pedal` = 一番下の音と交互）、`octaves`（2 なら1オクターブ上を重ねる。ボイシングは `VOICING_RANGES.arpWide`）、`gate`（刻みに対する音の長さ）、`cutoff`、`delay`。パターンはコードが変わるたびに頭から。音の並びは `arpNotes()` で作り、MIDI書き出しも同じものを使う。音色・ローパス・ディレイは再生開始時に反映される。
 - 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
 - 拍子の変更（3/4 など）は保留中。現状は 4/4・16ステップ前提。
 - 「小節数」は曲全体の最大の長さを表す（コード進行1周の長さではない）。コード進行・ドラムはその長さに達するまでループし、アレンジャーのタイムラインと書き出しの長さもこの値に合わせる。
@@ -166,7 +169,7 @@ src/engine/
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
 - MIDI書き出しはアレンジに未対応（コード進行1周分のコードとメロディだけ）。ベースもジャンル別パターンに未対応（コードごとのルート音の全音符）。
 - カスタムモードの「雰囲気」はコード進行の「カテゴリ」として選ぶ。スケールは `chordPattern.base_scale` から決まり（別に持たない）、スケールを選ぶとそのスケールのコード進行に切り替わる。
-- コードのリズム（`chordRhythm`）・コードの音色（`chordInstrument`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。音色の定義は各 Player の `INSTRUMENTS`。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。MIDI書き出しはコードのリズムに未対応。
+- コードのリズム（`chordRhythm`）・コードの音色（`chordInstrument`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。音色の定義は各 Player の `INSTRUMENTS`（ChordPlayer は Synth・音色専用のエフェクト・共通ローパスの周波数・コーラス量の組）。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。MIDI書き出しはコードのリズムに未対応。
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
 - シンプルモードの曲の長さは「コード進行の長さ × 全パートがそろうまでの周回数（4）」。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。

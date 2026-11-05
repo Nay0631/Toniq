@@ -54,16 +54,16 @@ export function reloadLayer(layer: LayerName) {
       loadDrumPattern(s.drumPattern);
       break;
     case "chord":
-      loadChordProgression(s.chordPattern, s.key, 4);
+      loadChordProgression(s.chordPattern, s.key);
       break;
     case "bass":
       loadBassLine(s.chordPattern, s.key, 2);
       break;
     case "arp":
-      loadArpPattern(s.chordPattern, s.key, 5, "8n");
+      loadArpPattern(s.chordPattern, s.key);
       break;
     case "pad":
-      loadPadPattern(s.chordPattern, s.key, 4);
+      loadPadPattern(s.chordPattern, s.key);
       break;
     case "signature":
       loadSignature(s.chordPattern, s.key);
@@ -117,10 +117,10 @@ export function replaceChordProgression(
   // Transport動作中でも正しく再開始できるよう少し遅延して再ロード
   const key = state.key;
   setTimeout(() => {
-    loadChordProgression(newProgression, key, 4);
+    loadChordProgression(newProgression, key);
     loadBassLine(newProgression, key, 2);
-    loadArpPattern(newProgression, key, 5, "8n");
-    loadPadPattern(newProgression, key, 4);
+    loadArpPattern(newProgression, key);
+    loadPadPattern(newProgression, key);
     if (getState().parts.signature) loadSignature(newProgression, key);
     if (getState().parts.fx) loadFx(newProgression);
     console.log(`コード進行差し替え完了: ${newProgression.name}`);

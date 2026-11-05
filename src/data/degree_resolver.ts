@@ -1,3 +1,5 @@
+import { ChordProgression } from "./types";
+
 export const NOTE_INDEX: Record<string, number> = {
   C: 0, "C#": 1, Db: 1,
   D: 2, "D#": 3, Eb: 3,
@@ -96,4 +98,89 @@ export function resolveChord(
 
   const bass_note = `${root}${octave - 1}`;
   return { root, type, notes, bass_note, degree };
+}
+// ===== ボイシング（コード・パッド・アルペジオの音の積み方） =====
+// 実音は resolveChord で求め、ここでは並べ方（転回形とオクターブ）だけを決める
+
+export function noteToMidi(note: string): number {
+  const m = note.match(/^([A-G][#b]?)(-?\d+)$/);
+  if (!m) throw new Error(`Unknown note: ${note}`);
+  return NOTE_INDEX[m[1]] + (parseInt(m[2]) + 1) * 12;
+}
+
+export function midiToNote(midi: number): string {
+  return `${NOTE_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
+}
+
+// 最低音を置く範囲（MIDI ノート番号、両端を含む）。幅を12以上にして、どの転回形も必ず1つ収まるようにする
+export interface VoicingRange { low: number; high: number }
+
+export const VOICING_RANGES = {
+  chord: { low: 55, high: 66 },  // G3〜F#4：メロディ（4〜5オクターブ）の下で密集配置
+  pad:   { low: 52, high: 63 },  // E3〜D#4：開離配置にして上に広げる
+  arp:   { low: 67, high: 78 },  // G4〜F#5
+  arpWide: { low: 60, high: 71 }, // C4〜B4：2オクターブのアルペジオ（上に1オクターブ足す）
+} satisfies Record<string, VoicingRange>;
+
+// 転回形ごとに、最低音が範囲に入るオクターブへ移した候補を作る
+function voicingCandidates(notes: number[], range: VoicingRange): { notes: number[]; inversion: number }[] {
+  const base = [...notes].sort((a, b) => a - b);
+  const out: { notes: number[]; inversion: number }[] = [];
+  for (let inv = 0; inv < base.length; inv++) {
+    const rotated = [...base.slice(inv), ...base.slice(0, inv).map((n) => n + 12)];
+    const shift = Math.ceil((range.low - rotated[0]) / 12) * 12;
+    const v = rotated.map((n) => n + shift);
+    if (v[0] <= range.high) out.push({ notes: v, inversion: inv });
+  }
+  return out;
+}
+
+// 前のコードからの動きの大きさ（各音から一番近い音までの距離の合計を両方向で）
+function movement(a: number[], b: number[]): number {
+  const nearest = (from: number[], to: number[]) =>
+    from.reduce((sum, n) => sum + Math.min(...to.map((m) => Math.abs(n - m))), 0);
+  return nearest(a, b) + nearest(b, a);
+}
+
+// 開離配置：下から2番目の音を1オクターブ上げる
+function spreadVoicing(notes: number[]): number[] {
+  if (notes.length < 3) return notes;
+  const v = [...notes];
+  v[1] += 12;
+  return v.sort((a, b) => a - b);
+}
+
+// コード進行の各コードを、前のコードから一番近い転回形で並べる（ボイスリーディング）。
+// 進行に書かれた inversion は動きが同じくらいなら優先する。ループの継ぎ目もなめらかになるよう、
+// 1周目の最後のコードを起点にもう1周決め直す。戻り値は progression.progression と同じ並びの音名
+export function voiceProgression(
+  progression: ChordProgression,
+  key: string,
+  range: VoicingRange,
+  options: { spread?: boolean } = {}
+): string[][] {
+  const chords = progression.progression.map((c) => ({
+    notes:     resolveChord(c.degree, c.type, 0, key, progression.base_scale, 4).notes.map(noteToMidi),
+    inversion: c.inversion,
+  }));
+
+  const pick = (prev: number[] | null, chord: { notes: number[]; inversion: number }) => {
+    const candidates = voicingCandidates(chord.notes, range);
+    let best = candidates[0];
+    let bestCost = Infinity;
+    for (const c of candidates) {
+      const preferred = c.inversion === chord.inversion % chord.notes.length ? 0 : 2;
+      const cost = (prev ? movement(prev, c.notes) : 0) + preferred;
+      if (cost < bestCost) { best = c; bestCost = cost; }
+    }
+    return best.notes;
+  };
+
+  let prev: number[] | null = null;
+  let voiced: number[][] = [];
+  for (let pass = 0; pass < 2; pass++) {
+    voiced = chords.map((c) => (prev = pick(prev, c)));
+  }
+
+  return voiced.map((v) => (options.spread ? spreadVoicing(v) : v).map(midiToNote));
 }
