@@ -18,6 +18,7 @@ import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerT
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
 import { initMixer, renderMixer } from "./MixerPanel";
+import { exportWavWithProgress } from "./ExportProgress";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -500,19 +501,9 @@ export function initCustomScreen(): void {
   ["c-export-wav", "c-arr-export-wav"].forEach(id => {
     const wavBtn = $(id) as HTMLButtonElement | null;
     wavBtn?.addEventListener("click", async () => {
-      const label = wavBtn.textContent;
-      wavBtn.textContent = "レンダリング中…";
-      wavBtn.disabled = true;
-      try {
-        const s = getState();
-        Playback.downloadBlob(await Playback.renderWav(), `toniq_${s.genre}_${s.key}.wav`);
-      } catch (e) {
-        console.error("WAVエクスポートエラー:", e);
-      } finally {
-        wavBtn.textContent = label;
-        wavBtn.disabled = false;
-        render();
-      }
+      const s = getState();
+      await exportWavWithProgress(`toniq_${s.genre}_${s.key}.wav`, wavBtn);
+      render();
     });
   });
 }

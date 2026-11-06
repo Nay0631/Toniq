@@ -3098,3 +3098,54 @@ span[data-term],
 .groove-label { font-size: 13px; font-weight: 600; }
 .groove-value { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
 .groove-auto.is-active { border-color: var(--custom); color: var(--custom); }
+
+/* ===== WAV書き出しの進み具合（ExportProgress.ts） ===== */
+.export-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--hover-overlay);
+  backdrop-filter: blur(2px);
+}
+
+.export-overlay[hidden] { display: none; }
+
+.export-dialog {
+  width: min(440px, 100%);
+  padding: 22px 24px;
+  box-shadow: 0 12px 40px var(--shadow);
+}
+
+.export-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.export-note { margin: 0 0 16px; font-size: 13px; line-height: 1.7; color: var(--text-muted); }
+
+.export-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--btn-soft);
+}
+
+.export-bar span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--custom);
+  transition: width 0.2s;
+}
+
+.export-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+
+.export-percent { font-variant-numeric: tabular-nums; font-weight: 600; }
+.export-elapsed { margin-top: 4px; font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }

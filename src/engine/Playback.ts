@@ -222,8 +222,73 @@ export function getPositionBars(): number {
   return transport.ticks / (transport.PPQ * 4);
 }
 
-// 曲全体をオフラインでレンダリングして WAV の Blob を返す
-export async function renderWav(): Promise<Blob> {
+// WAV書き出しの進み具合。stage ごとの progress（0〜1）を全体の進み具合にまとめて知らせる
+export type RenderStage = "prepare" | "schedule" | "render" | "encode";
+export type RenderProgress = (stage: RenderStage, progress: number) => void;
+
+// 全体のうち各段階が占める割合（始まり・幅）。音声の合成がいちばん重い
+const STAGE_SPAN: Record<RenderStage, [number, number]> = {
+  prepare:  [0,    0.05],
+  schedule: [0.05, 0.2],
+  render:   [0.25, 0.7],
+  encode:   [0.95, 0.05],
+};
+
+export function overallProgress(stage: RenderStage, progress: number): number {
+  const [start, width] = STAGE_SPAN[stage];
+  return start + width * Math.max(0, Math.min(1, progress));
+}
+
+const RENDER_STEPS = 40;  // 音声の合成の途中経過を知らせる回数
+
+// Tone.Offline と同じ手順でオフライン描画する。進み具合を取るため、ブラウザ標準の OfflineAudioContext を使い、
+// 合成の途中で suspend して知らせる（Tone.js の Offline は途中経過を返さない）
+async function renderOffline(
+  callback: () => Promise<void>, durationSec: number, onProgress?: RenderProgress,
+): Promise<AudioBuffer> {
+  const sampleRate = Tone.getContext().sampleRate;
+  const native     = new OfflineAudioContext(2, Math.ceil(durationSec * sampleRate), sampleRate);
+  const context    = new Tone.OfflineContext(native);
+  const original   = Tone.getContext();
+
+  Tone.setContext(context);
+  let bufferPromise: Promise<Tone.ToneAudioBuffer>;
+  try {
+    await callback();
+
+    // 合成の途中で一時停止して進み具合を知らせ、すぐ再開する（合成を始める前に予約しておく）
+    for (let i = 1; i < RENDER_STEPS; i++) {
+      const at = (durationSec * i) / RENDER_STEPS;
+      native.suspend(at)
+        .then(() => {
+          onProgress?.("render", i / RENDER_STEPS);
+          return native.resume();
+        })
+        .catch(() => { /* 一時停止に対応していないときは途中経過なしで最後まで合成する */ });
+    }
+
+    // 1段目：Tone.js が演奏の予定（各パートのイベント）を時間順に組み立てる。currentTime で進み具合を測る
+    const timer = setInterval(() => onProgress?.("schedule", context.currentTime / durationSec), 100);
+    bufferPromise = context.render().finally(() => clearInterval(timer));
+  } finally {
+    Tone.setContext(original);
+  }
+  const buffer = await bufferPromise;
+  onProgress?.("render", 1);
+  return buffer.get()!;
+}
+
+// 書き出した音声がすべて無音か（念のための確認。無音なら Tone.Offline で描き直す）
+function isSilent(buffer: AudioBuffer): boolean {
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i += 64) if (data[i] !== 0) return false;
+  }
+  return true;
+}
+
+// 曲全体をオフラインでレンダリングして WAV の Blob を返す（onProgress で進み具合を知らせる）
+export async function renderWav(onProgress?: RenderProgress): Promise<Blob> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) throw new Error("曲が生成されていません");
 
@@ -231,12 +296,13 @@ export async function renderWav(): Promise<Blob> {
   const drumPattern  = s.drumPattern;
   const durationSec  = getSongSeconds() + 2;
 
+  onProgress?.("prepare", 0);
   // 各パートの Synth はモジュールに1つずつなので、再生を止めてから書き出し用に作り直す
   stop();
   // ドラムの音源は通常のコンテキストで読み込んでおく（AudioBuffer は書き出し用のコンテキストでも使える）
   if (s.drumSource === "sample") await prepareDrumSamples(s.genre);
 
-  const buffer = await Tone.Offline(async () => {
+  const schedule = async () => {
     applyMixPreset(s.genre);
     await mixerReady();
     Tone.getTransport().bpm.value = s.bpm;
@@ -260,12 +326,31 @@ export async function renderWav(): Promise<Blob> {
     if (s.parts.melody) { initM();  loadMel(s.melodyNotes, `${chordPattern.length_bars}m`); }
     if (s.parts.fx)     { initF();  loadF(chordPattern); }
     Tone.getTransport().start();
-  }, durationSec);
+    onProgress?.("prepare", 1);
+  };
+
+  let buffer: AudioBuffer;
+  try {
+    buffer = await renderOffline(schedule, durationSec, onProgress);
+    // 鳴らすパートがあるのに無音なら、進み具合なしの Tone.Offline で描き直す（標準のコンテキストで動かない場合の保険）
+    const anyPart = Object.values(s.parts).some(Boolean);
+    if (anyPart && isSilent(buffer)) throw new Error("書き出した音声が無音でした");
+  } catch (e) {
+    console.warn("進み具合付きの書き出しに失敗したので、Tone.Offline で書き出し直します:", e);
+    disposeAllLayers();
+    onProgress?.("render", 0);
+    buffer = (await Tone.Offline(schedule, durationSec)).get()!;
+    onProgress?.("render", 1);
+  }
 
   // 書き出し用コンテキストの Synth を破棄する（次の再生で通常のコンテキストに作り直される）
   disposeAllLayers();
 
-  return new Blob([audioBufferToWav(buffer.get()!)], { type: "audio/wav" });
+  onProgress?.("encode", 0);
+  await new Promise(resolve => setTimeout(resolve, 0));  // 表示を「変換中」にしてから重い変換をする
+  const wav = audioBufferToWav(buffer);
+  onProgress?.("encode", 1);
+  return new Blob([wav], { type: "audio/wav" });
 }
 
 function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
