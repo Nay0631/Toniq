@@ -15,6 +15,7 @@ import { ChordProgression, DrumPattern } from "../data/types";
 import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
+import { initMixer, renderMixer } from "./MixerPanel";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
 import { exportAudioWithProgress } from "./ExportProgress";
@@ -245,6 +246,7 @@ function render(): void {
     el.setAttribute("aria-pressed", String(on));
   });
 
+  renderMixer();
 
   // アレンジャー
   renderArranger();
@@ -453,6 +455,9 @@ export function initCustomScreen(): void {
       setLayerEnabled(part, !getState().parts[part]);
       render();
     }));
+
+  // ===== ミキサー（パート別音量。アレンジャータブ） =====
+  initMixer(["c-arr-mixer"], render);
 
   // ===== アレンジャー =====
   // 再生開始位置を変えたら、再生中ならその位置から再生し直す
