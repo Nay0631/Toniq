@@ -248,8 +248,11 @@
           <hr class="divider">
 
           <div class="result-actions">
-            <button class="btn" id="s-export-midi" data-term="midi">MIDIで書き出す</button>
-            <button class="btn" id="s-export-wav" data-term="wav">WAVで書き出す</button>
+            <div class="result-exports">
+              <button class="btn" id="s-export-midi" data-term="midi">MIDIで書き出す</button>
+              <button class="btn" id="s-export-wav" data-term="wav">WAVで書き出す</button>
+              <button class="btn" id="s-export-mp3" data-term="mp3">MP3で書き出す</button>
+            </div>
             <button class="btn" id="s-regenerate">✦ もう一度生成する</button>
             <button class="btn btn-custom" data-goto="custom">☰ カスタムモードで編集する</button>
           </div>
@@ -534,6 +537,7 @@
           <span class="export-label">書き出し</span>
           <button class="btn btn-small" id="c-export-midi" data-term="midi">MIDI</button>
           <button class="btn btn-small" id="c-export-wav" data-term="wav">WAV</button>
+          <button class="btn btn-small" id="c-export-mp3" data-term="mp3">MP3</button>
         </div>
       </div>
 
@@ -574,6 +578,7 @@
             <div class="export-buttons">
               <button class="btn" id="c-arr-export-midi" data-term="midi">MIDI</button>
               <button class="btn" id="c-arr-export-wav" data-term="wav">WAV</button>
+              <button class="btn" id="c-arr-export-mp3" data-term="mp3">MP3</button>
             </div>
             <p class="hint hint-left">MIDI はアレンジに未対応です（コード進行1周分）</p>
           </div>

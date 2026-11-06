@@ -17,7 +17,8 @@ import { SCALE_LABELS, chordNames, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
-import { exportWavWithProgress } from "./ExportProgress";
+import { exportAudioWithProgress } from "./ExportProgress";
+import type { AudioFormat } from "../engine/Playback";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -493,11 +494,15 @@ export function initCustomScreen(): void {
       exportMidi(`toniq_${s.genre}_${s.key}.mid`);
     }));
 
-  ["c-export-wav", "c-arr-export-wav"].forEach(id => {
-    const wavBtn = $(id) as HTMLButtonElement | null;
-    wavBtn?.addEventListener("click", async () => {
+  const audioButtons: [string, AudioFormat][] = [
+    ["c-export-wav", "wav"], ["c-arr-export-wav", "wav"],
+    ["c-export-mp3", "mp3"], ["c-arr-export-mp3", "mp3"],
+  ];
+  audioButtons.forEach(([id, format]) => {
+    const btn = $(id) as HTMLButtonElement | null;
+    btn?.addEventListener("click", async () => {
       const s = getState();
-      await exportWavWithProgress(`toniq_${s.genre}_${s.key}.wav`, wavBtn);
+      await exportAudioWithProgress(format, `toniq_${s.genre}_${s.key}.${format}`, btn);
       render();
     });
   });

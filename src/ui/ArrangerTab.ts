@@ -3,6 +3,7 @@ import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArran
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
 import { signatureLabel } from "../engine/SignaturePlayer";
+import { setVolume } from "../engine/VolumeManager";
 import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
 import drumDB from "../data/drum_patterns.json";
 import { DrumPattern } from "../data/types";
@@ -65,6 +66,11 @@ function laneLabels(part: LayerName): { sub: string; block: string } {
   }
 }
 
+// パートの音量（0〜100。AppState.volumes）
+function volumeOf(part: LayerName): number {
+  return (getState().volumes as Record<string, number>)[part] ?? 75;
+}
+
 // 小節番号の間引き（小節数が多いときは2小節・4小節おき）
 function rulerStep(bars: number): number {
   return bars <= 8 ? 1 : bars <= 32 ? 2 : 4;
@@ -115,6 +121,8 @@ export function renderArranger(): void {
   if (!root || !s.chordPattern || drag) return;
   // ブロックの種類・パターンを選んでいる途中に描き直すとドロップダウンが閉じるので待つ（選び終えると blur して描き直す）
   if (document.activeElement?.closest(BLOCK_SELECT)) return;
+  // 音量のスライダーをドラッグしている途中に描き直すとつまみを離してしまうので待つ（離すと描き直す）
+  if (volumeDragging) return;
 
   const bars        = s.bars;
   const arrangement = getArrangement();
@@ -140,14 +148,23 @@ export function renderArranger(): void {
             <button class="arr-del" aria-label="削除">×</button>
             <span class="arr-handle arr-handle-right"></span>
           </div>`).join("");
+    const volume = volumeOf(name);
     return `
       <div class="arr-lane${on ? "" : " is-off"}">
         <div class="arr-head">
-          <div>
-            <div class="arr-name" data-term="${name}">${label}</div>
-            <div class="arr-sub">${sub}</div>
+          <div class="arr-head-top">
+            <div>
+              <div class="arr-name" data-term="${name}">${label}</div>
+              <div class="arr-sub">${sub}</div>
+            </div>
+            <button class="pill${on ? " is-on" : ""}" data-arr-toggle="${name}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
           </div>
-          <button class="pill${on ? " is-on" : ""}" data-arr-toggle="${name}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
+          <label class="arr-volume" title="${label}の音量（0〜100）">
+            <span class="arr-volume-label" data-term="volume">音量</span>
+            <input type="range" class="range arr-volume-range" min="0" max="100" step="1" value="${volume}"
+                   data-arr-volume="${name}" aria-label="${label}の音量">
+            <span class="arr-volume-value">${volume}</span>
+          </label>
         </div>
         <div class="arr-track" data-part="${name}">${body}</div>
       </div>`;
@@ -247,6 +264,9 @@ interface Drag {
 
 let drag: Drag | null = null;
 
+// 音量のスライダーをドラッグ中か（表示上の一時的な状態）
+let volumeDragging = false;
+
 function startDrag(e: PointerEvent, part: LayerName, el: HTMLElement, track: HTMLElement): void {
   const s     = getState();
   const start = Number(el.dataset.start);
@@ -310,6 +330,7 @@ export function initArranger(onSeek: () => void): void {
 
   root.addEventListener("pointerdown", e => {
     const target = e.target as HTMLElement;
+    if (target.closest("[data-arr-volume]")) { volumeDragging = true; return; }
     if (e.button !== 0 || target.closest(`.arr-del, ${BLOCK_SELECT}, [data-arr-toggle]`)) return;
 
     // 小節番号の目盛りをクリック：その小節を再生開始位置にする
@@ -369,6 +390,23 @@ export function initArranger(onSeek: () => void): void {
     removeBlock(part, Number(block.dataset.start));
     renderArranger();
   });
+
+  // パートの音量（再生中もすぐ反映される。ドラッグ中の変更は History がまとめて1つの「元に戻す」にする）
+  root.addEventListener("input", e => {
+    const range = (e.target as HTMLElement).closest<HTMLInputElement>("[data-arr-volume]");
+    if (!range) return;
+    const value = Number(range.value);
+    setVolume(range.dataset.arrVolume!, value);
+    const label = range.parentElement?.querySelector(".arr-volume-value");
+    if (label) label.textContent = String(value);
+  });
+  const endVolumeDrag = () => {
+    if (!volumeDragging) return;
+    volumeDragging = false;
+    renderArranger();
+  };
+  window.addEventListener("pointerup", endVolumeDrag);
+  window.addEventListener("pointercancel", endVolumeDrag);
 
   // FX のブロックの種類・ドラムのブロックのパターンを変える（再生中も次に鳴らすところから反映される）
   root.addEventListener("change", e => {

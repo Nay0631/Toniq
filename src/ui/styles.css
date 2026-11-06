@@ -633,6 +633,14 @@ button {
 
 .result-actions .btn { padding: 14px 18px; font-size: 15px; }
 
+/* 書き出し（MIDI / WAV / MP3）は1行に3つ並べる */
+.result-exports {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .hint {
   margin: 14px 0 0;
   text-align: center;
@@ -855,6 +863,41 @@ button {
 .arr-sub  { font-size: 12px; color: var(--text-muted); }
 .arr-head .pill { min-width: 44px; padding: 2px 8px; font-size: 11px; }
 
+/* レーンの見出しは「名前＋ON/OFF」の下に音量のスライダーを置く */
+.arr-lane > .arr-head {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 2px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.arr-head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.arr-volume {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: default;
+}
+
+.arr-volume-label { flex: none; }
+.arr-volume-range { flex: 1; width: 100%; height: 14px; margin: 0; cursor: pointer; }
+.arr-volume-value { flex: none; min-width: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+.arr-lane.is-off .arr-volume { opacity: 0.6; }
+
+@media (max-width: 720px) {
+  .arr-volume-label { display: none; }  /* 見出しが細いのでスライダーと数値だけにする */
+}
+
 .arr-ticks {
   position: relative;
   height: 30px;
@@ -900,7 +943,7 @@ button {
 /* 小節線と、コード進行1周ごとの太い線 */
 .arr-track {
   position: relative;
-  height: 56px;
+  min-height: 56px;  /* 見出し（音量のスライダー込み）の高さに合わせて伸びる */
   background:
     repeating-linear-gradient(to right, var(--grid-loop) 0 1px, transparent 1px calc(100% * var(--loop) / var(--bars))),
     repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px calc(100% / var(--bars)));
@@ -1083,7 +1126,8 @@ button {
   .method-cards,
   .setup-actions,
   .custom-grid,
-  .arranger-bottom { grid-template-columns: 1fr; }
+  .arranger-bottom,
+  .result-exports { grid-template-columns: 1fr; }
   .arranger { --head-w: 96px; }
   .arranger-hint { display: none; }
 }
@@ -1385,6 +1429,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .hw .arr-sub  { color: var(--hw-faint); }
 .hw .arr-lane.is-off .arr-name { color: var(--hw-faint); }
 .hw .arr-head .pill { min-width: 44px; padding: 2px 6px; }
+.hw .arr-volume { color: var(--hw-faint); }
+.hw .arr-volume-range { accent-color: var(--hw-sel, var(--custom)); }
 
 /* 小節の目盛り：黒い帯に小節線 */
 .hw .arr-ruler { background: var(--hw-bar); border-bottom-color: var(--hw-bar); }
