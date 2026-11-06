@@ -110,6 +110,9 @@ export interface AppState {
   chordRhythm:      ChordRhythm;
   chordInstrument:  ChordInstrument;
   fxType:           FxType;  // FX / SE の種類
+  // グルーヴ（0〜100。null = ジャンルの標準。mix_presets.json の swing / sidechain）
+  swing:            number | null;  // 裏の16分音符を後ろへずらす量（跳ねたノリ）
+  sidechain:        number | null;  // キックに合わせてベース・コードなどを沈める量（ポンピング）
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
   // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
@@ -187,6 +190,8 @@ export const defaultState: AppState = {
   chordRhythm:      "whole",
   chordInstrument:  "soft",
   fxType:           "auto",
+  swing:            null,
+  sidechain:        null,
   scaleLock:        true,
   drumCategory:     "EDM",
   drumSource:       "synth",
@@ -202,9 +207,10 @@ export const defaultState: AppState = {
     drum:   true,
     chord:  true,
     bass:   true,
-    arp:    false,  // アルペジオは初期状態で OFF
-    pad:    true,
-    signature: false,  // シグネチャーも初期状態で OFF
+    // パッド・アルペジオ・シグネチャーは初期状態で OFF（必要なときに足すパート）
+    arp:    false,
+    pad:    false,
+    signature: false,
     melody: true,
     fx:     true,
   },
@@ -226,7 +232,7 @@ export const defaultState: AppState = {
 export const SONG_FIELDS = [
   "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
   "chordPattern", "drumPattern", "melodyNotes", "melodyMethod", "melodyVersion",
-  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "scaleLock", "drumCategory",
+  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
   "arrangement", "parts", "volumes",
 ] as const;
 

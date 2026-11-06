@@ -58,15 +58,9 @@ function applyTheme(): void {
   listeners.forEach(fn => fn());
 }
 
-// AppState.skin を <html data-skin> とスキン切り替えボタンの表示に反映する
+// AppState.skin を <html data-skin> に反映する（スキンは設定画面で選ぶ）
 function applySkin(): void {
-  const { skin } = getState();
-  document.documentElement.dataset.skin = skin;
-  document.querySelectorAll<HTMLElement>("[data-skin-option]").forEach(btn => {
-    const on = btn.dataset.skinOption === skin;
-    btn.classList.toggle("is-active", on);
-    btn.setAttribute("aria-pressed", String(on));
-  });
+  document.documentElement.dataset.skin = getState().skin;
   listeners.forEach(fn => fn());
 }
 
@@ -103,6 +97,4 @@ export function initTheme(): void {
   document.getElementById("theme-toggle")?.addEventListener("click", () => {
     setTheme(getState().theme === "dark" ? "light" : "dark");
   });
-  document.querySelectorAll<HTMLElement>("[data-skin-option]").forEach(btn =>
-    btn.addEventListener("click", () => setSkin(btn.dataset.skinOption as Skin)));
 }

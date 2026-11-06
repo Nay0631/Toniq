@@ -17,18 +17,22 @@ function currentNodes(): Record<string, Tone.Volume> {
   return nodes;
 }
 
-// ミキサーのレベルメーター用。再生用のコンテキストだけに作る（WAV書き出しでは使わない）
-const metersByContext = new WeakMap<Tone.BaseContext, Record<string, Tone.Meter>>();
+// サイドチェイン用のゲイン（Volume の後ろ。Groove.ts がキックに合わせて一瞬下げる）。Volume と同じくコンテキストごと
+const ducksByContext = new WeakMap<Tone.BaseContext, Record<string, Tone.Gain>>();
 
-function currentMeters(): Record<string, Tone.Meter> | null {
+function currentDucks(): Record<string, Tone.Gain> {
   const ctx = Tone.getContext();
-  if (ctx instanceof Tone.OfflineContext) return null;
-  let meters = metersByContext.get(ctx);
-  if (!meters) {
-    meters = {};
-    metersByContext.set(ctx, meters);
+  let ducks = ducksByContext.get(ctx);
+  if (!ducks) {
+    ducks = {};
+    ducksByContext.set(ctx, ducks);
   }
-  return meters;
+  return ducks;
+}
+
+// 現在のコンテキストのサイドチェイン用のゲイン（まだ鳴らしていないパートは含まない）
+export function duckGains(): Record<string, Tone.Gain> {
+  return currentDucks();
 }
 
 // 0〜100の値をdBに変換
@@ -46,27 +50,15 @@ export function createVolumeNode(part: string): Tone.Volume {
   const volumes = state.volumes as Record<string, number>;
   const db      = toDb(volumes[part] ?? 75);
   const node    = new Tone.Volume(db);
-  connectToMixer(node, part);  // マスター（EQ・コンプ・リミッター）とリバーブ送りへ
+  // Volume → サイドチェインのゲイン → マスター（EQ・コンプ・リミッター）とリバーブ送りへ
+  // （リバーブにも沈んだ音を送るので、響きも一緒にうねる）
+  const duck = new Tone.Gain(1);
+  node.connect(duck);
+  connectToMixer(duck, part);
   nodes[part] = node;
+  currentDucks()[part] = duck;
 
-  // 音量を通ったあとのレベルを測る（メーターは音を出さない枝分かれ）
-  const meters = currentMeters();
-  if (meters && !meters[part]) {
-    meters[part] = new Tone.Meter({ smoothing: 0.6 });
-    node.connect(meters[part]);
-  }
   return node;
-}
-
-// 各パートの今のレベル（dB）。まだ鳴らしていないパートは含まない
-export function getPartLevels(): Record<string, number> {
-  const meters = currentMeters() ?? {};
-  const levels: Record<string, number> = {};
-  for (const [part, meter] of Object.entries(meters)) {
-    const v = meter.getValue();
-    levels[part] = Array.isArray(v) ? Math.max(...v) : v;
-  }
-  return levels;
 }
 
 // 音量を変更する
@@ -99,9 +91,7 @@ export function disposeVolumeNodes(): void {
   const nodes = currentNodes();
   Object.values(nodes).forEach(node => node.dispose());
   Object.keys(nodes).forEach(key => delete nodes[key]);
-  const meters = currentMeters();
-  if (meters) {
-    Object.values(meters).forEach(meter => meter.dispose());
-    Object.keys(meters).forEach(key => delete meters[key]);
-  }
+  const ducks = currentDucks();
+  Object.values(ducks).forEach(duck => duck.dispose());
+  Object.keys(ducks).forEach(key => delete ducks[key]);
 }

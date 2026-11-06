@@ -273,14 +273,6 @@
           <span class="info-item"><span data-term="bar">小節</span> <b id="c-info-bars"></b></span>
           <span class="info-item" id="c-info-loop" data-term="loop"></span>
         </div>
-        <!-- スキンの切り替え（Theme.ts。<html data-skin>） -->
-        <div class="skin-switch" role="group" aria-label="画面のスキン">
-          <span class="skin-switch-label">スキン</span>
-          <button type="button" data-skin-option="default">デフォルト</button>
-          <button type="button" data-skin-option="flat">フラット</button>
-          <button type="button" data-skin-option="studio">スタジオ</button>
-          <button type="button" data-skin-option="pop">ポップ</button>
-        </div>
         <div class="infobar-actions">
           <button class="btn btn-square" data-undo aria-label="元に戻す" title="元に戻す（Ctrl+Z）">↶</button>
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
@@ -364,6 +356,31 @@
                 <option value="soft">ソフトサイン（アンビエント）</option>
               </select>
             </label>
+
+            <hr class="panel-divider">
+
+            <!-- グルーヴ（Groove.ts）。「標準」はジャンルの標準の量（mix_presets.json）を使う -->
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 15c2 0 2-6 4-6s2 6 4 6 2-6 4-6 2 6 4 6 2-3 2-3"/>
+              </svg>
+              <span data-term="groove">グルーヴ</span>
+            </div>
+            <div class="groove-grid">
+              <div class="groove-item">
+                <span class="groove-label" data-term="swing">スウィング</span>
+                <!-- range はノブ（Controls.ts）に置き換わる -->
+                <input type="range" class="range" id="c-swing" min="0" max="100" step="1" aria-label="スウィング">
+                <span class="lcd groove-value" id="c-swing-value"></span>
+                <button class="btn btn-small groove-auto" id="c-swing-auto" title="ジャンルの標準の量にする">標準</button>
+              </div>
+              <div class="groove-item">
+                <span class="groove-label" data-term="sidechain">サイドチェイン</span>
+                <input type="range" class="range" id="c-sidechain" min="0" max="100" step="1" aria-label="サイドチェイン">
+                <span class="lcd groove-value" id="c-sidechain-value"></span>
+                <button class="btn btn-small groove-auto" id="c-sidechain-auto" title="ジャンルの標準の量にする">標準</button>
+              </div>
+            </div>
           </div>
 
           <!-- スケール・キー／コード進行 -->
@@ -512,16 +529,6 @@
           </div>
         </div>
 
-        <!-- ミキサー（パート別音量。中身は MixerPanel.ts で作る） -->
-        <div class="card panel mixer-panel">
-          <div class="panel-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-              <path d="M6 4v16M12 4v16M18 4v16"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/>
-            </svg>
-            <span data-term="mixer">ミキサー</span>
-          </div>
-          <div class="mixer" id="c-mixer"></div>
-        </div>
 
         <div class="export-row">
           <span class="export-label">書き出し</span>
@@ -541,15 +548,6 @@
           <div class="arranger" id="c-arranger"></div>
         </div>
 
-        <div class="card panel mixer-panel">
-          <div class="panel-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-              <path d="M6 4v16M12 4v16M18 4v16"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/>
-            </svg>
-            <span data-term="mixer">ミキサー</span>
-          </div>
-          <div class="mixer" id="c-arr-mixer"></div>
-        </div>
 
         <div class="arranger-bottom">
           <div class="card panel">

@@ -5,6 +5,7 @@ import { getState, ArrangeBlock } from "./AppState";
 import { createDrumKit, DrumKit } from "./SynthFactory";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementBlockAt } from "./LoopArranger";
+import { sidechainHit } from "./Groove";
 
 const DRUM_PATTERNS = drumDB as unknown as DrumPattern[];
 
@@ -67,7 +68,9 @@ export function loadDrumPattern(pattern: DrumPattern) {
       const hit = new Set<string>();
       Object.entries(current.tracks).forEach(([name, track]) => {
         if (!track.pattern[i]) return;
-        voices[name]?.trigger(time, track.velocity?.[i] ?? 1);
+        const velocity = track.velocity?.[i] ?? 1;
+        voices[name]?.trigger(time, velocity);
+        if (name === "kick") sidechainHit(time, velocity);  // キックに合わせてベース・コードなどを沈める
         hit.add(name);
       });
       hit.forEach(name => {

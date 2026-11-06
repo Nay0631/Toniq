@@ -9,6 +9,7 @@ import * as Playback from "../engine/Playback";
 import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, formatTime } from "./format";
 import { startPianoRollPlayhead } from "./PianoRollTab";
+import { exportWavWithProgress } from "./ExportProgress";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -328,22 +329,13 @@ export function initSimpleScreen(): void {
   // 書き出し
   $("s-export-midi")?.addEventListener("click", () => {
     const s = getState();
-    if (s.chordPattern) exportMidi(s.chordPattern, s.melodyNotes, s.key, s.bpm);
+    exportMidi(`toniq_${s.genre}_${s.mood}.mid`);
   });
 
   const wavBtn = $("s-export-wav") as HTMLButtonElement | null;
   wavBtn?.addEventListener("click", async () => {
-    const label = wavBtn.textContent;
-    wavBtn.textContent = "レンダリング中…";
-    wavBtn.disabled = true;
-    try {
-      const s = getState();
-      Playback.downloadBlob(await Playback.renderWav(), `toniq_${s.genre}_${s.mood}.wav`);
-    } catch (e) {
-      console.error("WAVエクスポートエラー:", e);
-    } finally {
-      wavBtn.textContent = label;
-      wavBtn.disabled = false;
-    }
+    const s = getState();
+    await exportWavWithProgress(`toniq_${s.genre}_${s.mood}.wav`, wavBtn);
+    render();
   });
 }
