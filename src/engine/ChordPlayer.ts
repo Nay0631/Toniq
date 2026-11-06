@@ -129,6 +129,41 @@ export function initChordSynth() {
   padSynth.chain(...chordEffects, chordVol);
 }
 
+// コードの1回の発音（位置と長さは16分音符の数。ループの頭から）
+export interface ChordHit {
+  sixteenth: number;
+  length:    number;
+  notes:     string[];
+  velocity:  number;  // 基準の強さ（鳴らすときに少し揺らす）
+  strum:     number;  // 音をずらす間隔（秒）
+}
+
+// コード進行1周分の発音（コードのリズム AppState.chordRhythm とボイシング。MIDI書き出しも同じものを使う）
+export function chordEvents(progression: ChordProgression, key: string): ChordHit[] {
+  const hits: ChordHit[] = [];
+  const step = RHYTHM_STEPS[getState().chordRhythm];
+  const voiced = voiceProgression(progression, key, VOICING_RANGES.chord);
+
+  progression.progression.forEach((chord, i) => {
+    const notes = voiced[i];
+    const start = (chord.bar - 1) * 16;
+    if (step === null) {
+      hits.push({ sixteenth: start, length: chord.duration_bars * 16, notes, velocity: 0.75, strum: STRUM_SEC.long });
+      return;
+    }
+    for (let six = 0; six < chord.duration_bars * 16; six += step) {
+      hits.push({
+        sixteenth: start + six,
+        length:    step,
+        notes,
+        velocity:  six === 0 ? 0.8 : six % 4 === 0 ? 0.68 : 0.56,
+        strum:     step >= 8 ? STRUM_SEC.long : STRUM_SEC.short,
+      });
+    }
+  });
+  return hits;
+}
+
 interface ChordEvent {
   time:     string;
   notes:    string[];
@@ -142,34 +177,15 @@ export function loadChordProgression(progression: ChordProgression, key: string 
   if (chordPart) { chordPart.dispose(); chordPart = null; }
   if (!padSynth) initChordSynth();
 
-  const events: ChordEvent[] = [];
-  const step = RHYTHM_STEPS[getState().chordRhythm];
-  const voiced = voiceProgression(progression, key, VOICING_RANGES.chord);
-
-  progression.progression.forEach((chord, i) => {
-    const notes = voiced[i];
-    if (step === null) {
-      events.push({
-        time:     `${chord.bar - 1}:0:0`,
-        notes,
-        dur:      `${chord.duration_bars}m`,
-        velocity: 0.75,
-        strum:    STRUM_SEC.long,
-      });
-      return;
-    }
-    // コードの長さの中で一定の間隔で刻む。コードの頭を強く、拍の頭を中くらい、裏を弱く
-    const start = (chord.bar - 1) * 16;
-    for (let six = 0; six < chord.duration_bars * 16; six += step) {
-      events.push({
-        time:     `0:0:${start + six}`,
-        notes,
-        dur:      `${16 / step}n`,
-        velocity: six === 0 ? 0.8 : six % 4 === 0 ? 0.68 : 0.56,
-        strum:    step >= 8 ? STRUM_SEC.long : STRUM_SEC.short,
-      });
-    }
-  });
+  // 全音符は小節表記の長さ（`2m` など）、刻むときは音価（`8n` など）で鳴らす
+  const step   = RHYTHM_STEPS[getState().chordRhythm];
+  const events: ChordEvent[] = chordEvents(progression, key).map(h => ({
+    time:     `0:0:${h.sixteenth}`,
+    notes:    h.notes,
+    dur:      step === null ? `${h.length / 16}m` : `${16 / step}n`,
+    velocity: h.velocity,
+    strum:    h.strum,
+  }));
 
   const arranged = arrangementGate("chord");
   chordPart = new Tone.Part((time, event: ChordEvent) => {

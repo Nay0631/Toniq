@@ -273,14 +273,6 @@
           <span class="info-item"><span data-term="bar">小節</span> <b id="c-info-bars"></b></span>
           <span class="info-item" id="c-info-loop" data-term="loop"></span>
         </div>
-        <!-- スキンの切り替え（Theme.ts。<html data-skin>） -->
-        <div class="skin-switch" role="group" aria-label="画面のスキン">
-          <span class="skin-switch-label">スキン</span>
-          <button type="button" data-skin-option="default">デフォルト</button>
-          <button type="button" data-skin-option="flat">フラット</button>
-          <button type="button" data-skin-option="studio">スタジオ</button>
-          <button type="button" data-skin-option="pop">ポップ</button>
-        </div>
         <div class="infobar-actions">
           <button class="btn btn-square" data-undo aria-label="元に戻す" title="元に戻す（Ctrl+Z）">↶</button>
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
@@ -537,16 +529,6 @@
           </div>
         </div>
 
-        <!-- ミキサー（パート別音量。中身は MixerPanel.ts で作る） -->
-        <div class="card panel mixer-panel">
-          <div class="panel-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-              <path d="M6 4v16M12 4v16M18 4v16"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/>
-            </svg>
-            <span data-term="mixer">ミキサー</span>
-          </div>
-          <div class="mixer" id="c-mixer"></div>
-        </div>
 
         <div class="export-row">
           <span class="export-label">書き出し</span>
@@ -566,15 +548,6 @@
           <div class="arranger" id="c-arranger"></div>
         </div>
 
-        <div class="card panel mixer-panel">
-          <div class="panel-title">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
-              <path d="M6 4v16M12 4v16M18 4v16"/><rect x="4" y="13" width="4" height="3" rx="1"/><rect x="10" y="7" width="4" height="3" rx="1"/><rect x="16" y="11" width="4" height="3" rx="1"/>
-            </svg>
-            <span data-term="mixer">ミキサー</span>
-          </div>
-          <div class="mixer" id="c-arr-mixer"></div>
-        </div>
 
         <div class="arranger-bottom">
           <div class="card panel">

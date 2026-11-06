@@ -30,7 +30,7 @@ export function genreSidechain(genre: string): number { return genreDefault("sid
 
 // 100 のときの Tone.js の swing の値。Tone.js は 1 で「16分音符の半分」ずれる（付点のようにかなり跳ねる）ので、
 // 100 で3連符に近いシャッフル（約 0.67）になるようにする
-const SWING_MAX = 0.67;
+export const SWING_MAX = 0.67;
 
 // 現在のコンテキストの Transport に当てる（再生・試聴・WAV書き出しの開始時と、量を変えたとき）。
 // 判定は Transport の16分音符の裏拍なので、各パートの Part / Sequence のイベントがまとめてずれる

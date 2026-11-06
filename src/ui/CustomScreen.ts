@@ -17,7 +17,6 @@ import { SCALE_LABELS, chordNames, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
-import { initMixer, renderMixer } from "./MixerPanel";
 import { exportWavWithProgress } from "./ExportProgress";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -245,7 +244,6 @@ function render(): void {
     el.setAttribute("aria-pressed", String(on));
   });
 
-  renderMixer();
 
   // アレンジャー
   renderArranger();
@@ -455,9 +453,6 @@ export function initCustomScreen(): void {
       render();
     }));
 
-  // ===== ミキサー（パート別音量。設定タブとアレンジャータブ） =====
-  initMixer(["c-mixer", "c-arr-mixer"], render);
-
   // ===== アレンジャー =====
   // 再生開始位置を変えたら、再生中ならその位置から再生し直す
   initArranger(async () => {
@@ -495,7 +490,7 @@ export function initCustomScreen(): void {
   ["c-export-midi", "c-arr-export-midi"].forEach(id =>
     $(id)?.addEventListener("click", () => {
       const s = getState();
-      if (s.chordPattern) exportMidi(s.chordPattern, s.melodyNotes, s.key, s.bpm);
+      exportMidi(`toniq_${s.genre}_${s.key}.mid`);
     }));
 
   ["c-export-wav", "c-arr-export-wav"].forEach(id => {

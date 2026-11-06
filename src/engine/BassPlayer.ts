@@ -43,16 +43,17 @@ export function initBassSynth() {
   }).connect(bassVol);
 }
 
-export function loadBassLine(
-  progression: ChordProgression,
-  key: string = "A",
-  octave: number = 2
-) {
-  if (bassPart) { bassPart.dispose(); bassPart = null; }
-  if (!bassSynth) initBassSynth();
+// ベースの1音（位置と長さは16分音符の数。ループの頭から）
+export interface BassNote {
+  sixteenth: number;
+  note:      string;
+  length:    number;
+}
 
-  const param  = bassParam();
-  const events: { time: string; note: string; dur: string }[] = [];
+// コード進行1周分のベースの音の並び（ジャンル別のパターン。MIDI書き出しも同じものを使う）
+export function bassNotes(progression: ChordProgression, key: string, octave: number = 2): BassNote[] {
+  const param = bassParam();
+  const notes: BassNote[] = [];
 
   progression.progression.forEach((chord) => {
     const resolved = resolveChord(
@@ -87,14 +88,26 @@ export function loadBassLine(
         // 続く "-" の数だけ伸ばす
         let len = 1;
         while (step + len < 16 && pattern[step + len] === "-") len++;
-        events.push({
-          time: `0:0:${bar * 16 + step}`,
-          note,
-          dur:  `0:0:${len}`,
-        });
+        notes.push({ sixteenth: bar * 16 + step, note, length: len });
       }
     }
   });
+  return notes;
+}
+
+export function loadBassLine(
+  progression: ChordProgression,
+  key: string = "A",
+  octave: number = 2
+) {
+  if (bassPart) { bassPart.dispose(); bassPart = null; }
+  if (!bassSynth) initBassSynth();
+
+  const events = bassNotes(progression, key, octave).map(n => ({
+    time: `0:0:${n.sixteenth}`,
+    note: n.note,
+    dur:  `0:0:${n.length}`,
+  }));
 
   const arranged = arrangementGate("bass");
   bassPart = new Tone.Part((time, event: any) => {

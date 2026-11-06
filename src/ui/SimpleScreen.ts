@@ -329,7 +329,7 @@ export function initSimpleScreen(): void {
   // 書き出し
   $("s-export-midi")?.addEventListener("click", () => {
     const s = getState();
-    if (s.chordPattern) exportMidi(s.chordPattern, s.melodyNotes, s.key, s.bpm);
+    exportMidi(`toniq_${s.genre}_${s.mood}.mid`);
   });
 
   const wavBtn = $("s-export-wav") as HTMLButtonElement | null;

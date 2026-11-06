@@ -207,9 +207,10 @@ export const defaultState: AppState = {
     drum:   true,
     chord:  true,
     bass:   true,
-    arp:    false,  // アルペジオは初期状態で OFF
-    pad:    true,
-    signature: false,  // シグネチャーも初期状態で OFF
+    // パッド・アルペジオ・シグネチャーは初期状態で OFF（必要なときに足すパート）
+    arp:    false,
+    pad:    false,
+    signature: false,
     melody: true,
     fx:     true,
   },

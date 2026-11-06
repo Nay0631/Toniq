@@ -25,6 +25,22 @@ export function initPadSynth() {
   }).connect(chorus);
 }
 
+// パッドの1回の発音（位置と長さは16分音符の数。コードごとに開離配置の和音を伸ばす。MIDI書き出しも同じものを使う）
+export interface PadHit {
+  sixteenth: number;
+  length:    number;
+  notes:     string[];
+}
+
+export function padEvents(progression: ChordProgression, key: string): PadHit[] {
+  const voiced = voiceProgression(progression, key, VOICING_RANGES.pad, { spread: true });
+  return progression.progression.map((chord, i) => ({
+    sixteenth: (chord.bar - 1) * 16,
+    length:    chord.duration_bars * 16,
+    notes:     voiced[i],
+  }));
+}
+
 interface PadEvent {
   time:  string;
   notes: string[];
@@ -36,11 +52,10 @@ export function loadPadPattern(progression: ChordProgression, key: string = "A")
   if (padPart) { padPart.dispose(); padPart = null; }
   if (!padSynth) initPadSynth();
 
-  const voiced = voiceProgression(progression, key, VOICING_RANGES.pad, { spread: true });
-  const events: PadEvent[] = progression.progression.map((chord, i) => ({
-    time:  `${chord.bar - 1}:0:0`,
-    notes: voiced[i],
-    dur:   `${chord.duration_bars}m`,
+  const events: PadEvent[] = padEvents(progression, key).map(h => ({
+    time:  `0:0:${h.sixteenth}`,
+    notes: h.notes,
+    dur:   `${h.length / 16}m`,
   }));
 
   const arranged = arrangementGate("pad");
