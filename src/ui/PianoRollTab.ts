@@ -6,7 +6,7 @@ import {
 import { reloadLayer } from "../engine/LayerManager";
 import { previewMelodyNote } from "../engine/MelodyPlayer";
 import * as Playback from "../engine/Playback";
-import { NOTE_INDEX, SCALE_TONES } from "../data/degree_resolver";
+import { NOTE_INDEX, scaleSemitones } from "../data/degree_resolver";
 import { onRender, render } from "./Router";
 import { SCALE_LABELS, chordSpans, displayNote } from "./format";
 
@@ -98,11 +98,8 @@ function scaleName(): string {
 
 // スケールの7音（ピッチクラス）。メロディ生成と同じ SCALE_TONES から作る
 function scalePitchClasses(): Set<number> {
-  const s     = getState();
-  const tones = SCALE_TONES[scaleName()] ?? SCALE_TONES.minor;
-  const root  = NOTE_INDEX[s.key] ?? 0;
-  const degrees = [...tones.core, ...Object.keys(tones.accent).map(Number)];
-  return new Set(degrees.map(d => (root + d) % 12));
+  const root = NOTE_INDEX[getState().key] ?? 0;
+  return new Set(scaleSemitones(scaleName()).map(d => (root + d) % 12));
 }
 
 function allowed(midi: number, scale: Set<number>): boolean {

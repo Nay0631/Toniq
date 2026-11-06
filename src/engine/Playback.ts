@@ -6,6 +6,7 @@ import { applyMixPreset, mixerReady } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
 import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
+import { stopScalePreview } from "./ScalePreview";
 import { prepareDrumSamples } from "./DrumSamples";
 import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
@@ -62,7 +63,8 @@ export async function play(options: PlayOptions = {}): Promise<void> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
-  stopMetronome();  // BPM のクリック音と重ねない
+  stopMetronome();     // BPM のクリック音と重ねない
+  stopScalePreview();  // キー・スケールの試聴とも重ねない
   stop();
   applyMixPreset(s.genre);
   await audioReady(s.genre);
@@ -95,7 +97,8 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
-  stopMetronome();  // BPM のクリック音と重ねない
+  stopMetronome();     // BPM のクリック音と重ねない
+  stopScalePreview();  // キー・スケールの試聴とも重ねない
   stop();
   applyMixPreset(s.genre);
   await audioReady(s.genre);
@@ -138,7 +141,8 @@ let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"
 // 各パートは AppState から読むので、鳴らしている間だけパターンとメロディを差し替え、止めたら元に戻す
 export async function playSample(sample: SampleSong, onEnded?: () => void): Promise<void> {
   await Tone.start();
-  stopMetronome();  // BPM のクリック音と重ねない
+  stopMetronome();     // BPM のクリック音と重ねない
+  stopScalePreview();  // キー・スケールの試聴とも重ねない
   stop();
   applyMixPreset(getState().genre);
   await audioReady(getState().genre);

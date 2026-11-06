@@ -35,6 +35,12 @@ export const SCALE_TONES: Record<string, ScaleTones> = {
   dorian:   { core: [0, 3, 5, 7, 10], accent: { 9: [7, 10], 2:  [0, 3] } },
 };
 
+// スケールの7音（主音からの半音数、低い順）。SCALE_TONES の core＋accent から作る。未定義なら minor
+export function scaleSemitones(scale: string): number[] {
+  const tones = SCALE_TONES[scale] ?? SCALE_TONES.minor;
+  return [...tones.core, ...Object.keys(tones.accent).map(Number)].sort((a, b) => a - b);
+}
+
 const CHORD_INTERVALS: Record<string, number[]> = {
   major: [0, 4, 7],
   minor: [0, 3, 7],

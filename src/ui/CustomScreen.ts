@@ -5,7 +5,10 @@ import { generateMelody } from "../engine/MelodyGenerator";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { signatureLabel } from "../engine/SignaturePlayer";
 import { tap } from "../engine/TapTempo";
-import { isMetronomeOn, onMetronomeChange, toggleMetronome } from "../engine/Metronome";
+import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
+import {
+  isScalePreviewOn, onScalePreviewChange, playScalePreview, scalePreviewNotes, scalePreviewStep, stopScalePreview,
+} from "../engine/ScalePreview";
 import { exportMidi } from "../engine/MidiExporter";
 import { applySwing, swingAmount, sidechainAmount } from "../engine/Groove";
 import * as Playback from "../engine/Playback";
@@ -13,7 +16,7 @@ import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
 import { onRender, showTab } from "./Router";
-import { SCALE_LABELS, chordNames, toDoremi } from "./format";
+import { SCALE_LABELS, chordNames, displayNote, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { initMixer, renderMixer } from "./MixerPanel";
 import { startPianoRollPlayhead } from "./PianoRollTab";
@@ -221,6 +224,18 @@ function render(): void {
   lock.setAttribute("aria-checked", String(s.scaleLock));
   $("c-scale-lock-label")!.textContent = s.scaleLock ? "有効" : "無効";
 
+  // スケールの音（試聴中は鳴っている音を光らせる。最後の和音では 1・3・5番目の音を光らせる）
+  const notes = scalePreviewNotes(s.key, scale);
+  const step  = scalePreviewStep();
+  const chordStep = step === notes.length;
+  $("c-scale-notes")!.innerHTML = notes.map((n, i) => {
+    const lit = chordStep ? (i === 0 || i === 2 || i === 4 || i === 7) : i === step;
+    return `<span class="scale-note${i === 0 || i === 7 ? " is-root" : ""}${lit ? " is-lit" : ""}">${displayNote(n.name.replace(/-?\d+$/, ""))}</span>`;
+  }).join("");
+  const scaleOn = isScalePreviewOn();
+  $("c-scale-preview")!.textContent = scaleOn ? "■ 停止" : "▷ 試聴";
+  $("c-scale-preview")!.classList.toggle("is-active", scaleOn);
+
   // コード進行
   $select("c-mood").value = s.mood;
   fillSelect($select("c-chord"), chordCandidates(), s.chordPattern, c => chordLabel(c, s.key));
@@ -263,6 +278,13 @@ function render(): void {
     : s.melodyNotes.length > 0
       ? `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`
       : "未作成（↻ で自動生成）";
+}
+
+// キー・スケールの試聴中なら、今のキー・スケールで鳴らし直す
+function replayScalePreview(): void {
+  if (!isScalePreviewOn()) return;
+  const s = getState();
+  playScalePreview(s.key, s.chordPattern?.base_scale ?? "minor");
 }
 
 // ===== イベント =====
@@ -312,7 +334,10 @@ export function initCustomScreen(): void {
 
   // 今の BPM の速さをクリック音で確かめる（鳴らしたままノブを回すとすぐ反映される）
   $("c-metronome")?.addEventListener("click", () => {
-    if (!isMetronomeOn()) Playback.stop();  // 曲の再生とは重ねない
+    if (!isMetronomeOn()) {
+      Playback.stop();     // 曲の再生とは重ねない
+      stopScalePreview();  // キー・スケールの試聴とも重ねない
+    }
     toggleMetronome();
   });
   onMetronomeChange(render);
@@ -353,6 +378,7 @@ export function initCustomScreen(): void {
     setState({ key: (e.target as HTMLSelectElement).value });
     // メロディは音名で持っているので、自動生成ならキーに合わせて作り直す
     if (hasAutoMelody()) makeMelody();
+    replayScalePreview();
     render();
     await restartIfPlaying();
   });
@@ -364,9 +390,23 @@ export function initCustomScreen(): void {
     const sameScale = chords.filter(c => c.base_scale === scale);
     const next = sameScale.find(c => c.mood.includes(s.mood)) ?? sameScale[0];
     if (next) setChordPattern(next);
+    replayScalePreview();
     render();
     await restartIfPlaying();
   });
+
+  // キー・スケールの試聴：曲の再生・BPM のクリック音とは重ねない。鳴らしたままキー・スケールを変えると鳴らし直す
+  $("c-scale-preview")?.addEventListener("click", () => {
+    if (isScalePreviewOn()) {
+      stopScalePreview();
+      return;
+    }
+    Playback.stop();
+    stopMetronome();
+    const s = getState();
+    playScalePreview(s.key, s.chordPattern?.base_scale ?? "minor");
+  });
+  onScalePreviewChange(render);
 
   $("c-scale-lock")?.addEventListener("click", () => {
     setState({ scaleLock: !getState().scaleLock });

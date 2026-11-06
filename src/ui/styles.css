@@ -722,6 +722,37 @@ button {
 .select-with-btn .select { grid-column: 1 / -1; }
 .select-with-btn .btn { grid-column: 3; }
 
+/* キー・スケールの試聴：スケールの8音を並べ、試聴中は鳴っている音を光らせる。右に試聴ボタン */
+.scale-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.scale-preview-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.scale-note {
+  min-width: 26px;
+  padding: 3px 4px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--hw-label);
+  background: var(--hw-box);
+  border-radius: 4px;
+  transition: background 0.08s, color 0.08s;
+}
+
+.scale-note.is-root { color: var(--hw-text); font-weight: 700; }
+.scale-note.is-lit  { color: var(--hw-sel-text); background: var(--hw-sel); }
+.scale-preview .btn { flex-shrink: 0; }
+
 .range { accent-color: var(--custom); min-width: 0; }
 
 /* BPM：ノブ＋液晶の数値＋タップ */
