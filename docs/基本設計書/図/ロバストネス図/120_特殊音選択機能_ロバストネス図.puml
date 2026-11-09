@@ -1,0 +1,28 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 120_特殊音選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面\n（パッド・アルペジオ・\nシグネチャーの ON/OFF）" as B1
+boundary "カスタムモード画面\n（FX / SE の種類）" as B2
+control "パートの ON/OFF を更新する" as C1
+control "OFF ならパートの音源を破棄する" as C2
+control "再生中に ON にしたら\nすぐ読み込む" as C3
+control "FX / SE の種類を更新する" as C4
+control "再生中なら再生し直す" as C5
+entity "曲の状態\n（AppState）" as E1
+entity "再生\n（Tone.Transport）" as E2
+
+A1 --> B1
+A1 --> B2
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C1 --> C3
+C3 --> E2
+B2 --> C4
+C4 --> E1
+C4 --> C5
+C5 --> E2
+
+@enduml

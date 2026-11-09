@@ -1,0 +1,36 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "MixerPanel" as B1 <<boundary>> {
+  {field} <U+002D> MIXER_PARTS
+  {method} <U+002B> initMixer(listIds, onChange)
+  {method} <U+002B> renderMixer()
+}
+class "Controls" as B2 <<boundary>> {
+  {method} <U+002B> attachFader(input, label)
+}
+class "VolumeManager" as C1 <<control>> {
+  {method} <U+002B> setVolume(part, value)
+  {method} <U+002B> createVolumeNode(part)
+  {method} <U+002B> applyAllVolumes()
+  {method} <U+002D> toDb(value) : number
+}
+class "MixerEngine" as C2 <<control>> {
+  {method} <U+002B> connectToMixer(node, part)
+}
+class "AppState" as E1 <<entity>> {
+  {field} <U+002B> volumes : Record<LayerName, number>
+  {method} <U+002B> setState(partial)
+}
+class "Tone.Volume" as E2 <<entity>> {
+  {field} <U+002B> volume : dB
+}
+
+B1 --> B2
+B1 --> C1
+C1 --> E1
+C1 --> E2
+C1 --> C2
+
+@enduml

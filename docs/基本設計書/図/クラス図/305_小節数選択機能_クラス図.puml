@@ -1,0 +1,32 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "CustomScreen" as B1 <<boundary>> {
+  {method} <U+002B> restartIfPlaying()
+  {method} <U+002D> render()
+}
+class "Playback" as C1 <<control>> {
+  {method} <U+002B> play(options)
+  {method} <U+002B> isPlaying() : boolean
+  {method} <U+002B> applyLoopPlayback()
+}
+class "LayerManager" as C2 <<control>> {
+  {method} <U+002B> reloadAllLayers()
+}
+class "LoopArranger" as C3 <<control>> {
+  {method} <U+002B> startLoopArranger(params)
+}
+class "AppState" as E1 <<entity>> {
+  {field} <U+002B> bars : number
+  {field} <U+002B> loopPlayback : boolean
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+B1 --> E1
+C1 --> C2
+C1 --> C3
+C1 --> E1
+
+@enduml

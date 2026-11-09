@@ -1,0 +1,34 @@
+' astah 風の見た目の共通設定（シーケンス図用）
+' 各図の先頭で相対パスで !include して使う。
+' 例: !include ../../astah-sequence-style.puml
+' ※ このファイル単体では図にならないよう、@startuml / @enduml は書かない。
+
+' 下側の参加者（フットボックス）を表示しない
+hide footbox
+
+' メッセージ番号を「1:」形式で付ける
+autonumber "0:"
+
+' 影なし
+skinparam shadowing false
+
+' 線と矢印は黒
+skinparam ArrowColor black
+skinparam SequenceLifeLineBorderColor black
+skinparam SequenceLifeLineBackgroundColor white
+skinparam SequenceGroupBorderColor black
+skinparam SequenceBoxBorderColor black
+
+' 利用者（actor）は白、枠線は黒
+skinparam ActorBackgroundColor white
+skinparam ActorBorderColor black
+
+' boundary・control・entity は薄い黄色、枠線は黒
+skinparam BoundaryBackgroundColor #FFFFCC
+skinparam BoundaryBorderColor black
+skinparam ControlBackgroundColor #FFFFCC
+skinparam ControlBorderColor black
+skinparam EntityBackgroundColor #FFFFCC
+skinparam EntityBorderColor black
+skinparam ParticipantBackgroundColor #FFFFCC
+skinparam ParticipantBorderColor black

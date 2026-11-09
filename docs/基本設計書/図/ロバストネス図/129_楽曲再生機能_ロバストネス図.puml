@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 129_楽曲再生機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ミュージックリスト画面\n（曲の再生ボタン）" as B1
+control "保存していない曲を\n捨ててよいか確かめる" as C1
+control "保存した曲を読み込む" as C2
+control "曲の内容と音量を反映する\n（元に戻す履歴は捨てる）" as C3
+control "ON のパートを読み込んで\n再生する" as C4
+control "再生位置を表示する" as C5
+entity "楽曲データ\n（localStorage toniq.songs）" as E1
+entity "曲の状態\n（AppState）" as E2
+entity "再生\n（Tone.Transport）" as E3
+
+A1 --> B1
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C2 --> C3
+C3 --> E2
+C3 --> C4
+C4 --> E3
+C4 --> C5
+
+@enduml

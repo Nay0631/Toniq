@@ -1,0 +1,145 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "Router" as B0 <<boundary>> {
+  {method} <U+002B> showScreen(screen)
+  {method} <U+002B> showTab(tab)
+  {method} <U+002B> render()
+}
+class "SimpleScreen" as B1 <<boundary>> {
+  {method} <U+002B> initSimpleScreen()
+  {method} <U+002D> generate()
+  {method} <U+002D> playGenreSample()
+}
+class "CustomScreen" as B2 <<boundary>> {
+  {method} <U+002B> initCustomScreen()
+  {method} <U+002B> restartIfPlaying()
+  {method} <U+002D> setChordPattern(next)
+}
+class "ArrangerTab" as B3 <<boundary>> {
+  {method} <U+002B> initArranger(onSeek)
+  {method} <U+002B> renderArranger()
+}
+class "PianoRollTab" as B4 <<boundary>> {
+  {method} <U+002B> initPianoRoll()
+  {method} <U+002B> renderPianoRoll()
+}
+class "MixerPanel" as B5 <<boundary>> {
+  {method} <U+002B> initMixer(listIds, onChange)
+  {method} <U+002B> renderMixer()
+}
+class "MusicListScreen" as B6 <<boundary>> {
+  {method} <U+002B> initMusicListScreen()
+}
+class "QuizScreen" as B7 <<boundary>> {
+  {method} <U+002B> initQuizScreen()
+}
+class "SimpleModeResolver" as C1 <<control>> {
+  {method} <U+002B> resolveSimpleMode(genre, mood)
+  {method} <U+002B> rerollChord(genre, mood, currentId)
+  {method} <U+002B> rerollDrum(genre, mood, currentId)
+  {method} <U+002B> resolveTempoPreset(genre, preset)
+}
+class "MelodyGenerator" as C2 <<control>> {
+  {method} <U+002B> generateMelody(progression, key, genre)
+}
+class "Playback" as C3 <<control>> {
+  {method} <U+002B> play(options)
+  {method} <U+002B> stop()
+  {method} <U+002B> preview(layer, onEnded)
+  {method} <U+002B> playSample(sample, onEnded)
+  {method} <U+002B> renderWav() : Blob
+}
+class "LayerManager" as C4 <<control>> {
+  {method} <U+002B> setLayerEnabled(layer, enabled)
+  {method} <U+002B> reloadLayer(layer)
+  {method} <U+002B> reloadAllLayers()
+  {method} <U+002B> disposeAllLayers()
+}
+class "LoopArranger" as C5 <<control>> {
+  {field} <U+002D> LOOP_SCHEDULE
+  {method} <U+002B> getArrangement() : Arrangement
+  {method} <U+002B> arrangementGate(part)
+  {method} <U+002B> startLoopArranger(params)
+}
+class "各パートのPlayer\n（Drum/Chord/Bass/Arp/Pad/\nSignature/Melody/Fx）" as C6 <<control>> {
+  {field} <U+002D> synth
+  {field} <U+002D> part
+  {method} <U+002B> init*Synth()
+  {method} <U+002B> load*()
+  {method} <U+002B> dispose*()
+}
+class "VolumeManager" as C7 <<control>> {
+  {method} <U+002B> createVolumeNode(part)
+  {method} <U+002B> setVolume(part, value)
+}
+class "MixerEngine" as C8 <<control>> {
+  {method} <U+002B> connectToMixer(node, part)
+  {method} <U+002B> applyMixPreset(genre)
+}
+class "MidiExporter" as C9 <<control>> {
+  {method} <U+002B> exportMidi(progression, melodyNotes, key, bpm)
+}
+class "SongLibrary" as C10 <<control>> {
+  {method} <U+002B> saveCurrentSong()
+  {method} <U+002B> loadSong(id) : boolean
+  {method} <U+002B> importSongFile(text)
+}
+class "degree_resolver" as C11 <<control>> {
+  {field} <U+002B> SCALE_INTERVALS
+  {field} <U+002B> SCALE_TONES
+  {method} <U+002B> resolveChord(degree, type, inversion, key, scale, octave)
+  {method} <U+002B> voiceProgression(progression, key, range)
+}
+class "QuizModes" as C12 <<control>> {
+  {field} <U+002B> QUIZ_CATEGORIES
+  {method} <U+002B> question() : Question
+}
+class "AppState" as E1 <<entity>> {
+  {field} <U+002B> screen / mode / genre / mood
+  {field} <U+002B> key / bpm / bars
+  {field} <U+002B> chordPattern / drumPattern
+  {field} <U+002B> melodyNotes / arrangement
+  {field} <U+002B> parts / volumes
+  {method} <U+002B> getState() : AppState
+  {method} <U+002B> setState(partial)
+}
+class "パターンDB\n（JSON 8種）" as E2 <<entity>> {
+  {field} <U+002B> chord_progressions
+  {field} <U+002B> drum_patterns
+  {field} <U+002B> easy_mode_table
+  {field} <U+002B> tempo_presets
+  {field} <U+002B> melody_params
+  {field} <U+002B> bass_params / arp_params
+  {field} <U+002B> mix_presets
+}
+
+B0 --> E1
+B1 --> C1
+B1 --> C2
+B1 --> C3
+B2 --> C3
+B2 --> C4
+B3 --> C5
+B4 --> C2
+B5 --> C7
+B6 --> C10
+B7 --> C12
+B1 --> C9
+B2 --> C9
+C1 --> E2
+C2 --> E2
+C3 --> C4
+C3 --> C5
+C3 --> C8
+C4 --> C6
+C6 --> C11
+C6 --> C7
+C7 --> C8
+C9 --> C11
+C10 --> E1
+C3 --> E1
+C8 --> E2
+
+@enduml

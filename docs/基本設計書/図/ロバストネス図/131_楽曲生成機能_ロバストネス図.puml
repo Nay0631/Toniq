@@ -1,0 +1,35 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** 131_楽曲生成機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面\n（生成するボタン）" as B1
+boundary "カスタムモード画面\nアレンジャータブ（メロディの差し替え）" as B2
+control "再生・クリック音を止める" as C1
+control "ジャンル・雰囲気から\nコード進行・ドラムを選ぶ" as C2
+control "曲の長さを決める\n（全パートがそろう周回分）" as C3
+control "メロディを自動生成する" as C4
+control "曲の内容を更新する" as C5
+entity "シンプルモード表\n（easy_mode_table.json）" as E1
+entity "コード進行DB\n（chord_progressions.json）" as E2
+entity "ドラムパターンDB\n（drum_patterns.json）" as E3
+entity "ジャンル標準のアレンジ\n（LOOP_SCHEDULE）" as E4
+entity "メロディ生成パラメータ\n（melody_params.json）" as E5
+entity "曲の状態\n（AppState）" as E6
+
+A1 --> B1
+A1 --> B2
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C2 --> E2
+C2 --> E3
+C2 --> C3
+C3 --> E4
+C3 --> C4
+B2 --> C4
+C4 --> E5
+C4 --> C5
+C5 --> E6
+
+@enduml

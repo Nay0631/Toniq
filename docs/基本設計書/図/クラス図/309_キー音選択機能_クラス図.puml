@@ -1,0 +1,43 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "CustomScreen" as B1 <<boundary>> {
+  {method} <U+002D> hasAutoMelody() : boolean
+  {method} <U+002D> makeMelody()
+  {method} <U+002D> render()
+  {method} <U+002B> restartIfPlaying()
+}
+class "format" as C1 <<control>> {
+  {method} <U+002B> chordNames(pattern, key) : string
+}
+class "degree_resolver" as C2 <<control>> {
+  {field} <U+002B> SCALE_INTERVALS
+  {field} <U+002B> CHORD_INTERVALS
+  {method} <U+002B> resolveChord(degree, type, inversion, key, scale, octave)
+}
+class "MelodyGenerator" as C3 <<control>> {
+  {method} <U+002B> generateMelody(progression, key, genre)
+}
+class "Playback" as C4 <<control>> {
+  {method} <U+002B> play(options)
+}
+class "melody_params.json" as E1 <<entity>> {
+  {field} <U+002B> rhythmPatterns
+  {field} <U+002B> phraseForms
+  {field} <U+002B> octaveRange
+}
+class "AppState" as E2 <<entity>> {
+  {field} <U+002B> key : string
+  {field} <U+002B> melodyNotes
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+C1 --> C2
+B1 --> C3
+C3 --> E1
+B1 --> C4
+B1 --> E2
+
+@enduml

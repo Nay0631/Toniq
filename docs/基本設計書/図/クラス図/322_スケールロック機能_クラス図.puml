@@ -1,0 +1,33 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "PianoRollTab" as B1 <<boundary>> {
+  {method} <U+002D> scalePitchClasses() : Set<number>
+  {method} <U+002D> allowed(midi, scale) : boolean
+  {method} <U+002D> snapToScale(midi, dir) : number
+}
+class "CustomScreen" as B2 <<boundary>> {
+  {method} <U+002D> chordCandidates() : ChordProgression[]
+}
+class "degree_resolver" as C1 <<control>> {
+  {field} <U+002B> SCALE_TONES
+  {field} <U+002B> NOTE_INDEX
+}
+class "chord_progressions.json" as E1 <<entity>> {
+  {field} <U+002B> base_scale : string
+  {field} <U+002B> mood : string[]
+}
+class "AppState" as E2 <<entity>> {
+  {field} <U+002B> pianoRollScaleLock : boolean
+  {field} <U+002B> scaleLock : boolean
+  {field} <U+002B> key : string
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+B1 --> E2
+B2 --> E1
+B2 --> E2
+
+@enduml

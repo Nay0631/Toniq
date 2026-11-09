@@ -1,0 +1,84 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 221_メロディ入力機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":PianoRollTab" as L2
+control ":degree_resolver" as L3
+control ":MelodyPlayer" as L4
+entity ":AppState" as L5
+control ":Playback" as L6
+control ":LayerManager" as L7
+
+alt グリッドをクリック・ドラッグ
+  L1 -> L2 : グリッドの空いている所を押下する()
+  activate L2
+  L2 -> L2 : startDrag(e, grid)
+  activate L2
+  L2 -> L2 : allowed(midi, scalePitchClasses())
+  activate L2
+  L2 -> L3 : SCALE_TONES を参照する(scale)
+  activate L3
+  deactivate L3
+  deactivate L2
+  L2 -> L4 : previewMelodyNote(note)
+  activate L4
+  deactivate L4
+  deactivate L2
+  deactivate L2
+  L1 -> L2 : ドラッグして離す()
+  activate L2
+  L2 -> L2 : endDrag()
+  activate L2
+  L2 -> L2 : placeNote(others, note)
+  activate L2
+  deactivate L2
+  L2 -> L2 : writeNotes(notes)
+  activate L2
+  L2 -> L5 : setState(melodyNotes, melodyMethod)
+  activate L5
+  deactivate L5
+  opt 再生中
+    L2 -> L7 : reloadLayer("melody")
+    activate L7
+    deactivate L7
+  end
+  deactivate L2
+  deactivate L2
+  deactivate L2
+else パソコンのキーボード（A〜K）で入力
+  L1 -> L2 : キーを押す()
+  activate L2
+  L2 -> L2 : inputKey(offset)
+  activate L2
+  L2 -> L2 : allowed(midi, scalePitchClasses())
+  activate L2
+  L2 -> L3 : SCALE_TONES を参照する(scale)
+  activate L3
+  deactivate L3
+  deactivate L2
+  L2 -> L2 : placeNote(notes, note)
+  activate L2
+  deactivate L2
+  L2 -> L2 : writeNotes(notes)
+  activate L2
+  L2 -> L5 : setState(melodyNotes, melodyMethod)
+  activate L5
+  deactivate L5
+  L2 -> L6 : isPlaying()
+  activate L6
+  deactivate L6
+  opt 再生中
+    L2 -> L7 : reloadLayer("melody")
+    activate L7
+    deactivate L7
+  end
+  deactivate L2
+  L2 -> L4 : previewMelodyNote(note)
+  activate L4
+  deactivate L4
+  deactivate L2
+  deactivate L2
+end
+
+@enduml

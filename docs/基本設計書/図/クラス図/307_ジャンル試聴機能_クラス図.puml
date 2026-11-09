@@ -1,0 +1,53 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "SimpleScreen" as B1 <<boundary>> {
+  {field} <U+002D> GENRE_DESCRIPTIONS
+  {method} <U+002D> playGenreSample()
+}
+class "SimpleModeResolver" as C1 <<control>> {
+  {method} <U+002B> resolveSimpleMode(genre, mood)
+}
+class "MelodyGenerator" as C2 <<control>> {
+  {method} <U+002B> generateMelody(progression, key, genre)
+}
+class "Playback" as C3 <<control>> {
+  {field} <U+002D> sampleRestore
+  {method} <U+002B> playSample(sample, onEnded)
+  {method} <U+002B> isSamplePlaying() : boolean
+  {method} <U+002B> stop()
+}
+class "LayerManager" as C4 <<control>> {
+  {method} <U+002B> reloadLayer(layer)
+}
+class "LoopArranger" as C5 <<control>> {
+  {method} <U+002B> setArrangementBypass(on)
+}
+class "easy_mode_table.json" as E1 <<entity>> {
+  {field} <U+002B> bpm : number
+  {field} <U+002B> chord_ids : string[]
+  {field} <U+002B> drum_ids : string[]
+}
+class "melody_params.json" as E2 <<entity>> {
+  {field} <U+002B> rhythmPatterns
+  {field} <U+002B> phraseForms
+  {field} <U+002B> instrument
+}
+class "AppState" as E3 <<entity>> {
+  {field} <U+002B> chordPattern
+  {field} <U+002B> drumPattern
+  {field} <U+002B> melodyNotes
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+B1 --> C2
+B1 --> C3
+C1 --> E1
+C2 --> E2
+C3 --> C4
+C3 --> C5
+C3 --> E3
+
+@enduml

@@ -1,0 +1,21 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** 03_コード進行（C01）_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "楽曲生成システム Toniq" {
+  usecase "コード進行カテゴリ選択機能" as UC1
+  usecase "雰囲気選択機能" as UC2
+  usecase "コード進行選択機能" as UC3
+  usecase "コード進行リズム選択機能" as UC4
+  usecase "コード進行試聴機能" as UC5
+}
+
+A1 -- UC1
+A1 -- UC2
+A1 -- UC3
+A1 -- UC4
+A1 -- UC5
+
+@enduml

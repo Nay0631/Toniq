@@ -1,0 +1,68 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "SimpleScreen" as B1 <<boundary>> {
+  {method} <U+002D> generate()
+  {method} <U+002D> songBars() : number
+  {method} <U+002D> makeMelody()
+}
+class "CustomScreen" as B2 <<boundary>> {
+  {method} <U+002D> makeMelody()
+  {method} <U+002B> restartIfPlaying()
+}
+class "SimpleModeResolver" as C1 <<control>> {
+  {method} <U+002B> resolveSimpleMode(genre, mood)
+}
+class "LoopArranger" as C2 <<control>> {
+  {field} <U+002D> LOOP_SCHEDULE
+  {method} <U+002B> getFullArrangementLoops(genre) : number
+}
+class "MelodyGenerator" as C3 <<control>> {
+  {method} <U+002B> generateMelody(progression, key, genre)
+}
+class "Playback" as C4 <<control>> {
+  {method} <U+002B> stop()
+  {method} <U+002B> play(options)
+}
+class "easy_mode_table.json" as E1 <<entity>> {
+  {field} <U+002B> bpm : number
+  {field} <U+002B> chord_ids : string[]
+  {field} <U+002B> drum_ids : string[]
+}
+class "chord_progressions.json" as E2 <<entity>> {
+  {field} <U+002B> id : string
+  {field} <U+002B> progression
+  {field} <U+002B> length_bars : number
+}
+class "drum_patterns.json" as E3 <<entity>> {
+  {field} <U+002B> id : string
+  {field} <U+002B> tracks
+}
+class "melody_params.json" as E4 <<entity>> {
+  {field} <U+002B> rhythmPatterns
+  {field} <U+002B> phraseForms
+}
+class "AppState" as E5 <<entity>> {
+  {field} <U+002B> chordPattern
+  {field} <U+002B> drumPattern
+  {field} <U+002B> melodyNotes
+  {field} <U+002B> bars : number
+  {field} <U+002B> generated : boolean
+  {method} <U+002B> setState(partial)
+}
+
+B1 --> C1
+B1 --> C2
+B1 --> C3
+B1 --> C4
+B2 --> C3
+B2 --> C4
+C1 --> E1
+C1 --> E2
+C1 --> E3
+C3 --> E4
+B1 --> E5
+B2 --> E5
+
+@enduml

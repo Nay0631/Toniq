@@ -1,0 +1,51 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 212_コード進行カテゴリ選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":CustomScreen" as L2
+entity ":AppState" as L3
+entity ":chord_progressions.json" as L4
+control ":Playback" as L5
+
+L1 -> L2 : カテゴリ（雰囲気）を選ぶ()
+activate L2
+L2 -> L3 : setState(mood)
+activate L3
+deactivate L3
+L2 -> L2 : chordCandidates()
+activate L2
+L2 -> L3 : getState()
+activate L3
+deactivate L3
+L2 -> L4 : 雰囲気が合う進行を取得する(mood)
+activate L4
+deactivate L4
+opt スケールロックが有効
+  L2 -> L2 : 今の進行と同じスケールに絞る()
+  activate L2
+  deactivate L2
+end
+deactivate L2
+opt 今の進行が候補にない
+  L2 -> L2 : setChordPattern(候補の先頭)
+  activate L2
+  L2 -> L3 : setState(chordPattern)
+  activate L3
+  deactivate L3
+  deactivate L2
+end
+L2 -> L2 : render()
+activate L2
+deactivate L2
+L2 -> L2 : restartIfPlaying()
+activate L2
+opt 再生中
+  L2 -> L5 : play(fromBar, onLoopChange, onEnded)
+  activate L5
+  deactivate L5
+end
+deactivate L2
+deactivate L2
+
+@enduml

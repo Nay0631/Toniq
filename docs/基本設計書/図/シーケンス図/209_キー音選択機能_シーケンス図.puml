@@ -1,0 +1,55 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 209_キー音選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":CustomScreen" as L2
+entity ":AppState" as L3
+control ":MelodyGenerator" as L4
+entity ":melody_params.json" as L5
+control ":format" as L6
+control ":degree_resolver" as L7
+control ":Playback" as L8
+
+L1 -> L2 : ルート音を選ぶ()
+activate L2
+L2 -> L3 : setState(key)
+activate L3
+deactivate L3
+L2 -> L2 : hasAutoMelody()
+activate L2
+deactivate L2
+opt 自動生成のメロディがある
+  L2 -> L2 : makeMelody()
+  activate L2
+  L2 -> L4 : generateMelody(chordPattern, key, genre)
+  activate L4
+  L4 -> L5 : ジャンルのメロディ生成パラメータを取得する()
+  activate L5
+  deactivate L5
+  deactivate L4
+  L2 -> L3 : setState(melodyNotes)
+  activate L3
+  deactivate L3
+  deactivate L2
+end
+L2 -> L2 : render()
+activate L2
+L2 -> L6 : chordNames(chordPattern, key)
+activate L6
+L6 -> L7 : resolveChord(degree, type, inversion, key, scale, octave)
+activate L7
+deactivate L7
+deactivate L6
+deactivate L2
+L2 -> L2 : restartIfPlaying()
+activate L2
+opt 再生中
+  L2 -> L8 : play(fromBar, onLoopChange, onEnded)
+  activate L8
+  deactivate L8
+end
+deactivate L2
+deactivate L2
+
+@enduml

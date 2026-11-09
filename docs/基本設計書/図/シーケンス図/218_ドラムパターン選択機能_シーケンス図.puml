@@ -1,0 +1,63 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 218_ドラムパターン選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":SimpleScreen" as L2
+boundary ":CustomScreen" as L3
+control ":SimpleModeResolver" as L4
+entity ":drum_patterns.json" as L5
+entity ":AppState" as L6
+control ":Playback" as L7
+
+alt シンプルモード画面（ドラムの再抽選）
+  L1 -> L2 : ドラムの再抽選ボタンを押下する()
+  activate L2
+  L2 -> L4 : rerollDrum(genre, mood, currentId)
+  activate L4
+  L4 -> L5 : ジャンル・雰囲気が合うパターンを取得する()
+  activate L5
+  deactivate L5
+  L4 -> L4 : 今のパターン以外からランダムに選ぶ()
+  activate L4
+  deactivate L4
+  deactivate L4
+  L2 -> L6 : setState(drumPattern)
+  activate L6
+  deactivate L6
+  L2 -> L2 : render()
+  activate L2
+  deactivate L2
+  L2 -> L2 : restartIfPlaying()
+  activate L2
+  opt 再生中
+    L2 -> L7 : play(onEnded)
+    activate L7
+    deactivate L7
+  end
+  deactivate L2
+  deactivate L2
+else カスタムモード画面（ドロップダウン・◀▶）
+  L1 -> L3 : ドラムパターンを選ぶ()
+  activate L3
+  L3 -> L5 : 選んだパターンを取得する(id)
+  activate L5
+  deactivate L5
+  L3 -> L6 : setState(drumPattern)
+  activate L6
+  deactivate L6
+  L3 -> L3 : render()
+  activate L3
+  deactivate L3
+  L3 -> L3 : restartIfPlaying()
+  activate L3
+  opt 再生中
+    L3 -> L7 : play(fromBar, onLoopChange, onEnded)
+    activate L7
+    deactivate L7
+  end
+  deactivate L3
+  deactivate L3
+end
+
+@enduml

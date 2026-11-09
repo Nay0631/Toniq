@@ -1,0 +1,79 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd 224_パート配置機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ArrangerTab" as L2
+control ":LoopArranger" as L3
+entity ":AppState" as L4
+control ":LayerManager" as L5
+control ":各パートのPlayer" as L6
+
+alt 空いている所を押下（ブロックを置く）
+  L1 -> L2 : タイムラインの空いている所を押下する()
+  activate L2
+  L2 -> L2 : addBlock(part, bar)
+  activate L2
+  L2 -> L3 : getArrangement()
+  activate L3
+  deactivate L3
+  L2 -> L2 : freeRange(blocks, null, bar)
+  activate L2
+  deactivate L2
+  L2 -> L2 : editArrangement(fn)
+  activate L2
+  L2 -> L3 : cloneArrangement(arrangement)
+  activate L3
+  deactivate L3
+  L2 -> L4 : setState(arrangement)
+  activate L4
+  deactivate L4
+  deactivate L2
+  opt パートが OFF
+    L2 -> L5 : setLayerEnabled(part, true)
+    activate L5
+    deactivate L5
+  end
+  deactivate L2
+  deactivate L2
+else ブロックをドラッグ（移動・長さ変更）
+  L1 -> L2 : ブロックをドラッグして離す()
+  activate L2
+  L2 -> L2 : startDrag() / moveDrag() / endDrag()
+  activate L2
+  L2 -> L2 : editArrangement(fn)
+  activate L2
+  L2 -> L4 : setState(arrangement)
+  activate L4
+  deactivate L4
+  deactivate L2
+  deactivate L2
+  deactivate L2
+else 右クリック・×ボタン・Delete キー（削除）
+  L1 -> L2 : ブロックを削除する()
+  activate L2
+  L2 -> L2 : removeBlock(part, start)
+  activate L2
+  L2 -> L2 : editArrangement(fn)
+  activate L2
+  L2 -> L4 : setState(arrangement)
+  activate L4
+  deactivate L4
+  deactivate L2
+  deactivate L2
+  deactivate L2
+end
+
+loop 再生中、各パートの発音ごと
+  L6 -> L3 : arrangementGate(part)(time)
+  activate L3
+  L3 -> L3 : isArrangedAt(part, bar)
+  activate L3
+  L3 -> L4 : getState()
+  activate L4
+  deactivate L4
+  deactivate L3
+  deactivate L3
+end
+
+@enduml
