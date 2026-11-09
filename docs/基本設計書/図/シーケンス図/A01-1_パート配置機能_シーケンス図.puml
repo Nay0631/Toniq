@@ -1,0 +1,77 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-1_パート配置機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":ブロック編集" as L3
+control ":アレンジ管理" as L4
+entity ":アプリの状態" as L5
+entity ":標準アレンジマスタ" as L6
+control ":パート管理" as L7
+control ":各パートの演奏" as L8
+
+alt 空いている所を押下（ブロックを置く）
+  L1 -> L2 : タイムラインの空いている所を押下する() : void
+  activate L2
+  L2 -> L3 : ブロックを置く() : void
+  activate L3
+  L3 -> L4 : 今のアレンジを取得する() : void
+  activate L4
+  L4 -> L5 : アレンジ・ジャンル・小節数を取得する() : void
+  activate L5
+  deactivate L5
+  opt アレンジを編集していない
+    L4 -> L6 : ジャンルの標準アレンジを取得する() : void
+    activate L6
+    deactivate L6
+  end
+  deactivate L4
+  L3 -> L3 : 周回1周分の空きを求める() : void
+  activate L3
+  deactivate L3
+  L3 -> L5 : アレンジを更新する() : void
+  activate L5
+  deactivate L5
+  opt パートが OFF
+    L3 -> L7 : パートを ON にする() : void
+    activate L7
+    deactivate L7
+  end
+  deactivate L3
+  deactivate L2
+else ブロックをドラッグ・削除
+  L1 -> L2 : ブロックをドラッグする・右クリックする() : void
+  activate L2
+  L2 -> L3 : ブロックを動かす・削除する() : void
+  activate L3
+  L3 -> L4 : 今のアレンジを取得する() : void
+  activate L4
+  deactivate L4
+  L3 -> L5 : アレンジを更新する() : void
+  activate L5
+  deactivate L5
+  deactivate L3
+  deactivate L2
+else 標準に戻す
+  L1 -> L2 : 標準に戻すボタンを押下する() : void
+  activate L2
+  L2 -> L3 : 標準に戻す() : void
+  activate L3
+  L3 -> L5 : アレンジを空にする() : void
+  activate L5
+  deactivate L5
+  deactivate L3
+  deactivate L2
+end
+
+loop 再生中、各パートの発音ごと
+  L8 -> L4 : 鳴らす小節か確かめる() : void
+  activate L4
+  L4 -> L5 : アレンジを取得する() : void
+  activate L5
+  deactivate L5
+  deactivate L4
+end
+
+@enduml

@@ -1,0 +1,33 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ミュージックリスト画面" as B1 <<boundary>> {
+  {method} <U+002B> 「ファイルに書き出す」を押下する() : void
+  {method} <U+002B> すべて書き出すボタンを押下する() : void
+  {method} <U+002B> 「書き出す曲がありません」を表示する() : void
+}
+class "曲ファイル書き出し" as C1 <<control>> {
+  {method} <U+002B> 曲ファイルに書き出す() : void
+}
+class "曲の管理" as C2 <<control>> {
+  {method} <U+002B> 曲を取り出す() : void
+  {method} <U+002B> ファイルの形にする() : void
+}
+class "楽曲データ" as E1 <<entity>> {
+  {field} <U+002B> 保存した曲
+  {method} <U+002B> 保存した曲を取得する() : void
+}
+class "曲ファイル" as E2 <<entity>> {
+  {field} <U+002B> 形式名・版・書き出した日時
+  {field} <U+002B> 曲の一覧
+  {method} <U+002B> 保存する() : void
+}
+
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C1 --> E2
+C1 --> B1
+
+@enduml

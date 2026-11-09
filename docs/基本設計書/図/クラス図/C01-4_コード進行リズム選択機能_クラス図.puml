@@ -1,0 +1,30 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> リズムを選ぶ() : void
+}
+class "リズム設定" as C1 <<control>> {
+  {method} <U+002B> リズムを設定する() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "コード演奏" as C3 <<control>> {
+  {method} <U+002B> コードを読み込む() : void
+  {method} <U+002D> リズムの間隔でコードを刻んで並べる() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> コードのリズム
+  {method} <U+002B> コードのリズムを更新する() : void
+  {method} <U+002B> リズムを取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> E1
+
+@enduml

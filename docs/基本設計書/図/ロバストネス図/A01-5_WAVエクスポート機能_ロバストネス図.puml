@@ -1,0 +1,30 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-5_WAVエクスポート機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "再生" as C1
+control "ドラム音源読み込み" as C2
+control "ミックス" as C3
+control "各パートの演奏" as C4
+entity "ドラム音源ファイル" as E1
+entity "アプリの状態" as E2
+entity "ミックス設定マスタ" as E3
+entity "WAVファイル" as E4
+
+A1 --> B1 : WAVで書き出すボタンを押下する
+A1 --> B2 : WAV ボタンを押下する
+B1 --> C1 : WAV で書き出す
+B2 --> C1 : WAV で書き出す
+C1 --> C1 : 再生を止める
+C1 --> C2 : サンプル音源なら読み込む
+C2 --> E1 : ジャンルの音源を取得する
+C1 --> C3 : ミックスをジャンルに合わせる
+C3 --> E3 : ミックス設定を取得する
+C1 --> E2 : ON のパートと曲の内容を取得する
+C1 --> C4 : 曲全体をオフラインで鳴らす
+C1 --> E4 : 16bit PCM に変換して保存する
+
+@enduml

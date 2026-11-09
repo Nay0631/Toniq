@@ -1,0 +1,25 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> BPMノブを回す() : void
+}
+class "BPM設定" as C1 <<control>> {
+  {method} <U+002B> BPMを設定する() : void
+  {method} <U+002D> BPMを20〜240に丸める() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> テンポを反映する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> BPM
+  {field} <U+002B> テンポプリセット
+  {method} <U+002B> BPMを更新する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+
+@enduml

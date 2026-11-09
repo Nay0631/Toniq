@@ -1,0 +1,32 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd U01-6_用語ツールチップ切替機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":設定画面" as L2
+control ":用語の説明" as L3
+entity ":アプリの状態" as L4
+entity ":端末の設定データ" as L5
+
+L1 -> L2 : 用語の説明のスイッチを押下する() : void
+activate L2
+L2 -> L3 : 用語の説明を切り替える() : void
+activate L3
+L3 -> L4 : 用語の説明の ON/OFF を更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 用語の説明の ON/OFF を保存する() : void
+activate L5
+deactivate L5
+opt OFF にした
+  L3 -> L3 : 表示中の説明を消す() : void
+  activate L3
+  deactivate L3
+end
+L3 -> L2 : 点線の下線の表示を切り替える() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

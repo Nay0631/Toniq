@@ -1,0 +1,22 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** M01-1_楽曲保存機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "曲の管理" as C1
+entity "アプリの状態" as E1
+entity "楽曲データ" as E2
+
+A1 --> B1 : 保存ボタンを押下する
+A1 --> B2 : 保存ボタンを押下する
+B1 --> C1 : 今の曲を保存する
+B2 --> C1 : 今の曲を保存する
+C1 --> E1 : 曲の内容と今の曲（リストの曲か）を取得する
+C1 --> E2 : リストの曲なら上書き、ほかは名前を付けて追加する
+C1 --> E1 : 保存した曲を今の曲にする
+C1 --> B1 : 「保存しました」を表示する
+C1 --> B2 : 「保存しました」を表示する
+
+@enduml

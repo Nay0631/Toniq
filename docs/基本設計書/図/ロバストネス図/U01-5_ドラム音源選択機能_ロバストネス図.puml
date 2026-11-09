@@ -1,0 +1,23 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** U01-5_ドラム音源選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "設定画面" as B1
+control "端末の設定" as C1
+control "ドラム音源読み込み" as C2
+control "パート管理" as C3
+entity "アプリの状態" as E1
+entity "端末の設定データ" as E2
+entity "ドラム音源ファイル" as E3
+
+A1 --> B1 : ドラムの音源（シンセ・サンプル音源）を押下する
+B1 --> C1 : ドラムの音源を選ぶ
+C1 --> E1 : ドラムの音源を更新する
+C1 --> E2 : ドラムの音源を保存する
+C1 --> C2 : サンプル音源なら読み込む
+C2 --> E3 : ジャンルの音源を取得する
+C2 --> C2 : ない音は default フォルダ、それもなければシンセで鳴らす
+C1 --> C3 : 再生中ならドラムを読み込み直す
+
+@enduml

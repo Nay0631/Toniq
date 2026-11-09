@@ -1,0 +1,25 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-3_MIDIエクスポート機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "MIDI書き出し" as C1
+control "コード変換" as C2
+control "アルペジオ演奏" as C3
+entity "アプリの状態" as E1
+entity "スケールマスタ" as E2
+entity "MIDIファイル" as E3
+
+A1 --> B1 : MIDIで書き出すボタンを押下する
+A1 --> B2 : MIDI ボタンを押下する
+B1 --> C1 : MIDI で書き出す
+B2 --> C1 : MIDI で書き出す
+C1 --> E1 : コード進行・メロディ・キー・BPMを取得する
+C1 --> C2 : コードのボイシングとルート音を求める
+C2 --> E2 : スケールの音程を取得する
+C1 --> C3 : アルペジオの音を並べる
+C1 --> E3 : 4トラックを書いて保存する
+
+@enduml

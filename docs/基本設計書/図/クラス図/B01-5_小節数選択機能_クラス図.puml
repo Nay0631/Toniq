@@ -1,0 +1,27 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> 小節数を選ぶ() : void
+}
+class "小節数設定" as C1 <<control>> {
+  {method} <U+002B> 小節数を設定する() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 先頭から再生し直す() : void
+  {method} <U+002D> 小節数で自動停止を予約する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 小節数
+  {field} <U+002B> ループ再生
+  {method} <U+002B> 小節数を更新する() : void
+  {method} <U+002B> 小節数を取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> E1
+
+@enduml

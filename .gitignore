@@ -2,3 +2,7 @@ node_modules
 dist
 dist-electron
 release
+
+# Claude Code の個人設定（作業終了の通知など）
+.claude/settings.local.json
+.claude/hooks/

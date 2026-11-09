@@ -1,0 +1,44 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ピアノロール画面" as B1 <<boundary>> {
+  {method} <U+002B> 音符を押下してドラッグする() : void
+  {method} <U+002B> 右クリック・Delete キーで削除する() : void
+  {method} <U+002B> 音符を表示する() : void
+}
+class "音符編集" as C1 <<control>> {
+  {field} <U+002D> 選択中の音
+  {method} <U+002B> 音を選択する() : void
+  {method} <U+002B> 選んだ音を削除する() : void
+  {method} <U+002D> 位置・高さ・長さを変える() : void
+}
+class "スケール判定" as C2 <<control>> {
+  {method} <U+002B> スケール音に寄せる() : void
+}
+class "メロディ演奏" as C3 <<control>> {
+  {method} <U+002B> 選んだ音を試聴する() : void
+}
+class "パート管理" as C4 <<control>> {
+  {method} <U+002B> メロディを読み込み直す() : void
+}
+class "スケールマスタ" as E1 <<entity>> {
+  {field} <U+002B> スケール
+  {field} <U+002B> ペンタトニックの5音・アクセントの2音
+  {method} <U+002B> スケールの7音を取得する() : void
+}
+class "アプリの状態" as E2 <<entity>> {
+  {field} <U+002B> メロディ
+  {field} <U+002B> メロディの入力方法
+  {method} <U+002B> メロディを更新し「自分で入力」にする() : void
+}
+
+B1 --> C1
+C1 --> C3
+C1 --> C2
+C2 --> E1
+C1 --> E2
+C1 --> C4
+C1 --> B1
+
+@enduml

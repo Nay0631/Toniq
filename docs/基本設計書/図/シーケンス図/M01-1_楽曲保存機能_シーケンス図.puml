@@ -1,0 +1,41 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-1_楽曲保存機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":曲の管理" as L3
+entity ":アプリの状態" as L4
+entity ":楽曲データ" as L5
+
+note over L2 : シンプルモード画面の保存ボタンも同じ流れ
+
+L1 -> L2 : 保存ボタンを押下する() : void
+activate L2
+L2 -> L3 : 今の曲を保存する() : void
+activate L3
+L3 -> L4 : 曲の内容と今の曲を取得する() : void
+activate L4
+deactivate L4
+alt リストから開いた曲
+  L3 -> L5 : 上書きする() : void
+  activate L5
+  deactivate L5
+else 未保存の曲
+  L3 -> L3 : 名前を付ける（ジャンル・雰囲気 #番号）() : void
+  activate L3
+  deactivate L3
+  L3 -> L5 : 追加する() : void
+  activate L5
+  deactivate L5
+end
+L3 -> L4 : 保存した曲を今の曲にする() : void
+activate L4
+deactivate L4
+L3 -> L2 : 「保存しました」を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

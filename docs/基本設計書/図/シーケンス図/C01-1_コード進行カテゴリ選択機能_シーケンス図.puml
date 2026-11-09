@@ -1,0 +1,40 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd C01-1_コード進行カテゴリ選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":カテゴリ設定" as L3
+entity ":アプリの状態" as L4
+entity ":コード進行マスタ" as L5
+control ":再生" as L6
+
+L1 -> L2 : カテゴリを選ぶ() : void
+activate L2
+L2 -> L3 : カテゴリを設定する() : void
+activate L3
+L3 -> L4 : 雰囲気を更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 雰囲気が合うコード進行を取得する() : void
+activate L5
+deactivate L5
+opt スケールロックが有効
+  L3 -> L3 : 今と同じスケールの進行に絞る() : void
+  activate L3
+  deactivate L3
+end
+opt 今の進行が候補にない
+  L3 -> L4 : 候補の先頭の進行に切り替える() : void
+  activate L4
+  deactivate L4
+end
+opt 再生中
+  L3 -> L6 : 再生し直す() : void
+  activate L6
+  deactivate L6
+end
+deactivate L3
+deactivate L2
+
+@enduml

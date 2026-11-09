@@ -1,0 +1,60 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-5_WAVエクスポート機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":再生" as L3
+control ":ドラム音源読み込み" as L4
+entity ":ドラム音源ファイル" as L5
+control ":ミックス" as L6
+entity ":ミックス設定マスタ" as L7
+entity ":アプリの状態" as L8
+control ":各パートの演奏" as L9
+entity ":WAVファイル" as L10
+
+note over L2 : シンプルモード画面の「WAVで書き出す」も同じ流れ
+
+L1 -> L2 : WAV ボタンを押下する() : void
+activate L2
+L2 -> L2 : ボタンを「レンダリング中…」にする() : void
+activate L2
+deactivate L2
+L2 -> L3 : WAV で書き出す() : void
+activate L3
+L3 -> L3 : 再生を止める() : void
+activate L3
+deactivate L3
+opt ドラムの音源がサンプル音源
+  L3 -> L4 : 音源を読み込む() : void
+  activate L4
+  L4 -> L5 : ジャンルの音源を取得する() : void
+  activate L5
+  deactivate L5
+  deactivate L4
+end
+L3 -> L6 : ミックスをジャンルに合わせる() : void
+activate L6
+L6 -> L7 : ミックス設定を取得する() : void
+activate L7
+deactivate L7
+deactivate L6
+L3 -> L8 : ON のパートと曲の内容を取得する() : void
+activate L8
+deactivate L8
+L3 -> L9 : 曲全体をオフラインで鳴らす() : void
+activate L9
+deactivate L9
+L3 -> L3 : 16bit PCM の WAV に変換する() : void
+activate L3
+deactivate L3
+L3 -> L10 : 保存する() : void
+activate L10
+deactivate L10
+deactivate L3
+L2 -> L2 : ボタンを元に戻す() : void
+activate L2
+deactivate L2
+deactivate L2
+
+@enduml

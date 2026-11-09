@@ -1,0 +1,23 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** U01-3_音名表記選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "設定画面" as B1
+boundary "音楽クイズ画面" as B2
+boundary "ピアノロール画面" as B3
+control "端末の設定" as C1
+control "クイズ出題" as C2
+entity "アプリの状態" as E1
+entity "端末の設定データ" as E2
+
+A1 --> B1 : 音名の表記（C D E・ド レ ミ）を押下する
+A1 --> B2 : 音名の表記（CDE・ドレミ）を押下する
+B1 --> C1 : 音名の表記を選ぶ
+B2 --> C1 : 音名の表記を選ぶ
+C1 --> E1 : 音名の表記を更新する
+C1 --> E2 : 音名の表記を保存する
+C1 --> B3 : 鍵盤・音符の音名を表示し直す
+B2 --> C2 : 新しい問題を出す
+
+@enduml

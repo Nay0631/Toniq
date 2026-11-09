@@ -1,0 +1,47 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "アレンジ画面" as B1 <<boundary>> {
+  {method} <U+002B> タイムラインの空いている所を押下する() : void
+  {method} <U+002B> ブロックをドラッグする・右クリックする() : void
+  {method} <U+002B> 標準に戻すボタンを押下する() : void
+}
+class "ブロック編集" as C1 <<control>> {
+  {method} <U+002B> ブロックを置く() : void
+  {method} <U+002B> ブロックを動かす・削除する() : void
+  {method} <U+002B> 標準に戻す() : void
+  {method} <U+002D> 周回1周分の空きを求める() : void
+}
+class "アレンジ管理" as C2 <<control>> {
+  {method} <U+002B> 今のアレンジを取得する() : void
+  {method} <U+002B> 鳴らす小節か確かめる() : void
+}
+class "パート管理" as C3 <<control>> {
+  {method} <U+002B> パートを ON にする() : void
+}
+class "各パートの演奏" as C4 <<control>> {
+  {method} <U+002B> 音を鳴らす() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> アレンジ（パートごとのブロック）
+  {field} <U+002B> ジャンル・小節数
+  {method} <U+002B> アレンジ・ジャンル・小節数を取得する() : void
+  {method} <U+002B> アレンジを更新する() : void
+  {method} <U+002B> アレンジを空にする() : void
+}
+class "標準アレンジマスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 周回ごとに鳴らすパート
+  {method} <U+002B> ジャンルの標準アレンジを取得する() : void
+}
+
+B1 --> C1
+C1 --> C2
+C2 --> E1
+C2 --> E2
+C1 --> E1
+C1 --> C3
+C4 --> C2
+
+@enduml

@@ -1,0 +1,71 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-6_ジャンル選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":シンプルモード画面" as L2
+boundary ":カスタムモード画面" as L3
+control ":ジャンル設定" as L4
+control ":パターン選出" as L5
+entity ":テンポマスタ" as L6
+entity ":アプリの状態" as L7
+control ":ジャンル試聴" as L8
+control ":再生" as L9
+control ":ミックス" as L10
+entity ":ミックス設定マスタ" as L11
+
+alt シンプルモード画面
+  L1 -> L2 : ジャンルのチップを押下する() : void
+  activate L2
+  L2 -> L4 : ジャンルを設定する() : void
+  activate L4
+  opt テンポがプリセット（ゆっくり・普通・速い）
+    L4 -> L5 : BPMを求める() : void
+    activate L5
+    L5 -> L6 : BPMを取得する() : void
+    activate L6
+    deactivate L6
+    deactivate L5
+  end
+  L4 -> L7 : ジャンルとBPMを更新する() : void
+  activate L7
+  deactivate L7
+  opt ジャンルのサンプルを再生中
+    L4 -> L8 : 新しいジャンルのサンプルを鳴らす() : void
+    activate L8
+    deactivate L8
+  end
+  deactivate L4
+  deactivate L2
+else カスタムモード画面
+  L1 -> L3 : ジャンルを選ぶ() : void
+  activate L3
+  L3 -> L4 : ジャンルを設定する() : void
+  activate L4
+  opt テンポがプリセット（ゆっくり・普通・速い）
+    L4 -> L5 : BPMを求める() : void
+    activate L5
+    L5 -> L6 : BPMを取得する() : void
+    activate L6
+    deactivate L6
+    deactivate L5
+  end
+  L4 -> L7 : ジャンル・BPM・ドラムのカテゴリを更新する() : void
+  activate L7
+  deactivate L7
+  opt 再生中
+    L4 -> L9 : 再生し直す() : void
+    activate L9
+    L9 -> L10 : ミックスをジャンルに合わせる() : void
+    activate L10
+    L10 -> L11 : ミックス設定を取得する() : void
+    activate L11
+    deactivate L11
+    deactivate L10
+    deactivate L9
+  end
+  deactivate L4
+  deactivate L3
+end
+
+@enduml

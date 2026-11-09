@@ -1,0 +1,39 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> ON/OFF ボタンを押下する() : void
+  {method} <U+002B> FX / SE の種類を選ぶ() : void
+  {method} <U+002B> FX / SE の試聴ボタンを押下する() : void
+}
+class "パート管理" as C1 <<control>> {
+  {method} <U+002B> パートを ON/OFF する() : void
+}
+class "各パートの演奏" as C2 <<control>> {
+  {method} <U+002B> 音源を読み込む() : void
+  {method} <U+002B> 音源を破棄する() : void
+}
+class "FX設定" as C3 <<control>> {
+  {method} <U+002B> FX / SE の種類を設定する() : void
+}
+class "再生" as C4 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+  {method} <U+002B> FX / SE を試聴する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> パートの ON/OFF
+  {field} <U+002B> FX / SE の種類
+  {method} <U+002B> パートの ON/OFF を更新する() : void
+  {method} <U+002B> FX / SE の種類を更新する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+B1 --> C3
+C3 --> E1
+C3 --> C4
+B1 --> C4
+
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> 保存ボタンを押下する() : void
+  {method} <U+002B> 「保存しました」を表示する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> 保存ボタンを押下する() : void
+  {method} <U+002B> 「保存しました」を表示する() : void
+}
+class "曲の管理" as C1 <<control>> {
+  {method} <U+002B> 今の曲を保存する() : void
+  {method} <U+002D> 名前を付ける() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 曲の内容
+  {field} <U+002B> 今の曲（リストの曲か）
+  {method} <U+002B> 曲の内容と今の曲を取得する() : void
+  {method} <U+002B> 保存した曲を今の曲にする() : void
+}
+class "楽曲データ" as E2 <<entity>> {
+  {field} <U+002B> 曲名・お気に入り・日時
+  {field} <U+002B> 曲の内容
+  {method} <U+002B> 上書きする() : void
+  {method} <U+002B> 追加する() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> E1
+C1 --> E2
+C1 --> B1
+C1 --> B2
+
+@enduml

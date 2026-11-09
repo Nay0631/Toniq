@@ -1,0 +1,39 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "設定画面" as B1 <<boundary>> {
+  {method} <U+002B> ドラムの音源を押下する() : void
+}
+class "端末の設定" as C1 <<control>> {
+  {method} <U+002B> ドラムの音源を選ぶ() : void
+}
+class "ドラム音源読み込み" as C2 <<control>> {
+  {field} <U+002D> 読み込んだ音源
+  {method} <U+002B> 音源を読み込む() : void
+}
+class "パート管理" as C3 <<control>> {
+  {method} <U+002B> ドラムを読み込み直す() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> ドラムの音源
+  {method} <U+002B> ドラムの音源を更新する() : void
+}
+class "端末の設定データ" as E2 <<entity>> {
+  {field} <U+002B> ドラムの音源
+  {method} <U+002B> ドラムの音源を保存する() : void
+}
+class "ドラム音源ファイル" as E3 <<entity>> {
+  {field} <U+002B> ジャンルのフォルダ
+  {field} <U+002B> トラックごとの音
+  {method} <U+002B> ジャンルの音源を取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> E2
+C1 --> C2
+C2 --> E3
+C1 --> C3
+
+@enduml
