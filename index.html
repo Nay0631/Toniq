@@ -449,6 +449,14 @@
               </div>
             </div>
 
+            <div class="form-row">
+              <span class="form-label" data-term="chorus">サビ</span>
+              <div class="select-with-btn">
+                <select class="select" id="c-chorus" aria-label="サビの進行"></select>
+                <button class="btn btn-small btn-icon" id="c-chorus-reroll" aria-label="サビの進行を差し替え" title="差し替え">↻</button>
+              </div>
+            </div>
+
             <label class="form-row">
               <span class="form-label" data-term="chordRhythm">リズム</span>
               <select class="select" id="c-rhythm">
@@ -564,6 +572,14 @@
           <div class="arranger" id="c-arranger"></div>
         </div>
 
+        <!-- テスト中の機能（聴き比べ用の ON/OFF）と自動チェック。中身は ArrangerTab.ts で作る -->
+        <div class="card panel test-panel">
+          <div class="panel-title panel-title-plain">テスト中の機能<span class="test-panel-note">聴き比べ用。端末ごとに保存されます</span></div>
+          <div class="test-toggles" id="c-test-toggles"></div>
+          <div class="panel-title panel-title-plain test-panel-sub"><span data-term="qualityCheck">自動チェック</span><span class="test-panel-note">今の曲を規則で調べた結果です</span></div>
+          <ul class="quality-list" id="c-quality"></ul>
+        </div>
+
         <!-- ミキサー（パート別音量。中身は MixerPanel.ts で作る） -->
         <div class="card panel mixer-panel">
           <div class="panel-title">
@@ -602,7 +618,7 @@
               <button class="btn" id="c-arr-export-wav" data-term="wav">WAV</button>
               <button class="btn" id="c-arr-export-mp3" data-term="mp3">MP3</button>
             </div>
-            <p class="hint hint-left">MIDI はアレンジに未対応です（コード進行1周分）</p>
+            <p class="hint hint-left">MIDI はシグネチャー・FX / SE を含みません</p>
           </div>
         </div>
       </div>

@@ -12,7 +12,8 @@ import { onRender, render } from "./Router";
 
 // 再生し直さなくても反映できる項目（アレンジは再生中も AppState を見ている）
 const LIGHT_FIELDS: TrackedField[] = [
-  "arrangement", "volumes", "parts", "melodyNotes", "melodyMethod", "melodyVersion", "swing", "sidechain",
+  "arrangement", "volumes", "parts", "melodyNotes", "chorusMelodyNotes", "melodyMethod", "melodyVersion",
+  "swing", "sidechain",
 ];
 
 function renderButtons(): void {
@@ -32,7 +33,7 @@ async function applyChanges(changed: TrackedField[], before: Record<LayerName, b
       (Object.keys(before) as LayerName[]).forEach(part => {
         if (before[part] !== s.parts[part]) withoutHistory(() => setLayerEnabled(part, s.parts[part]));
       });
-      if (changed.some(f => f.startsWith("melody")) && s.parts.melody) reloadLayer("melody");
+      if (changed.some(f => f.startsWith("melody") || f === "chorusMelodyNotes") && s.parts.melody) reloadLayer("melody");
     } else if (getState().screen === "custom") {
       await restartCustom();
     } else {

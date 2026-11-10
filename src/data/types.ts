@@ -22,6 +22,9 @@ export interface ChordDegree {
   type:         string;
   inversion:    number;
   duration_bars: number;
+  // 曲全体の並び（SongForm.songProgression）でだけ付く印
+  ending?:  boolean;      // 曲の終わり（エンディング）の主和音
+  section?: "A" | "B";    // どのセクション（Aメロ／サビ）のコードか
 }
 
 export interface ChordProgression {
@@ -35,4 +38,7 @@ export interface ChordProgression {
   progression: ChordDegree[];
   chord_rhythm: { pattern: string; description: string };
   notes?:      string;
+  // 曲全体の並び（SongForm.songProgression）でだけ付く：元のコード進行1周の長さ（小節）。
+  // ベースのフィルなど「1周の最後の小節」を求めるのに使う
+  section_bars?: number;
 }

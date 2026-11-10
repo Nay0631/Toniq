@@ -1,6 +1,6 @@
-import { getState, setState, PianoRollLength } from "../engine/AppState";
+import { getState, setState, PianoRollLength, Section } from "../engine/AppState";
 import {
-  MelodyNote, generateMelody, noteToMidi, midiToNote,
+  MelodyNote, noteToMidi, midiToNote,
   timeToUnits, durationToUnits, unitsToTime, unitsToDuration,
 } from "../engine/MelodyGenerator";
 import { reloadLayer } from "../engine/LayerManager";
@@ -9,6 +9,8 @@ import * as Playback from "../engine/Playback";
 import { NOTE_INDEX, scaleSemitones } from "../data/degree_resolver";
 import { onRender, render } from "./Router";
 import { SCALE_LABELS, chordSpans, displayNote } from "./format";
+import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
+import type { ChordProgression } from "../data/types";
 
 // 表示する音域（MIDI ノート番号。C3〜C7）
 const LOW  = 48;
@@ -45,6 +47,21 @@ interface RollNote {
 let selected: number | null = null;
 let cursor = 0;
 
+// 編集中のセクション（A = Aメロ、B = サビ。サビは AppState.chorusMelodyNotes）。表示上の一時的な状態
+let section: Section = "A";
+
+// 編集中のセクションのコード進行（サビの進行がなければ Aメロと同じ）
+function rollProgression(): ChordProgression | null {
+  const s = getState();
+  return section === "B" ? chorusProgression() ?? s.chordPattern : s.chordPattern;
+}
+
+// 編集中のセクションのメロディ（サビのメロディがまだなければ、サビでも鳴る Aメロのメロディを見せる）
+function sectionNotes(): MelodyNote[] {
+  const s = getState();
+  return section === "B" && s.chorusMelodyNotes.length > 0 ? s.chorusMelodyNotes : s.melodyNotes;
+}
+
 // ===== メロディ（AppState.melodyNotes）との変換 =====
 
 function loopUnits(): number {
@@ -63,7 +80,7 @@ function snapUnits(): number {
 // 休符は持たず、鳴る音だけを扱う。コード進行1周より後ろの音は表示しない
 function readNotes(): RollNote[] {
   const total = loopUnits();
-  return getState().melodyNotes
+  return sectionNotes()
     .filter((n): n is MelodyNote & { note: string } => n.note !== null)
     .map(n => ({ midi: noteToMidi(n.note), start: timeToUnits(n.time), units: durationToUnits(n.duration) }))
     .filter(n => n.start < total);
@@ -74,7 +91,7 @@ function writeNotes(notes: RollNote[]): void {
   const melodyNotes: MelodyNote[] = [...notes]
     .sort((a, b) => a.start - b.start)
     .map(n => ({ note: midiToNote(n.midi), duration: unitsToDuration(n.units), time: unitsToTime(n.start) }));
-  setState({ melodyNotes, melodyMethod: "manual" });
+  setState(section === "B" ? { chorusMelodyNotes: melodyNotes, melodyMethod: "manual" } : { melodyNotes, melodyMethod: "manual" });
   if (Playback.isPlaying() && getState().parts.melody) reloadLayer("melody");
   render();
 }
@@ -147,6 +164,10 @@ const TRASH_ICON = `
 function buildSkeleton(root: HTMLElement): void {
   root.innerHTML = `
     <div class="pr-toolbar">
+      <div class="pr-seg" role="group" aria-label="編集するセクション" data-term="section">
+        <button data-pr-section="A">Aメロ</button><button data-pr-section="B">サビ</button>
+      </div>
+      <span class="pr-sep"></span>
       <div class="pr-seg" role="group" aria-label="入力する音符の長さ" data-term="noteLength">
         ${LENGTHS.map(l => `<button data-pr-length="${l.value}">${l.label}</button>`).join("")}
       </div>
@@ -206,6 +227,8 @@ export function renderPianoRoll(): void {
   // ツールバー
   root.querySelectorAll<HTMLElement>("[data-pr-length]").forEach(btn =>
     btn.classList.toggle("is-active", btn.dataset.prLength === s.pianoRollLength));
+  root.querySelectorAll<HTMLElement>("[data-pr-section]").forEach(btn =>
+    btn.classList.toggle("is-active", btn.dataset.prSection === section));
   const lock = q(root, "[data-pr-lock]");
   lock.classList.toggle("is-on", s.pianoRollScaleLock);
   lock.setAttribute("aria-pressed", String(s.pianoRollScaleLock));
@@ -216,7 +239,7 @@ export function renderPianoRoll(): void {
   // 目盛り：小節番号とその小節のコード
   let chords: { bar: number; bars: number; name: string }[] = [];
   try {
-    chords = chordSpans(s.chordPattern, s.key);
+    chords = chordSpans(rollProgression() ?? s.chordPattern, s.key);
   } catch (e) {
     console.warn("ピアノロール：コード名の解決に失敗", e);
   }
@@ -454,6 +477,12 @@ export function initPianoRoll(): void {
         setState({ pianoRollLength: btn.dataset.prLength as PianoRollLength });
         render();
       }));
+    rootEl.querySelectorAll<HTMLElement>("[data-pr-section]").forEach(btn =>
+      btn.addEventListener("click", () => {
+        section = btn.dataset.prSection === "B" ? "B" : "A";
+        selected = null;
+        render();
+      }));
     q(rootEl, "[data-pr-lock]").addEventListener("click", () => {
       setState({ pianoRollScaleLock: !getState().pianoRollScaleLock });
       render();
@@ -472,8 +501,9 @@ export function initPianoRoll(): void {
       if (s.melodyMethod === "manual" && readNotes().length > 0
           && !confirm("入力したメロディを自動生成のメロディに置き換えますか？")) return;
       selected = null;
+      // Aメロとサビの両方を作り直す
       setState({
-        melodyNotes:   generateMelody(s.chordPattern, s.key, s.genre),
+        ...generateSongMelodies(),
         melodyMethod:  "auto",
         melodyVersion: s.melodyVersion + 1,
       });

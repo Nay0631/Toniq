@@ -1,7 +1,8 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { createVolumeNode } from "./VolumeManager";
-import { arrangementBlockAt, getArrangement } from "./LoopArranger";
+import { arrangementBlockAt, getArrangement, positionAt } from "./LoopArranger";
+import { endingBar } from "./SongForm";
 import { getState, FxType, ArrangeBlock } from "./AppState";
 
 // FX / SE：ループの継ぎ目を演出する効果音
@@ -385,10 +386,12 @@ export function loadFx(progression: ChordProgression) {
   ];
 
   // 鳴らすかどうかと種類は、発音時刻にあるブロックで決める（再生中のアレンジの編集もすぐ反映される）
-  const blockAt = arrangementBlockAt("fx");
+  const blockAt  = arrangementBlockAt("fx");
+  const position = positionAt();
   fxPart = new Tone.Part((time, event: FxEvent) => {
     const block = blockAt(time);
     if (block === undefined) return;
+    if (position(time).bar === endingBar()) return;  // エンディングの小節では鳴らさない（主和音で静かに終える）
     const voice = voiceFor(blockFxType(block));
     if (!voice) return;
     if (event.kind === "hit") {

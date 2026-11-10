@@ -10,6 +10,7 @@ import { loadSignature, disposeSignature }     from "./SignaturePlayer";
 import { loadMelody, disposeMelody }          from "./MelodyPlayer";
 import { loadFx, disposeFx }                  from "./FxPlayer";
 import { getState, setState }                 from "./AppState";
+import { songProgression, songMelody }         from "./SongForm";
 
 export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "fx";
 
@@ -45,31 +46,34 @@ function disposeLayer(layer: LayerName) {
 }
 
 // ===== レイヤー再ロード（現在のStateから） =====
+// コードに沿うパートには曲全体の並び（セクションごとの進行・エンディング。SongForm.songProgression）を渡す。
+// FX はループの継ぎ目の効果音なので、コード進行1周で読み込む
 export function reloadLayer(layer: LayerName) {
   const s = getState();
-  if (!s.chordPattern || !s.drumPattern) return;
+  const song = songProgression();
+  if (!s.chordPattern || !s.drumPattern || !song) return;
 
   switch (layer) {
     case "drum":
       loadDrumPattern(s.drumPattern);
       break;
     case "chord":
-      loadChordProgression(s.chordPattern, s.key);
+      loadChordProgression(song, s.key);
       break;
     case "bass":
-      loadBassLine(s.chordPattern, s.key, 2);
+      loadBassLine(song, s.key, 2);
       break;
     case "arp":
-      loadArpPattern(s.chordPattern, s.key);
+      loadArpPattern(song, s.key);
       break;
     case "pad":
-      loadPadPattern(s.chordPattern, s.key);
+      loadPadPattern(song, s.key);
       break;
     case "signature":
-      loadSignature(s.chordPattern, s.key);
+      loadSignature(song, s.key);
       break;
     case "melody":
-      loadMelody(s.melodyNotes, `${s.chordPattern.length_bars}m`);
+      loadMelody(songMelody(), `${song.length_bars}m`);
       break;
     case "fx":
       loadFx(s.chordPattern);
@@ -114,15 +118,11 @@ export function replaceChordProgression(
   disposeSignature();
   disposeFx();
 
-  // Transport動作中でも正しく再開始できるよう少し遅延して再ロード
-  const key = state.key;
+  // Transport動作中でも正しく再開始できるよう少し遅延して再ロード（曲全体の並びで読み込む）
   setTimeout(() => {
-    loadChordProgression(newProgression, key);
-    loadBassLine(newProgression, key, 2);
-    loadArpPattern(newProgression, key);
-    loadPadPattern(newProgression, key);
-    if (getState().parts.signature) loadSignature(newProgression, key);
-    if (getState().parts.fx) loadFx(newProgression);
+    (["chord", "bass", "arp", "pad", "signature", "fx"] as LayerName[]).forEach(layer => {
+      if (getState().parts[layer]) reloadLayer(layer);
+    });
     console.log(`コード進行差し替え完了: ${newProgression.name}`);
   }, 50);
 
@@ -133,8 +133,7 @@ export function replaceChordProgression(
 export function replaceMelody(newNotes: MelodyNote[]) {
   setState({ melodyNotes: newNotes });
   disposeMelody();
-  const s = getState();
-  loadMelody(newNotes, `${s.chordPattern!.length_bars}m`);
+  reloadLayer("melody");
   console.log("メロディ差し替え完了");
 }
 

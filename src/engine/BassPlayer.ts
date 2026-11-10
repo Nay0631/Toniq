@@ -2,7 +2,8 @@ import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
-import { arrangementGate } from "./LoopArranger";
+import { arrangementGate, positionAt } from "./LoopArranger";
+import { kickAt } from "./DrumEngine";
 import { getState } from "./AppState";
 import bassParams from "../data/bass_params.json";
 
@@ -50,10 +51,12 @@ export interface BassNote {
   length:    number;
 }
 
-// コード進行1周分のベースの音の並び（ジャンル別のパターン。MIDI書き出しも同じものを使う）
+// ベースの音の並び（ジャンル別のパターン。MIDI書き出しも同じものを使う）。
+// コード進行1周の最後の小節は fill（曲全体の並びなら section_bars ごと）。エンディングの主和音はルートの全音符1つ
 export function bassNotes(progression: ChordProgression, key: string, octave: number = 2): BassNote[] {
   const param = bassParam();
   const notes: BassNote[] = [];
+  const loopBars = progression.section_bars ?? progression.length_bars;
 
   progression.progression.forEach((chord) => {
     const resolved = resolveChord(
@@ -76,9 +79,14 @@ export function bassNotes(progression: ChordProgression, key: string, octave: nu
       O: root.transpose(12).toNote(),
     };
 
+    if (chord.ending) {
+      notes.push({ sixteenth: (chord.bar - 1) * 16, note: roles.R, length: chord.duration_bars * 16 });
+      return;
+    }
+
     for (let b = 0; b < chord.duration_bars; b++) {
       const bar = chord.bar - 1 + b;
-      const pattern = bar === progression.length_bars - 1
+      const pattern = bar % loopBars === loopBars - 1
         ? param.fill
         : param.patterns[bar % param.patterns.length];
 
@@ -93,6 +101,12 @@ export function bassNotes(progression: ChordProgression, key: string, octave: nu
     }
   });
   return notes;
+}
+
+// ベースの強さ：キックと同時に鳴る音を強く、それ以外は拍の頭 > 裏の順に少し弱くして、低音のアタックをキックにそろえる
+export function bassVelocity(bar: number, step: number): number {
+  if (kickAt(bar, step)) return 1;
+  return step % 4 === 0 ? 0.88 : 0.76;
 }
 
 export function loadBassLine(
@@ -110,9 +124,11 @@ export function loadBassLine(
   }));
 
   const arranged = arrangementGate("bass");
+  const position = positionAt();
   bassPart = new Tone.Part((time, event: any) => {
     if (!arranged(time)) return;
-    bassSynth?.triggerAttackRelease(event.note, event.dur, time);
+    const { bar, step } = position(time);
+    bassSynth?.triggerAttackRelease(event.note, event.dur, time, bassVelocity(bar, step));
   }, events);
 
   bassPart.loop = true;

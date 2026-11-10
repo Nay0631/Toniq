@@ -1,6 +1,6 @@
 import { getState, setState, defaultState, SONG_FIELDS, SongFields } from "./AppState";
 import { applyAllVolumes } from "./VolumeManager";
-import { resolveSimpleMode, resolveTempoPreset } from "./SimpleModeResolver";
+import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./SimpleModeResolver";
 import { emptyArrangement } from "./LoopArranger";
 import { resetHistory } from "./History";
 
@@ -224,6 +224,7 @@ export function newSong(): void {
   setState({
     bpm:          resolveTempoPreset(s.genre, s.tempoPreset as "ゆっくり" | "普通" | "速い"),
     chordPattern: result.chordPattern,
+    chorusPattern: pickChorus(result.chordPattern, s.genre, s.mood),
     drumPattern:  result.drumPattern,
   });
   // メロディは空のまま（自動生成ボタンを押したときに初めて作る）

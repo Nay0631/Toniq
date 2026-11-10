@@ -1,5 +1,6 @@
 import { getState, setState } from "../engine/AppState";
-import { resolveSimpleMode, resolveTempoPreset, rerollChord, rerollDrum } from "../engine/SimpleModeResolver";
+import { resolveSimpleMode, resolveTempoPreset, rerollChord, rerollDrum, pickChorus } from "../engine/SimpleModeResolver";
+import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import { generateMelody } from "../engine/MelodyGenerator";
 import { getFullArrangementLoops, isArrangedAt, LAYERS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
@@ -37,13 +38,11 @@ function songBars(): number {
   return (s.chordPattern?.length_bars ?? 4) * getFullArrangementLoops(s.genre);
 }
 
+// Aメロとサビのメロディを作る（サビは高めの音域）
 function makeMelody(): void {
   const s = getState();
   if (!s.chordPattern) return;
-  const melodyNotes = s.melodyMethod === "auto"
-    ? generateMelody(s.chordPattern, s.key, s.genre)
-    : [];
-  setState({ melodyNotes });
+  setState(s.melodyMethod === "auto" ? generateSongMelodies() : { melodyNotes: [], chorusMelodyNotes: [] });
 }
 
 function generate(): void {
@@ -53,11 +52,13 @@ function generate(): void {
   const result = resolveSimpleMode(s.genre, s.mood);
   setState({
     chordPattern:  result.chordPattern,
+    chorusPattern: pickChorus(result.chordPattern, s.genre, s.mood),  // サビの進行（同じ長さ・スケールのもの）
     drumPattern:   result.drumPattern,
     melodyVersion: 0,
     generated:     true,
     songId:        null,  // 新しい曲としてミュージックリストに保存する
     arrangement:   null,  // カスタムモードで編集したアレンジは捨ててジャンルの標準に戻す
+    sections:      null,  // セクションもジャンルの標準に戻す
   });
   setState({ bars: songBars() });
   makeMelody();
@@ -201,7 +202,10 @@ function render(): void {
     ? `自動生成 フレーズ${phrase}`
     : `ピアノロールで入力（${s.melodyNotes.filter(n => n.note).length}音）`;
   $("s-melody-action")!.textContent = s.melodyMethod === "auto" ? "↻ 再生成" : "ピアノロールを開く";
-  $("s-chord-desc")!.textContent = s.chordPattern ? chordNames(s.chordPattern, s.key) : "";
+  const chorus = chorusProgression();
+  $("s-chord-desc")!.textContent = !s.chordPattern ? ""
+    : chorus ? `${chordNames(s.chordPattern, s.key)}（サビ：${chordNames(chorus, s.key)}）`
+    : chordNames(s.chordPattern, s.key);
   if (s.drumPattern) {
     $("s-drum-desc")!.textContent = `#${s.drumPattern.id.replace(/\D/g, "")} ${s.drumPattern.name}`;
   }
@@ -308,7 +312,8 @@ export function initSimpleScreen(): void {
 
   $("s-chord-reroll")?.addEventListener("click", async () => {
     const s = getState();
-    setState({ chordPattern: rerollChord(s.genre, s.mood, s.chordPattern?.id) });
+    const chordPattern = rerollChord(s.genre, s.mood, s.chordPattern?.id);
+    setState({ chordPattern, chorusPattern: pickChorus(chordPattern, s.genre, s.mood) });
     setState({ bars: songBars() });
     // スケールや長さが変わることがあるので、自動生成のメロディは作り直す
     if (s.melodyMethod === "auto") {

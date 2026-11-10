@@ -6,7 +6,7 @@ import { initSignatureSynth }                       from "./engine/SignaturePlay
 import { initMelodySynth }                          from "./engine/MelodyPlayer";
 import { initFxSynth }                              from "./engine/FxPlayer";
 import { setState }                                 from "./engine/AppState";
-import { resolveSimpleMode, resolveTempoPreset } from "./engine/SimpleModeResolver";
+import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./engine/SimpleModeResolver";
 import { initRouter } from "./ui/Router";
 import { initSimpleScreen } from "./ui/SimpleScreen";
 import { initCustomScreen } from "./ui/CustomScreen";
@@ -30,6 +30,7 @@ setState({
   tempoPreset:  "普通",
   bpm:          initialBpm,
   chordPattern: initialResult.chordPattern,
+  chorusPattern: pickChorus(initialResult.chordPattern, "EDM", "明るい"),
   drumPattern:  initialResult.drumPattern,
 });
 
