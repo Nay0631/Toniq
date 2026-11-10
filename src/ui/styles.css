@@ -530,6 +530,7 @@ button {
   margin-top: 12px;
 }
 .genre-desc { color: var(--text-sub); font-size: 14px; }
+.field-hint { margin-left: 6px; font-size: 13px; font-weight: 400; color: var(--text-sub); }
 #s-sample.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
 
 .method-cards {
