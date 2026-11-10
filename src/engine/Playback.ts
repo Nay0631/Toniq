@@ -11,6 +11,7 @@ import { prepareDrumSamples } from "./DrumSamples";
 import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
 import { applySwing } from "./Groove";
+import { endingBar, songMelody, songProgression } from "./SongForm";
 
 // 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
 async function audioReady(genre: string): Promise<void> {
@@ -48,12 +49,14 @@ export function applyLoopPlayback(): void {
   } else {
     transport.loop = false;
     const onEnded = songOnEnded;
+    // エンディングを使うときは、最後の主和音の余韻が切れないよう1小節待ってから止める
+    const endAt = endingBar() !== null ? s.bars + 1 : s.bars;
     endEventId = transport.scheduleOnce(time => {
       Tone.getDraw().schedule(() => {
         stop();
         onEnded();
       }, time);
-    }, `${s.bars}m`);
+    }, `${endAt}m`);
   }
 }
 
@@ -308,6 +311,8 @@ async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
 
   const chordPattern = s.chordPattern;
   const drumPattern  = s.drumPattern;
+  const song         = songProgression() ?? chordPattern;  // 曲全体の並び（セクション・エンディング）
+  const melody       = songMelody();
   const durationSec  = getSongSeconds() + 2;
 
   onProgress?.("prepare", 0);
@@ -332,12 +337,12 @@ async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
     const { initFxSynth: initF,    loadFx: loadF }               = await import("./FxPlayer");
 
     if (s.parts.drum)   loadDrum(drumPattern);
-    if (s.parts.chord)  { initC();  loadC(chordPattern, s.key); }
-    if (s.parts.bass)   { initB();  loadB(chordPattern, s.key, 2); }
-    if (s.parts.arp)    { initAr(); loadAr(chordPattern, s.key); }
-    if (s.parts.pad)    { initP();  loadP(chordPattern, s.key); }
-    if (s.parts.signature) { initS(); loadS(chordPattern, s.key); }
-    if (s.parts.melody) { initM();  loadMel(s.melodyNotes, `${chordPattern.length_bars}m`); }
+    if (s.parts.chord)  { initC();  loadC(song, s.key); }
+    if (s.parts.bass)   { initB();  loadB(song, s.key, 2); }
+    if (s.parts.arp)    { initAr(); loadAr(song, s.key); }
+    if (s.parts.pad)    { initP();  loadP(song, s.key); }
+    if (s.parts.signature) { initS(); loadS(song, s.key); }
+    if (s.parts.melody) { initM();  loadMel(melody, `${song.length_bars}m`); }
     if (s.parts.fx)     { initF();  loadF(chordPattern); }
     Tone.getTransport().start();
     onProgress?.("prepare", 1);

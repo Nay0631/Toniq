@@ -2,16 +2,17 @@ import { Midi, Track } from "@tonejs/midi";
 import { getState } from "./AppState";
 import { MelodyNote } from "./MelodyGenerator";
 import { arpNotes, arpParam } from "./ArpPlayer";
-import { bassNotes } from "./BassPlayer";
+import { bassNotes, bassVelocity } from "./BassPlayer";
 import { chordEvents } from "./ChordPlayer";
 import { padEvents } from "./PadPlayer";
-import { blockDrumPattern } from "./DrumEngine";
+import { blockDrumPattern, drumStepHits } from "./DrumEngine";
+import { songMelody, songProgression } from "./SongForm";
 import { getArrangement, findBlock } from "./LoopArranger";
 import { swingAmount, SWING_MAX } from "./Groove";
 import type { LayerName } from "./LayerManager";
 
 // MIDI書き出し。今の曲（AppState）を再生と同じ内容で書き出す：
-// - 長さは曲全体（AppState.bars 小節）。コード進行・メロディはその長さまでループする
+// - 長さは曲全体（AppState.bars 小節）。コード進行・メロディは曲全体の並び（セクションごとの進行・エンディング）で書き出す
 // - アレンジ（ブロックのある小節だけ鳴らす）と パートの ON/OFF に従う。ドラムはブロックごとのパターンも反映する
 // - ベースはジャンル別のパターン、コードはコードのリズム、アルペジオ・パッドは再生と同じボイシング
 // - スウィングは発音位置に反映する（Tone.js の Transport と同じずらし方）
@@ -70,7 +71,7 @@ const TRACKS: Record<Exclude<LayerName, "signature" | "fx">, { name: string; cha
 // ===== MIDIエクスポート本体 =====
 export function exportMidi(filename?: string): void {
   const s = getState();
-  const progression = s.chordPattern;
+  const progression = songProgression();  // 曲全体の並び（再生と同じ）
   if (!progression) return;
 
   const midi = new Midi();
@@ -131,7 +132,7 @@ export function exportMidi(filename?: string): void {
   // ===== メロディ =====
   const melTrack = addTrack("melody");
   if (melTrack) {
-    addLooped(melTrack, "melody", s.melodyNotes
+    addLooped(melTrack, "melody", songMelody()
       .filter((n): n is MelodyNote & { note: string } => !!n.note)
       .map(n => {
         const beats = timeStrToBeats(n.time);
@@ -168,10 +169,11 @@ export function exportMidi(filename?: string): void {
   const bassTrack = addTrack("bass");
   if (bassTrack) {
     addLooped(bassTrack, "bass", bassNotes(progression, key, 2).map(n =>
-      ({ beats: n.sixteenth / 4, length: n.length / 4, midi: noteToMidi(n.note), velocity: 0.8 })));
+      ({ beats: n.sixteenth / 4, length: n.length / 4, midi: noteToMidi(n.note),
+         velocity: 0.8 * bassVelocity(Math.floor(n.sixteenth / 16), n.sixteenth % 16) })));
   }
 
-  // ===== ドラム（16分ごとに、その小節のブロックのパターンで鳴らす。DrumEngine と同じ選び方） =====
+  // ===== ドラム（16分ごとに、その小節のブロックのパターンで鳴らす。フィル・エンディングも DrumEngine と共通） =====
   const drumTrack = addTrack("drum");
   if (drumTrack) {
     for (let step = 0; step < s.bars * 16; step++) {
@@ -180,14 +182,13 @@ export function exportMidi(filename?: string): void {
       if (!block) continue;
       const pattern = blockDrumPattern(block);
       if (!pattern) continue;
-      const i = step % pattern.steps;
-      for (const [name, track] of Object.entries(pattern.tracks)) {
-        if (!track.pattern[i] || GM_DRUMS[name] === undefined) continue;
+      for (const { name, velocity } of drumStepHits(pattern, bar, step % 16)) {
+        if (GM_DRUMS[name] === undefined) continue;
         drumTrack.addNote({
           midi:          GM_DRUMS[name],
           ticks:         toTicks(swung(step / 4)),
           durationTicks: toTicks(0.25),
-          velocity:      track.velocity?.[i] ?? 1,
+          velocity,
         });
       }
     }

@@ -147,7 +147,8 @@ export function chordEvents(progression: ChordProgression, key: string): ChordHi
   progression.progression.forEach((chord, i) => {
     const notes = voiced[i];
     const start = (chord.bar - 1) * 16;
-    if (step === null) {
+    // 全音符、またはエンディングの主和音はコードの長さいっぱいに1回だけ鳴らす
+    if (step === null || chord.ending) {
       hits.push({ sixteenth: start, length: chord.duration_bars * 16, notes, velocity: 0.75, strum: STRUM_SEC.long });
       return;
     }
@@ -182,7 +183,7 @@ export function loadChordProgression(progression: ChordProgression, key: string 
   const events: ChordEvent[] = chordEvents(progression, key).map(h => ({
     time:     `0:0:${h.sixteenth}`,
     notes:    h.notes,
-    dur:      step === null ? `${h.length / 16}m` : `${16 / step}n`,
+    dur:      step === null || h.length !== step ? `${h.length / 16}m` : `${16 / step}n`,
     velocity: h.velocity,
     strum:    h.strum,
   }));

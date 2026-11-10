@@ -1,7 +1,7 @@
 [
   {
     "id": "chord_001",
-    "name": "王道進行",
+    "name": "エピック進行（1-6-3-7）",
     "mood": ["明るい"],
     "genre": ["EDM", "ゲームBGM", "トランス"],
     "bpm_range": { "min": 100, "max": 160 },
@@ -498,5 +498,267 @@
     ],
     "chord_rhythm": { "pattern": "whole", "description": "全音符" },
     "notes": "主和音から下りて bVII で押し上げ、また主和音へ戻る。疾走感のあるダークなトランス向き。"
+  },
+  {
+    "id": "chord_031",
+    "name": "マイナー 1-4 ループ",
+    "mood": ["落ち着いた", "暗い", "切ない"],
+    "genre": ["テクノ", "ローファイ", "ハウス", "アンビエント", "トランス"],
+    "bpm_range": { "min": 70, "max": 140 },
+    "base_scale": "minor",
+    "length_bars": 2,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IVm",  "type": "minor", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "2コードドローンの相方。サビで4度に上がるだけで景色が変わる"
+  },
+  {
+    "id": "chord_032",
+    "name": "メジャー 1-4 ループ",
+    "mood": ["明るい", "落ち着いた"],
+    "genre": ["8bit", "ゲームBGM", "ハウス"],
+    "bpm_range": { "min": 100, "max": 150 },
+    "base_scale": "major",
+    "length_bars": 2,
+    "progression": [
+      { "bar": 1, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "シンプルメジャーループの相方。のどかで明るい2コード"
+  },
+  {
+    "id": "chord_033",
+    "name": "王道進行（4-5-3-6）",
+    "mood": ["明るい", "切ない"],
+    "genre": ["ゲームBGM", "8bit", "EDM"],
+    "bpm_range": { "min": 100, "max": 160 },
+    "base_scale": "major",
+    "length_bars": 8,
+    "progression": [
+      { "bar": 1, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "V",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IIIm", "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "VIm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 5, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 6, "degree": "V",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 7, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 2 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "Jポップのサビの定番。最後に主和音で落ち着く8小節"
+  },
+  {
+    "id": "chord_034",
+    "name": "ハウス・メジャー8小節",
+    "mood": ["明るい", "落ち着いた", "切ない"],
+    "genre": ["ハウス", "ローファイ", "EDM"],
+    "bpm_range": { "min": 80, "max": 128 },
+    "base_scale": "major",
+    "length_bars": 8,
+    "progression": [
+      { "bar": 1, "degree": "I",    "type": "maj7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "VIm",  "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IIm",  "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",    "type": "dom7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 5, "degree": "I",    "type": "maj7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 6, "degree": "IIIm", "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 7, "degree": "IV",   "type": "maj7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 8, "degree": "V",    "type": "dom7",  "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "7thコードでおしゃれに回る8小節。後半は3度・4度で少し景色を変える"
+  },
+  {
+    "id": "chord_035",
+    "name": "マイナー8小節（ドミナント終止）",
+    "mood": ["切ない", "暗い", "激しい"],
+    "genre": ["EDM", "トランス", "ゲームBGM", "8bit"],
+    "bpm_range": { "min": 110, "max": 150 },
+    "base_scale": "minor",
+    "length_bars": 8,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVI",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bIII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 5, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 6, "degree": "bVI",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 7, "degree": "IVm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 8, "degree": "V",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "前半はエピック進行、後半はドミナント（V）で次の頭へ強く戻る"
+  },
+  {
+    "id": "chord_036",
+    "name": "フリジアン・ダーク",
+    "mood": ["暗い", "激しい"],
+    "genre": ["テクノ", "ゲームBGM", "8bit", "EDM"],
+    "bpm_range": { "min": 120, "max": 150 },
+    "base_scale": "phrygian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bII",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "半音上の bII が不穏さを出す。ボス戦・ダークなテクノに"
+  },
+  {
+    "id": "chord_037",
+    "name": "ドリアン 1-2-4-1",
+    "mood": ["落ち着いた", "切ない"],
+    "genre": ["ローファイ", "ハウス", "テクノ", "アンビエント"],
+    "bpm_range": { "min": 75, "max": 125 },
+    "base_scale": "dorian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IIm",  "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IV",   "type": "dom7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "Im",   "type": "min7",  "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ドリアンの明るい IV を7thで。浮遊感のあるマイナー"
+  },
+  {
+    "id": "chord_038",
+    "name": "丸サ進行（4-3-6-1）",
+    "mood": ["切ない", "落ち着いた"],
+    "genre": ["ローファイ", "ハウス"],
+    "bpm_range": { "min": 70, "max": 120 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "IV",   "type": "maj7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "III",  "type": "dom7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "VIm",  "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "I",    "type": "dom7",  "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "III7 と I7 のセカンダリードミナントでおしゃれに切ない"
+  },
+  {
+    "id": "chord_039",
+    "name": "ローファイ・マイナー7th",
+    "mood": ["暗い", "落ち着いた", "切ない"],
+    "genre": ["ローファイ", "アンビエント", "ハウス"],
+    "bpm_range": { "min": 65, "max": 110 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVI",  "type": "maj7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IVm",  "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",    "type": "dom7",  "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "7thコードで柔らかく回るマイナー。V7 で頭に戻る"
+  },
+  {
+    "id": "chord_040",
+    "name": "サブドミナントマイナー",
+    "mood": ["切ない", "明るい"],
+    "genre": ["ゲームBGM", "ローファイ", "EDM"],
+    "bpm_range": { "min": 80, "max": 140 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IIIm", "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "IVm",  "type": "minor", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "IV のあとに IVm で一瞬だけ切なくなる"
+  },
+  {
+    "id": "chord_041",
+    "name": "マイナー・アンセム",
+    "mood": ["明るい", "切ない"],
+    "genre": ["EDM", "トランス", "ハウス"],
+    "bpm_range": { "min": 120, "max": 140 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bIII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "最後の IV（メジャー）で明るく開けるマイナー。サビ向け"
+  },
+  {
+    "id": "chord_042",
+    "name": "ゲーム・ファンファーレ（1-6-4-5）",
+    "mood": ["明るい"],
+    "genre": ["8bit", "ゲームBGM"],
+    "bpm_range": { "min": 110, "max": 160 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "VIm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "50年代風の王道ループ。元気で分かりやすい"
+  },
+  {
+    "id": "chord_043",
+    "name": "ダーク・ドライブ",
+    "mood": ["激しい", "暗い"],
+    "genre": ["テクノ", "EDM", "8bit", "トランス"],
+    "bpm_range": { "min": 125, "max": 150 },
+    "base_scale": "minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVI",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "V（メジャー）で緊張を高めて頭に戻る、疾走感のあるマイナー"
+  },
+  {
+    "id": "chord_044",
+    "name": "ドリアン・グルーヴ",
+    "mood": ["明るい", "激しい", "落ち着いた"],
+    "genre": ["ハウス", "テクノ", "ローファイ"],
+    "bpm_range": { "min": 100, "max": 130 },
+    "base_scale": "dorian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "min7",  "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IV",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "Im",   "type": "min7",  "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "bVII と IV のメジャーで前向きに動くドリアン"
+  },
+  {
+    "id": "chord_045",
+    "name": "フリジアン上昇",
+    "mood": ["激しい", "暗い"],
+    "genre": ["ゲームBGM", "テクノ", "8bit"],
+    "bpm_range": { "min": 120, "max": 160 },
+    "base_scale": "phrygian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bII",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bIII", "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bII",  "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "bII・bIII と半音・全音で上下する、緊迫したフリジアン"
   }
 ]

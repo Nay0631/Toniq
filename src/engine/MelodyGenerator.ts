@@ -3,6 +3,7 @@ import {
   resolveChord, ResolvedChord, NOTE_INDEX, SCALE_TONES, ScaleTones,
 } from "../data/degree_resolver";
 import melodyParams from "../data/melody_params.json";
+import type { Section } from "./AppState";
 
 // ===== 型定義 =====
 export interface MelodyNote {
@@ -18,6 +19,8 @@ interface MelodyParam {
   preferStepwise:    boolean;
   octaveRange:       number[];  // [number, number] → number[] に変更
   accentProbability: number;    // 弱拍でアクセント音（ペンタトニック外の2音）を使う確率
+  variation?:        number;    // くり返すモチーフの最後の音を変える確率（なし = DEFAULT_VARIATION）
+  suspension?:       number;    // コードが変わる小節の頭で掛留を使う確率（なし = DEFAULT_SUSPENSION）
 }
 
 // ===== 音名→MIDIノート番号 =====
@@ -107,6 +110,44 @@ function pickRandom<T>(list: T[]): T {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+// 重みを付けて1つ選ぶ（重みがすべて 0 なら均等に選ぶ）
+function pickWeighted<T>(list: T[], weight: (item: T) => number): T {
+  const weights = list.map(weight);
+  const total   = weights.reduce((a, b) => a + b, 0);
+  if (total <= 0) return pickRandom(list);
+  let r = Math.random() * total;
+  for (let i = 0; i < list.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return list[i];
+  }
+  return list[list.length - 1];
+}
+
+// ===== 音の上がり下がりの形（輪郭） =====
+// フレーズ（フレーズ形式1回分）の中の位置 t（0〜1）で、音域のどのあたりを狙うか（0 = 低い、1 = 高い）
+type Contour = "arch" | "rise" | "fall" | "wave";
+
+const CONTOURS: Record<Contour, (t: number) => number> = {
+  arch: t => t < 0.6 ? 0.2 + 0.8 * (t / 0.6) : 1 - 0.7 * ((t - 0.6) / 0.4),  // 山型（6割あたりで最高音）
+  rise: t => 0.15 + 0.85 * t,                                               // だんだん上がる
+  fall: t => 1 - 0.8 * t,                                                   // だんだん下がる
+  wave: t => 0.5 + 0.4 * Math.sin(2 * Math.PI * t),                         // 上がって下がって戻る
+};
+
+// セクションごとの形の候補と、音域のうち使う範囲（サビは高めの音域で、山型か上昇の形にする）
+const SECTION_SHAPE: Record<Section, { contours: Contour[]; band: [number, number] }> = {
+  A: { contours: ["arch", "wave", "fall", "rise"], band: [0,   0.6] },
+  B: { contours: ["arch", "rise", "arch"],         band: [0.4, 1] },
+};
+
+// melody_params.json に variation / suspension がないときの値
+const DEFAULT_VARIATION = 0.35;  // くり返すモチーフの最後の音を変える確率（A → A'）
+const DEFAULT_SUSPENSION: Record<string, number> = {  // コードが変わる小節の頭で掛留を使う確率
+  "ローファイ": 0.3, "アンビエント": 0.3, "ハウス": 0.25, "トランス": 0.25,
+  "EDM": 0.2, "ゲームBGM": 0.2, "テクノ": 0.15, "8bit": 0.1,
+};
+const STRONG_BEAT_CHORD_TONE = 0.7;  // 3拍目の頭の音をコード構成音にする確率
+
 // ===== 次の音を選ぶ =====
 interface PickContext {
   root:          number;   // 主音のピッチクラス
@@ -116,7 +157,9 @@ interface PickContext {
   chordMidi:     number[]; // 現在のコードの構成音（ピッチクラス）
   param:         MelodyParam;
   isDownbeat:    boolean;  // 小節の最初の音
+  strongBeat:    boolean;  // 3拍目の頭（小節の最初の音を除く）
   accentAllowed: boolean;  // アクセント音を置いてよい位置か
+  target:        number;   // 輪郭から決めた、この位置で狙う高さ（MIDI）
 }
 
 function degreeOf(midi: number, root: number): number {
@@ -129,12 +172,18 @@ function needsResolve(midi: number, ctx: PickContext): boolean {
       && !ctx.chordMidi.includes(midi % 12);
 }
 
+// 狙う高さに近いほど大きい重み
+function closeness(midi: number, target: number): number {
+  const d = Math.abs(midi - target) / 4;
+  return 1 / (1 + d * d);
+}
+
 function pickNextNote(
   prev:          number | null,
   prevNeedsRes:  boolean,
   ctx:           PickContext
 ): number {
-  const { root, tones, scaleNotes, coreNotes, chordMidi, param } = ctx;
+  const { root, tones, scaleNotes, coreNotes, chordMidi, param, target } = ctx;
 
   // 直前がアクセント音なら、解決先へ順次進行（2半音以内）
   if (prev !== null && prevNeedsRes) {
@@ -145,13 +194,17 @@ function pickNextNote(
     if (candidates.length > 0) return pickRandom(candidates);
   }
 
-  // 小節の最初の音はコード構成音に着地
+  // 小節の最初の音はコード構成音に着地（大きく跳ばず、輪郭の高さに近いものを選ぶ）
   if (ctx.isDownbeat && chordMidi.length > 0) {
-    const candidates = scaleNotes.filter(n => chordMidi.includes(n % 12));
-    if (candidates.length > 0) return pickRandom(candidates);
+    let candidates = scaleNotes.filter(n => chordMidi.includes(n % 12));
+    if (prev !== null) {
+      const near = candidates.filter(n => Math.abs(n - prev) <= Math.max(param.maxLeap, 5) + 2);
+      if (near.length > 0) candidates = near;
+    }
+    if (candidates.length > 0) return pickWeighted(candidates, n => closeness(n, target));
   }
 
-  if (prev === null) return pickRandom(coreNotes);
+  if (prev === null) return pickWeighted(coreNotes, n => closeness(n, target));
 
   // 弱拍ではアクセント音を経過音・刺繍音として入れる
   if (ctx.accentAllowed && Math.random() < param.accentProbability) {
@@ -162,9 +215,16 @@ function pickNextNote(
   }
 
   // それ以外はペンタトニック5音＋コード構成音になっているアクセント音から選ぶ
-  const pool = scaleNotes.filter(n => coreNotes.includes(n) || chordMidi.includes(n % 12));
+  let pool = scaleNotes.filter(n => coreNotes.includes(n) || chordMidi.includes(n % 12));
 
-  // 跳躍幅・順次進行の優先度を適用してフィルタリング
+  // 3拍目の頭はコード構成音を優先する（コードとぶつかる音を強拍に置かない）
+  if (ctx.strongBeat && Math.random() < STRONG_BEAT_CHORD_TONE) {
+    const chordTones = pool.filter(n =>
+      chordMidi.includes(n % 12) && n !== prev && Math.abs(n - prev) <= param.maxLeap);
+    if (chordTones.length > 0) pool = chordTones;
+  }
+
+  // 跳躍幅を適用してフィルタリング
   let candidates = pool.filter(n => {
     const leap = Math.abs(n - prev);
     if (leap === 0) return false;           // 同じ音の連続を避ける
@@ -174,24 +234,31 @@ function pickNextNote(
 
   if (candidates.length === 0) candidates = scaleNotes;
 
-  // 順次進行優先の場合、近い音に重みを付ける
-  if (param.preferStepwise) {
-    candidates.sort((a, b) => Math.abs(a - prev) - Math.abs(b - prev));
-    // 上位半分に絞る
-    candidates = candidates.slice(0, Math.max(3, Math.ceil(candidates.length / 2)));
-  }
-
-  return candidates[Math.floor(Math.random() * candidates.length)];
+  // 輪郭の高さに近い音ほど選ばれやすく、順次進行優先なら直前の音に近い音にも重みを付ける
+  return pickWeighted(candidates, n => {
+    let w = closeness(n, target);
+    if (param.preferStepwise) w *= 1 / (1 + Math.abs(n - prev) / 2);
+    return w;
+  });
 }
 
 // ===== メイン生成関数 =====
+export interface MelodyOptions {
+  section?:  Section;  // B（サビ）なら高めの音域で、山型・上昇の形にする。省略すると A
+  prevNote?: number;   // このメロディの直前に鳴る音（MIDI。Aメロの最後の音など）。最初の音を近くに置き、継ぎ目で大きく跳ばない
+}
+
 export function generateMelody(
   progression: ChordProgression,
   key:         string = "A",
-  genre:       string = "ローファイ"
+  genre:       string = "ローファイ",
+  options:     MelodyOptions = {}
 ): MelodyNote[] {
-  const param = (melodyParams as unknown as Record<string, MelodyParam>)[genre]
-              ?? (melodyParams as unknown as Record<string, MelodyParam>)["ローファイ"];
+  const params     = melodyParams as unknown as Record<string, MelodyParam>;
+  const param      = params[genre] ?? params["ローファイ"];
+  const section    = options.section ?? "A";
+  const variation  = param.variation  ?? DEFAULT_VARIATION;
+  const suspension = param.suspension ?? DEFAULT_SUSPENSION[genre] ?? 0.2;
   const root       = NOTE_INDEX[key] ?? 0;
   const tones      = SCALE_TONES[progression.base_scale] ?? SCALE_TONES.minor;
   const allTones   = [...tones.core, ...Object.keys(tones.accent).map(Number)];
@@ -216,6 +283,18 @@ export function generateMelody(
     barEvents.push(parseRhythm(rhythmOf[letterOf(bar)], bar * 16));
   }
   const events = barEvents.flat();
+
+  // 輪郭：フレーズ形式1回分を1つの形で動く。音域のうちセクションの範囲を使う
+  const shape       = SECTION_SHAPE[section];
+  const contour     = CONTOURS[pickRandom(shape.contours)];
+  const lowMidi     = scaleNotes[0];
+  const highMidi    = scaleNotes[scaleNotes.length - 1];
+  const phraseUnits = Math.min(totalUnits, form.length * 16);
+  function targetAt(unit: number): number {
+    const t = (unit % phraseUnits) / phraseUnits;
+    const [lo, hi] = shape.band;
+    return lowMidi + (highMidi - lowMidi) * (lo + (hi - lo) * contour(t));
+  }
 
   // コードごとのMIDI構成音を取得
   const chordMap: { startUnit: number; midiNotes: number[] }[] = [];
@@ -247,29 +326,55 @@ export function generateMelody(
     return {
       root, tones, scaleNotes, coreNotes, chordMidi: getChordMidi(ev.start),
       param, isDownbeat, accentAllowed,
+      strongBeat: ev.start % 16 === 8 && !isDownbeat,
+      target:     targetAt(ev.start),
     };
   }
 
-  // モチーフの小節を、最初の音が新しいコードの構成音になるようスケール上でずらす。
-  // ずらさずに合うならそのまま繰り返す。音域に収まらなければ null
-  function transposeBar(source: number[], firstIndex: number): number[] | null {
+  // 掛留：コードが変わる小節の頭で、前の音が新しいコードの構成音でなければ同じ音を弾き直し、
+  // 次の音で下の構成音（1〜2半音下）へ解決する。解決先を返す（使わないときは null）
+  function suspensionAt(index: number, prev: number | null, ctx: PickContext): number | null {
+    if (prev === null || index === 0 || Math.random() >= suspension) return null;
+    const ev = events[index], next = events[index + 1];
+    if (!next || next.start !== ev.start + ev.units || Math.floor(next.start / 16) !== Math.floor(ev.start / 16)) return null;
+    if (ctx.chordMidi.includes(prev % 12)) return null;
+    if (getChordMidi(events[index - 1].start) === ctx.chordMidi) return null;  // コードが変わっていない
+    return scaleNotes.find(n => (n === prev - 1 || n === prev - 2) && ctx.chordMidi.includes(n % 12)) ?? null;
+  }
+
+  // モチーフの小節を、最初の音が新しいコードの構成音になるようスケール上でずらす（オクターブ違いも含める）。
+  // 候補のうち、直前の音からの跳躍が小さく、輪郭の高さに近いものを選ぶ（最初の小節より前に音がなければ、ずらし幅が小さいもの）。
+  // 音域に収まらなければ null
+  function transposeBar(source: number[], firstIndex: number, prev: number | null): number[] | null {
     if (source.length === 0) return [];
     const chordMidi = getChordMidi(events[firstIndex].start);
+    const target    = targetAt(events[firstIndex].start);
     const indices   = source.map(m => scaleNotes.indexOf(m));
-    const shifts    = [0];
-    for (let k = 1; k <= 3; k++) shifts.push(...(Math.random() < 0.5 ? [k, -k] : [-k, k]));
-    for (const shift of shifts) {
+    let best: number[] | null = null;
+    let bestScore = Infinity;
+    for (let shift = -10; shift <= 10; shift++) {
       const moved = indices.map(i => scaleNotes[i + shift]);
-      if (moved.some(m => m === undefined)) continue;
-      if (chordMidi.includes(moved[0] % 12)) return moved;
+      if (moved.some(m => m === undefined) || !chordMidi.includes(moved[0] % 12)) continue;
+      const center = moved.reduce((a, b) => a + b, 0) / moved.length;
+      const score  = prev === null
+        ? Math.abs(shift)
+        : Math.abs(moved[0] - prev) + Math.abs(center - target) * 0.3;
+      if (score < bestScore || (score === bestScore && Math.random() < 0.5)) {
+        best = moved;
+        bestScore = score;
+      }
     }
-    return null;
+    // 近い候補でも跳躍が大きすぎるなら、くり返さずに1音ずつ選び直す
+    const limit = Math.max(param.maxLeap, 5) + 2;
+    if (best && prev !== null && Math.abs(best[0] - prev) > limit) return null;
+    return best;
   }
 
   // ===== 音高を決める =====
   const midis: number[] = [];
+  const keep = new Set<number>();  // あとの直しで変えない音（掛留とその解決、終止の音）
   const firstBarOf: Record<string, number> = {};
-  let prevMidi: number | null = null;
+  let prevMidi: number | null = options.prevNote ?? null;
   let prevNeedsRes = false;
 
   barEvents.forEach((evs, bar) => {
@@ -280,18 +385,43 @@ export function generateMelody(
     let barMidis: number[] | null = null;
     if (sourceBar !== undefined) {
       const sourceIndex = barEvents.slice(0, sourceBar).reduce((s, e) => s + e.length, 0);
-      barMidis = transposeBar(midis.slice(sourceIndex, sourceIndex + evs.length), firstIndex);
+      barMidis = transposeBar(midis.slice(sourceIndex, sourceIndex + evs.length), firstIndex, prevMidi);
+
+      // モチーフを少し変える：くり返しの最後の1〜2音だけ選び直す（A → A'。機械的なくり返しにしない）
+      if (barMidis && barMidis.length >= 2 && Math.random() < variation) {
+        const k = barMidis.length >= 4 ? 2 : 1;
+        for (let j = barMidis.length - k; j < barMidis.length; j++) {
+          const ctx = makeContext(firstIndex + j);
+          barMidis[j] = pickNextNote(barMidis[j - 1], false, { ...ctx, accentAllowed: false });
+        }
+      }
     }
 
     // 新しいモチーフ（またはずらしても合わないとき）は1音ずつ選ぶ
     if (!barMidis) {
-      barMidis = evs.map((_, j) => {
-        const ctx  = makeContext(firstIndex + j);
-        const midi = pickNextNote(prevMidi, prevNeedsRes, ctx);
+      const picked: number[] = [];
+      let resolveTo: number | null = null;
+      evs.forEach((_, j) => {
+        const index = firstIndex + j;
+        const ctx   = makeContext(index);
+        let midi: number;
+        const sus = resolveTo === null && j === 0 ? suspensionAt(index, prevMidi, ctx) : null;
+        if (resolveTo !== null) {
+          midi = resolveTo;  // 掛留の解決
+          resolveTo = null;
+          keep.add(index);
+        } else if (sus !== null && prevMidi !== null) {
+          midi = prevMidi;   // 掛留：前の音を弾き直す
+          resolveTo = sus;
+          keep.add(index);
+        } else {
+          midi = pickNextNote(prevMidi, prevNeedsRes, ctx);
+        }
         prevMidi     = midi;
-        prevNeedsRes = needsResolve(midi, ctx);
-        return midi;
+        prevNeedsRes = !keep.has(index) && needsResolve(midi, ctx);
+        picked.push(midi);
       });
+      barMidis = picked;
     }
 
     midis.push(...barMidis);
@@ -305,6 +435,7 @@ export function generateMelody(
 
   // ずらしたモチーフで解決できなくなったアクセント音は、いちばん近いペンタトニック音かコード構成音に直す
   midis.forEach((midi, i) => {
+    if (keep.has(i)) return;
     const ctx = makeContext(i);
     if (!needsResolve(midi, ctx)) return;
     const next     = midis[i + 1];
@@ -316,6 +447,50 @@ export function generateMelody(
     const best = Math.min(...pool.map(n => Math.abs(n - midi)));
     midis[i] = pickRandom(pool.filter(n => Math.abs(n - midi) === best));
   });
+
+  // ===== 終止：フレーズの終わりの音 =====
+  // 進行の最後の音は主音で言い切る（コードに合わなければ安定したコード構成音）。
+  // 前半の終わりは主音を避けて5度・2度などで止め、問いかけと答えの形にする
+  const lastIndexInBar = (bar: number): number => {
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (Math.floor(events[i].start / 16) === bar) return i;
+    }
+    return -1;
+  };
+
+  // preferences：主音からの半音数の候補を優先順に。maxUnits：この長さ（16分音符）までは伸ばす。
+  // wrapTo：ループで次に鳴る音（進行の最初の音）。指定すると、その音からも離れすぎない高さを選ぶ
+  function land(i: number, preferences: number[][], avoidRoot: boolean, maxUnits: number, wrapTo?: number): void {
+    if (i < 0) return;
+    const ctx  = makeContext(i);
+    const prev = i > 0 ? midis[i - 1] : midis[i];
+    const deg  = (n: number) => degreeOf(n, root);
+    const fits = (n: number) => ctx.chordMidi.includes(n % 12) && !(avoidRoot && deg(n) === 0);
+    let pool: number[] = [];
+    for (const degrees of preferences) {
+      pool = scaleNotes.filter(n => degrees.includes(deg(n)) && fits(n));
+      if (pool.length > 0) break;
+    }
+    if (pool.length === 0) pool = scaleNotes.filter(fits);
+    if (pool.length === 0) return;
+    const cost = (n: number) => Math.abs(n - prev) + (wrapTo === undefined ? 0 : Math.abs(n - wrapTo) * 0.7);
+    const best = Math.min(...pool.map(cost));
+    midis[i] = pickRandom(pool.filter(n => cost(n) === best));
+    keep.add(i);
+
+    // 短すぎる音は、次の音（なければ進行の終わり）までの間で少し伸ばして落ち着かせる
+    const ev    = events[i];
+    const limit = (events[i + 1]?.start ?? totalUnits) - ev.start;
+    if (ev.units < maxUnits) ev.units = Math.max(ev.units, Math.min(limit, maxUnits));
+  }
+
+  const finalIndex = events.length - 1;
+  if (totalBars >= 2) {
+    const halfBar   = Math.max(0, Math.floor(totalBars / 2) - 1);
+    const halfIndex = lastIndexInBar(halfBar);
+    if (halfIndex >= 0 && halfIndex !== finalIndex) land(halfIndex, [[7], [2], [3, 4]], true, 4);
+  }
+  land(finalIndex, [[0], [7], [3, 4]], false, 6, midis[0]);
 
   // ===== MelodyNote に変換（音の間は休符） =====
   const notes: MelodyNote[] = [];

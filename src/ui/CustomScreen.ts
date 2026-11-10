@@ -1,7 +1,7 @@
 import { getState, setState, ChordRhythm, ChordInstrument, MelodyInstrument, FxType } from "../engine/AppState";
 import { fxLabel } from "../engine/FxPlayer";
-import { resolveTempoPreset } from "../engine/SimpleModeResolver";
-import { generateMelody } from "../engine/MelodyGenerator";
+import { resolveTempoPreset, chorusCandidates, pickChorus } from "../engine/SimpleModeResolver";
+import { chorusFits, chorusProgression, generateChorusMelody, generateSongMelodies } from "../engine/SongForm";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { signatureLabel } from "../engine/SignaturePlayer";
 import { tap } from "../engine/TapTempo";
@@ -45,13 +45,11 @@ const $select = (id: string) => document.getElementById(id) as HTMLSelectElement
 
 // ===== 状態の更新 =====
 
+// Aメロとサビのメロディを作る（サビは高めの音域）
 function makeMelody(): void {
   const s = getState();
   if (!s.chordPattern) return;
-  const melodyNotes = s.melodyMethod === "auto"
-    ? generateMelody(s.chordPattern, s.key, s.genre)
-    : [];
-  setState({ melodyNotes });
+  setState(s.melodyMethod === "auto" ? generateSongMelodies() : { melodyNotes: [], chorusMelodyNotes: [] });
 }
 
 // 自動生成したメロディがあるか（空のときはまだ作っていないので、設定を変えても勝手に作らない）
@@ -60,16 +58,26 @@ function hasAutoMelody(): boolean {
   return s.melodyMethod === "auto" && s.melodyNotes.length > 0;
 }
 
-// コード進行を変えたら、スケールや長さが変わることがあるので自動生成のメロディは作り直す
+// コード進行を変えたら、スケールや長さが変わることがあるので自動生成のメロディは作り直す。
+// サビの進行が新しい進行と長さ・スケールが合わなくなったら、合うものを選び直す（「なし」にしていればそのまま）
 function setChordPattern(next: ChordProgression): void {
   const s = getState();
   if (next.id === s.chordPattern?.id) return;
   const regenerate = hasAutoMelody();
-  setState({ chordPattern: next });
+  const chorusPattern = s.chorusPattern === null || chorusFits(s.chorusPattern, next)
+    ? s.chorusPattern
+    : pickChorus(next, s.genre, s.mood);
+  setState({ chordPattern: next, chorusPattern });
   if (regenerate) {
     setState({ melodyVersion: s.melodyVersion + 1 });
     makeMelody();
   }
+}
+
+// サビの進行を変える。メロディがあればサビのメロディだけ作り直す（Aメロのメロディはそのまま）
+function setChorusPattern(next: ChordProgression | null): void {
+  setState({ chorusPattern: next });
+  if (getState().melodyNotes.length > 0) setState({ chorusMelodyNotes: generateChorusMelody() });
 }
 
 // グルーヴのノブ（スウィング・サイドチェイン）
@@ -239,6 +247,7 @@ function render(): void {
   // コード進行
   $select("c-mood").value = s.mood;
   fillSelect($select("c-chord"), chordCandidates(), s.chordPattern, c => chordLabel(c, s.key));
+  renderChorusSelect();
   $select("c-rhythm").value = s.chordRhythm;
   $select("c-chord-instrument").value = s.chordInstrument;
 
@@ -267,7 +276,9 @@ function render(): void {
   renderArranger();
   let chordText = "";
   try {
+    const chorus = chorusProgression();
     chordText = s.chordPattern ? chordNames(s.chordPattern, s.key).replace(/ - /g, "-") : "";
+    if (chorus) chordText += `／サビ ${chordNames(chorus, s.key).replace(/ - /g, "-")}`;
   } catch {
     chordText = s.chordPattern?.name ?? "";
   }
@@ -278,6 +289,17 @@ function render(): void {
     : s.melodyNotes.length > 0
       ? `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`
       : "未作成（↻ で自動生成）";
+}
+
+// サビの進行：「なし」（Aメロと同じ進行）と、今の進行と同じ長さ・スケールの進行
+function renderChorusSelect(): void {
+  const s = getState();
+  const select = $select("c-chorus");
+  const candidates = s.chordPattern ? chorusCandidates(s.chordPattern, s.genre, s.mood) : [];
+  select.innerHTML = `<option value="">なし（Aメロと同じ進行）</option>` + candidates
+    .map(c => `<option value="${c.id}">${chordLabel(c, s.key)}</option>`).join("");
+  select.value = chorusProgression()?.id ?? "";
+  ($("c-chorus-reroll") as HTMLButtonElement).disabled = candidates.length === 0;
 }
 
 // キー・スケールの試聴中なら、今のキー・スケールで鳴らし直す
@@ -433,6 +455,23 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
+  // サビの進行（"" = なし。Aメロと同じ進行で鳴らす）
+  $select("c-chorus").addEventListener("change", async e => {
+    const id = (e.target as HTMLSelectElement).value;
+    setChorusPattern(chords.find(c => c.id === id) ?? null);
+    render();
+    await restartIfPlaying();
+  });
+
+  $("c-chorus-reroll")?.addEventListener("click", async () => {
+    const s = getState();
+    if (!s.chordPattern) return;
+    const next = pickChorus(s.chordPattern, s.genre, s.mood, chorusProgression()?.id);
+    if (next) setChorusPattern(next);
+    render();
+    await restartIfPlaying();
+  });
+
   $("c-chord-preview")?.addEventListener("click", async () => {
     await Playback.preview("chord", render);
     render();
@@ -504,6 +543,9 @@ export function initCustomScreen(): void {
   initArranger(async () => {
     if (Playback.isPlaying()) await startPlayback();
     else render();
+  }, async () => {
+    render();
+    await restartIfPlaying();
   });
 
   $("c-arr-chord-reroll")?.addEventListener("click", async () => {

@@ -94,3 +94,27 @@ export function resolveTempoPreset(
   const presets = tempoPresets as Record<string, Record<string, number>>;
   return presets[genre]?.[preset] ?? 128;
 }
+// ===== サビ（セクション B）の進行 =====
+
+// ジャンル・雰囲気の合い方（ジャンルが合う = 2、雰囲気が合う = 1）
+function matchScore(c: ChordProgression, genre: string, mood: string): number {
+  return (c.genre.includes(genre) ? 2 : 0) + (c.mood.includes(mood) ? 1 : 0);
+}
+
+// サビに使える進行：Aメロの進行と同じ長さ・スケールの別の進行（ジャンル・雰囲気が合うものを先に並べる）
+export function chorusCandidates(base: ChordProgression, genre: string, mood: string): ChordProgression[] {
+  const chords = chordDB as unknown as ChordProgression[];
+  return chords
+    .filter(c => c.id !== base.id && c.length_bars === base.length_bars && c.base_scale === base.base_scale)
+    .sort((a, b) => matchScore(b, genre, mood) - matchScore(a, genre, mood));
+}
+
+// サビの進行を自動で選ぶ（いちばん合う候補の中からランダム。currentId 以外を優先。なければ null = Aメロと同じ進行）
+export function pickChorus(base: ChordProgression, genre: string, mood: string, currentId?: string): ChordProgression | null {
+  const candidates = chorusCandidates(base, genre, mood);
+  if (candidates.length === 0) return null;
+  const others = candidates.filter(c => c.id !== currentId);
+  const pool   = others.length > 0 ? others : candidates;
+  const best   = Math.max(...pool.map(c => matchScore(c, genre, mood)));
+  return pickRandom(pool.filter(c => matchScore(c, genre, mood) === best));
+}

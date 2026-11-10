@@ -7,6 +7,9 @@ import drumDB from "../data/drum_patterns.json";
 import { DrumPattern } from "../data/types";
 import { render } from "./Router";
 import { formatTimePrecise } from "./format";
+import { chorusProgression, getSections, loopBars } from "../engine/SongForm";
+import { analyzeSong } from "../engine/QualityCheck";
+import { setTestFeature, TEST_FEATURES, TestFeature } from "./Preferences";
 
 // アレンジャーのレーン（上から表示する順）
 const LANES: { name: LayerName; label: string }[] = [
@@ -104,6 +107,70 @@ function blockLabel(part: LayerName, b: ArrangeBlock, label: string): string {
   return `<span class="arr-block-label">${label}</span>`;
 }
 
+// セクション（Aメロ／サビ）の行：周回ごとのボタン。クリックで切り替える
+function sectionLane(bars: number): string {
+  const L = loopBars();
+  const chorus = chorusProgression();
+  const cells = getSections().map((section, i) => {
+    const start = i * L;
+    if (start >= bars) return "";
+    const length = Math.min(L, bars - start);
+    return `<button class="arr-section is-${section}" data-section-loop="${i}" style="${blockStyle({ start, length }, bars)}"
+              title="${start + 1}〜${start + length}小節（クリックで Aメロ／サビ を切り替え）">${section === "B" ? "サビ" : "Aメロ"}</button>`;
+  }).join("");
+  const sub = chorus ? `サビ 進行 ${patternNo(chorus.id)}` : "サビも同じ進行";
+  return `
+    <div class="arr-lane arr-section-lane">
+      <div class="arr-head">
+        <div>
+          <div class="arr-name" data-term="section">セクション</div>
+          <div class="arr-sub">${sub}</div>
+        </div>
+      </div>
+      <div class="arr-sections">${cells}</div>
+    </div>`;
+}
+
+// ===== テスト中の機能・自動チェック =====
+
+const TEST_LABELS: Record<TestFeature, { label: string; term: string; desc: string }> = {
+  endingEnabled: { label: "エンディング", term: "ending",   desc: "曲の最後の小節を主和音（全音符）で終わらせる" },
+  drumFill:      { label: "ドラムのフィル", term: "drumFill", desc: "サビの前・ドラムが抜ける前・8小節ごとにフィルを入れる" },
+  drumHumanize:  { label: "ドラムの揺らぎ", term: "humanize", desc: "強さ・タイミングを少し揺らし、ゴーストノートを入れる" },
+};
+
+function renderTestPanel(): void {
+  const s = getState();
+  const toggles = $("c-test-toggles");
+  if (toggles) {
+    toggles.innerHTML = TEST_FEATURES.map(f => {
+      const on = s[f];
+      const { label, term, desc } = TEST_LABELS[f];
+      return `
+        <div class="test-row">
+          <span class="test-name" data-term="${term}">${label}</span>
+          <span class="test-desc">${desc}</span>
+          <button class="pill${on ? " is-on" : ""}" data-test-toggle="${f}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
+        </div>`;
+    }).join("");
+  }
+
+  const list = $("c-quality");
+  if (list) {
+    list.innerHTML = analyzeSong().map(item => {
+      const cls  = item.ok === null ? "is-info" : item.ok ? "is-ok" : "is-warn";
+      const mark = item.ok === null ? "・" : item.ok ? "✓" : "!";
+      return `
+        <li class="quality-item ${cls}">
+          <span class="quality-mark" aria-hidden="true">${mark}</span>
+          <span class="quality-label">${item.label}</span>
+          <span class="quality-value">${item.value}</span>
+          <span class="quality-hint">${item.hint}</span>
+        </li>`;
+    }).join("");
+  }
+}
+
 function blockStyle(b: ArrangeBlock, bars: number): string {
   const end = Math.min(b.start + b.length, bars);
   return `left:${(b.start / bars) * 100}%;width:${((end - b.start) / bars) * 100}%`;
@@ -158,17 +225,19 @@ export function renderArranger(): void {
       <div class="arr-head arr-ruler-head">再生開始 <b>${Math.min(s.startBar, bars - 1) + 1}</b> 小節目</div>
       <div class="arr-ticks" title="クリックで再生開始位置を指定">${ticks}<span class="arr-start-marker" style="left:${startLeft}"></span></div>
     </div>
+    ${sectionLane(bars)}
     ${lanes}
     <div class="arr-overlay">
       <div class="arr-start-line" style="left:${startLeft}"></div>
       <div class="arr-playhead" id="c-arr-playhead" hidden></div>
     </div>`;
 
-  const edited = s.arrangement !== null;
+  const edited = s.arrangement !== null || s.sections !== null;
   $("c-arr-mode")!.textContent = edited ? "編集済み" : `${s.genre} の標準アレンジ`;
   $("c-arr-mode")!.classList.toggle("is-edited", edited);
   ($("c-arr-reset") as HTMLButtonElement).disabled = !edited;
   renderPlayhead();
+  renderTestPanel();
 }
 
 function renderPlayhead(): void {
@@ -317,13 +386,14 @@ function endDrag(): void {
 }
 
 // onSeek：再生開始位置を変えたときに呼ぶ（再生中ならその位置から再生し直す）
-export function initArranger(onSeek: () => void): void {
+// onSongChange：セクション・エンディングなど、読み込み直しが要る変更をしたときに呼ぶ（再生中なら再生し直す）
+export function initArranger(onSeek: () => void, onSongChange: () => void): void {
   const root = $("c-arranger");
   if (!root) return;
 
   root.addEventListener("pointerdown", e => {
     const target = e.target as HTMLElement;
-    if (e.button !== 0 || target.closest(`.arr-del, ${BLOCK_SELECT}, [data-arr-toggle]`)) return;
+    if (e.button !== 0 || target.closest(`.arr-del, ${BLOCK_SELECT}, [data-arr-toggle], [data-section-loop]`)) return;
 
     // 小節番号の目盛りをクリック：その小節を再生開始位置にする
     const ticks = target.closest<HTMLElement>(".arr-ticks");
@@ -356,6 +426,16 @@ export function initArranger(onSeek: () => void): void {
 
   root.addEventListener("click", e => {
     const target = e.target as HTMLElement;
+    // セクションの切り替え（コードとメロディの並びが変わるので、再生中なら再生し直す）
+    const section = target.closest<HTMLElement>("[data-section-loop]");
+    if (section) {
+      const sections = getSections();
+      const i = Number(section.dataset.sectionLoop);
+      sections[i] = sections[i] === "B" ? "A" : "B";
+      setState({ sections });
+      onSongChange();
+      return;
+    }
     const toggle = target.closest<HTMLElement>("[data-arr-toggle]");
     if (toggle) {
       const part = toggle.dataset.arrToggle as LayerName;
@@ -422,7 +502,19 @@ export function initArranger(onSeek: () => void): void {
   });
 
   $("c-arr-reset")?.addEventListener("click", () => {
-    setState({ arrangement: null });
-    renderArranger();
+    const sectionsEdited = getState().sections !== null;
+    setState({ arrangement: null, sections: null });
+    if (sectionsEdited) onSongChange();
+    else renderArranger();
+  });
+
+  // テスト中の機能の ON/OFF。フィル・揺らぎは再生中もすぐ反映され、エンディングは再生し直す
+  $("c-test-toggles")?.addEventListener("click", e => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-test-toggle]");
+    if (!btn) return;
+    const feature = btn.dataset.testToggle as TestFeature;
+    setTestFeature(feature, !getState()[feature]);
+    if (feature === "endingEnabled") onSongChange();
+    else renderArranger();
   });
 }

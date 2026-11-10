@@ -51,6 +51,9 @@ export interface ArrangeBlock {
 // パートごとのブロックの並び（開始小節順・重なりなし）
 export type Arrangement = Record<LayerName, ArrangeBlock[]>;
 
+// 曲のセクション（A = Aメロ、B = サビ）。周回（コード進行1周）ごとに決める
+export type Section = "A" | "B";
+
 // アプリ全体の状態を一元管理する
 export interface AppState {
   // 表示中の画面とタブ
@@ -100,6 +103,19 @@ export interface AppState {
   chordPattern:  ChordProgression | null;
   drumPattern:   DrumPattern      | null;
   melodyNotes:   MelodyNote[];
+
+  // サビ（セクション B）のコード進行とメロディ。
+  // chorusPattern は chordPattern と同じ長さ・スケールのものだけ使う（null・合わないときは chordPattern で鳴らす）。
+  // chorusMelodyNotes が空なら、サビでも melodyNotes を鳴らす
+  chorusPattern:     ChordProgression | null;
+  chorusMelodyNotes: MelodyNote[];
+  // 周回ごとのセクション（null = ジャンルの標準。LoopArranger の LOOP_SCHEDULE）
+  sections:          Section[] | null;
+
+  // テスト中の機能の ON/OFF（アレンジャータブでまとめて切り替える。Preferences.ts が端末ごとに保存する。曲には保存しない）
+  endingEnabled: boolean;  // 曲の最後の小節を主和音で終わらせる（エンディング）
+  drumFill:      boolean;  // セクションの継ぎ目でドラムのフィルを入れる
+  drumHumanize:  boolean;  // ドラムの強さ・タイミングを少し揺らし、ゴーストノートを入れる
 
   // メロディの入力方法（自動生成／ピアノロールで自分で入力）と自動生成の回数
   melodyMethod:  "auto" | "manual";
@@ -183,6 +199,12 @@ export const defaultState: AppState = {
   chordPattern: null,
   drumPattern:  null,
   melodyNotes:  [],
+  chorusPattern:     null,
+  chorusMelodyNotes: [],
+  sections:          null,
+  endingEnabled: true,
+  drumFill:      true,
+  drumHumanize:  true,
   melodyMethod:  "auto",
   melodyVersion: 0,
 
@@ -231,7 +253,8 @@ export const defaultState: AppState = {
 // ミュージックリスト（SongLibrary.ts）・曲ファイル・元に戻す／やり直す（History.ts）で使う
 export const SONG_FIELDS = [
   "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
-  "chordPattern", "drumPattern", "melodyNotes", "melodyMethod", "melodyVersion",
+  "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
+  "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
   "arrangement", "parts", "volumes",
 ] as const;

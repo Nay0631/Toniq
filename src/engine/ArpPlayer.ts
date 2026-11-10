@@ -98,6 +98,7 @@ export function arpNotes(progression: ChordProgression, key: string, param: ArpP
   const out: ArpNote[] = [];
 
   progression.progression.forEach((chord, c) => {
+    if (chord.ending) return;  // エンディングの主和音では刻まない
     const notes = param.octaves === 2
       ? [...voiced[c], ...voiced[c].map((n) => midiToNote(noteToMidi(n) + 12))]
       : voiced[c];

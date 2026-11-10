@@ -324,6 +324,7 @@ export function loadSignature(progression: ChordProgression, key: string = "A") 
   const def = signatureDef();
   const events: SignatureEvent[] = [];
   progression.progression.forEach(chord => {
+    if (chord.ending) return;  // エンディングの主和音では鳴らさない
     const resolved = resolveChord(chord.degree, chord.type, chord.inversion, key, progression.base_scale, 4);
     events.push(...def.events(resolved.notes, chord.bar - 1, chord.duration_bars));
   });

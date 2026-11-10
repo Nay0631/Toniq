@@ -1,75 +1,101 @@
 import * as Tone from "tone";
-import { getState, ArrangeBlock, Arrangement } from "./AppState";
+import { getState, ArrangeBlock, Arrangement, Section } from "./AppState";
 import type { LayerName } from "./LayerManager";
 
 export const LAYERS: LayerName[] = ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"];
 
-// ジャンルごとの周回アレンジ定義（パートは一度入ると以降の周回でも鳴り続ける）
-// 標準アレンジ（AppState.arrangement が null のとき）はこれを周回の長さで並べて作る
-const LOOP_SCHEDULE: Record<string, Record<number, string[]>> = {
-  "EDM": {
-    1: ["drum", "chord"],
-    2: ["drum", "chord", "bass", "fx"],
-    3: ["drum", "chord", "bass", "arp", "pad", "signature", "fx"],
-    4: ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"],
-  },
-  "8bit": {
-    1: ["drum", "chord"],
-    2: ["drum", "chord", "melody"],
-    3: ["drum", "chord", "melody", "bass", "fx"],
-    4: ["drum", "chord", "melody", "bass", "arp", "signature", "fx"],
-  },
-  "ローファイ": {
-    1: ["drum", "chord", "pad", "signature"],
-    2: ["drum", "chord", "pad", "bass", "signature"],
-    3: ["drum", "chord", "pad", "bass", "melody", "signature"],
-    4: ["drum", "chord", "pad", "bass", "melody", "arp", "signature"],
-  },
-  "ゲームBGM": {
-    1: ["drum", "chord"],
-    2: ["drum", "chord", "bass", "pad"],
-    3: ["drum", "chord", "bass", "pad", "melody", "signature", "fx"],
-    4: ["drum", "chord", "bass", "pad", "melody", "arp", "signature", "fx"],
-  },
-  "テクノ": {
-    1: ["drum"],
-    2: ["drum", "bass", "signature", "fx"],
-    3: ["drum", "bass", "signature", "arp", "chord", "fx"],
-    4: ["drum", "bass", "signature", "arp", "chord", "pad", "melody", "fx"],
-  },
-  "ハウス": {
-    1: ["drum", "bass"],
-    2: ["drum", "bass", "chord", "fx"],
-    3: ["drum", "bass", "chord", "pad", "melody", "signature", "fx"],
-    4: ["drum", "bass", "chord", "pad", "melody", "arp", "signature", "fx"],
-  },
+// ジャンルごとの周回アレンジ定義。標準アレンジ（AppState.arrangement が null のとき）はこれを周回の長さで並べて作る。
+// section: その周回のセクション（A = Aメロ、B = サビ。サビの進行・メロディで鳴らす。AppState.sections が null のときの標準）
+// parts:   その周回で鳴らすパート（足すだけでなく、ブレイクで抜く周回もある）
+// gap:     その周回の最後の1小節だけ抜くパート（サビの直前に空白を作る。コード進行が2小節以上のとき）
+// build:   その周回の最後の1小節だけ足すパート（ブレイクの終わりにドラムを戻してフィルで次へつなぐ。2小節以上のとき）
+// 定義より長い曲は、2周目以降の定義をくり返す（ずっと全部のパートが鳴り続けないようにする）
+interface LoopPlan {
+  section: Section;
+  parts:   LayerName[];
+  gap?:    LayerName[];
+  build?:  LayerName[];
+}
+
+const LOOP_SCHEDULE: Record<string, LoopPlan[]> = {
+  // EDM：イントロ → ブレイク（ドラム・ベースを抜いてメロディを聴かせる）→ ドロップ（サビ）
+  "EDM": [
+    { section: "A", parts: ["drum", "chord", "bass"] },
+    { section: "A", parts: ["chord", "pad", "arp", "melody", "fx"], build: ["drum"] },
+    { section: "B", parts: ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"] },
+    { section: "B", parts: ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"] },
+  ],
+  // 8bit：サビでアルペジオをシグネチャー（高速アルペジオ）に持ち替える
+  "8bit": [
+    { section: "A", parts: ["drum", "chord", "melody"] },
+    { section: "A", parts: ["drum", "chord", "melody", "bass", "arp"], gap: ["bass"] },
+    { section: "B", parts: ["drum", "chord", "melody", "bass", "signature", "fx"] },
+    { section: "B", parts: ["drum", "chord", "melody", "bass", "arp", "signature", "fx"] },
+  ],
+  // ローファイ：ドラムなしのイントロから。サビはパッドをアルペジオに替える
+  "ローファイ": [
+    { section: "A", parts: ["chord", "pad", "signature"] },
+    { section: "A", parts: ["drum", "chord", "pad", "bass", "melody", "signature"], gap: ["drum"] },
+    { section: "B", parts: ["drum", "chord", "bass", "melody", "arp", "signature"] },
+    { section: "B", parts: ["drum", "chord", "pad", "bass", "melody", "arp", "signature"] },
+  ],
+  "ゲームBGM": [
+    { section: "A", parts: ["drum", "chord", "bass"] },
+    { section: "A", parts: ["drum", "chord", "bass", "pad", "melody"], gap: ["drum"] },
+    { section: "B", parts: ["drum", "chord", "bass", "pad", "melody", "arp", "signature", "fx"] },
+    { section: "B", parts: ["drum", "chord", "bass", "melody", "arp", "signature", "fx"] },
+  ],
+  // テクノ：キックとベースから。3周目はキックを抜いたブレイク
+  "テクノ": [
+    { section: "A", parts: ["drum", "bass"] },
+    { section: "A", parts: ["drum", "bass", "signature", "fx"], gap: ["bass"] },
+    { section: "B", parts: ["chord", "pad", "signature", "arp", "fx"], build: ["drum"] },
+    { section: "B", parts: ["drum", "bass", "signature", "arp", "chord", "pad", "melody", "fx"] },
+  ],
+  "ハウス": [
+    { section: "A", parts: ["drum", "bass"] },
+    { section: "A", parts: ["drum", "bass", "chord", "melody", "fx"], gap: ["bass"] },
+    { section: "B", parts: ["drum", "bass", "chord", "pad", "melody", "signature", "fx"] },
+    { section: "B", parts: ["drum", "bass", "chord", "pad", "melody", "arp", "signature", "fx"] },
+  ],
   // トランス：ビルドアップ → ブレイクダウン（ドラム・ベースを抜いてパッドとメロディだけ）→ ドロップで全部そろう
-  "トランス": {
-    1: ["drum", "bass"],
-    2: ["drum", "bass", "arp", "signature", "fx"],
-    3: ["pad", "chord", "signature", "melody", "fx"],
-    4: ["drum", "bass", "chord", "arp", "pad", "signature", "melody", "fx"],
-  },
+  "トランス": [
+    { section: "A", parts: ["drum", "bass"] },
+    { section: "A", parts: ["drum", "bass", "arp", "signature", "fx"], gap: ["bass"] },
+    { section: "B", parts: ["pad", "chord", "signature", "melody", "fx"], build: ["drum"] },
+    { section: "B", parts: ["drum", "bass", "chord", "arp", "pad", "signature", "melody", "fx"] },
+  ],
   // アンビエント：パッドとコードから始め、ドラムは最後に薄く足す
-  "アンビエント": {
-    1: ["pad", "chord"],
-    2: ["pad", "chord", "melody", "signature"],
-    3: ["pad", "chord", "melody", "bass", "arp", "signature"],
-    4: ["pad", "chord", "melody", "bass", "arp", "signature", "drum"],
-  },
+  "アンビエント": [
+    { section: "A", parts: ["pad", "chord"] },
+    { section: "A", parts: ["pad", "chord", "melody", "signature"] },
+    { section: "B", parts: ["pad", "chord", "melody", "bass", "arp", "signature"] },
+    { section: "B", parts: ["pad", "chord", "melody", "arp", "signature", "drum"] },
+  ],
 };
+
+function loopPlan(genre: string, loop: number): LoopPlan {
+  const schedule = LOOP_SCHEDULE[genre] ?? LOOP_SCHEDULE["ローファイ"];
+  const n = Math.max(loop, 1);
+  if (n <= schedule.length) return schedule[n - 1];
+  // 定義より後ろの周回は、2周目以降の定義をくり返す
+  const repeat = schedule.length - 1;
+  return schedule[1 + ((n - 2) % repeat)];
+}
 
 // 指定した周回で鳴っているパート
 export function getActiveParts(genre: string, loop: number): string[] {
-  const schedule = LOOP_SCHEDULE[genre] ?? LOOP_SCHEDULE["ローファイ"];
-  const maxLoop  = Math.max(...Object.keys(schedule).map(Number));
-  return schedule[Math.min(Math.max(loop, 1), maxLoop)];
+  return loopPlan(genre, loop).parts;
 }
 
-// 全パートがそろうまでの周回数
+// 全パートがそろうまでの周回数（標準アレンジの定義の周回数）
 export function getFullArrangementLoops(genre: string): number {
-  const schedule = LOOP_SCHEDULE[genre] ?? LOOP_SCHEDULE["ローファイ"];
-  return Math.max(...Object.keys(schedule).map(Number));
+  return (LOOP_SCHEDULE[genre] ?? LOOP_SCHEDULE["ローファイ"]).length;
+}
+
+// ジャンルの標準のセクション（周回ごと。loops 周回ぶん）
+export function defaultSections(genre: string, loops: number): Section[] {
+  return Array.from({ length: loops }, (_, i) => loopPlan(genre, i + 1).section);
 }
 
 // ===== アレンジ =====
@@ -78,17 +104,29 @@ export function emptyArrangement(): Arrangement {
   return { drum: [], chord: [], bass: [], arp: [], pad: [], signature: [], melody: [], fx: [] };
 }
 
-// ジャンルの標準アレンジ：周回ごとに LOOP_SCHEDULE のパートを置き、続いている周回は1つのブロックにまとめる
-export function buildDefaultArrangement(genre: string, loopBars: number, totalBars: number): Arrangement {
+// ジャンルの標準アレンジ：周回ごとに LOOP_SCHEDULE のパートを置き、続いている周回は1つのブロックにまとめる。
+// 次の周回がサビ（セクション B）に変わるときは、gap のパートをその周回の最後の1小節だけ抜く
+// sections を渡すと、セクションの切り替わりはその並び（AppState.sections）で判断する
+export function buildDefaultArrangement(
+  genre: string, loopBars: number, totalBars: number, sections?: Section[] | null,
+): Arrangement {
   const arrangement = emptyArrangement();
+  const sectionOf = (loop: number) => sections?.[loop - 1] ?? loopPlan(genre, loop).section;
   for (let start = 0, loop = 1; start < totalBars; start += loopBars, loop++) {
+    const plan   = loopPlan(genre, loop);
     const length = Math.min(loopBars, totalBars - start);
-    for (const part of getActiveParts(genre, loop) as LayerName[]) {
+    const toChorus = sectionOf(loop) === "A" && sectionOf(loop + 1) === "B" && start + loopBars < totalBars;
+    const full  = loopBars >= 2 && length === loopBars && start + loopBars < totalBars;
+    const gap   = toChorus && full ? plan.gap ?? [] : [];
+    const build = full ? (plan.build ?? []).filter(p => !plan.parts.includes(p)) : [];
+    const place = (part: LayerName, from: number, len: number) => {
       const blocks = arrangement[part];
       const last   = blocks[blocks.length - 1];
-      if (last && last.start + last.length === start) last.length += length;
-      else blocks.push({ start, length });
-    }
+      if (last && last.start + last.length === from) last.length += len;
+      else blocks.push({ start: from, length: len });
+    };
+    for (const part of plan.parts) place(part, start, gap.includes(part) ? length - 1 : length);
+    for (const part of build) place(part, start + length - 1, 1);
   }
   return arrangement;
 }
@@ -102,9 +140,9 @@ export function getArrangement(): Arrangement {
   if (s.arrangement) return s.arrangement;
   if (!s.chordPattern) return emptyArrangement();
 
-  const key = `${s.genre}|${s.chordPattern.length_bars}|${s.bars}`;
+  const key = `${s.genre}|${s.chordPattern.length_bars}|${s.bars}|${s.sections?.join("") ?? ""}`;
   if (defaultCache?.key !== key) {
-    defaultCache = { key, arrangement: buildDefaultArrangement(s.genre, s.chordPattern.length_bars, s.bars) };
+    defaultCache = { key, arrangement: buildDefaultArrangement(s.genre, s.chordPattern.length_bars, s.bars, s.sections) };
   }
   return defaultCache.arrangement;
 }
@@ -130,6 +168,20 @@ let bypass = false;
 
 export function setArrangementBypass(on: boolean): void {
   bypass = on;
+}
+
+// 試聴・サンプル中か（アレンジの判定を外しているとき。セクション・エンディング・フィルも使わない）
+export function isArrangementBypassed(): boolean {
+  return bypass;
+}
+
+// 発音時刻（秒）が曲の何小節目・小節の何ステップ目（16分音符）か。読み込んだ時点の Transport で調べる
+export function positionAt(): (time: number) => { bar: number; step: number } {
+  const transport = Tone.getTransport();
+  return time => {
+    const sixteenths = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ / 4) + 1e-6);
+    return { bar: Math.floor(sixteenths / 16), step: sixteenths % 16 };
+  };
 }
 
 // 各パートの Part / Sequence のコールバックで使う判定。

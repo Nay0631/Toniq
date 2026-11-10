@@ -1459,6 +1459,115 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .fader.is-dragging .fader-cap,
 .knob.is-dragging { cursor: grabbing; }
 
+/* ── セクション（Aメロ／サビ）の行（ArrangerTab.ts）── 周回ごとのボタン。クリックで切り替える */
+.arr-sections {
+  position: relative;
+  height: 34px;
+  background-color: var(--surface-sunken);
+}
+
+.arr-section {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  border: 0 solid transparent;
+  border-width: 0 2px;
+  background-clip: padding-box;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.arr-section.is-A { color: var(--text-sub); background-color: var(--btn-soft); }
+.arr-section.is-B { color: var(--custom-ink); background-color: var(--custom-soft); }
+.arr-section:hover { filter: brightness(0.96); }
+.arr-section:focus-visible { outline: 2px solid var(--custom); outline-offset: -2px; }
+
+.hw .arr-sections { background-color: var(--track-bg); }
+.hw .arr-section-lane { border-bottom-color: var(--hw-line); }
+
+/* ── テスト中の機能と自動チェック（ArrangerTab.ts）── */
+.test-panel { margin-top: 20px; }
+.hw .test-panel { margin-top: 0; border-top: none; }
+[data-skin="default"] .hw .test-panel { margin-top: 20px; border-top: 1px solid var(--border); }
+[data-skin="pop"] .hw .test-panel { margin-top: 16px; }
+
+.test-panel-note {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.test-panel-sub { margin-top: 18px; }
+
+.test-toggles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 20px;
+}
+
+.test-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name toggle" "desc toggle";
+  align-items: center;
+  column-gap: 10px;
+}
+
+.test-name { grid-area: name; font-weight: 700; }
+.test-desc { grid-area: desc; font-size: 12px; color: var(--text-muted); }
+.test-row .pill { grid-area: toggle; min-width: 52px; }
+
+.quality-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quality-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-areas: "mark label" "mark value" "mark hint";
+  column-gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-sunken);
+}
+
+.quality-mark {
+  grid-area: mark;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quality-label { grid-area: label; font-size: 12px; color: var(--text-muted); }
+.quality-value { grid-area: value; font-weight: 700; }
+.quality-hint  { grid-area: hint; font-size: 11px; color: var(--text-faint); }
+
+.quality-item.is-ok   .quality-mark { color: var(--custom-ink); background: var(--custom-soft); }
+.quality-item.is-warn .quality-mark { color: var(--danger-ink); background: var(--danger-soft); }
+.quality-item.is-info .quality-mark { color: var(--text-muted); background: var(--btn-soft); }
+
+@media (max-width: 1000px) {
+  .test-toggles { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .quality-list { grid-template-columns: 1fr; }
+  .test-panel-note { display: block; margin-left: 0; }
+}
+
 /* ── ミキサー（MixerPanel.ts） ──
    上端の黒い帯にパートの色と名前を並べ、その下に電源・フェーダー＋メーター・値。左端に dB 目盛り、右端にマスター */
 .mixer-panel { margin-top: 20px; }
