@@ -3,6 +3,7 @@ import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./SimpleModeResolver";
 import { emptyArrangement } from "./LoopArranger";
 import { resetHistory } from "./History";
+import { normalizeToniqSynth } from "./ToniqSynth";
 
 export { SONG_FIELDS };
 export type { SongFields };
@@ -104,6 +105,7 @@ function songFields(song: Partial<SongFields>): SongFields {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
     volumes:     { ...defaultState.volumes, ...loaded.volumes },
+    toniqSynth:  normalizeToniqSynth(loaded.toniqSynth),
     arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
   };
 }

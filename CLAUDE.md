@@ -34,8 +34,9 @@ src/ui/
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   HistoryControls.ts      元に戻す／やり直すのボタン（両モードの情報バー）とショートカット（Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）、戻したあとの再生への反映
   Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS）
-  SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・用語のツールチップの ON/OFF）
-  Preferences.ts          端末ごとの設定（音名の表記 toniq.noteNames・ループ再生 toniq.loop・ドラムの音源 toniq.drumSource・テスト中の機能 toniq.test.*）の保存・読み込み
+  SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・Toniq シンセ・用語のツールチップの ON/OFF）
+  Preferences.ts          端末ごとの設定（音名の表記 toniq.noteNames・ループ再生 toniq.loop・ドラムの音源 toniq.drumSource・テスト中の機能 toniq.test.*（Toniq シンセ toniq.test.toniqSynth を含む））の保存・読み込み
+  ToniqSynthPanel.ts      Toniq シンセの音作りのパネル（カスタムモードの設定タブの下 #c-toniq。モジュールごとのノブ・セレクト、プリセット、試聴、「メロディに使う」）
   Theme.ts                ライト／ダーク／OS に合わせるの切り替え（ヘッダー右端のボタンと設定画面、<html data-theme>、localStorage の toniq.theme）と、カスタムモードのスキン（デフォルト／フラット／スタジオ／ポップ。設定画面で選ぶ。<html data-skin>、toniq.skin）
   styles.css              デザイントークン（ライト＋ダーク）と共通スタイル
 src/quiz/               音楽クイズ
@@ -64,6 +65,7 @@ src/engine/
   Groove.ts               グルーヴ（スウィング applySwing・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
+  ToniqSynth.ts           Toniq シンセ（テスト中。Toniq 専用の単音シンセ ToniqVoice、音作りの値 ToniqSynthParams・プリセット TONIQ_PRESETS・単位の変換）
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラムのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
@@ -114,6 +116,13 @@ src/engine/
   - 4/4・16ステップの前提で表せないジャンル（スウィング・3連符、32分のハイハットロール、3拍子など）は今の仕組みでは作れない。
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
 - アレンジャーのドラムのブロックは1つずつパターンを持てる（`ArrangeBlock.drum` = パターン ID。ブロックのラベルのセレクトで選ぶ。今のジャンルのパターンを先に並べ、ほかのジャンルも選べる。なし = 曲の設定 `drumPattern`）。鳴らすときはステップごとに `arrangementBlockAt("drum")` でブロックを調べてパターンを決めるので、再生中の変更もすぐ反映される。キットはパターンを切り替えても音が欠けないよう、DB に出てくる全トラック分を作る。16ステップ・`16n` 以外のパターンを足すときは `DrumEngine.ts` の Sequence と `MidiExporter.ts` のドラムを見直す。
+- Toniq シンセ（テスト中。`ToniqSynth.ts` / `ToniqSynthPanel.ts`）：Toniq 専用の単音シンセサイザーで、メロディの音色 `melodyInstrument: "toniq"` として鳴らす。
+  - 使えるかどうかは `AppState.toniqSynthEnabled`（設定画面の「Toniq シンセ（テスト中）」、`Preferences.ts` が localStorage の `toniq.test.toniqSynth` に保存。初期値 OFF。曲の内容ではないので `SONG_FIELDS` には入れない）。OFF のあいだはインストの選択肢・音作りのパネルを隠し、`"toniq"` の曲もジャンルの標準の音色で鳴らす（`resolveMelodySound()`）。切り替えたときメロディの Synth があれば `refreshMelodySynth()` で作り直す。
+  - 音作りの値は `AppState.toniqSynth`（`ToniqSynthParams`。`SONG_FIELDS` に含む。古い曲は `normalizeToniqSynth()` で初期値を補う）。ノブの値はすべて 0〜100 で持ち、Hz・秒などへの変換は `ToniqSynth.ts` の関数（`toSeconds` / `cutoffHz` など）で行う。波形・フィルターの種類・LFO の行き先・OSC2 のオクターブはセレクト。
+  - 音の流れ：OSC1・OSC2（FatOscillator。ユニゾンの枚数・広がり）・サブ（1オクターブ下のサイン）・ノイズ → フィルター（`FrequencyEnvelope` ＋ LFO）→ アンプ（ADSR）→ 音量の LFO → ドライブ → コーラス → ディレイ → メロディの Volume。自前のリバーブは持たない（マスターのリバーブ送り）。オシレーターは鳴らしっぱなしにしてエンベロープで出し入れし、休符を挟まずに続く音だけグライドで滑らせる。
+  - FatOscillator は重ねた音の位相をずらして鳴らすので、高さが同じだと打ち消し合って無音になる。ユニゾンで重ねるときは最低 8 セントずらす（`set()`）。重ねた枚数の音量の補正は FatOscillator 自身が行う。
+  - パネルのノブを動かすと `applyToniqSynthLive()` で再生中のメロディ・試聴の音にすぐ当てる（Synth は作り直さない）。「▷ 試聴」は曲の再生を止め、今のキー・スケールの短いフレーズを別の音源で鳴らす。プリセットを足すときは `TONIQ_PRESETS` に足し、音量はシンセリード（`lead`）と RMS が同じくらいになるよう `level` で合わせる。
+  - MIDI書き出しは他の音色と同じくメロディの音として書き出す（音色の再現はしない）。
 - ドラムの音源（テスト中）：`AppState.drumSource` が `"synth"`（Tone.js のシンセ、初期値）か `"sample"`（ワンショット音源）。設定画面の「ドラムの音源」で切り替え、`Preferences.ts` が localStorage の `toniq.drumSource` に保存する。曲の内容ではないので `SONG_FIELDS` には入れない。再生中に切り替えたら（サンプル音源なら読み込みを待って）ドラムだけ読み込み直す。
   - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。

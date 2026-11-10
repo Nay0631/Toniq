@@ -238,6 +238,8 @@ export function renderArranger(): void {
   ($("c-arr-reset") as HTMLButtonElement).disabled = !edited;
   renderPlayhead();
   renderTestPanel();
+  // ほかの画面（シンプルモードなど）で始めた再生でも、表示したら再生位置の線を動かす
+  if (Playback.isPlaying()) startArrangerPlayhead();
 }
 
 function renderPlayhead(): void {
