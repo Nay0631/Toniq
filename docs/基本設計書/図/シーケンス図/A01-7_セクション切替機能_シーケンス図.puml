@@ -1,0 +1,45 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-7_セクション切替機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":セクション切り替え" as L3
+control ":曲の構成" as L4
+entity ":アプリの状態" as L5
+entity ":標準アレンジマスタ" as L6
+control ":再生" as L7
+
+L1 -> L2 : セクションの行の周回を押下する() : void
+activate L2
+L2 -> L3 : その周回の Aメロ／サビを切り替える() : void
+activate L3
+L3 -> L4 : 周回ごとのセクションを取得する() : void
+activate L4
+L4 -> L5 : セクション・ジャンル・小節数を取得する() : void
+activate L5
+deactivate L5
+opt セクションを編集していない
+  L4 -> L6 : 標準のセクションを取得する() : void
+  activate L6
+  deactivate L6
+end
+deactivate L4
+L3 -> L3 : 押した周回を Aメロとサビで入れ替える() : void
+activate L3
+deactivate L3
+L3 -> L5 : セクションを更新する() : void
+activate L5
+deactivate L5
+opt 再生中
+  L3 -> L7 : 再生し直す() : void
+  activate L7
+  deactivate L7
+end
+L3 -> L2 : 周回ごとの Aメロ・サビを表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

@@ -7,9 +7,11 @@ actor "利用者" as A1
 rectangle "楽曲生成システム Toniq" {
   usecase "キー音選択機能" as UC1
   usecase "スケール選択機能" as UC2
+  usecase "キー・スケール試聴機能" as UC3
 }
 
 A1 -- UC1
 A1 -- UC2
+A1 -- UC3
 
 @enduml

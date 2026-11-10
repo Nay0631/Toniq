@@ -1,0 +1,58 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-9_グルーヴ調整機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":グルーヴ設定" as L3
+entity ":アプリの状態" as L4
+control ":グルーヴ" as L5
+entity ":ミックス設定マスタ" as L6
+control ":ドラム演奏" as L7
+
+note over L2 : 「標準」ボタンも同じ流れ（量を空にして、ジャンルの標準の量に戻す）
+
+L1 -> L2 : スウィング・サイドチェインのノブを回す() : void
+activate L2
+L2 -> L3 : グルーヴの量を設定する() : void
+activate L3
+L3 -> L4 : スウィング・サイドチェインを更新する() : void
+activate L4
+deactivate L4
+opt スウィングを変えた
+  L3 -> L5 : スウィングを反映する() : void
+  activate L5
+  L5 -> L4 : スウィングの量を取得する() : void
+  activate L4
+  deactivate L4
+  opt 量が空
+    L5 -> L6 : ジャンルの標準の量を取得する() : void
+    activate L6
+    deactivate L6
+  end
+  L5 -> L5 : 裏の16分音符をずらす() : void
+  activate L5
+  deactivate L5
+  deactivate L5
+end
+L3 -> L2 : ノブの値を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+loop 再生中、キックが鳴るたび
+  L7 -> L5 : ほかのパートを沈める() : void
+  activate L5
+  L5 -> L4 : サイドチェインの量を取得する() : void
+  activate L4
+  deactivate L4
+  opt 量が空
+    L5 -> L6 : ジャンルの標準の量を取得する() : void
+    activate L6
+    deactivate L6
+  end
+  deactivate L5
+end
+
+@enduml

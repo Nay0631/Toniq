@@ -1,0 +1,49 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "アレンジ画面" as B1 <<boundary>> {
+  {method} <U+002B> アレンジャータブを開く() : void
+  {method} <U+002B> 項目ごとの結果を表示する() : void
+}
+class "自動チェック" as C1 <<control>> {
+  {method} <U+002B> 今の曲を調べる() : void
+  {method} <U+002D> 強拍の構成音の割合・最後の音・跳躍・サビの高さ・抜き差しを数える() : void
+  {method} <U+002D> 同じ長さ・スケールのサビの相方があるか確かめる() : void
+}
+class "曲の構成" as C2 <<control>> {
+  {method} <U+002B> 曲全体のコード進行とメロディを求める() : void
+  {method} <U+002B> エンディング・フィルの小節を求める() : void
+}
+class "アレンジ管理" as C3 <<control>> {
+  {method} <U+002B> 小節ごとに鳴るパートを求める() : void
+}
+class "コード変換" as C4 <<control>> {
+  {method} <U+002B> コードの構成音を求める() : void
+  {method} <U+002B> 実音にできるか確かめる() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 曲の内容
+  {field} <U+002B> テスト中の機能
+  {method} <U+002B> 曲の内容とテスト中の機能を取得する() : void
+}
+class "コード進行マスタ" as E2 <<entity>> {
+  {field} <U+002B> ディグリーの並び・スケール
+  {method} <U+002B> 全進行を取得する() : void
+}
+class "スケールマスタ" as E3 <<entity>> {
+  {field} <U+002B> スケール
+  {field} <U+002B> 音程
+  {method} <U+002B> スケールの音程を取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C1 --> C3
+C1 --> C4
+C4 --> E3
+C1 --> E2
+C1 --> B1
+
+@enduml

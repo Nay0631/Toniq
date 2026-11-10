@@ -8,8 +8,12 @@ rectangle "楽曲生成システム Toniq" {
   usecase "パート配置機能" as UC1
   usecase "パート別音量調節機能" as UC2
   usecase "MIDIエクスポート機能" as UC3
-  usecase "WAVエクスポート機能" as UC4
-  usecase "再生開始位置選択機能" as UC5
+  usecase "MP3エクスポート機能" as UC4
+  usecase "WAVエクスポート機能" as UC5
+  usecase "再生開始位置選択機能" as UC6
+  usecase "セクション切替機能" as UC7
+  usecase "テスト中の機能切替機能" as UC8
+  usecase "自動チェック機能" as UC9
 }
 
 A1 -- UC1
@@ -17,5 +21,9 @@ A1 -- UC2
 A1 -- UC3
 A1 -- UC4
 A1 -- UC5
+A1 -- UC6
+A1 -- UC7
+A1 -- UC8
+A1 -- UC9
 
 @enduml

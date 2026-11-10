@@ -4,6 +4,7 @@ mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
   {method} <U+002B> コードの再抽選ボタンを押下する() : void
+  {method} <U+002B> コード名を表示する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> コード進行を選ぶ() : void
@@ -14,11 +15,15 @@ class "コード進行設定" as C1 <<control>> {
 }
 class "パターン選出" as C2 <<control>> {
   {method} <U+002B> 今の進行以外から選ぶ() : void
+  {method} <U+002B> サビの進行を選び直す() : void
 }
-class "メロディ生成" as C3 <<control>> {
-  {method} <U+002B> メロディを生成する() : void
+class "曲の構成" as C3 <<control>> {
+  {method} <U+002B> Aメロとサビのメロディを作り直す() : void
 }
-class "再生" as C4 <<control>> {
+class "メロディ生成" as C4 <<control>> {
+  {method} <U+002B> メロディを作る() : void
+}
+class "再生" as C5 <<control>> {
   {method} <U+002B> 再生し直す() : void
 }
 class "シンプルモード表マスタ" as E1 <<entity>> {
@@ -28,16 +33,18 @@ class "シンプルモード表マスタ" as E1 <<entity>> {
 }
 class "コード進行マスタ" as E2 <<entity>> {
   {field} <U+002B> ジャンル・雰囲気・スケール
-  {field} <U+002B> ディグリーの並び
+  {field} <U+002B> ディグリーの並び（長さ）
   {method} <U+002B> 候補のコード進行を取得する() : void
   {method} <U+002B> 選んだコード進行を取得する() : void
+  {method} <U+002B> 同じ長さ・スケールの候補を取得する() : void
 }
 class "アプリの状態" as E3 <<entity>> {
-  {field} <U+002B> コード進行
+  {field} <U+002B> コード進行・サビの進行
   {field} <U+002B> 小節数
-  {field} <U+002B> メロディ
-  {method} <U+002B> コード進行を更新する() : void
-  {method} <U+002B> メロディを更新する() : void
+  {field} <U+002B> メロディ・サビのメロディ
+  {method} <U+002B> コード進行・サビの進行・小節数を更新する() : void
+  {method} <U+002B> コード進行・サビの進行を更新する() : void
+  {method} <U+002B> メロディとサビのメロディを更新する() : void
 }
 
 B1 --> C1
@@ -48,6 +55,8 @@ C2 --> E2
 C1 --> E2
 C1 --> E3
 C1 --> C3
-C1 --> C4
+C3 --> C4
+C1 --> C5
+C1 --> B1
 
 @enduml

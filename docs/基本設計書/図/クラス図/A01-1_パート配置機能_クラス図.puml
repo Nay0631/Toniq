@@ -26,13 +26,18 @@ class "各パートの演奏" as C4 <<control>> {
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> アレンジ（パートごとのブロック）
   {field} <U+002B> ジャンル・小節数
+  {field} <U+002B> セクション
   {method} <U+002B> アレンジ・ジャンル・小節数を取得する() : void
   {method} <U+002B> アレンジを更新する() : void
-  {method} <U+002B> アレンジを空にする() : void
+  {method} <U+002B> アレンジとセクションを空にする() : void
+}
+class "再生" as C5 <<control>> {
+  {method} <U+002B> 再生し直す() : void
 }
 class "標準アレンジマスタ" as E2 <<entity>> {
   {field} <U+002B> ジャンル
-  {field} <U+002B> 周回ごとに鳴らすパート
+  {field} <U+002B> 周回ごとのセクション・鳴らすパート
+  {field} <U+002B> サビ前に抜くパート・ブレイクの終わりに足すパート
   {method} <U+002B> ジャンルの標準アレンジを取得する() : void
 }
 
@@ -42,6 +47,7 @@ C2 --> E1
 C2 --> E2
 C1 --> E1
 C1 --> C3
+C1 --> C5
 C4 --> C2
 
 @enduml

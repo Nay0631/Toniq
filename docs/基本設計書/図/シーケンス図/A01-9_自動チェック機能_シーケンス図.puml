@@ -1,0 +1,59 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-9_自動チェック機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":自動チェック" as L3
+entity ":アプリの状態" as L4
+control ":曲の構成" as L5
+control ":アレンジ管理" as L6
+control ":コード変換" as L7
+entity ":スケールマスタ" as L8
+entity ":コード進行マスタ" as L9
+
+note over L2 : 曲の内容を変えて表示し直したときも同じ流れ
+
+L1 -> L2 : アレンジャータブを開く() : void
+activate L2
+L2 -> L3 : 今の曲を調べる() : void
+activate L3
+L3 -> L4 : 曲の内容とテスト中の機能を取得する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 曲全体のコード進行とメロディを求める() : void
+activate L5
+deactivate L5
+L3 -> L5 : エンディング・フィルの小節を求める() : void
+activate L5
+deactivate L5
+L3 -> L6 : 小節ごとに鳴るパートを求める() : void
+activate L6
+deactivate L6
+L3 -> L7 : コードの構成音を求める() : void
+activate L7
+L7 -> L8 : スケールの音程を取得する() : void
+activate L8
+deactivate L8
+deactivate L7
+L3 -> L3 : 強拍の構成音の割合・最後の音・跳躍・サビの高さ・抜き差しを数える() : void
+activate L3
+deactivate L3
+L3 -> L9 : 全進行を取得する() : void
+activate L9
+deactivate L9
+loop 全進行
+  L3 -> L7 : 実音にできるか確かめる() : void
+  activate L7
+  deactivate L7
+  L3 -> L3 : 同じ長さ・スケールのサビの相方があるか確かめる() : void
+  activate L3
+  deactivate L3
+end
+L3 -> L2 : 項目ごとの結果を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

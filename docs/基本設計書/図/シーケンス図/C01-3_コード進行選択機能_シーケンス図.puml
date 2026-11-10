@@ -10,8 +10,9 @@ control ":パターン選出" as L5
 entity ":シンプルモード表マスタ" as L6
 entity ":コード進行マスタ" as L7
 entity ":アプリの状態" as L8
-control ":メロディ生成" as L9
-control ":再生" as L10
+control ":曲の構成" as L9
+control ":メロディ生成" as L10
+control ":再生" as L11
 
 alt シンプルモード画面（再抽選）
   L1 -> L2 : コードの再抽選ボタンを押下する() : void
@@ -27,22 +28,34 @@ alt シンプルモード画面（再抽選）
   activate L7
   deactivate L7
   deactivate L5
-  L4 -> L8 : コード進行と小節数を更新する() : void
+  L4 -> L5 : サビの進行を選び直す() : void
+  activate L5
+  L5 -> L7 : 同じ長さ・スケールの候補を取得する() : void
+  activate L7
+  deactivate L7
+  deactivate L5
+  L4 -> L8 : コード進行・サビの進行・小節数を更新する() : void
   activate L8
   deactivate L8
-  opt メロディが自動生成
-    L4 -> L9 : メロディを生成する() : void
+  opt 自動生成のメロディがある
+    L4 -> L9 : Aメロとサビのメロディを作り直す() : void
     activate L9
+    L9 -> L10 : メロディを作る() : void
+    activate L10
+    deactivate L10
     deactivate L9
-    L4 -> L8 : メロディを更新する() : void
+    L4 -> L8 : メロディとサビのメロディを更新する() : void
     activate L8
     deactivate L8
   end
   opt 再生中
-    L4 -> L10 : 再生し直す() : void
-    activate L10
-    deactivate L10
+    L4 -> L11 : 再生し直す() : void
+    activate L11
+    deactivate L11
   end
+  L4 -> L2 : コード名を表示する() : void
+  activate L2
+  deactivate L2
   deactivate L4
   deactivate L2
 else カスタムモード画面（ドロップダウン・◀▶）
@@ -53,21 +66,32 @@ else カスタムモード画面（ドロップダウン・◀▶）
   L4 -> L7 : 選んだコード進行を取得する() : void
   activate L7
   deactivate L7
-  L4 -> L8 : コード進行を更新する() : void
+  opt サビの進行が新しい進行と長さ・スケールが合わない
+    L4 -> L5 : サビの進行を選び直す() : void
+    activate L5
+    L5 -> L7 : 同じ長さ・スケールの候補を取得する() : void
+    activate L7
+    deactivate L7
+    deactivate L5
+  end
+  L4 -> L8 : コード進行・サビの進行を更新する() : void
   activate L8
   deactivate L8
   opt 自動生成のメロディがある
-    L4 -> L9 : メロディを生成する() : void
+    L4 -> L9 : Aメロとサビのメロディを作り直す() : void
     activate L9
+    L9 -> L10 : メロディを作る() : void
+    activate L10
+    deactivate L10
     deactivate L9
-    L4 -> L8 : メロディを更新する() : void
+    L4 -> L8 : メロディとサビのメロディを更新する() : void
     activate L8
     deactivate L8
   end
   opt 再生中
-    L4 -> L10 : 再生し直す() : void
-    activate L10
-    deactivate L10
+    L4 -> L11 : 再生し直す() : void
+    activate L11
+    deactivate L11
   end
   deactivate L4
   deactivate L3
