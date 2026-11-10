@@ -864,6 +864,18 @@ button {
 
 .arranger-mode.is-edited { color: var(--custom); background: var(--custom-soft); }
 
+/* 再生位置の時間（1:00.00 / 2:30.00） */
+.arranger-time {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.arranger-time.is-playing { color: var(--text); }
+
 .arranger-hint {
   flex: 1;
   min-width: 0;
@@ -1629,6 +1641,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .hw .arranger-card { padding: 0; }
 .hw .arranger-toolbar { border-bottom-color: var(--hw-line); }
 .hw .arranger-hint { color: var(--hw-faint); }
+.hw .arranger-time { color: var(--hw-label); }
+.hw .arranger-time.is-playing { color: var(--hw-text); }
 .hw .arranger-mode { color: var(--hw-label); background: var(--hw-box); border-radius: 2px; }
 .hw .arranger-mode.is-edited { color: var(--hw-sel-text); background: var(--hw-sel); }
 
