@@ -212,6 +212,8 @@ function render(): void {
 
   renderWave();
   renderPlayhead();
+  // カスタムモードで始めた再生でも、表示したら再生位置を動かす
+  if (Playback.isPlaying()) startPlayheadLoop();
 }
 
 // ===== イベント =====

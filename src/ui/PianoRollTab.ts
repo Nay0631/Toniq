@@ -290,6 +290,8 @@ export function renderPianoRoll(): void {
     scrollToOctave(root);
   }
   renderPlayhead();
+  // ほかの画面で始めた再生でも、表示したら再生位置の線を動かす
+  if (Playback.isPlaying()) startPianoRollPlayhead();
 }
 
 function scrollToOctave(root: HTMLElement): void {

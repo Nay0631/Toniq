@@ -3243,6 +3243,105 @@ span[data-term],
 .groove-value { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
 .groove-auto.is-active { border-color: var(--custom); color: var(--custom); }
 
+/* ===== Toniq シンセ（テスト中。カスタムモードの設定タブの下。ToniqSynthPanel.ts） ===== */
+.knob-sm { --size: 44px; }
+
+.toniq-panel { margin-top: 20px; }
+.hw .toniq-panel { margin-top: 0; border: 1px solid var(--hw-line); border-top: none; }
+
+.toniq-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.toniq-head .panel-title { margin: 0 auto 0 0; }
+
+/* スタジオスキン：見出しの帯を行全体（タイトル・プリセット・ボタン）に広げる */
+[data-skin="studio"] .hw .toniq-head {
+  margin: -14px -20px 14px;
+  padding: 6px 20px;
+  background: var(--hw-bg-2);
+  border-bottom: 1px solid var(--hw-line);
+}
+[data-skin="studio"] .hw .toniq-head .panel-title { margin: 0 auto 0 0; padding: 0; background: none; border: none; }
+
+.toniq-badge {
+  padding: 1px 8px;
+  border: 1px solid var(--hw-orange);
+  border-radius: 999px;
+  color: var(--hw-orange);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.toniq-preset { display: flex; align-items: center; gap: 8px; }
+.toniq-preset .select { width: auto; min-width: 150px; }
+
+#tq-use.is-active { border-color: var(--hw-green); color: var(--hw-green); opacity: 1; }
+
+.toniq-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--hw-line);
+}
+
+.toniq-module {
+  min-width: 0;
+  padding: 10px 12px 12px;
+  border-right: 1px solid var(--hw-line);
+  border-bottom: 1px solid var(--hw-line);
+}
+
+.toniq-module:nth-child(4n) { border-right: none; }
+.toniq-module:nth-last-child(-n + 4) { border-bottom: none; }
+
+.toniq-module-title {
+  margin-bottom: 10px;
+  color: var(--hw-label);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.toniq-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 8px;
+}
+
+.toniq-ctl {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 52px;
+}
+
+.toniq-ctl-select { align-items: stretch; min-width: 84px; }
+.toniq-ctl-select .select { width: 100%; font-size: 12px; }
+.toniq-ctl-label { color: var(--hw-label); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.toniq-value { min-width: 48px; padding: 1px 4px; font-size: 11px; text-align: center; }
+.toniq-hint { margin: 12px 0 0; color: var(--hw-label); font-size: 12px; }
+
+@media (max-width: 1000px) {
+  .toniq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .toniq-module:nth-child(4n) { border-right: 1px solid var(--hw-line); }
+  .toniq-module:nth-child(2n) { border-right: none; }
+  .toniq-module:nth-last-child(-n + 4) { border-bottom: 1px solid var(--hw-line); }
+  .toniq-module:nth-last-child(-n + 2) { border-bottom: none; }
+}
+
+@media (max-width: 720px) {
+  .toniq-grid { grid-template-columns: 1fr; }
+  .toniq-module { border-right: none !important; border-bottom: 1px solid var(--hw-line) !important; }
+  .toniq-module:last-child { border-bottom: none !important; }
+}
+
 /* ===== WAV書き出しの進み具合（ExportProgress.ts） ===== */
 .export-overlay {
   position: fixed;

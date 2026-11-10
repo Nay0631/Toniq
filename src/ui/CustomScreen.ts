@@ -22,6 +22,8 @@ import { initMixer, renderMixer } from "./MixerPanel";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
 import { exportAudioWithProgress } from "./ExportProgress";
+import { initToniqSynthPanel, renderToniqSynthPanel } from "./ToniqSynthPanel";
+import { render as renderAll } from "./Router";
 import type { AudioFormat } from "../engine/Playback";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -218,7 +220,13 @@ function render(): void {
   barsSelect.value = String(s.bars);
 
   $select("c-genre").value      = s.genre;
-  $select("c-instrument").value = s.melodyInstrument;
+  // Toniq シンセ（テスト中）は設定画面で ON のときだけ選べる。OFF のあいだはジャンルの標準で鳴るのでそう表示する
+  const toniqOption = $("c-instrument-toniq") as HTMLOptionElement;
+  toniqOption.hidden   = !s.toniqSynthEnabled;
+  toniqOption.disabled = !s.toniqSynthEnabled;
+  $select("c-instrument").value =
+    s.melodyInstrument === "toniq" && !s.toniqSynthEnabled ? "auto" : s.melodyInstrument;
+  renderToniqSynthPanel();
 
   // スケール・キー
   // ルート音は単音なので、ドレミ表記なら読みを添える（値・キー名は CDE 表記のまま）
@@ -386,6 +394,14 @@ export function initCustomScreen(): void {
     render();
     // ミックスとアレンジがジャンルで変わるので再生し直す
     await restartIfPlaying();
+  });
+
+  // Toniq シンセ（テスト中）の音作り。「メロディに使う」でインストを切り替えたら再生し直す
+  initToniqSynthPanel({
+    onInstrumentChange: async () => {
+      renderAll();
+      await restartIfPlaying();
+    },
   });
 
   // インスト：メロディの Synth は再生開始時に作り直されるので、再生中なら再生し直す
