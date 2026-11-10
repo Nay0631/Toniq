@@ -25,11 +25,12 @@ src/ui/
   SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、書き出し、ジャンルのサンプル試聴）
   CustomScreen.ts         カスタムモード画面の設定タブ（基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオの3列＋書き出し）とアレンジャータブ下部（差し替え・書き出し）
   ArrangerTab.ts          アレンジャーのタイムライン（パートごとのブロックの配置・移動・長さ変更・削除、再生位置）
+  MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・音量のフェーダー・レベルメーター、マスターのメーター）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通）
   MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・⋮メニュー）と両モードの「♪ 保存」ボタン
   QuizScreen.ts           音楽クイズ画面（カテゴリ・出題モードの切り替え、出題・採点、鍵盤／選択肢での回答、出題設定）
-  Controls.ts             シンセサイザー風のノブ（attachKnob）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
-  ExportProgress.ts       WAV書き出しの進み具合のダイアログ（目安の説明・段階・進み具合・経過時間。両モード共通の exportWavWithProgress）
+  Controls.ts             シンセサイザー風のノブ（attachKnob）・縦フェーダー（attachFader。ミキサー）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
+  ExportProgress.ts       音声の書き出し（WAV / MP3）の進み具合のダイアログ（目安の説明・段階・進み具合・経過時間。両モード共通の exportAudioWithProgress）
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   HistoryControls.ts      元に戻す／やり直すのボタン（両モードの情報バー）とショートカット（Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）、戻したあとの再生への反映
   Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS）
@@ -64,12 +65,13 @@ src/engine/
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラムのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
-  Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAVレンダリング
+  Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）。オーディオコンテキストごとに保持
   MixerEngine.ts          マスター（入口→EQ→コンプ→持ち上げ→リミッター）とリバーブ送り。オーディオコンテキストごとに保持
   TapTempo.ts             タップテンポ（AppState.bpm を更新する。再生中の反映は呼び出し側が Playback.applyBpm()）
   Transport.ts            旧 BPM 設定（未使用。Transport の BPM は Playback.ts が AppState.bpm から設定する）
   Metronome.ts            BPM 試聴用のクリック音（Web Audio API で直接鳴らす）
+  ScalePreview.ts         キー・スケールの試聴（スケールを順に鳴らして主音の和音で終わる。Web Audio API で直接鳴らす）
   MidiExporter.ts         MIDI書き出し（今の曲を曲全体の長さで。アレンジ・パートの ON/OFF・スウィングを反映）
   Exoporter.ts            旧WAV書き出し（全体コメントアウト済み・未使用。WAVは Playback.ts で実装）
 ```
@@ -171,7 +173,7 @@ src/engine/
   - トークンを足すときはフラット（ライト／ダーク）・デフォルト・スタジオ・ポップの各スキンに値を入れる。
 - `styles.css` では色を直書きせず、`:root` のトークン（`var(--…)`）を使う。トークンを足すときは `:root[data-theme="dark"]` にもダーク用の値を足す。例外はパートの識別色（`.arr-*` / `.dot-*` のパステル）とアクセント色の上の白文字・クイズの黒鍵で、どちらのテーマでも同じ色を使う。
 - カスタムモードの設定タブ・アレンジャータブ（`.hw`）と情報バー（`.hw-bar`）とタブ（`.hw-tabs`）はスキンで見た目が変わる。フラットスキンの形はシンセサイザーのプラグイン風（区切り線で仕切ったフラットなグレーの面、白いノブと細い色の弧、下線付きのドロップダウン、グレーの値の箱、情報バー・タブ・小節の目盛りは黒い帯、選択中はオレンジの枠）。色は `--hw-*` / `--knob-*` / `--slider-*` / `--track-*` のトークンを使う。BPM はノブ、コード進行・ドラムパターンは ◀▶ で切り替え（`Controls.ts`）。AppState から range の値を書き換えたら `syncControls()` で見た目をそろえる。
-- カスタムモードの画面にミキサー（パート別の音量のフェーダー・レベルメーター）は置かない（廃止した）。パートの音量は `AppState.volumes`（初期値は `defaultState.volumes`。曲に保存され、元に戻す／やり直すの対象）のまま `VolumeManager` が Volume ノードに当てる。パートの ON/OFF はアレンジャーのレーンの ON ボタンと、設定タブのパッド／アルペジオ／シグネチャーのボタンで切り替える。
+- ミキサー（`MixerPanel.ts`、`#c-arr-mixer`）はアレンジャータブのタイムラインの下にだけ置く（設定タブには置かない）。左端に dB 目盛り、パートごとのチャンネル（色・名前、ON/OFF ボタン、縦フェーダー `attachFader`＋レベルメーター、値 0〜100）、右端にマスターのメーターと dB。フェーダーは `VolumeManager.setVolume` で `AppState.volumes`（初期値は `defaultState.volumes`。曲に保存され、元に戻す／やり直すの対象）を書き換え、Volume ノードにもすぐ当てる。メーターは再生中だけ `Tone.Meter`（パートはサイドチェインの Gain のあと、マスターはリミッターのあと。WAV / MP3 書き出しのコンテキストには作らない）を読む。パートの ON/OFF はミキサーの ON ボタン、アレンジャーのレーンの ON ボタン、設定タブのパッド／アルペジオ／シグネチャーのボタンで切り替える。
 - メニューへの導線は、メニュー以外のすべての画面の上部に出るパンくずの「メニューに戻る」ボタン。ヘッダーの「⋯」メニューとシンプル／カスタムの切り替えボタンは廃止した。
 - カスタムモードには「生成する」ボタンを置かない（設定の変更はその場で反映され、メロディの作り直しはアレンジャータブの「レイヤー差し替え」で行う）。情報バーの主ボタンは「▷ 再生」。
 - ミュージックリストの絞り込み・並び順（`musicListQuery` / `musicListGenre` / `musicListFavorites` / `musicListSort`）は AppState に置く。⋮ メニューを開いている曲・名前を変更中の曲は表示上の一時的な状態としてモジュール内に持つ。お気に入りは曲データ（`SavedSong.favorite`）に保存する。
@@ -181,6 +183,7 @@ src/engine/
 - 音楽クイズ：選んでいる出題モード（`quizMode`）は AppState に置く。出題中の問題・成績（正解数・連続）は表示上の一時的な状態として `QuizScreen.ts` に、出題設定は各モード（`QuizModes.ts`）に持つ（どちらも保存しない）。モードを足すときは `QuizMode`（`settings` と `question()`、必要なら出題設定に出すおすすめ `hint`）を作って `QUIZ_CATEGORIES` に加える。問題は回答方法（`choice` 選択肢／`notes` 鍵盤で複数選択／`key` 鍵盤を1つ押す）、回答後の一言の解説（`explain`）、再生ボタン（`sounds`、`afterAnswer` で回答後だけ表示）で表す。
 - クイズの音名の表記：単音・構成音は `displayNote`（`format.ts`。`QuizModes.ts` から再エクスポート）で今の表記にする。コード名・キー名は CDE 表記のまま。`notes` / `key` の正解は CDE 表記（`NOTES`）で持ち、表示するときに変換する。表記を切り替えると新しい問題を出す。
 - BPM の試聴（`Metronome.ts`。シンプルモードの「♪ クリックで試聴」、カスタムモードの BPM ノブ横の「♪ 試聴」）は、曲の再生（Tone.js）とは別のオーディオコンテキストで 4/4 のクリック音（1拍目は高い音）を鳴らす。拍ごとに `AppState.bpm` を読むので、鳴らしたまま BPM を変えるとすぐ反映される。鳴っているかどうかは表示上の一時的な状態としてモジュール内に持つ（保存しない）。曲の再生・試聴の開始、画面の切り替え、シンプルモードの生成で止める。
+- キー・スケールの試聴（`ScalePreview.ts`。カスタムモードの「スケール・キー」欄の「響き」の「▷ 試聴」）は、今のキー（`AppState.key`）とスケール（`chordPattern.base_scale`）で、主音から1オクターブ上までの8音（主音は A3〜G#4）を順に鳴らし、最後に主音の和音を鳴らす。スケールの7音は `scaleSemitones()`（`degree_resolver.ts`。`SCALE_TONES` から作る。ピアノロールのスケールロックと共通）。曲の再生とは別のオーディオコンテキストで鳴らし、欄に並べた音名（`displayNote` で今の表記）のうち鳴っている音を光らせる。鳴っている・何音目かは表示上の一時的な状態としてモジュール内に持つ。鳴らしたままキー・スケールを変えると鳴らし直す。曲の再生・試聴・サンプルの開始、BPM のクリック音、画面の切り替えで止める。
 - ジャンルの試聴（シンプルモードの設定画面、ジャンルのチップの下の「▷ ○○ のサンプルを聴く」と一言の説明 `GENRE_DESCRIPTIONS`）：
   - 選んでいるジャンル・雰囲気から `resolveSimpleMode` でパターンを選び、メロディを自動生成して `Playback.playSample()` で鳴らす。
   - コード進行1周（4小節未満なら4小節）を、ドラム・コード・ベース・パッド・シグネチャー・メロディをアレンジに関係なく同時に鳴らす。
@@ -207,5 +210,6 @@ src/engine/
 - シンプルモードの曲の長さは「コード進行の長さ × 全パートがそろうまでの周回数（4）」。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
 - 各パートの Synth はモジュールに1つずつ。WAV書き出しは再生を止めて Synth を作り直し、終わったら破棄する。再生中に書き出すと再生は止まる。
-- WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。UI は `ExportProgress.ts` の `exportWavWithProgress()` を使う。
+- WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。
+- MP3書き出し（`Playback.renderMp3(onProgress)`）は WAV と同じ `renderSong()` で合成した音声を `@breezystack/lamejs`（純 JS の MP3 エンコーダ。ES モジュール対応版の lamejs）で 192kbps に変換する。エンコーダは書き出すときだけ動的に読み込む。変換は重いので `MP3_CHUNK` ごとに区切って画面に返し、`encode` の段階の進み具合を知らせる（全体の割合は `STAGE_SPAN.mp3`）。ボタンは両モードの書き出し欄（`s-export-mp3` / `c-export-mp3` / `c-arr-export-mp3`）。
 - `Playback.play()` は開始時点の AppState で各パートを読み込むので、再生中に曲の内容（コード進行・ドラム・メロディ・キーなど）を変えたら先頭から再生し直す（アレンジの編集だけは再生し直さなくてよい）。

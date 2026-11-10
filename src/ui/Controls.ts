@@ -1,9 +1,9 @@
-// シンセサイザー風の操作部品（つまみ＝ノブ）。
+// シンセサイザー風の操作部品（つまみ＝ノブ／フェーダー）。
 // 見た目と操作だけを受け持ち、値は隠した <input type="range"> に持たせる。
 // 値を変えると range に input イベントを送るので、呼び出し側は今までどおり range の input イベントで AppState を更新する。
 // AppState から range.value を書き換えたあとは syncControls() で見た目をそろえる。
 
-type Kind = "knob";
+type Kind = "knob" | "fader";
 
 interface Control {
   input: HTMLInputElement;
@@ -135,6 +135,52 @@ export function attachKnob(input: HTMLInputElement, label: string, size: "md" | 
       const px = KNOB_DRAG_PX * (ev.shiftKey ? FINE : 1);
       setValue(c, startV + ((startY - ev.clientY) / px) * (max - min));
     };
+    const up = () => {
+      el.classList.remove("is-dragging");
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", up);
+    };
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+  });
+
+  sync(c);
+}
+
+/** range を縦フェーダーにする。溝をクリックでその位置へ、つまみを上下ドラッグで操作 */
+export function attachFader(input: HTMLInputElement, label: string): void {
+  const el = document.createElement("div");
+  el.className = "fader";
+  el.innerHTML = `
+    <span class="fader-slot"><span class="fader-fill"></span></span>
+    <span class="fader-cap"></span>`;
+
+  const c = register(input, el, "fader", label);
+  bindCommon(c);
+
+  // つまみの中心が動く範囲（溝の上端〜下端）での位置を値にする
+  const valueAt = (clientY: number): number => {
+    const { min, max } = bounds(input);
+    const slot = el.querySelector(".fader-slot")!.getBoundingClientRect();
+    const p = (slot.bottom - clientY) / slot.height;
+    return min + Math.max(0, Math.min(1, p)) * (max - min);
+  };
+
+  el.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    el.focus();
+    el.setPointerCapture(e.pointerId);
+    el.classList.add("is-dragging");
+
+    // つまみを掴んだときは掴んだ位置からの相対移動、溝をクリックしたときはその位置へ飛ぶ
+    const onCap  = (e.target as HTMLElement).closest(".fader-cap") !== null;
+    const offset = onCap ? valueAt(e.clientY) - parseFloat(input.value) : 0;
+    if (!onCap) setValue(c, valueAt(e.clientY));
+
+    const move = (ev: PointerEvent) => setValue(c, valueAt(ev.clientY) - offset);
     const up = () => {
       el.classList.remove("is-dragging");
       el.removeEventListener("pointermove", move);

@@ -6,6 +6,7 @@ import { applyMixPreset, mixerReady } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
 import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
+import { stopScalePreview } from "./ScalePreview";
 import { prepareDrumSamples } from "./DrumSamples";
 import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
@@ -62,7 +63,8 @@ export async function play(options: PlayOptions = {}): Promise<void> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
-  stopMetronome();  // BPM のクリック音と重ねない
+  stopMetronome();     // BPM のクリック音と重ねない
+  stopScalePreview();  // キー・スケールの試聴とも重ねない
   stop();
   applyMixPreset(s.genre);
   await audioReady(s.genre);
@@ -95,7 +97,8 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
 
-  stopMetronome();  // BPM のクリック音と重ねない
+  stopMetronome();     // BPM のクリック音と重ねない
+  stopScalePreview();  // キー・スケールの試聴とも重ねない
   stop();
   applyMixPreset(s.genre);
   await audioReady(s.genre);
@@ -138,7 +141,8 @@ let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"
 // 各パートは AppState から読むので、鳴らしている間だけパターンとメロディを差し替え、止めたら元に戻す
 export async function playSample(sample: SampleSong, onEnded?: () => void): Promise<void> {
   await Tone.start();
-  stopMetronome();  // BPM のクリック音と重ねない
+  stopMetronome();     // BPM のクリック音と重ねない
+  stopScalePreview();  // キー・スケールの試聴とも重ねない
   stop();
   applyMixPreset(getState().genre);
   await audioReady(getState().genre);
@@ -222,20 +226,30 @@ export function getPositionBars(): number {
   return transport.ticks / (transport.PPQ * 4);
 }
 
-// WAV書き出しの進み具合。stage ごとの progress（0〜1）を全体の進み具合にまとめて知らせる
+// 音声の書き出し（WAV / MP3）の進み具合。stage ごとの progress（0〜1）を全体の進み具合にまとめて知らせる
+export type AudioFormat = "wav" | "mp3";
 export type RenderStage = "prepare" | "schedule" | "render" | "encode";
 export type RenderProgress = (stage: RenderStage, progress: number) => void;
 
-// 全体のうち各段階が占める割合（始まり・幅）。音声の合成がいちばん重い
-const STAGE_SPAN: Record<RenderStage, [number, number]> = {
-  prepare:  [0,    0.05],
-  schedule: [0.05, 0.2],
-  render:   [0.25, 0.7],
-  encode:   [0.95, 0.05],
+// 全体のうち各段階が占める割合（始まり・幅）。音声の合成がいちばん重い。
+// MP3 は圧縮に時間がかかるので、変換の割合を大きく取る
+const STAGE_SPAN: Record<AudioFormat, Record<RenderStage, [number, number]>> = {
+  wav: {
+    prepare:  [0,    0.05],
+    schedule: [0.05, 0.2],
+    render:   [0.25, 0.7],
+    encode:   [0.95, 0.05],
+  },
+  mp3: {
+    prepare:  [0,    0.04],
+    schedule: [0.04, 0.16],
+    render:   [0.2,  0.5],
+    encode:   [0.7,  0.3],
+  },
 };
 
-export function overallProgress(stage: RenderStage, progress: number): number {
-  const [start, width] = STAGE_SPAN[stage];
+export function overallProgress(stage: RenderStage, progress: number, format: AudioFormat = "wav"): number {
+  const [start, width] = STAGE_SPAN[format][stage];
   return start + width * Math.max(0, Math.min(1, progress));
 }
 
@@ -287,8 +301,8 @@ function isSilent(buffer: AudioBuffer): boolean {
   return true;
 }
 
-// 曲全体をオフラインでレンダリングして WAV の Blob を返す（onProgress で進み具合を知らせる）
-export async function renderWav(onProgress?: RenderProgress): Promise<Blob> {
+// 曲全体をオフラインでレンダリングして AudioBuffer を返す（onProgress で進み具合を知らせる）
+async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) throw new Error("曲が生成されていません");
 
@@ -345,12 +359,66 @@ export async function renderWav(onProgress?: RenderProgress): Promise<Blob> {
 
   // 書き出し用コンテキストの Synth を破棄する（次の再生で通常のコンテキストに作り直される）
   disposeAllLayers();
+  return buffer;
+}
 
+// 曲全体を WAV の Blob にする
+export async function renderWav(onProgress?: RenderProgress): Promise<Blob> {
+  const buffer = await renderSong(onProgress);
   onProgress?.("encode", 0);
   await new Promise(resolve => setTimeout(resolve, 0));  // 表示を「変換中」にしてから重い変換をする
   const wav = audioBufferToWav(buffer);
   onProgress?.("encode", 1);
   return new Blob([wav], { type: "audio/wav" });
+}
+
+// 曲全体を MP3 の Blob にする
+export async function renderMp3(onProgress?: RenderProgress): Promise<Blob> {
+  const buffer = await renderSong(onProgress);
+  onProgress?.("encode", 0);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const mp3 = await audioBufferToMp3(buffer, p => onProgress?.("encode", p));
+  onProgress?.("encode", 1);
+  return new Blob(mp3 as BlobPart[], { type: "audio/mpeg" });
+}
+
+export function renderAudio(format: AudioFormat, onProgress?: RenderProgress): Promise<Blob> {
+  return format === "mp3" ? renderMp3(onProgress) : renderWav(onProgress);
+}
+
+const MP3_KBPS  = 192;              // ビットレート（音楽として十分な音質とファイルの小ささの釣り合い）
+const MP3_CHUNK = 1152 * 64;        // 一度に変換する長さ（MP3 の1フレーム = 1152 サンプルの倍数。この区切りで画面を更新する）
+
+// -1〜1 の音声を 16bit 整数にする
+function toInt16(data: Float32Array, from: number, to: number): Int16Array {
+  const out = new Int16Array(to - from);
+  for (let i = from; i < to; i++) {
+    const v = Math.max(-1, Math.min(1, data[i]));
+    out[i - from] = v < 0 ? v * 0x8000 : v * 0x7FFF;
+  }
+  return out;
+}
+
+// AudioBuffer を MP3 に変換する（lamejs。重いので区切りながら変換し、合間に進み具合を知らせる）
+async function audioBufferToMp3(buffer: AudioBuffer, onProgress: (p: number) => void): Promise<Uint8Array[]> {
+  const { Mp3Encoder } = await import("@breezystack/lamejs");  // 使うときだけ読み込む
+  const stereo  = buffer.numberOfChannels >= 2;
+  const encoder = new Mp3Encoder(stereo ? 2 : 1, buffer.sampleRate, MP3_KBPS);
+  const left    = buffer.getChannelData(0);
+  const right   = stereo ? buffer.getChannelData(1) : null;
+  const chunks: Uint8Array[] = [];
+
+  for (let i = 0; i < buffer.length; i += MP3_CHUNK) {
+    const end = Math.min(i + MP3_CHUNK, buffer.length);
+    const l   = toInt16(left, i, end);
+    const out = right ? encoder.encodeBuffer(l, toInt16(right, i, end)) : encoder.encodeBuffer(l);
+    if (out.length > 0) chunks.push(new Uint8Array(out));  // エンコーダの内部バッファを使い回されないよう写す
+    onProgress(end / buffer.length);
+    await new Promise(resolve => setTimeout(resolve, 0));  // 画面を固まらせない
+  }
+  const last = encoder.flush();
+  if (last.length > 0) chunks.push(new Uint8Array(last));
+  return chunks;
 }
 
 function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {

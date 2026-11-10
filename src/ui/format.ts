@@ -51,3 +51,11 @@ export function formatTime(sec: number): string {
   const s = Math.floor(sec % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
+
+// 再生位置などの時間（分:秒.1/100秒。例 1:00.00）
+export function formatTimePrecise(sec: number): string {
+  const cs = Math.max(0, Math.floor(sec * 100));
+  const m = Math.floor(cs / 6000);
+  const s = Math.floor((cs % 6000) / 100);
+  return `${m}:${String(s).padStart(2, "0")}.${String(cs % 100).padStart(2, "0")}`;
+}

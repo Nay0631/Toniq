@@ -2,11 +2,11 @@ import { getState, setState, ArrangeBlock, Arrangement, FxType } from "../engine
 import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArranger";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
-import { signatureLabel } from "../engine/SignaturePlayer";
-import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
+import { signatureLabel } from "../engine/SignaturePlayer";import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
 import drumDB from "../data/drum_patterns.json";
 import { DrumPattern } from "../data/types";
 import { render } from "./Router";
+import { formatTimePrecise } from "./format";
 
 // アレンジャーのレーン（上から表示する順）
 const LANES: { name: LayerName; label: string }[] = [
@@ -115,7 +115,6 @@ export function renderArranger(): void {
   if (!root || !s.chordPattern || drag) return;
   // ブロックの種類・パターンを選んでいる途中に描き直すとドロップダウンが閉じるので待つ（選び終えると blur して描き直す）
   if (document.activeElement?.closest(BLOCK_SELECT)) return;
-
   const bars        = s.bars;
   const arrangement = getArrangement();
   root.style.setProperty("--bars", String(bars));
@@ -173,14 +172,29 @@ export function renderArranger(): void {
 }
 
 function renderPlayhead(): void {
-  const playhead = $("c-arr-playhead");
-  if (!playhead) return;
   const playing = Playback.isPlaying();
-  playhead.hidden = !playing;
-  if (playing) {
-    const progress = Math.min(1, Playback.getPositionSeconds() / Playback.getSongSeconds());
-    playhead.style.left = `${progress * 100}%`;
+  const total = Playback.getSongSeconds();
+  const playhead = $("c-arr-playhead");
+  if (playhead) {
+    playhead.hidden = !playing;
+    if (playing) {
+      const progress = Math.min(1, Playback.getPositionSeconds() / total);
+      playhead.style.left = `${progress * 100}%`;
+    }
   }
+  renderTime(playing, total);
+}
+
+// 再生位置の時間（再生中は今の位置、停止中は再生開始位置）と曲全体の長さ
+function renderTime(playing: boolean, total: number): void {
+  const time = $("c-arr-time");
+  if (!time) return;
+  const s = getState();
+  const startSec = (Math.min(s.startBar, s.bars - 1) * 4 * 60) / s.bpm;
+  const sec = playing ? Math.min(total, Playback.getPositionSeconds()) : startSec;
+  const text = `${formatTimePrecise(sec)} / ${formatTimePrecise(total)}`;
+  if (time.textContent !== text) time.textContent = text;
+  time.classList.toggle("is-playing", playing);
 }
 
 let rafId: number | null = null;
@@ -246,7 +260,6 @@ interface Drag {
 }
 
 let drag: Drag | null = null;
-
 function startDrag(e: PointerEvent, part: LayerName, el: HTMLElement, track: HTMLElement): void {
   const s     = getState();
   const start = Number(el.dataset.start);

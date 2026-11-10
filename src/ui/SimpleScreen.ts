@@ -9,7 +9,7 @@ import * as Playback from "../engine/Playback";
 import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, formatTime } from "./format";
 import { startPianoRollPlayhead } from "./PianoRollTab";
-import { exportWavWithProgress } from "./ExportProgress";
+import { exportAudioWithProgress } from "./ExportProgress";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -332,10 +332,12 @@ export function initSimpleScreen(): void {
     exportMidi(`toniq_${s.genre}_${s.mood}.mid`);
   });
 
-  const wavBtn = $("s-export-wav") as HTMLButtonElement | null;
-  wavBtn?.addEventListener("click", async () => {
-    const s = getState();
-    await exportWavWithProgress(`toniq_${s.genre}_${s.mood}.wav`, wavBtn);
-    render();
+  (["wav", "mp3"] as const).forEach(format => {
+    const btn = $(`s-export-${format}`) as HTMLButtonElement | null;
+    btn?.addEventListener("click", async () => {
+      const s = getState();
+      await exportAudioWithProgress(format, `toniq_${s.genre}_${s.mood}.${format}`, btn);
+      render();
+    });
   });
 }
