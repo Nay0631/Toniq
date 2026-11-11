@@ -1,0 +1,40 @@
+' astah 風の見た目の共通設定（画面遷移図＝ステートマシン図用）
+' 各画面遷移図の先頭で相対パスで !include して使う。
+' 例: !include ../astah-state-style.puml
+' 図の枠は .puml 側で「mainframe **stm** <図名>」と書く（astah と同じ「stm 図名」の枠になる）。
+' ※ このファイル単体では図にならないよう、@startuml / @enduml は書かない。
+
+' 影なし・背景は白
+skinparam shadowing false
+skinparam BackgroundColor white
+
+' 線はまっすぐ引く（曲線にしない）
+skinparam linetype polyline
+
+' 線は細い黒
+skinparam ArrowColor black
+skinparam ArrowThickness 1
+
+' 画面（状態）は薄い黄色の角丸の四角、枠線は太い黒
+skinparam StateBackgroundColor #FFFFCC
+skinparam StateBorderColor black
+skinparam StateBorderThickness 2
+skinparam RoundCorner 15
+
+' 開始・終了の黒丸、分岐のひし形
+skinparam StateStartColor black
+skinparam StateEndColor black
+skinparam ActivityDiamondBackgroundColor white
+skinparam ActivityDiamondBorderColor black
+
+' ステレオタイプは «» ではなく << >> で書く
+skinparam guillemet false
+
+' 図全体の枠（mainframe）は黒
+skinparam DiagramBorderColor black
+skinparam DiagramBorderThickness 1
+
+' 画面名は太字、entry / do / exit の行は普通の文字。
+' ※ 文字の太さの設定はファイルの最後に置く（前のほうに書くと効かないことがある）。
+skinparam StateFontStyle bold
+skinparam StateAttributeFontStyle plain
