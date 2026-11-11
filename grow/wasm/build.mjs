@@ -1,5 +1,5 @@
 // grow の WebAssembly 版をビルドする（npm run grow:wasm）。
-// Emscripten（emcc）が PATH にあること。出力は public/grow/grow.wasm（Toniq がそのまま読む）
+// Emscripten（em++）が PATH にあること。出力は public/grow/grow.wasm（Toniq がそのまま読む）
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -10,7 +10,7 @@ const root = join(here, "..", "..");
 const core = join(here, "..", "core");
 const out  = join(root, "public", "grow", "grow.wasm");
 
-// grow_wasm.cpp の GROW_EXPORT の関数（emcc に残す関数）
+// grow_wasm.cpp の GROW_EXPORT の関数（wasm に残す関数）
 const exported = [
   "grow_init", "grow_block_size", "grow_left", "grow_right", "grow_render",
   "grow_note_on", "grow_note_off", "grow_all_notes_off", "grow_set_bpm",
@@ -40,10 +40,11 @@ const args = [
   "-o", relative(root, out),
 ];
 
-console.log(`emcc ${args.join(" ")}`);
-const result = spawnSync("emcc", args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+// C++ の標準ライブラリ（new / delete など）もつなぐため、emcc ではなく em++ で呼ぶ
+console.log(`em++ ${args.join(" ")}`);
+const result = spawnSync("em++", args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
 if (result.error) {
-  console.error("emcc を起動できませんでした。Emscripten をインストールし、emsdk_env で PATH を通してください。", result.error);
+  console.error("em++ を起動できませんでした。Emscripten をインストールし、emsdk_env で PATH を通してください。", result.error);
   process.exit(1);
 }
 process.exit(result.status ?? 1);
