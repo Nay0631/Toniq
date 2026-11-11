@@ -5,3 +5,4 @@ release
 output/**
 !output/**/
 !output/**/.gitkeep
+grow/build

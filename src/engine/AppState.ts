@@ -2,7 +2,6 @@ import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import type { LayerName } from "./LayerManager";
 import type { DrumSource } from "./SynthFactory";
-import { DEFAULT_TONIQ_SYNTH, cloneToniqSynth, type ToniqSynthParams } from "./ToniqSynth";
 
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings";
@@ -13,10 +12,9 @@ export type Tab = "settings" | "arranger" | "pianoroll";
 // コードを鳴らすリズム（whole = コードの長さいっぱいに伸ばす）
 export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
-// メロディの音色（auto = ジャンルの標準。melody_params.json の instrument。
-// toniq = Toniq シンセ（テスト中。設定画面で OFF のときはジャンルの標準で鳴る））
+// メロディの音色（auto = ジャンルの標準。melody_params.json の instrument）
 export type MelodyInstrument =
-  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid" | "toniq";
+  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid";
 
 // コードの音色
 export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
@@ -139,10 +137,6 @@ export interface AppState {
   // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
   // 設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
   drumSource:       DrumSource;
-  // Toniq シンセ（テスト中）を使えるようにするか。設定画面で切り替え、Preferences.ts が端末ごとに保存する（曲には保存しない）
-  toniqSynthEnabled: boolean;
-  // Toniq シンセの音作り（ToniqSynth.ts。曲に保存する）
-  toniqSynth:       ToniqSynthParams;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
@@ -227,8 +221,6 @@ export const defaultState: AppState = {
   scaleLock:        true,
   drumCategory:     "EDM",
   drumSource:       "synth",
-  toniqSynthEnabled: false,
-  toniqSynth:       cloneToniqSynth(DEFAULT_TONIQ_SYNTH),
 
   arrangement: null,
   startBar:    0,
@@ -268,7 +260,6 @@ export const SONG_FIELDS = [
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
   "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
-  "toniqSynth",
   "arrangement", "parts", "volumes",
 ] as const;
 

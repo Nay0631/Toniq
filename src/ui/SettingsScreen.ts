@@ -2,11 +2,11 @@ import { getState, Skin, ThemeMode, NoteNames } from "../engine/AppState";
 import type { DrumSource } from "../engine/SynthFactory";
 import { setThemeMode, setSkin, onAppearanceChange } from "./Theme";
 import { setTooltips } from "./Glossary";
-import { setNoteNames, setLoopPlayback, setDrumSource, setToniqSynthEnabled } from "./Preferences";
+import { setNoteNames, setLoopPlayback, setDrumSource } from "./Preferences";
 import { onRender, render as renderAll } from "./Router";
 
-// 設定画面：配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・Toniq シンセ（テスト中）・用語のツールチップ。
-// 値は AppState に置き、保存は Theme.ts（配色・スキン）／Preferences.ts（音名・ループ・ドラムの音源・Toniq シンセ）／
+// 設定画面：配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・用語のツールチップ。
+// 値は AppState に置き、保存は Theme.ts（配色・スキン）／Preferences.ts（音名・ループ・ドラムの音源）／
 // Glossary.ts（ツールチップ）が localStorage に行う（曲には保存しない）
 
 const SKIN_DESCRIPTIONS: Record<Skin, string> = {
@@ -41,7 +41,6 @@ function render(): void {
   setActive("data-settings-drum-source", s.drumSource);
   setSwitch("settings-loop", s.loopPlayback);
   setSwitch("settings-tooltips", s.tooltips);
-  setSwitch("settings-toniq-synth", s.toniqSynthEnabled);
 }
 
 function onClick(attr: string, fn: (value: string) => void): void {
@@ -70,10 +69,5 @@ export function initSettingsScreen(): void {
   document.getElementById("settings-tooltips")?.addEventListener("click", () => {
     setTooltips(!getState().tooltips);
     render();
-  });
-  // Toniq シンセ（テスト中）：カスタムモードの音色の選択肢・音作りのパネルも出し入れするので全体を描き直す
-  document.getElementById("settings-toniq-synth")?.addEventListener("click", () => {
-    setToniqSynthEnabled(!getState().toniqSynthEnabled);
-    renderAll();
   });
 }

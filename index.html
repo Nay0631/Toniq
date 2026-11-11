@@ -376,8 +376,6 @@
                 <option value="lead">シンセリード</option>
                 <option value="pluck">プラック（ハウス）</option>
                 <option value="soft">ソフトサイン（アンビエント）</option>
-                <!-- Toniq シンセ（テスト中）。設定画面で ON のときだけ出す（CustomScreen.ts） -->
-                <option value="toniq" id="c-instrument-toniq">Toniq シンセ（テスト中）</option>
               </select>
             </label>
 
@@ -568,9 +566,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Toniq シンセ（テスト中）の音作り。設定画面で ON のときだけ出す。中身は ToniqSynthPanel.ts が作る -->
-        <div class="card panel toniq-panel" id="c-toniq" hidden></div>
 
 
         <div class="export-row">
@@ -801,14 +796,6 @@
               <button class="chip" role="radio" data-settings-drum-source="synth">シンセ</button>
               <button class="chip" role="radio" data-settings-drum-source="sample">サンプル音源</button>
             </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-text">
-              <div class="settings-label"><span data-term="toniqSynth">Toniq シンセ</span>（テスト中）</div>
-              <div class="settings-desc">Toniq 専用のシンセサイザーを使えるようにします。ON にすると、カスタムモードのメロディの音色に「Toniq シンセ」が増え、設定タブの下で音作りができます。OFF のあいだは、Toniq シンセを選んだ曲もジャンルの標準の音色で鳴ります。</div>
-            </div>
-            <button class="toggle" id="settings-toniq-synth" role="switch" aria-label="Toniq シンセ"><span></span></button>
           </div>
         </div>
 

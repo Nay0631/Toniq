@@ -14,11 +14,20 @@ npm run electron:build  # インストーラ作成（release/）
 
 テスト・Lint は未導入。変更後は `npx tsc --noEmit` で型チェックする。
 
+grow（内部シンセ。C++ / JUCE）は `grow/` で CMake を使ってビルドする（Visual Studio 2022・CMake 3.22 以上が必要。詳しくは `grow/README.md`）：
+
+```bash
+cd grow
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Release   # build/grow_artefacts/Release/ に Standalone の grow.exe と VST3
+```
+
 ## ディレクトリ構成
 
 ```
 electron/main.ts        Electron メインプロセス（ウィンドウ生成と、出力フォルダ output/ への保存・作業ファイルのダイアログの IPC）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
+grow/                   内部シンセ grow（C++ / JUCE の Standalone・VST3。Toniq 本体とは別にビルドする。構成は grow/README.md）
 output/                 曲の出力フォルダ（projects = 作業ファイル、audio = WAV / MP3、midi = MIDI。中身は Git 管理外）
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
@@ -37,9 +46,8 @@ src/ui/
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   HistoryControls.ts      元に戻す／やり直すのボタン（両モードの情報バー）とショートカット（Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）、戻したあとの再生への反映
   Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS）
-  SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・Toniq シンセ・用語のツールチップの ON/OFF）
-  Preferences.ts          端末ごとの設定（音名の表記 toniq.noteNames・ループ再生 toniq.loop・ドラムの音源 toniq.drumSource・テスト中の機能 toniq.test.*（Toniq シンセ toniq.test.toniqSynth を含む））の保存・読み込み
-  ToniqSynthPanel.ts      Toniq シンセの音作りのパネル（カスタムモードの設定タブの下 #c-toniq。モジュールごとのノブ・セレクト、プリセット、試聴、「メロディに使う」）
+  SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・用語のツールチップの ON/OFF）
+  Preferences.ts          端末ごとの設定（音名の表記 toniq.noteNames・ループ再生 toniq.loop・ドラムの音源 toniq.drumSource・テスト中の機能 toniq.test.*）の保存・読み込み
   Theme.ts                ライト／ダーク／OS に合わせるの切り替え（ヘッダー右端のボタンと設定画面、<html data-theme>、localStorage の toniq.theme）と、カスタムモードのスキン（デフォルト／フラット／スタジオ／ポップ。設定画面で選ぶ。<html data-skin>、toniq.skin）
   styles.css              デザイントークン（ライト＋ダーク）と共通スタイル
 src/quiz/               音楽クイズ
@@ -69,7 +77,6 @@ src/engine/
   Groove.ts               グルーヴ（スウィング applySwing・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
-  ToniqSynth.ts           Toniq シンセ（テスト中。Toniq 専用の単音シンセ ToniqVoice、音作りの値 ToniqSynthParams・プリセット TONIQ_PRESETS・単位の変換）
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラムのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
@@ -120,16 +127,11 @@ src/engine/
   - 4/4・16ステップの前提で表せないジャンル（スウィング・3連符、32分のハイハットロール、3拍子など）は今の仕組みでは作れない。
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
 - アレンジャーのドラムのブロックは1つずつパターンを持てる（`ArrangeBlock.drum` = パターン ID。ブロックのラベルのセレクトで選ぶ。今のジャンルのパターンを先に並べ、ほかのジャンルも選べる。なし = 曲の設定 `drumPattern`）。鳴らすときはステップごとに `arrangementBlockAt("drum")` でブロックを調べてパターンを決めるので、再生中の変更もすぐ反映される。キットはパターンを切り替えても音が欠けないよう、DB に出てくる全トラック分を作る。16ステップ・`16n` 以外のパターンを足すときは `DrumEngine.ts` の Sequence と `MidiExporter.ts` のドラムを見直す。
-- Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメントで新しく書くときは「grow」と呼ぶ。現在のコード・UI に残る「Toniq シンセ」・`ToniqSynth` / `ToniqVoice` / `toniqSynth*` / `"toniq"`（メロディの音色）/ localStorage の `toniq.test.toniqSynth` は旧名の名残（名前を変えるときは、保存済みの曲の `toniqSynth`・`melodyInstrument: "toniq"` と localStorage のキーも読めるようにする）。以下の説明は旧名のまま書いている。
-- Toniq シンセ（grow。テスト中。`ToniqSynth.ts` / `ToniqSynthPanel.ts`）：Toniq 専用の単音シンセサイザーで、メロディの音色 `melodyInstrument: "toniq"` として鳴らす。
-  - 使えるかどうかは `AppState.toniqSynthEnabled`（設定画面の「Toniq シンセ（テスト中）」、`Preferences.ts` が localStorage の `toniq.test.toniqSynth` に保存。初期値 OFF。曲の内容ではないので `SONG_FIELDS` には入れない）。OFF のあいだはインストの選択肢・音作りのパネルを隠し、`"toniq"` の曲もジャンルの標準の音色で鳴らす（`resolveMelodySound()`）。切り替えたときメロディの Synth があれば `refreshMelodySynth()` で作り直す。
-  - 音作りの値は `AppState.toniqSynth`（`ToniqSynthParams`。`SONG_FIELDS` に含む）。`layers`（[A, B]。`ToniqLayerParams`：オクターブ・音量・OSC・サブ・ノイズ・ユニゾン・フィルター・EG）と、両方のレイヤーで共通の値（グライド・LFO・エフェクト・レベル）に分かれる。古い曲は `normalizeToniqSynth()` で初期値を補い、レイヤーのない旧形式（値が平らに並んだもの）はその値をレイヤー A（ステレオ幅 0）にする。ノブの値はすべて 0〜100 で持ち、Hz・秒などへの変換は `ToniqSynth.ts` の関数（`toSeconds` / `cutoffHz` など）で行う。波形・フィルターの種類・LFO の行き先・オクターブはセレクト。複製は `cloneToniqSynth()`（`layers` を共有しない）。
-  - 音の流れ：レイヤー A・B（`ToniqLayer`。それぞれ OSC1・OSC2（ユニゾン）・サブ（1オクターブ下のサイン）・ノイズ（左右別々）→ フィルター（`FrequencyEnvelope` ＋ LFO）→ アンプ（ADSR）→ レイヤーの音量）→ 足す → 音量の LFO → ドライブ → コーラス → ディレイ → メロディの Volume。A は常に鳴り、B は `on` のときだけ鳴る（OFF のあいだは B の音源を作らない）。レイヤーは音を重ねるためのもので、パッドなら「こもった厚い本体」と「1オクターブ上を高域だけ残して広げたエアー」のように別々のフィルター・エンベロープで作る。自前のリバーブは持たない（マスターのリバーブ送り）。オシレーターは鳴らしっぱなしにしてエンベロープで出し入れし、休符を挟まずに続く音だけグライドで滑らせる。
-  - ユニゾンは重ねる音を1枚ずつ `Tone.Oscillator` ＋ `Tone.Panner` で鳴らす（FatOscillator は左右に振り分けられないので使わない）。重ねた中の位置（-1〜1）で高さのずれ（`spread` = デチューン。重ねるときは打ち消し合わないよう最低 8 セント、`unisonSpreadCents()`）と左右の位置（`width` = ステレオ幅。OSC2 は OSC1 と左右を逆）を決め、位相はばらばらにする。1枚ずつの音量は FatOscillator と同じ補正（-6 - 枚数×1.1 dB）、左右に振ったぶん片側が -3dB になるので OSC の音量は √2 倍にする。枚数が変わったら音源を作り直す（`rebuildSources`）。
-  - LFO のテンポ同期（`lfoSync`。`"off"` なら `lfoRate` の Hz、ほかは1周の長さを音符で表し `LFO_SYNC_BEATS` と BPM から `lfoRateHz()` で Hz にする）：BPM は `ToniqVoice` の作成時に渡し、`setBpm()` で合わせ直す（`Playback.applyBpm()` → `applyToniqSynthLive()`）。同期中は休符のあとの発音ごとに LFO の位相を頭に戻す（`retriggerLfo`。Tone.js の LFO は `start()` し直しても位相が戻らないので、`stop()` してすぐ `start()` する。音量・フィルターの LFO はいちばん大きい所＝位相 90° から始める）。グライドでつなぐ音では戻さない。
-  - ピッチ EG（`pitchEnvAmount`：50 = なし、`pitchEnvSemitones()` で最大 ±36 半音／`pitchEnvTime`）：両方のレイヤーで共通の `Tone.Signal`（セント）を各オシレーターの detune に音の高さの LFO と一緒につなぎ（`pitchMods`）、発音の瞬間にずらしてから `setTargetAtTime` で 0 に戻す。グライドでつなぐ音ではかけない。
-  - パネルのノブを動かすと `applyToniqSynthLive()` で再生中のメロディ・試聴の音にすぐ当てる（Synth は作り直さない）。「▷ 試聴」は曲の再生を止め、今のキー・スケールの短いフレーズを別の音源で鳴らす。パネルの上段はレイヤーごとの音作り（A / B のタブで編集するレイヤーを切り替え、同じノブで動かす。編集中のレイヤーは表示上の一時的な状態としてモジュール内に持つ）、下段は共通の値。プリセットを足すときは `TONIQ_PRESETS` に足し（`preset(id, label, 共通, A, B)`。B を省くと OFF）、B を重ねるプリセットも含めて、音量はシンセリード（`lead`）と RMS が同じくらいになるよう `level` で合わせる。
-  - MIDI書き出しは他の音色と同じくメロディの音として書き出す（音色の再現はしない）。
+- Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメントでは「grow」と呼ぶ。
+- grow（`grow/`）は C++ と JUCE で作った単体のシンセサイザー（Standalone の grow.exe と VST3 プラグイン）。Toniq 本体（Electron / Tone.js）とは別のプログラムで、今は Toniq の再生・書き出しにはつながっていない。作り・決まりごとは `grow/README.md`。
+  - 以前の Tone.js 版（`ToniqSynth.ts` / `ToniqSynthPanel.ts`、`AppState.toniqSynth` / `toniqSynthEnabled`、メロディの音色 `"toniq"`、localStorage の `toniq.test.toniqSynth`）はすべて廃止した。保存済みの曲の `toniqSynth` は読み捨て、`melodyInstrument: "toniq"` は `loadSong()`（`songFields`）で `"auto"`（ジャンルの標準の音色）にして読む。
+  - 音の流れ：OSC 1・OSC 2（ユニゾン最大7枚・左右に広げる）＋サブ＋ノイズ → フィルター（EG・LFO・キー追従）→ アンプ（ADSR）→ 8音を足す → ドライブ → コーラス → ディレイ → リバーブ → マスター → リミッター。ボイスはポリ／モノ／レガート。
+  - パラメーターは `AudioProcessorValueTreeState`（ID は `Parameters.h` の `ids`。一度出した ID は変えない）。音を作る側はブロックの頭に `readParams()` で作る `GrowParams` だけを読む。日本語の文字列は `jp()` を通す。
 - ドラムの音源（テスト中）：`AppState.drumSource` が `"synth"`（Tone.js のシンセ、初期値）か `"sample"`（ワンショット音源）。設定画面の「ドラムの音源」で切り替え、`Preferences.ts` が localStorage の `toniq.drumSource` に保存する。曲の内容ではないので `SONG_FIELDS` には入れない。再生中に切り替えたら（サンプル音源なら読み込みを待って）ドラムだけ読み込み直す。
   - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。

@@ -99,7 +99,7 @@ function point(deg: number, r: number): string {
 }
 
 /** range をノブ（回すつまみ）にする。上下ドラッグ・ホイール・矢印キーで操作 */
-export function attachKnob(input: HTMLInputElement, label: string, size: "sm" | "md" | "lg" = "md"): void {
+export function attachKnob(input: HTMLInputElement, label: string, size: "md" | "lg" = "md"): void {
   const half = KNOB_SWEEP / 2;
   const ticks = Array.from({ length: 11 }, (_, i) => {
     const deg = -half + (KNOB_SWEEP * i) / 10;

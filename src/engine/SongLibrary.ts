@@ -3,7 +3,6 @@ import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./SimpleModeResolver";
 import { emptyArrangement } from "./LoopArranger";
 import { resetHistory } from "./History";
-import { normalizeToniqSynth } from "./ToniqSynth";
 
 export { SONG_FIELDS };
 export type { SongFields };
@@ -105,7 +104,8 @@ function songFields(song: Partial<SongFields>): SongFields {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
     volumes:     { ...defaultState.volumes, ...loaded.volumes },
-    toniqSynth:  normalizeToniqSynth(loaded.toniqSynth),
+    // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）
+    melodyInstrument: (loaded.melodyInstrument as string) === "toniq" ? "auto" : loaded.melodyInstrument,
     arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
   };
 }
