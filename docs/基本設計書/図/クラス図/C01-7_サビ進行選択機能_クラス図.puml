@@ -1,0 +1,56 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> サビのドロップダウンで進行を選ぶ() : void
+  {method} <U+002B> サビの差し替えボタンを押下する() : void
+  {method} <U+002B> サビの進行を表示する() : void
+}
+class "サビ進行設定" as C1 <<control>> {
+  {method} <U+002B> サビの進行を切り替える() : void
+  {method} <U+002B> サビの進行を差し替える() : void
+}
+class "パターン選出" as C2 <<control>> {
+  {method} <U+002B> 今のサビ以外から選ぶ() : void
+}
+class "曲の構成" as C3 <<control>> {
+  {method} <U+002B> サビのメロディを作り直す() : void
+}
+class "メロディ生成" as C4 <<control>> {
+  {method} <U+002B> 高めの音域でメロディを作る() : void
+}
+class "再生" as C5 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "コード進行マスタ" as E1 <<entity>> {
+  {field} <U+002B> ジャンル・雰囲気・スケール
+  {field} <U+002B> ディグリーの並び（長さ）
+  {method} <U+002B> 選んだコード進行を取得する() : void
+  {method} <U+002B> 同じ長さ・スケールの候補を取得する() : void
+}
+class "アプリの状態" as E2 <<entity>> {
+  {field} <U+002B> コード進行・サビの進行
+  {field} <U+002B> ジャンル・雰囲気
+  {field} <U+002B> メロディ・サビのメロディ
+  {method} <U+002B> コード進行・ジャンル・雰囲気を取得する() : void
+  {method} <U+002B> サビの進行を更新する() : void
+  {method} <U+002B> サビのメロディを更新する() : void
+}
+class "メロディ設定マスタ" as E3 <<entity>> {
+  {field} <U+002B> リズム・フレーズ形式・音域
+  {method} <U+002B> 生成パラメータを取得する() : void
+}
+
+B1 --> C1
+C1 --> E2
+C1 --> C2
+C2 --> E1
+C1 --> E1
+C1 --> C3
+C3 --> C4
+C4 --> E3
+C1 --> C5
+C1 --> B1
+
+@enduml

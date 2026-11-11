@@ -10,6 +10,7 @@ class "ミキサー" as B5 <<boundary>>
 class "ミュージックリスト画面" as B6 <<boundary>>
 class "音楽クイズ画面" as B7 <<boundary>>
 class "設定画面" as B8 <<boundary>>
+class "書き出しダイアログ" as B9 <<boundary>>
 class "パターン選出" as C1 <<control>>
 class "メロディ生成" as C2 <<control>>
 class "タップテンポ" as C3 <<control>>
@@ -28,6 +29,10 @@ class "履歴管理" as C15 <<control>>
 class "見た目設定・端末の設定・用語の説明" as C16 <<control>>
 class "クイズ出題・クイズの音" as C17 <<control>>
 class "画面の中の処理\n（BPM設定・楽曲生成・音符編集 ほか）" as C18 <<control>>
+class "曲の構成" as C19 <<control>>
+class "グルーヴ" as C20 <<control>>
+class "自動チェック" as C21 <<control>>
+class "スケール試聴" as C22 <<control>>
 class "アプリの状態" as E1 <<entity>>
 class "コード進行マスタ・ドラムパターンマスタ・\nシンプルモード表マスタ・テンポマスタ" as E2 <<entity>>
 class "メロディ設定マスタ・ベース設定マスタ・\nアルペジオ設定マスタ・ミックス設定マスタ" as E3 <<entity>>
@@ -36,7 +41,7 @@ class "クイズ問題マスタ" as E5 <<entity>>
 class "楽曲データ・曲ファイル" as E6 <<entity>>
 class "端末の設定データ" as E7 <<entity>>
 class "ドラム音源ファイル" as E8 <<entity>>
-class "MIDIファイル・WAVファイル" as E9 <<entity>>
+class "MIDIファイル・WAVファイル・MP3ファイル" as E9 <<entity>>
 
 B1 --> C18
 B2 --> C18
@@ -87,5 +92,26 @@ C17 --> E5
 C3 --> E1
 C4 --> E1
 C10 --> E1
+C18 --> C19
+C18 --> C20
+C18 --> C21
+C18 --> C22
+C5 --> B9
+C5 --> C19
+C8 --> C20
+C13 --> C19
+C13 --> C7
+C13 --> C8
+C19 --> C2
+C19 --> E1
+C19 --> E4
+C20 --> E1
+C20 --> E3
+C21 --> C19
+C21 --> C7
+C21 --> C12
+C21 --> E1
+C21 --> E2
+C22 --> E4
 
 @enduml

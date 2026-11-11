@@ -7,6 +7,7 @@ boundary ":ミキサー" as L2
 control ":音量管理" as L3
 entity ":アプリの状態" as L4
 control ":パート管理" as L5
+control ":ミックス" as L6
 
 alt フェーダー
   L1 -> L2 : フェーダーを動かす() : void
@@ -26,8 +27,8 @@ alt フェーダー
   deactivate L2
   deactivate L3
   deactivate L2
-else 電源ボタン
-  L1 -> L2 : 電源ボタンを押下する() : void
+else ON ボタン
+  L1 -> L2 : ON ボタンを押下する() : void
   activate L2
   L2 -> L5 : パートを ON/OFF する() : void
   activate L5
@@ -35,6 +36,18 @@ else 電源ボタン
   activate L4
   deactivate L4
   deactivate L5
+  deactivate L2
+end
+
+loop 再生中、画面を描くたび
+  L2 -> L3 : パートのレベルを取得する() : void
+  activate L3
+  deactivate L3
+  L2 -> L6 : マスターのレベルを取得する() : void
+  activate L6
+  deactivate L6
+  L2 -> L2 : レベルメーターを表示する() : void
+  activate L2
   deactivate L2
 end
 

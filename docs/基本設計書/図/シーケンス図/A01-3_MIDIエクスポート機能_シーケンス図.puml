@@ -6,10 +6,16 @@ actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
 control ":MIDI書き出し" as L3
 entity ":アプリの状態" as L4
-control ":コード変換" as L5
-entity ":スケールマスタ" as L6
-control ":アルペジオ演奏" as L7
-entity ":MIDIファイル" as L8
+control ":曲の構成" as L5
+control ":アレンジ管理" as L6
+entity ":標準アレンジマスタ" as L7
+control ":コード変換" as L8
+entity ":スケールマスタ" as L9
+control ":各パートの演奏" as L10
+entity ":ドラムパターンマスタ" as L11
+entity ":ベース設定マスタ" as L12
+entity ":アルペジオ設定マスタ" as L13
+entity ":MIDIファイル" as L14
 
 note over L2 : シンプルモード画面の「MIDIで書き出す」も同じ流れ
 
@@ -17,30 +23,54 @@ L1 -> L2 : MIDI ボタンを押下する() : void
 activate L2
 L2 -> L3 : MIDI で書き出す() : void
 activate L3
-L3 -> L4 : コード進行・メロディ・キー・BPMを取得する() : void
+L3 -> L4 : キー・BPM・小節数・パートの ON/OFF・スウィングを取得する() : void
 activate L4
 deactivate L4
-L3 -> L3 : テンポ・拍子とメロディのトラックを書く() : void
-activate L3
-deactivate L3
-L3 -> L5 : コードのボイシングとルート音を求める() : void
+L3 -> L5 : 曲全体のコード進行とメロディを求める() : void
 activate L5
-L5 -> L6 : スケールの音程を取得する() : void
-activate L6
-deactivate L6
+opt セクションを編集していない
+  L5 -> L7 : 標準のセクションを取得する() : void
+  activate L7
+  deactivate L7
+end
 deactivate L5
-L3 -> L3 : コード・ベースのトラックを書く() : void
-activate L3
-deactivate L3
-L3 -> L7 : アルペジオの音を並べる() : void
-activate L7
-deactivate L7
-L3 -> L3 : アルペジオのトラックを書く() : void
-activate L3
-deactivate L3
-L3 -> L8 : 保存する() : void
+L3 -> L8 : コード・パッドのボイシングを求める() : void
 activate L8
+L8 -> L9 : スケールの音程を取得する() : void
+activate L9
+deactivate L9
 deactivate L8
+L3 -> L10 : コード・パッド・アルペジオ・ベース・ドラムの音を並べる() : void
+activate L10
+L10 -> L11 : ブロックのドラムパターンを取得する() : void
+activate L11
+deactivate L11
+L10 -> L12 : ジャンルのベースのパターンを取得する() : void
+activate L12
+deactivate L12
+L10 -> L13 : ジャンルのアルペジオの設定を取得する() : void
+activate L13
+deactivate L13
+deactivate L10
+loop 曲全体（小節数分）の各パートの音
+  L3 -> L6 : 鳴らす小節か確かめる() : void
+  activate L6
+  opt アレンジを編集していない
+    L6 -> L7 : 標準アレンジを取得する() : void
+    activate L7
+    deactivate L7
+  end
+  deactivate L6
+  L3 -> L3 : スウィングに合わせて発音位置をずらす() : void
+  activate L3
+  deactivate L3
+end
+L3 -> L3 : テンポ・拍子と6トラックを書く() : void
+activate L3
+deactivate L3
+L3 -> L14 : 保存する() : void
+activate L14
+deactivate L14
 deactivate L3
 deactivate L2
 

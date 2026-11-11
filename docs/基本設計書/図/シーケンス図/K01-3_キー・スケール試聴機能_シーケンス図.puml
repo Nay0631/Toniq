@@ -1,0 +1,53 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd K01-3_キー・スケール試聴機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":スケール試聴の切り替え" as L3
+control ":再生" as L4
+control ":クリック音" as L5
+entity ":アプリの状態" as L6
+control ":スケール試聴" as L7
+entity ":スケールマスタ" as L8
+
+L1 -> L2 : 響きの試聴ボタンを押下する() : void
+activate L2
+L2 -> L3 : 試聴を始める・止める() : void
+activate L3
+alt スケールが鳴っていない
+  L3 -> L4 : 曲の再生を止める() : void
+  activate L4
+  deactivate L4
+  L3 -> L5 : クリック音を止める() : void
+  activate L5
+  deactivate L5
+  L3 -> L6 : キー・スケールを取得する() : void
+  activate L6
+  deactivate L6
+  L3 -> L7 : スケールを鳴らす() : void
+  activate L7
+  L7 -> L8 : スケールの7音を取得する() : void
+  activate L8
+  deactivate L8
+  loop 主音から1オクターブ上までの8音
+    L7 -> L7 : 音を鳴らす() : void
+    activate L7
+    deactivate L7
+    L7 -> L2 : 鳴っている音を強調表示する() : void
+    activate L2
+    deactivate L2
+  end
+  L7 -> L7 : 主音の和音を鳴らす() : void
+  activate L7
+  deactivate L7
+  deactivate L7
+else スケールが鳴っている
+  L3 -> L7 : スケールを止める() : void
+  activate L7
+  deactivate L7
+end
+deactivate L3
+deactivate L2
+
+@enduml

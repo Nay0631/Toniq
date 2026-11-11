@@ -4,16 +4,22 @@ mainframe **pkg**
 
 class "ミキサー" as B1 <<boundary>> {
   {method} <U+002B> フェーダーを動かす() : void
-  {method} <U+002B> 電源ボタンを押下する() : void
+  {method} <U+002B> ON ボタンを押下する() : void
   {method} <U+002B> 音量の数値を表示する() : void
+  {method} <U+002D> レベルメーターを表示する() : void
 }
 class "音量管理" as C1 <<control>> {
-  {field} <U+002D> パートの音量ノード
+  {field} <U+002D> パートの音量ノード・レベルメーター
   {method} <U+002B> パートの音量を変える() : void
+  {method} <U+002B> パートのレベルを取得する() : void
   {method} <U+002D> dB に変換して再生中の音量に反映する() : void
 }
 class "パート管理" as C2 <<control>> {
   {method} <U+002B> パートを ON/OFF する() : void
+}
+class "ミックス" as C3 <<control>> {
+  {field} <U+002D> マスターのレベルメーター
+  {method} <U+002B> マスターのレベルを取得する() : void
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> パートごとの音量（0〜100）
@@ -27,5 +33,6 @@ C1 --> E1
 C1 --> B1
 B1 --> C2
 C2 --> E1
+B1 --> C3
 
 @enduml

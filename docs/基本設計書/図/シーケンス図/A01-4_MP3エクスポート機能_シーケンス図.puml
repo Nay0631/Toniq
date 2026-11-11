@@ -1,0 +1,83 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-4_MP3エクスポート機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":再生" as L3
+boundary ":書き出しダイアログ" as L4
+control ":ドラム音源読み込み" as L5
+entity ":ドラム音源ファイル" as L6
+control ":ミックス" as L7
+entity ":ミックス設定マスタ" as L8
+entity ":アプリの状態" as L9
+control ":各パートの演奏" as L10
+entity ":MP3ファイル" as L11
+
+note over L2 : シンプルモード画面の「MP3で書き出すボタン」も同じ流れ
+
+L1 -> L2 : MP3 ボタンを押下する() : void
+activate L2
+L2 -> L3 : MP3 で書き出す() : void
+activate L3
+L3 -> L4 : 書き出しダイアログを開く() : void
+activate L4
+deactivate L4
+L3 -> L3 : 再生を止める() : void
+activate L3
+deactivate L3
+opt ドラムの音源がサンプル音源
+  L3 -> L5 : 音源を読み込む() : void
+  activate L5
+  L5 -> L6 : ジャンルの音源を取得する() : void
+  activate L6
+  deactivate L6
+  deactivate L5
+end
+L3 -> L7 : ミックスをジャンルに合わせる() : void
+activate L7
+L7 -> L8 : ミックス設定を取得する() : void
+activate L8
+deactivate L8
+deactivate L7
+L3 -> L9 : ON のパートと曲の内容を取得する() : void
+activate L9
+deactivate L9
+L3 -> L10 : 演奏の予定を組み立てる() : void
+activate L10
+deactivate L10
+L3 -> L4 : 段階と進み具合を表示する() : void
+activate L4
+deactivate L4
+loop 合成の区切りごと
+  L3 -> L3 : 音声を合成する() : void
+  activate L3
+  deactivate L3
+  L3 -> L4 : 段階と進み具合を表示する() : void
+  activate L4
+  deactivate L4
+end
+alt 合成できた
+  loop 変換の区切りごと
+    L3 -> L3 : MP3（192kbps）に変換する() : void
+    activate L3
+    deactivate L3
+    L3 -> L4 : 段階と進み具合を表示する() : void
+    activate L4
+    deactivate L4
+  end
+  L3 -> L11 : 保存する() : void
+  activate L11
+  deactivate L11
+  L3 -> L4 : 書き出しダイアログを閉じる() : void
+  activate L4
+  deactivate L4
+else 失敗した
+  L3 -> L4 : 失敗のメッセージを表示する() : void
+  activate L4
+  deactivate L4
+end
+deactivate L3
+deactivate L2
+
+@enduml

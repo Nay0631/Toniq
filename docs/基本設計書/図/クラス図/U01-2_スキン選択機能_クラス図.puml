@@ -6,7 +6,6 @@ class "設定画面" as B1 <<boundary>> {
   {method} <U+002B> スキンを押下する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
-  {method} <U+002B> 情報バーのスキンを押下する() : void
   {method} <U+002B> カスタムモードの見た目を変える() : void
 }
 class "見た目設定" as C1 <<control>> {
@@ -22,7 +21,6 @@ class "端末の設定データ" as E2 <<entity>> {
 }
 
 B1 --> C1
-B2 --> C1
 C1 --> E1
 C1 --> E2
 C1 --> B2

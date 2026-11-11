@@ -1,0 +1,22 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-7_セクション切替機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "アレンジ画面" as B1
+control "セクション切り替え" as C1
+control "曲の構成" as C2
+control "再生" as C3
+entity "アプリの状態" as E1
+entity "標準アレンジマスタ" as E2
+
+A1 --> B1 : セクションの行の周回を押下する
+B1 --> C1 : その周回の Aメロ／サビを切り替える
+C1 --> C2 : 周回ごとのセクションを取得する
+C2 --> E1 : セクション・ジャンル・小節数を取得する
+C2 --> E2 : 編集していなければ標準のセクションを取得する
+C1 --> E1 : セクションを更新する
+C1 --> C3 : 再生中なら再生し直す
+C1 --> B1 : 周回ごとの Aメロ・サビを表示する
+
+@enduml

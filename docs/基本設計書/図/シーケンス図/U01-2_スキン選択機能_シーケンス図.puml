@@ -9,8 +9,6 @@ entity ":アプリの状態" as L4
 entity ":端末の設定データ" as L5
 boundary ":カスタムモード画面" as L6
 
-note over L2 : カスタムモード画面の情報バーのスキンも同じ流れ
-
 L1 -> L2 : スキンを押下する() : void
 activate L2
 L2 -> L3 : スキンを選ぶ() : void

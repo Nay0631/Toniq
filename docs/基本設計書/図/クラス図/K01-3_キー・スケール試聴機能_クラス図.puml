@@ -1,0 +1,44 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> 響きの試聴ボタンを押下する() : void
+  {method} <U+002B> 鳴っている音を強調表示する() : void
+}
+class "スケール試聴の切り替え" as C1 <<control>> {
+  {method} <U+002B> 試聴を始める・止める() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 曲の再生を止める() : void
+}
+class "クリック音" as C3 <<control>> {
+  {method} <U+002B> クリック音を止める() : void
+}
+class "スケール試聴" as C4 <<control>> {
+  {field} <U+002D> 鳴っているか・何音目か
+  {method} <U+002B> スケールを鳴らす() : void
+  {method} <U+002B> スケールを止める() : void
+  {method} <U+002D> 音を鳴らす() : void
+  {method} <U+002D> 主音の和音を鳴らす() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> キー
+  {field} <U+002B> コード進行（スケール）
+  {method} <U+002B> キー・スケールを取得する() : void
+}
+class "スケールマスタ" as E2 <<entity>> {
+  {field} <U+002B> スケール
+  {field} <U+002B> ペンタトニックの5音・アクセントの2音
+  {method} <U+002B> スケールの7音を取得する() : void
+}
+
+B1 --> C1
+C1 --> C2
+C1 --> C3
+C1 --> E1
+C1 --> C4
+C4 --> E2
+C4 --> B1
+
+@enduml

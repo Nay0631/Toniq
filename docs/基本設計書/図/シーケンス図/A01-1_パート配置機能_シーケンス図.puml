@@ -10,6 +10,7 @@ entity ":アプリの状態" as L5
 entity ":標準アレンジマスタ" as L6
 control ":パート管理" as L7
 control ":各パートの演奏" as L8
+control ":再生" as L9
 
 alt 空いている所を押下（ブロックを置く）
   L1 -> L2 : タイムラインの空いている所を押下する() : void
@@ -58,9 +59,14 @@ else 標準に戻す
   activate L2
   L2 -> L3 : 標準に戻す() : void
   activate L3
-  L3 -> L5 : アレンジを空にする() : void
+  L3 -> L5 : アレンジとセクションを空にする() : void
   activate L5
   deactivate L5
+  opt セクションを編集していた、かつ再生中
+    L3 -> L9 : 再生し直す() : void
+    activate L9
+    deactivate L9
+  end
   deactivate L3
   deactivate L2
 end
