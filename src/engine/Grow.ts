@@ -220,6 +220,15 @@ export function growPresetValues(preset: number): number[] | null {
   return params.map(p => ex!.grow_preset_value(preset, p.index));
 }
 
+// プリセットの値の一部を上書きした値（overrides はパラメーターの ID → 値。FX の EG の長さなど、テンポで変わる値に使う）
+export function growPresetValuesWith(preset: number, overrides: Record<string, number>): number[] | null {
+  if (!ex) return null;
+  return params.map(p => {
+    const value = overrides[p.id];
+    return typeof value === "number" ? value : ex!.grow_preset_value(preset, p.index);
+  });
+}
+
 // 今の曲の grow の値（パラメーターの番号順）。プリセットの値に、曲で変えた値（growParams など）を重ねる
 export function currentGrowValues(part: GrowPart = "melody"): number[] | null {
   if (!ex) return null;

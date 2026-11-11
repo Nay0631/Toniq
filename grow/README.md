@@ -78,7 +78,8 @@ OSC 1・OSC 2（ユニゾンで最大7枚重ね、左右に広げる）＋サブ
 - 音の終わりの合図は 2ms 遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。同じ高さの音が続くときは、ワークレットが前の音の終わりを無視する。
 - Toniq ではメロディ・コード（音色が grow のとき）とパッド・アルペジオ・シグネチャー（いつも）を grow で鳴らす。和音は同じサンプルに重なる合図を2サンプルずつずらして渡す。
 - 曲に保存するのはパートごとのプリセットの番号と変えた値（ID → 値。null = プリセットのまま）：メロディ `AppState.growPreset` / `growParams`、コード `growChordPreset` / `growChordParams`、パッド・アルペジオ・シグネチャー `growSounds`（プリセットの null = ジャンルの標準）。
-- パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを **名前** で探す（候補を前から順に。今の wasm にない名前は飛ばす）。Toniq 向けのプリセット（ソフトパッド〜ウィンド）の名前を変えるときは `GROW_STANDARD` と `SignaturePlayer.ts`（レコードプチ）もそろえる。
+- FX / SE（`src/engine/FxPlayer.ts` の `GROW_FX`）は「FX …」のプリセットを名前で探して鳴らし、テンポで変わる EG の時間などをその場で上書きする。プリセットがなければ Tone.js の音で鳴る。
+- パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを **名前** で探す（候補を前から順に。今の wasm にない名前は飛ばす）。Toniq 向けのプリセット（ソフトパッド〜ウィンド、「FX …」）の名前を変えるときは `GROW_STANDARD`・`SignaturePlayer.ts`（レコードプチ）・`FxPlayer.ts`（`GROW_FX`）もそろえる。
 
 ## 決まりごと
 
