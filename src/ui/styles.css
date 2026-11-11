@@ -3163,9 +3163,8 @@ span[data-term],
   cursor: inherit;
 }
 
-/* ===== メニューの設定カード：ほかのカードより細い横長で、2列ぶんの幅を使う ===== */
+/* ===== メニューの細いカード（作業ファイルを開く・設定）：ほかのカードより背が低く、2枚で1行に並べる ===== */
 .menu-card-slim {
-  grid-column: 1 / -1;
   padding-top: clamp(16px, calc(var(--menu-scale) * 2), 32px);
   padding-bottom: clamp(16px, calc(var(--menu-scale) * 2), 32px);
 }

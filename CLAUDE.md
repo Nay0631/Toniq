@@ -17,7 +17,9 @@ npm run electron:build  # インストーラ作成（release/）
 ## ディレクトリ構成
 
 ```
-electron/main.ts        Electron メインプロセス（ウィンドウ生成のみ）
+electron/main.ts        Electron メインプロセス（ウィンドウ生成と、出力フォルダ output/ への保存・作業ファイルのダイアログの IPC）
+electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
+output/                 曲の出力フォルダ（projects = 作業ファイル、audio = WAV / MP3、midi = MIDI。中身は Git 管理外）
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
 src/ui/
@@ -30,6 +32,7 @@ src/ui/
   MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・⋮メニュー）と両モードの「♪ 保存」ボタン
   QuizScreen.ts           音楽クイズ画面（カテゴリ・出題モードの切り替え、出題・採点、鍵盤／選択肢での回答、出題設定）
   Controls.ts             シンセサイザー風のノブ（attachKnob）・縦フェーダー（attachFader。ミキサー）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
+  ProjectFileControls.ts  作業ファイルの保存（両モードの情報バー「⇩ 作業ファイル」）・開く（メニューのカード・ミュージックリスト）と「出力フォルダ」ボタン
   ExportProgress.ts       音声の書き出し（WAV / MP3）の進み具合のダイアログ（目安の説明・段階・進み具合・経過時間。両モード共通の exportAudioWithProgress）
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   HistoryControls.ts      元に戻す／やり直すのボタン（両モードの情報バー）とショートカット（Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）、戻したあとの再生への反映
@@ -55,7 +58,8 @@ src/data/               楽曲データとデータ型
   mix_presets.json        ジャンル別マスターエフェクト設定（リバーブ送り量・EQ・コンプ・リミッター・持ち上げ gain）
 src/engine/
   AppState.ts             アプリ状態の唯一の保持場所
-  SongLibrary.ts          ミュージックリストの保存・読み込み（localStorage の toniq.songs）と曲ファイル（.toniq.json）の書き出し・読み込み
+  SongLibrary.ts          ミュージックリストの保存・読み込み（localStorage の toniq.songs）と曲ファイル（.toniq.json）の書き出し・読み込み、作業ファイル（projectFileText / loadProjectFile）
+  OutputFiles.ts          書き出したファイルの保存先（Electron は output/<種類>/ に直接保存、ブラウザはダウンロード。saveOutput）
   History.ts              元に戻す／やり直すの履歴（setState の直前に曲の内容のスナップショットを積む）
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
@@ -189,6 +193,11 @@ src/engine/
 - 用語のツールチップ（`Glossary.ts`）：要素に `data-term="キー"` を付けると、カーソルを乗せる（キーボードならフォーカスする）と少し待って `TERMS` の説明を出す。`span` とアレンジャーのレーン名には点線の下線が付く。パート名（`LayerName`）はそのまま `TERMS` のキーとして使う（アレンジャー）。説明は初心者向けに1〜2文で、専門用語を重ねない。新しい用語を画面に出したら `TERMS` に足して `data-term` を付ける。
   - ON/OFF は設定画面で切り替える（`AppState.tooltips`、localStorage の `toniq.tooltips` = `on` / `off`、`<html data-tooltips>`。OFF では下線も出さない）。`<head>` でも描画前に `data-tooltips` を付ける。曲の内容ではないので `SONG_FIELDS` には入れない。
 - 設定画面（`SettingsScreen.ts`、`data-screen="settings"`）はメニューの横長の「設定」カードから開く。端末ごとの設定（配色・スキン・音名の表記・ループ再生・ドラムの音源・ツールチップ）を集める。曲に保存する項目は置かない。設定を足すときは AppState に項目を足し、保存は担当のモジュールが localStorage（`toniq.*`）に行い、表示の切り替えは `<html data-*>` で行う。
+- 作業ファイル・出力フォルダ：
+  - 作業ファイルは今の曲1曲分の曲ファイル（`.toniq.json`、ミュージックリストの曲ファイルと同じ形式）。保存は `projectFileText()`、開くのは `loadProjectFile()`（今の曲として読み込み、ミュージックリストには追加しない。`songId` は `null`、開いた・保存した場所は `AppState.projectPath`。曲の内容ではないので `SONG_FIELDS` には入れない。`loadSong` / `newSong` で `null` に戻す）。
+  - Electron では保存・開くのダイアログを `output/projects` から始め、前回の保存先があればそこを出す。WAV / MP3 / MIDI は `saveOutput()`（`OutputFiles.ts`）で `output/audio` / `output/midi` に直接保存し（同名なら「 (2)」を付けて上書きしない）、保存後にフォルダを開くか聞く。
+  - 出力フォルダの場所は開発時が toniq フォルダの `output/`、インストール版は Toniq.exe と同じ場所の `output/`（書き込めなければ「ドキュメント/Toniq/output」）。起動時に作る。
+  - ブラウザで開いたとき（`window.toniqFiles` がない）は、保存はダウンロード、開くのはファイル選択になり、「出力フォルダ」ボタンは隠す。
 - `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（未保存の曲があれば確認する）。
 - 両モードの情報バーの「＋ 新規作成」は、確認のうえ再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
 - 配色は選び方を `AppState.themeMode`（`light` / `dark` / `system` = OS に合わせる）、実際の配色を `AppState.theme` に置き、`Theme.ts` が `<html data-theme>` に反映して localStorage の `toniq.theme` に保存する（未保存か `system` なら OS の設定に合わせ、OS の配色が変わったら追従する。ヘッダーのボタンはライト／ダークを明示的に選ぶ。曲の内容ではないので `SONG_FIELDS` には入れない）。`index.html` の `<head>` でも同じキーを読んで描画前に `data-theme` を付ける。

@@ -1,6 +1,7 @@
 import * as Playback from "../engine/Playback";
 import type { AudioFormat, RenderStage } from "../engine/Playback";
 import { formatTime } from "./format";
+import { saveOutput } from "../engine/OutputFiles";
 
 // 音声の書き出し（WAV / MP3）の進み具合のダイアログ（シンプルモード・カスタムモード共通）。
 // 書き出しは曲の長さに応じて数秒〜数十秒かかるので、始めに目安を伝え、段階と進み具合・経過時間を出す
@@ -82,7 +83,9 @@ export async function exportAudioWithProgress(
   try {
     // ダイアログを描いてから重い処理を始める
     await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
-    Playback.downloadBlob(await Playback.renderAudio(format, update), filename);
+    const blob = await Playback.renderAudio(format, update);
+    el.hidden = true;  // 保存先の確認を出す前にダイアログを閉じる
+    await saveOutput("audio", blob, filename);
   } catch (e) {
     console.error(`${FORMAT_NAMES[format]}エクスポートエラー:`, e);
     alert(`${FORMAT_NAMES[format]} の書き出しに失敗しました。\n${e instanceof Error ? e.message : String(e)}`);
