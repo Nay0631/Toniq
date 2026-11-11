@@ -40,15 +40,18 @@ juce_add_plugin(grow
   VST3_CATEGORIES             Instrument Synth
   FORMATS                     Standalone VST3)
 
+# 音を作る部分は JUCE を使わないコア（core/。WebAssembly 版と共通）
 target_sources(grow PRIVATE
-  Source/Parameters.cpp
-  Source/GrowVoice.cpp
-  Source/GrowSynth.cpp
-  Source/FxChain.cpp
-  Source/Presets.cpp
+  core/GrowParams.cpp
+  core/GrowPresets.cpp
+  core/GrowVoice.cpp
+  core/GrowFx.cpp
+  core/GrowEngine.cpp
   Source/GrowLookAndFeel.cpp
   Source/PluginProcessor.cpp
   Source/PluginEditor.cpp)
+
+target_include_directories(grow PRIVATE core)
 
 target_compile_definitions(grow PUBLIC
   JUCE_WEB_BROWSER=0

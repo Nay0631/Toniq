@@ -4,15 +4,16 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState, MelodyInstrument } from "./AppState";
 import melodyParams from "../data/melody_params.json";
+import { GrowInstrument, currentGrowValues, isGrowReady, prepareGrowContext } from "./Grow";
 
 
 let melodyPart:  Tone.Part | null = null;
-let melodySynth: MelodySynth | null = null;
+let melodySynth: MelodySynth | GrowInstrument | null = null;
 let melodyFx:    Tone.ToneAudioNode[] = [];  // Synth の後ろにつなぐエフェクト（Synth と一緒に破棄する）
 let melodyVol:   Tone.Volume | null = null;
 
-// ジャンルごとの音色
-type SoundName = Exclude<MelodyInstrument, "auto">;
+// ジャンルごとの音色（grow は INSTRUMENTS ではなく Grow.ts で鳴らす）
+type SoundName = Exclude<MelodyInstrument, "auto" | "grow">;
 
 // メロディは単音なので、単音の Synth のどれか
 type MelodySynth = Tone.Synth | Tone.MonoSynth | Tone.FMSynth;
@@ -143,10 +144,15 @@ const INSTRUMENTS: Record<SoundName, MelodySound> = {
   },
 };
 
-// 実際に鳴らす音色。"auto" はジャンルの標準（melody_params.json の instrument）
-export function resolveMelodySound(): SoundName {
+// 実際に鳴らす音色。"auto" はジャンルの標準（melody_params.json の instrument）。
+// "grow" は今のオーディオコンテキストで grow の準備ができていれば grow、できていなければジャンルの標準
+export function resolveMelodySound(): SoundName | "grow" {
   const s = getState();
-  if (s.melodyInstrument !== "auto" && s.melodyInstrument in INSTRUMENTS) return s.melodyInstrument;
+  if (s.melodyInstrument === "grow") {
+    if (isGrowReady()) return "grow";
+  } else if (s.melodyInstrument !== "auto" && s.melodyInstrument in INSTRUMENTS) {
+    return s.melodyInstrument;
+  }
   const params = melodyParams as unknown as Record<string, { instrument?: SoundName }>;
   const name = (params[s.genre] ?? params["ローファイ"]).instrument;
   return name && name in INSTRUMENTS ? name : "soft";
@@ -156,7 +162,13 @@ export function resolveMelodySound(): SoundName {
 export function initMelodySynth() {
   disposeMelodySynth();
   melodyVol = createVolumeNode("melody");  // 現在のオーディオコンテキスト用のノード
-  const inst   = INSTRUMENTS[resolveMelodySound()];
+  const sound = resolveMelodySound();
+  if (sound === "grow") {
+    // grow は自前のエフェクト（リバーブを含む）を持つので、そのままメロディの Volume へ
+    melodySynth = new GrowInstrument(currentGrowValues()!, getState().bpm).connect(melodyVol);
+    return;
+  }
+  const inst   = INSTRUMENTS[sound];
   const reverb = new Tone.Reverb(inst.reverb).connect(melodyVol);
   melodyFx    = [...inst.fx(), reverb];
   const synth = inst.synth();
@@ -195,8 +207,22 @@ export function loadMelody(notes: MelodyNote[], loopEnd: string) {
 // ピアノロールで置いた音を試聴する（Synth がなければ作る。再生中は鳴っているメロディの Synth で鳴らす）
 export async function previewMelodyNote(note: string) {
   await Tone.start();
+  if (getState().melodyInstrument === "grow") await prepareGrowContext();
   if (!melodySynth) initMelodySynth();
   melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);
+}
+
+// grow の音作りの値と BPM（テンポ同期の LFO・ディレイ）を、鳴っているメロディにすぐ当てる（作り直さない）
+export function applyGrowLive(): void {
+  if (!(melodySynth instanceof GrowInstrument)) return;
+  const values = currentGrowValues();
+  if (values) melodySynth.setValues(values);
+  melodySynth.setBpm(getState().bpm);
+}
+
+// メロディの Synth を今の設定で作り直す（再生中なら鳴っている Part はそのまま新しい Synth で鳴る）
+export function refreshMelodySynth(): void {
+  if (melodySynth) initMelodySynth();
 }
 
 function disposeMelodySynth() {

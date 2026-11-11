@@ -104,7 +104,8 @@ function songFields(song: Partial<SongFields>): SongFields {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
     volumes:     { ...defaultState.volumes, ...loaded.volumes },
-    // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）
+    // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）。
+    // 今の grow は "grow"（growPreset / growParams）
     melodyInstrument: (loaded.melodyInstrument as string) === "toniq" ? "auto" : loaded.melodyInstrument,
     arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
   };

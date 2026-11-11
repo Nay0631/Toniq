@@ -12,9 +12,10 @@ export type Tab = "settings" | "arranger" | "pianoroll";
 // コードを鳴らすリズム（whole = コードの長さいっぱいに伸ばす）
 export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
-// メロディの音色（auto = ジャンルの標準。melody_params.json の instrument）
+// メロディの音色（auto = ジャンルの標準。melody_params.json の instrument。
+// grow = 内部シンセ grow（テスト中。Grow.ts。wasm がないときはジャンルの標準で鳴る））
 export type MelodyInstrument =
-  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid";
+  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid" | "grow";
 
 // コードの音色
 export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
@@ -137,6 +138,10 @@ export interface AppState {
   // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
   // 設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
   drumSource:       DrumSource;
+  // grow の音作り（曲に保存する）。プリセットの番号（grow のコアの GrowPresets.cpp の並び）と、
+  // そこから変えた値（パラメーターの ID → 実際の値。null = プリセットのまま）
+  growPreset:       number;
+  growParams:       Record<string, number> | null;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
@@ -221,6 +226,8 @@ export const defaultState: AppState = {
   scaleLock:        true,
   drumCategory:     "EDM",
   drumSource:       "synth",
+  growPreset:       1,  // シンセリード
+  growParams:       null,
 
   arrangement: null,
   startBar:    0,
@@ -260,6 +267,7 @@ export const SONG_FIELDS = [
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
   "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
+  "growPreset", "growParams",
   "arrangement", "parts", "volumes",
 ] as const;
 

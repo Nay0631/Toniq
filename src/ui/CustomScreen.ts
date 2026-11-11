@@ -23,6 +23,7 @@ import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
 import { exportAudioWithProgress } from "./ExportProgress";
 import type { AudioFormat } from "../engine/Playback";
+import { initGrowPanel } from "./GrowPanel";
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -388,6 +389,9 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
+
+  // grow（テスト中）の音作りのパネル。値はその場で鳴っているメロディに当たるので再生し直さない
+  initGrowPanel();
 
   // インスト：メロディの Synth は再生開始時に作り直されるので、再生中なら再生し直す
   $select("c-instrument").addEventListener("change", async e => {

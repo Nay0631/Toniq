@@ -376,6 +376,8 @@
                 <option value="lead">シンセリード</option>
                 <option value="pluck">プラック（ハウス）</option>
                 <option value="soft">ソフトサイン（アンビエント）</option>
+                <!-- 内部シンセ grow（テスト中）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
+                <option value="grow">grow（テスト中）</option>
               </select>
             </label>
 
@@ -567,6 +569,8 @@
           </div>
         </div>
 
+        <!-- grow（テスト中）の音作り。メロディのインストが grow のときだけ出す。中身は GrowPanel.ts が作る -->
+        <div class="card panel grow-panel" id="c-grow" hidden></div>
 
         <div class="export-row">
           <span class="export-label">書き出し</span>

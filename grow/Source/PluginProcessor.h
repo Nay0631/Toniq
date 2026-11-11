@@ -1,13 +1,13 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
-#include "FxChain.h"
-#include "GrowSynth.h"
-#include "Parameters.h"
+#include "GrowEngine.h"
 
 namespace grow
 {
-// grow の本体（Standalone・VST3 で共通）。MIDI を受けてボイスを鳴らし、エフェクトを通して左右の出力に書く
+// JUCE 版 grow の本体（Standalone・VST3 で共通）。
+// パラメーターは AudioProcessorValueTreeState（コアの表から作る）に持ち、ブロックごとにコアのエンジンへ渡す。
+// MIDI はイベントの位置でブロックを区切ってエンジンに渡す
 class GrowProcessor : public juce::AudioProcessor
 {
 public:
@@ -41,10 +41,10 @@ public:
     juce::MidiKeyboardState keyboardState;  // 画面の鍵盤（Standalone で弾く）
 
 private:
-    GrowParams  params;
-    VoiceShared shared;
-    GrowSynth   synth;
-    FxChain     fx;
+    void handleMidi (const juce::MidiMessage& message);
+
+    Engine engine;
+    std::atomic<float>* rawValues[numParams] {};
     int currentProgram = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (GrowProcessor)

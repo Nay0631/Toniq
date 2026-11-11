@@ -3243,6 +3243,40 @@ span[data-term],
 .groove-value { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
 .groove-auto.is-active { border-color: var(--custom); color: var(--custom); }
 
+/* ===== grow（テスト中。カスタムモードの設定タブの下。GrowPanel.ts） ===== */
+.grow-panel { margin-top: 20px; }
+.hw .grow-panel { margin-top: 0; border: 1px solid var(--hw-line); border-top: none; }
+.grow-status { margin: 4px 0 12px; color: var(--text-sub); font-size: 12px; }
+.grow-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; margin-bottom: 12px; }
+.grow-edited { color: var(--text-sub); font-size: 12px; }
+.grow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.grow-module {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.grow-module-title { margin: 0 0 8px; color: var(--custom); font-size: 12px; font-weight: 700; }
+.grow-control {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  font-size: 12px;
+}
+.grow-control .grow-select { grid-column: 2 / 4; width: 100%; font-size: 12px; }
+.grow-toggle input { justify-self: start; }
+.grow-preset { grid-template-columns: auto minmax(160px, 1fr); }
+.grow-preset .select { width: 100%; }
+.grow-name { color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grow-value { color: var(--text-sub); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.grow-control input[type="range"] { width: 100%; accent-color: var(--custom); }
+
 /* ===== WAV書き出しの進み具合（ExportProgress.ts） ===== */
 .export-overlay {
   position: fixed;

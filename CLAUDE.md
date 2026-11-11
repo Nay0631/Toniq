@@ -14,20 +14,23 @@ npm run electron:build  # インストーラ作成（release/）
 
 テスト・Lint は未導入。変更後は `npx tsc --noEmit` で型チェックする。
 
-grow（内部シンセ。C++ / JUCE）は `grow/` で CMake を使ってビルドする（Visual Studio 2022・CMake 3.22 以上が必要。詳しくは `grow/README.md`）：
+grow（内部シンセ。C++）は2通りにビルドする（詳しくは `grow/README.md`）：
 
 ```bash
-cd grow
-cmake -B build -G "Visual Studio 17 2022"
-cmake --build build --config Release   # build/grow_artefacts/Release/ に Standalone の grow.exe と VST3
+npm run grow:wasm   # Toniq で鳴らす wasm（Emscripten の emcc が必要）→ public/grow/grow.wasm（Git に入れる）
+cd grow && cmake -B build -G "Visual Studio 17 2022" && cmake --build build --config Release
+                    # 単体版（JUCE の Standalone・VST3。Visual Studio 2022・CMake 3.22 以上）
 ```
+
+grow のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルドし直す（Toniq は wasm を読むので、ビルドしないと変更が鳴らない）。
 
 ## ディレクトリ構成
 
 ```
 electron/main.ts        Electron メインプロセス（ウィンドウ生成と、出力フォルダ output/ への保存・作業ファイルのダイアログの IPC）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
-grow/                   内部シンセ grow（C++ / JUCE の Standalone・VST3。Toniq 本体とは別にビルドする。構成は grow/README.md）
+grow/                   内部シンセ grow（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
+public/grow/grow.wasm   grow の wasm（npm run grow:wasm で作る。Grow.ts が読む）
 output/                 曲の出力フォルダ（projects = 作業ファイル、audio = WAV / MP3、midi = MIDI。中身は Git 管理外）
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
@@ -47,6 +50,7 @@ src/ui/
   HistoryControls.ts      元に戻す／やり直すのボタン（両モードの情報バー）とショートカット（Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）、戻したあとの再生への反映
   Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS）
   SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・用語のツールチップの ON/OFF）
+  GrowPanel.ts            grow（テスト中）の音作りの暫定パネル（カスタムモードの設定タブの下 #c-grow。プリセット、コアの表から作るモジュールごとのつまみ）
   Preferences.ts          端末ごとの設定（音名の表記 toniq.noteNames・ループ再生 toniq.loop・ドラムの音源 toniq.drumSource・テスト中の機能 toniq.test.*）の保存・読み込み
   Theme.ts                ライト／ダーク／OS に合わせるの切り替え（ヘッダー右端のボタンと設定画面、<html data-theme>、localStorage の toniq.theme）と、カスタムモードのスキン（デフォルト／フラット／スタジオ／ポップ。設定画面で選ぶ。<html data-skin>、toniq.skin）
   styles.css              デザイントークン（ライト＋ダーク）と共通スタイル
@@ -78,6 +82,8 @@ src/engine/
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
+  Grow.ts                 grow（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット、AudioWorklet の登録、メロディの音色 GrowInstrument
+  growWorklet.js          grow の AudioWorklet（wasm を 128 サンプルずつ描く。音符は AudioParam の合図で受ける）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラムのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
@@ -128,10 +134,13 @@ src/engine/
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
 - アレンジャーのドラムのブロックは1つずつパターンを持てる（`ArrangeBlock.drum` = パターン ID。ブロックのラベルのセレクトで選ぶ。今のジャンルのパターンを先に並べ、ほかのジャンルも選べる。なし = 曲の設定 `drumPattern`）。鳴らすときはステップごとに `arrangementBlockAt("drum")` でブロックを調べてパターンを決めるので、再生中の変更もすぐ反映される。キットはパターンを切り替えても音が欠けないよう、DB に出てくる全トラック分を作る。16ステップ・`16n` 以外のパターンを足すときは `DrumEngine.ts` の Sequence と `MidiExporter.ts` のドラムを見直す。
 - Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメントでは「grow」と呼ぶ。
-- grow（`grow/`）は C++ と JUCE で作った単体のシンセサイザー（Standalone の grow.exe と VST3 プラグイン）。Toniq 本体（Electron / Tone.js）とは別のプログラムで、今は Toniq の再生・書き出しにはつながっていない。作り・決まりごとは `grow/README.md`。
-  - 以前の Tone.js 版（`ToniqSynth.ts` / `ToniqSynthPanel.ts`、`AppState.toniqSynth` / `toniqSynthEnabled`、メロディの音色 `"toniq"`、localStorage の `toniq.test.toniqSynth`）はすべて廃止した。保存済みの曲の `toniqSynth` は読み捨て、`melodyInstrument: "toniq"` は `loadSong()`（`songFields`）で `"auto"`（ジャンルの標準の音色）にして読む。
-  - 音の流れ：OSC 1・OSC 2（ユニゾン最大7枚・左右に広げる）＋サブ＋ノイズ → フィルター（EG・LFO・キー追従）→ アンプ（ADSR）→ 8音を足す → ドライブ → コーラス → ディレイ → リバーブ → マスター → リミッター。ボイスはポリ／モノ／レガート。
-  - パラメーターは `AudioProcessorValueTreeState`（ID は `Parameters.h` の `ids`。一度出した ID は変えない）。音を作る側はブロックの頭に `readParams()` で作る `GrowParams` だけを読む。日本語の文字列は `jp()` を通す。
+- grow（`grow/`）は C++ のシンセサイザー。音を作るコア（`grow/core/`。JUCE なし）を、Toniq では WebAssembly＋AudioWorklet で、単体では JUCE の Standalone・VST3 で鳴らす。作り・決まりごとは `grow/README.md`。
+  - Toniq ではメロディの音色 `melodyInstrument: "grow"`（インストの「grow（テスト中）」）。`Grow.ts` が `public/grow/grow.wasm` を読み込み、AudioWorklet（`growWorklet.js`。`?raw` で読み込んで Blob の URL で登録）をオーディオコンテキストごとに登録する。再生・試聴・サンプルは `Playback.audioReady`、WAV / MP3 書き出しは `renderSong` の `schedule` で `prepareGrowContext()` を待つ。準備ができていない・wasm がないときは `resolveMelodySound()` がジャンルの標準の音色にする。
+  - `GrowInstrument`（`Grow.ts`）はほかの音色の Synth と同じ `triggerAttackRelease` で鳴らす。音符は AudioParam（`on` / `off`）の1サンプルの合図で渡す（書き出しでも合う）。音の終わりは 2ms 遅らせてレガートでつながるようにし、同じ高さが続くときはワークレットが前の音の終わりを無視する。自前のエフェクト（リバーブを含む）を持つので、メロディの Volume に直接つなぐ。
+  - 音作りの値は `AppState.growPreset`（コアのプリセットの番号）と `growParams`（変えた値。パラメーターの ID → 値。`null` = プリセットのまま）。どちらも `SONG_FIELDS` に含む。パラメーターの表・プリセット・値の表示はコア（wasm）から読み、TypeScript 側では持たない。
+  - 音作りのパネル（`GrowPanel.ts`、カスタムモードの設定タブの下 `#c-grow`。インストが grow のときだけ出す）はテスト用の暫定。最終的にはプリセットを選ぶだけにする予定。値を変えると `applyGrowLive()` で鳴っているメロディにすぐ当てる（作り直さない）。BPM の変更も `Playback.applyBpm()` から当てる。
+  - 以前の Tone.js 版（`ToniqSynth.ts` / `ToniqSynthPanel.ts`、`AppState.toniqSynth` / `toniqSynthEnabled`、メロディの音色 `"toniq"`、localStorage の `toniq.test.toniqSynth`）は廃止した。保存済みの曲の `toniqSynth` は読み捨て、`melodyInstrument: "toniq"` は `loadSong()`（`songFields`）で `"auto"` にして読む。
+  - MIDI書き出しはほかの音色と同じくメロディの音として書き出す（音色の再現はしない）。
 - ドラムの音源（テスト中）：`AppState.drumSource` が `"synth"`（Tone.js のシンセ、初期値）か `"sample"`（ワンショット音源）。設定画面の「ドラムの音源」で切り替え、`Preferences.ts` が localStorage の `toniq.drumSource` に保存する。曲の内容ではないので `SONG_FIELDS` には入れない。再生中に切り替えたら（サンプル音源なら読み込みを待って）ドラムだけ読み込み直す。
   - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。

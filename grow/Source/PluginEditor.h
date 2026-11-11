@@ -7,12 +7,11 @@
 namespace grow
 {
 // モジュール1つ分の枠（見出し＋つまみ・セレクト・スイッチの並び）。
-// パラメーターの種類で部品を選び（選択肢 → セレクト、ON/OFF → スイッチ、ほか → ノブ）、名前はパラメーターの名前を出す
+// コアのパラメーターの表の group が同じものを並べ、種類で部品を選ぶ（選択肢 → セレクト、ON/OFF → スイッチ、ほか → ノブ）
 class ParamSection : public juce::Component
 {
 public:
-    ParamSection (juce::AudioProcessorValueTreeState& state, const juce::String& title,
-                  std::initializer_list<juce::String> parameterIds);
+    ParamSection (juce::AudioProcessorValueTreeState& state, const char* group);
 
     int getPreferredWidth() const;
     void paint (juce::Graphics&) override;
@@ -49,7 +48,6 @@ public:
 
 private:
     void selectPreset (int index);
-    void refreshPresetList();
 
     GrowLookAndFeel lookAndFeel;  // 部品より先に作り、あとで壊す
     GrowProcessor& growProcessor;  // AudioProcessorEditor::processor と同じもの（型付き）

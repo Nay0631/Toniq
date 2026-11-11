@@ -1,15 +1,49 @@
 # grow
 
-Toniq の内部シンセサイザー。C++ と [JUCE](https://juce.com/) で作り、**Standalone（単体のアプリ）** と **VST3 プラグイン** として動く。
-Toniq 本体（Electron + Tone.js）とは別のプログラムで、今は Toniq の曲の再生・書き出しにはつながっていない。
+Toniq の内部シンセサイザー。C++ で作り、同じ「コア」から2つの形で動く。
+
+- **Toniq の中**：コアを WebAssembly にして AudioWorklet で鳴らす（メロディの音色「grow（テスト中）」）。再生・ミキサー・WAV / MP3 書き出しにそのまま入る。
+- **単体**：[JUCE](https://juce.com/) で **Standalone（grow.exe）** と **VST3 プラグイン** にする。
+
+JUCE は WebAssembly に公式対応していないので、音を作る部分（`core/`）は JUCE を使わない C++ で書き、JUCE は単体版の画面とホストとのやり取りだけに使う。
+
+## ファイル
+
+```
+core/                     音を作るコア（JUCE なし。単体版・wasm 版で共通）
+  GrowParams.h/.cpp         パラメーターの表（ID・モジュール名・表示名・範囲・初期値・表示）と、音を作る側が読む GrowParams
+  GrowPresets.h/.cpp        工場出荷のプリセット（初期値から変える値だけを書く）
+  GrowDsp.h                 部品（ADSR・ステートバリアブルフィルター・PolyBLEP のオシレーター・乱数）
+  GrowVoice.h/.cpp          1音分のシンセ（OSC・フィルター・EG・LFO・グライド）
+  GrowFx.h/.cpp             エフェクト（ドライブ・コーラス・ディレイ・リバーブ（Freeverb）・マスター・リミッター）
+  GrowEngine.h/.cpp         本体（パラメーターの値・ボイスの割り当て（ポリ／モノ／レガート）・エフェクト）
+wasm/
+  grow_wasm.cpp             wasm 版の入口（C の関数。Toniq の src/engine/growWorklet.js・Grow.ts が呼ぶ）
+  build.mjs                 wasm のビルド（npm run grow:wasm → public/grow/grow.wasm）
+Source/                   JUCE の単体版
+  PluginProcessor.h/.cpp    コアの表から JUCE のパラメーターを作り、MIDI の位置でブロックを区切ってエンジンに渡す
+  PluginEditor.h/.cpp       画面（コアの表のモジュールごとにノブ・セレクトを並べる、プリセット、鍵盤）
+  GrowLookAndFeel.h/.cpp    見た目（色・ノブの描き方・日本語のフォント）
+  Text.h                    日本語の文字列（jp()）
+CMakeLists.txt            単体版のビルド
+```
 
 ## ビルド
 
-必要なもの（Windows）：
+### wasm 版（Toniq で鳴らす）
 
-- Visual Studio 2022（「C++ によるデスクトップ開発」）
-- CMake 3.22 以上
-- Git（JUCE を取得するため）
+[Emscripten](https://emscripten.org/docs/getting_started/downloads.html) を入れ、`emsdk_env` で `emcc` に PATH を通してから、Toniq のフォルダで：
+
+```bash
+npm run grow:wasm   # → public/grow/grow.wasm
+```
+
+できた `public/grow/grow.wasm` は Git に入れる（Toniq を動かすだけの人が Emscripten を入れなくて済むように）。
+コアを変えたらビルドし直す。wasm がないと、Toniq では grow を選んでもジャンルの標準の音色で鳴る。
+
+### 単体版（JUCE）
+
+Visual Studio 2022（「C++ によるデスクトップ開発」）・CMake 3.22 以上・Git が必要。
 
 ```bash
 cd grow
@@ -17,13 +51,8 @@ cmake -B build -G "Visual Studio 17 2022"
 cmake --build build --config Release
 ```
 
-最初の構成で JUCE 8.0.4 を GitHub から取得する。手元の JUCE を使うときは `-DGROW_JUCE_DIR=C:/path/to/JUCE` を付ける。
-
-できあがるもの：
-
-- `build/grow_artefacts/Release/Standalone/grow.exe`
-- `build/grow_artefacts/Release/VST3/grow.vst3`（DAW の VST3 フォルダに入れて使う）
-
+最初の構成で JUCE 8.0.4 を GitHub から取得する（手元の JUCE は `-DGROW_JUCE_DIR=C:/path/to/JUCE`）。
+できあがるのは `build/grow_artefacts/Release/Standalone/grow.exe` と `build/grow_artefacts/Release/VST3/grow.vst3`。
 JUCE のライセンス（AGPLv3 か商用ライセンス）に注意する。
 
 ## 音の流れ
@@ -36,29 +65,21 @@ OSC 1・OSC 2（ユニゾンで最大7枚重ね、左右に広げる）＋サブ
 ```
 
 - ボイスのモード：ポリ（8音）／モノ／レガート（押したまま次を押すと EG を掛け直さずにつなぐ）。グライドは前に弾いた音から滑らせる。
-- LFO：波形（サイン・三角・ノコギリ・矩形・ランダム）、速さは Hz かテンポ同期（ホストの BPM。Standalone は 120）。行き先は高さ・フィルター・音量に別々の量で送る。
-- ピッチ EG：発音の瞬間に高さをずらし、「時間」で 0 に戻す。
+- LFO：波形（サイン・三角・ノコギリ・矩形・ランダム）、速さは Hz かテンポ同期。行き先は高さ・フィルター・音量に別々の量で送る。
+- テンポ：単体版はホストの BPM（Standalone は 120）、Toniq では曲の BPM。
 
-## ファイル
+## Toniq とのつなぎ方（wasm 版）
 
-```
-CMakeLists.txt          ビルドの設定（JUCE の取得・プラグインの形式）
-Source/
-  Parameters.h/.cpp     パラメーターの定義（ID・名前・範囲・表示）と、ブロックごとのスナップショット GrowParams
-  Oscillator.h          波形（PolyBLEP のノコギリ・矩形）と音の高さの変換
-  GrowVoice.h/.cpp      1音分のシンセ（OSC・フィルター・EG・LFO・グライド）
-  GrowSynth.h/.cpp      ボイスの割り当て（ポリ／モノ／レガート）
-  FxChain.h/.cpp        エフェクトとマスター
-  Presets.h/.cpp        工場出荷のプリセット
-  PluginProcessor.h/.cpp  本体（MIDI → ボイス → エフェクト、状態の保存）
-  PluginEditor.h/.cpp   画面（モジュールごとのノブ・セレクト、プリセット、鍵盤）
-  GrowLookAndFeel.h/.cpp  見た目（色・ノブの描き方・日本語のフォント）
-  Text.h                日本語の文字列（jp()）
-```
+- `src/engine/Grow.ts`：wasm を読み込み（`public/grow/grow.wasm`）、画面のスレッドにも1つインスタンスを作って、パラメーターの表・プリセット・値の表示に使う。AudioWorklet はオーディオコンテキストごとに登録する（再生用と書き出し用）。
+- `src/engine/growWorklet.js`：AudioWorklet。wasm をインスタンス化して 128 サンプルずつ描く。
+- 音符は AudioParam（`on` / `off`）の1サンプルだけの合図で渡す（`on` = ノート番号 + 1 + 強さ × 0.5、`off` = ノート番号 + 1）。port のメッセージは書き出しのときに届くのが遅れることがあるので、音符には使わない。パラメーター・BPM は port で送る。
+- 音の終わりの合図は 2ms 遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。同じ高さの音が続くときは、ワークレットが前の音の終わりを無視する。
+- 曲に保存するのは `AppState.growPreset`（プリセットの番号）と `growParams`（変えた値。ID → 値。null = プリセットのまま）。
 
 ## 決まりごと
 
-- 日本語の表示文字列は必ず `jp("…")` を通す（`juce::String (const char*)` は ASCII 前提）。ソースは UTF-8 で保存する（MSVC は `/utf-8`）。
-- パラメーターを足すときは `Parameters.h` の `ids` と `GrowParams`、`Parameters.cpp` の `createParameterLayout()` と `readParams()`、画面に出すなら `PluginEditor.cpp` のモジュールに足す。ID は一度出したら変えない（保存した状態・ホストのオートメーションが読めなくなる）。
-- 音を作る側（`GrowVoice` / `FxChain`）は APVTS を直接読まず、ブロックの頭に作る `GrowParams` だけを読む。
-- プリセットは `Presets.cpp` に足す（初期値から変える値だけを書く）。
+- パラメーターを足すときは `core/GrowParams.h` の `Param` と `GrowParams`、`core/GrowParams.cpp` の `table`（並びは `Param` と同じ）と `makeParams()` に足す。単体版の画面・Toniq の暫定のパネルは表から作るので、新しいモジュール名を足したときだけ `Source/PluginEditor.cpp` の `layoutRows` にも足す。ID は一度出したら変えない（保存した状態・曲・ホストのオートメーションが読めなくなる）。
+- プリセットの並びを変えると、曲に保存した `growPreset`（番号）が別のプリセットを指す。足すときは後ろに足す。
+- コアはオーディオスレッドで確保しない（バッファは `prepare` で確保する）。例外・RTTI は使わない（wasm は `-fno-exceptions -fno-rtti`）。
+- 日本語の文字列はコアでは UTF-8 の `const char*` のまま持ち、JUCE では `jp("…")` を通す（`juce::String (const char*)` は ASCII 前提）。ソースは UTF-8 で保存する（MSVC は `/utf-8`）。
+- wasm に関数を足すときは `wasm/grow_wasm.cpp`（`GROW_EXPORT`）と `wasm/build.mjs` の `exported` の両方に足す。

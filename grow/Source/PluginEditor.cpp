@@ -1,6 +1,8 @@
 #include "PluginEditor.h"
-#include "Presets.h"
+#include "GrowPresets.h"
 #include "Text.h"
+
+#include <cstring>
 
 namespace grow
 {
@@ -20,17 +22,24 @@ juce::Font uiFont (float height, bool bold = false)
     return juce::Font (juce::FontOptions (height, bold ? juce::Font::bold : juce::Font::plain));
 }
 
-juce::String osc (int index, const char* name) { return ids::oscId (index, name); }
+// 画面の行ごとに並べるモジュール（コアのパラメーターの表の group）
+const std::vector<std::vector<const char*>> layoutRows {
+    { "OSC 1", "OSC 2" },
+    { "サブ・ノイズ", "フィルター", "フィルター EG", "アンプ EG" },
+    { "LFO", "ピッチ EG", "ボイス" },
+    { "ドライブ", "コーラス", "ディレイ", "リバーブ", "出力" },
+};
 } // namespace
 
 // ===== ParamSection =====
 
-ParamSection::ParamSection (juce::AudioProcessorValueTreeState& state, const juce::String& sectionTitle,
-                            std::initializer_list<juce::String> parameterIds)
-    : title (sectionTitle)
+ParamSection::ParamSection (juce::AudioProcessorValueTreeState& state, const char* group)
+    : title (jp (group))
 {
-    for (const auto& id : parameterIds)
+    for (int i = 0; i < numParams; ++i)
     {
+        if (std::strcmp (paramInfo (i).group, group) != 0) continue;
+        const juce::String id (paramInfo (i).id);
         auto* param = state.getParameter (id);
         jassert (param != nullptr);  // ID の書き間違い
         if (param == nullptr) continue;
@@ -131,7 +140,9 @@ GrowEditor::GrowEditor (GrowProcessor& p)
     title.setColour (juce::Label::textColourId, colours::text);
     addAndMakeVisible (title);
 
-    refreshPresetList();
+    for (int i = 0; i < numPresets(); ++i)
+        presets.addItem (jp (presetName (i)), i + 1);
+    presets.setSelectedItemIndex (growProcessor.getCurrentProgram(), juce::dontSendNotification);
     presets.onChange = [this] { selectPreset (presets.getSelectedItemIndex()); };
     addAndMakeVisible (presets);
 
@@ -149,37 +160,13 @@ GrowEditor::GrowEditor (GrowProcessor& p)
     hint.setColour (juce::Label::textColourId, colours::label);
     addAndMakeVisible (hint);
 
-    auto& s = growProcessor.state;
-    auto section = [&s] (const char* name, std::initializer_list<juce::String> parameterIds) {
-        return std::make_unique<ParamSection> (s, jp (name), parameterIds);
-    };
-    auto row = [] (auto... sections) {
+    for (const auto& groups : layoutRows)
+    {
         std::vector<std::unique_ptr<ParamSection>> list;
-        (list.push_back (std::move (sections)), ...);
-        return list;
-    };
-
-    rows.push_back (row (
-        section ("OSC 1", { osc (0, "wave"), osc (0, "octave"), osc (0, "semi"), osc (0, "fine"), osc (0, "level"),
-                            osc (0, "unison"), osc (0, "detune"), osc (0, "width") }),
-        section ("OSC 2", { osc (1, "wave"), osc (1, "octave"), osc (1, "semi"), osc (1, "fine"), osc (1, "level"),
-                            osc (1, "unison"), osc (1, "detune"), osc (1, "width") })));
-    rows.push_back (row (
-        section ("サブ・ノイズ", { ids::subLevel, ids::noiseLevel }),
-        section ("フィルター", { ids::filterType, ids::cutoff, ids::resonance, ids::filterEnvAmt, ids::keyTrack }),
-        section ("フィルター EG", { ids::fenvA, ids::fenvD, ids::fenvS, ids::fenvR }),
-        section ("アンプ EG", { ids::aenvA, ids::aenvD, ids::aenvS, ids::aenvR })));
-    rows.push_back (row (
-        section ("LFO", { ids::lfoWave, ids::lfoSync, ids::lfoRate, ids::lfoRetrigger, ids::lfoPitch, ids::lfoFilter,
-                          ids::lfoAmp }),
-        section ("ピッチ EG", { ids::pitchEnvAmt, ids::pitchEnvTime }),
-        section ("ボイス", { ids::voiceMode, ids::glide, ids::velocity })));
-    rows.push_back (row (
-        section ("ドライブ", { ids::drive }),
-        section ("コーラス", { ids::chorusMix, ids::chorusRate, ids::chorusDepth }),
-        section ("ディレイ", { ids::delayMix, ids::delayTime, ids::delayFeedback, ids::delayPingPong }),
-        section ("リバーブ", { ids::reverbMix, ids::reverbSize }),
-        section ("出力", { ids::master })));
+        for (auto* group : groups)
+            list.push_back (std::make_unique<ParamSection> (growProcessor.state, group));
+        rows.push_back (std::move (list));
+    }
 
     auto contentWidth = 0;
     for (auto& r : rows)
@@ -208,14 +195,6 @@ GrowEditor::~GrowEditor()
 {
     setLookAndFeel (nullptr);
     juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
-}
-
-void GrowEditor::refreshPresetList()
-{
-    presets.clear (juce::dontSendNotification);
-    for (int i = 0; i < numPresets(); ++i)
-        presets.addItem (presetName (i), i + 1);
-    presets.setSelectedItemIndex (growProcessor.getCurrentProgram(), juce::dontSendNotification);
 }
 
 void GrowEditor::selectPreset (int index)
