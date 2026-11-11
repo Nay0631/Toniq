@@ -5,7 +5,7 @@
 // パラメーターの ID・名前・範囲・初期値・表示は、すべてこの表（GrowParams.cpp の table）が決める。
 namespace grow
 {
-inline constexpr int numVoices = 8;  // 同時に鳴らせる音の数（ポリ）
+inline constexpr int numVoices = 16;  // 同時に鳴らせる音の数（ポリ。鳴っていない音は計算しないので、増やしても負担は鳴っている音の分だけ）
 inline constexpr int maxUnison = 7;  // OSC 1つあたりに重ねられる音の数
 
 enum class Wave       { sine, triangle, saw, square };
@@ -35,12 +35,12 @@ enum Param : int
     osc1Wave, osc1Octave, osc1Semi, osc1Fine, osc1Level, osc1Unison, osc1Detune, osc1Width,
     osc2Wave, osc2Octave, osc2Semi, osc2Fine, osc2Level, osc2Unison, osc2Detune, osc2Width,
     subLevel, noiseLevel,
-    filterType, filterCutoff, filterResonance, filterEnvAmount, filterKeyTrack,
+    filterType, filterCutoff, filterResonance, filterEnvAmount, filterKeyTrack, filterDrive, filterVelocity,
     fenvAttack, fenvDecay, fenvSustain, fenvRelease,
     aenvAttack, aenvDecay, aenvSustain, aenvRelease,
     lfoWave, lfoSync, lfoRate, lfoRetrigger, lfoPitch, lfoFilter, lfoAmp,
     pitchEnvAmount, pitchEnvTime,
-    voiceMode, glide, velocity,
+    voiceMode, glide, velocity, drift,
     drive, chorusMix, chorusRate, chorusDepth,
     delayMix, delayTime, delayFeedback, delayPingPong,
     reverbMix, reverbSize, master,
@@ -86,6 +86,8 @@ struct GrowParams
     float resonance       = 0.0f;  // 0〜1
     float filterEnvSemis  = 0.0f;  // フィルター EG でカットオフを動かす量（半音）
     float keyTrack        = 0.0f;  // 弾く音の高さにカットオフを追従させる量（1 で音の高さと同じだけ動く）
+    float filterDrive     = 0.0f;  // フィルターの中で飽和させる量（0〜1。0 なら歪まない）。レゾナンスが丸く太くなる
+    float velocitySemis   = 0.0f;  // 弱く弾いたときにカットオフを下げる量（半音。強さ 1 で 0、強さ 0 でこの分だけ下がる）
 
     EnvParams filterEnv;
     EnvParams ampEnv;
@@ -103,6 +105,7 @@ struct GrowParams
     VoiceMode voiceMode    = VoiceMode::poly;
     float     glideTime    = 0.0f;  // 前の音から滑らせる時間（秒）
     float     velocitySens = 0.5f;  // 強さ（ベロシティ）で音量を変える量
+    float     drift        = 0.0f;  // アナログらしいずれ（0〜1）。音ごとに高さ・カットオフを少しずらし、高さをゆっくり揺らす
 
     float drive         = 0.0f;
     float chorusMix     = 0.0f;

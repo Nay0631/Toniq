@@ -56,6 +56,8 @@ const ParamInfo table[] = {
     { "filter_reso",     "フィルター", "レゾナンス", K::continuous, 0, 1, 0.15f, 0, U::percent, GROW_NO_CHOICES },
     { "filter_env",      "フィルター", "EG の量",    K::continuous, -48, 48, 0, 0, U::semitones, GROW_NO_CHOICES },
     { "filter_keytrack", "フィルター", "キー追従",   K::continuous, 0, 1, 0.5f, 0, U::percent, GROW_NO_CHOICES },
+    { "filter_drive",    "フィルター", "ドライブ",   K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "filter_velocity", "フィルター", "ベロシティ", K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
 
     { "fenv_attack",  "フィルター EG", "A", K::continuous, 0.001f, 10, 0.005f, 0.5f, U::seconds, GROW_NO_CHOICES },
     { "fenv_decay",   "フィルター EG", "D", K::continuous, 0.001f, 10, 0.3f, 0.5f, U::seconds, GROW_NO_CHOICES },
@@ -81,6 +83,7 @@ const ParamInfo table[] = {
     { "voice_mode", "ボイス", "モード",     K::choice,     0, 2, 0, 0, U::none, GROW_CHOICES (voiceModeNames) },
     { "glide",      "ボイス", "グライド",   K::continuous, 0, 2, 0, 0.3f, U::seconds, GROW_NO_CHOICES },
     { "velocity",   "ボイス", "ベロシティ", K::continuous, 0, 1, 0.5f, 0, U::percent, GROW_NO_CHOICES },
+    { "drift",      "ボイス", "ドリフト",   K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
 
     { "fx_drive",     "ドライブ", "ドライブ", K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "chorus_mix",   "コーラス", "量",       K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
@@ -221,6 +224,8 @@ GrowParams makeParams (const float* values, double bpm)
     p.resonance      = value (values, filterResonance);
     p.filterEnvSemis = value (values, filterEnvAmount);
     p.keyTrack       = value (values, filterKeyTrack);
+    p.filterDrive    = value (values, filterDrive);
+    p.velocitySemis  = value (values, filterVelocity) * 24.0f;  // 最大 2 オクターブ
     p.filterEnv      = envelope (values, fenvAttack);
     p.ampEnv         = envelope (values, aenvAttack);
 
@@ -238,6 +243,7 @@ GrowParams makeParams (const float* values, double bpm)
     p.voiceMode    = (VoiceMode) intValue (values, voiceMode);
     p.glideTime    = value (values, glide);
     p.velocitySens = value (values, velocity);
+    p.drift        = value (values, drift);
 
     p.drive         = value (values, drive);
     p.chorusMix     = value (values, chorusMix);

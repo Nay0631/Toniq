@@ -11,7 +11,7 @@ import arpParams from "../data/arp_params.json";
 //     （再生用と、WAV / MP3 書き出し用のオフラインのコンテキスト）
 //   - 音符は AudioParam の1サンプルだけの合図で渡す（書き出しでもサンプル単位で合う）
 //   - パートごとに別々の音作り（GrowPart）を持つ。和音は同じ時刻の合図を少しずらして渡す
-//   - パッド・アルペジオ・シグネチャーはジャンルの標準のプリセット（GROW_STANDARD）を名前で探す。
+//   - ベース・パッド・アルペジオ・シグネチャーはジャンルの標準のプリセット（GROW_STANDARD）を名前で探す。
 //     今の wasm にない名前（コアに足したがビルドし直していない）は、後ろの候補の既存のプリセットで鳴らす
 // wasm がないとき（まだビルドしていない）は使えず、各パートは Tone.js の音色で鳴る。
 
@@ -42,7 +42,19 @@ const SIGNATURE_STANDARD: Record<string, string[]> = {
   "トランス":   ["ゲートソウ", "スーパーソウ"],
   "アンビエント": ["ウィンド", "ノイズスイープ"],
 };
+// ベースは bass_params.json の音色（ジャンル）に合わせる。どれもなければサブベース
+const BASS_STANDARD: Record<string, string[]> = {
+  "EDM":       ["ソウベース", "サブベース"],
+  "テクノ":     ["スクエアベース", "サブベース"],
+  "8bit":      ["チップベース", "サブベース"],
+  "ローファイ":  ["サブベース"],
+  "ゲームBGM":  ["ソウベース", "サブベース"],
+  "ハウス":     ["スクエアベース", "サブベース"],
+  "トランス":   ["ローリングベース", "サブベース"],
+  "アンビエント": ["ソフトベース", "サブベース"],
+};
 const GROW_STANDARD: Record<GrowPartName, (genre: string) => string[]> = {
+  bass:      genre => BASS_STANDARD[genre] ?? BASS_STANDARD["ローファイ"],
   pad:       () => ["ソフトパッド", "ワイドパッド"],
   arp:       genre => {
     const params = arpParams as unknown as Record<string, { instrument: string }>;
@@ -185,15 +197,15 @@ export function findGrowPreset(...names: string[]): number {
 }
 
 function isPartName(part: GrowPart): part is GrowPartName {
-  return part === "pad" || part === "arp" || part === "signature";
+  return part === "bass" || part === "pad" || part === "arp" || part === "signature";
 }
 
-// パッド・アルペジオ・シグネチャーの、今のジャンルの標準のプリセットの番号（見つからなければ 0 = 初期化）
+// ベース・パッド・アルペジオ・シグネチャーの、今のジャンルの標準のプリセットの番号（見つからなければ 0 = 初期化）
 export function standardGrowPreset(part: GrowPartName, genre: string = getState().genre): number {
   return Math.max(0, findGrowPreset(...GROW_STANDARD[part](genre)));
 }
 
-// AppState に保存しているパートの音作り（パッド・アルペジオ・シグネチャーの preset は null = ジャンルの標準）
+// AppState に保存しているパートの音作り（ベース・パッド・アルペジオ・シグネチャーの preset は null = ジャンルの標準）
 export function storedGrowSound(part: GrowPart): { preset: number | null; params: Record<string, number> | null } {
   const s = getState();
   if (part === "melody") return { preset: s.growPreset,      params: s.growParams };

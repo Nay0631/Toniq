@@ -86,11 +86,19 @@ private:
     // 1サンプルごとに滑らかにする値
     Smoother lfoPitchSmooth, lfoAmpSmooth, subSmooth, noiseSmooth;
     // フィルターの計算し直し（filterEvery サンプルごと）に合わせて滑らかにする値
-    Smoother cutoffSmooth, qSmooth, envAmountSmooth, lfoFilterSmooth, keyTrackSmooth;
+    Smoother cutoffSmooth, qSmooth, envAmountSmooth, lfoFilterSmooth, keyTrackSmooth, driveSmooth;
 
     float lfoPhase = 0.0f;
     float lfoHold  = 0.0f;  // ランダム（サンプル＆ホールド）の今の値
     float pitchEnvLevel = 0.0f;
+
+    // ドリフト（アナログらしいずれ。量は GrowParams::drift）。
+    // 音ごとに決める高さ・カットオフのずれ（-1〜1）と、高さのゆっくりした揺れ（今の値・目指す値・次に目指す値を選び直すまでのサンプル数）
+    float driftPitch = 0.0f, driftCutoff = 0.0f;
+    // 弾いた強さ（0〜1）。カットオフのベロシティに使う
+    float noteVelocity = 1.0f;
+    float wander = 0.0f, wanderTarget = 0.0f;
+    int   wanderCounter = 0;
 
     Svf filter1, filter2;  // ローパス 24 は2段に重ねる
     int filterCounter = 0;

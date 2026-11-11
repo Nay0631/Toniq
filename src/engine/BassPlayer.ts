@@ -6,6 +6,7 @@ import { arrangementGate, positionAt } from "./LoopArranger";
 import { kickAt } from "./DrumEngine";
 import { getState } from "./AppState";
 import bassParams from "../data/bass_params.json";
+import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 
 // ジャンル別のベース設定（bass_params.json）
 // パターンは16ステップ表記：R = ルート、F = 5度、O = 1オクターブ上、- = 伸ばす、. = 休符
@@ -23,7 +24,7 @@ interface BassParam {
 }
 
 let bassPart: Tone.Part | null = null;
-let bassSynth: Tone.MonoSynth | null = null;
+let bassSynth: Tone.MonoSynth | GrowInstrument | null = null;
 let bassVol: Tone.Volume | null = null;
 
 function bassParam(): BassParam {
@@ -31,9 +32,15 @@ function bassParam(): BassParam {
   return params[getState().genre] ?? params["ローファイ"];
 }
 
-// 音色は AppState.genre から決める。変更は次に Synth を作り直したとき（再生開始時）に反映される
+// grow（AppState.growSounds.bass。標準はジャンルに合わせたプリセット。Grow.ts の BASS_STANDARD）で鳴らし、そのまま Volume へ。
+// grow の準備ができていない（wasm がない）ときは、AppState.genre の bass_params.json の synth で Tone.js の MonoSynth を作る。
+// 変更は次に Synth を作り直したとき（再生開始時）に反映される
 export function initBassSynth() {
   bassVol = createVolumeNode("bass");  // 現在のオーディオコンテキスト用のノード
+  if (isGrowReady()) {
+    bassSynth = new GrowInstrument(growValues("bass")).connect(bassVol);
+    return;
+  }
   const { synth } = bassParam();
   bassSynth = new Tone.MonoSynth({
     oscillator:     { type: synth.oscillator },

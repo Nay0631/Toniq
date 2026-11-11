@@ -223,7 +223,18 @@ private:
     float sustainCoeff = 1.0f;
 };
 
+// なめらかな飽和（tanh を有理式で近づけたもの。|x| が 3 を超えたら ±1）
+inline float softSaturate (float x) noexcept
+{
+    if (x > 3.0f)  return 1.0f;
+    if (x < -3.0f) return -1.0f;
+    const auto x2 = x * x;
+    return x * (27.0f + x2) / (27.0f + 9.0f * x2);
+}
+
 // ===== ステートバリアブルフィルター（TPT。左右2チャンネル） =====
+// ドライブ（0〜1）を上げると、入力を持ち上げて1段目の積分器（バンドパスの状態）を飽和させる。
+// レゾナンスの山が大きくなりすぎずに丸く太くなる（アナログのフィルターに近い振る舞い）。出力は持ち上げた分だけ戻す
 class Svf
 {
 public:
@@ -241,18 +252,28 @@ public:
         resonance = q;
         update();
     }
+    void setDrive (float amount) noexcept
+    {
+        drive    = amount;
+        inGain   = 1.0f + 3.0f * amount;
+        outGain  = 1.0f / inGain;
+    }
     void reset() noexcept { s1[0] = s1[1] = s2[0] = s2[1] = 0.0f; }
 
     float process (int ch, float x) noexcept
     {
         auto& a = s1[ch];
         auto& b = s2[ch];
+        if (drive > 0.0f) x *= inGain;
         const auto hp = h * (x - a * (g + r2) - b);
         const auto bp = hp * g + a;
-        a = flushDenormal (hp * g + bp);
+        const auto next = hp * g + bp;
+        // ドライブがあるときは積分器を飽和させる（satLevel までは素通しに近い）
+        a = flushDenormal (drive > 0.0f ? satLevel * softSaturate (next / satLevel) : next);
         const auto lp = bp * g + b;
         b = flushDenormal (bp * g + lp);
-        return type == Type::lowpass ? lp : type == Type::bandpass ? bp : hp;
+        const auto y = type == Type::lowpass ? lp : type == Type::bandpass ? bp : hp;
+        return drive > 0.0f ? y * outGain : y;
     }
 
 private:
@@ -264,7 +285,9 @@ private:
         h  = 1.0f / (1.0f + r2 * g + g * g);
     }
 
+    static constexpr float satLevel = 1.5f;  // 積分器が飽和し始める大きさ
     Type type = Type::lowpass;
+    float drive = 0.0f, inGain = 1.0f, outGain = 1.0f;
     float sampleRate = 44100.0f, cutoff = 1000.0f, resonance = 0.7071f;
     float g = 0.0f, r2 = 1.414f, h = 1.0f;
     float s1[2] {}, s2[2] {};

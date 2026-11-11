@@ -9,6 +9,13 @@ namespace
 {
 constexpr float voiceGain   = 0.3f;    // 8音重ねても割れにくいよう、1音の大きさを抑える（最後にリミッター）
 constexpr int   filterEvery = 4;       // フィルターのカットオフを計算し直す間隔（サンプル）
+// ドリフトの量が最大（1）のときのずれ。音ごとの高さ（半音）・カットオフ（半音）、高さのゆっくりした揺れ（半音）と、
+// 揺れの目指す値を選び直す間隔（秒）・近づく速さ（時定数・秒）
+constexpr float driftPitchSemis   = 0.07f;
+constexpr float driftCutoffSemis  = 2.0f;
+constexpr float driftWanderSemis  = 0.04f;
+constexpr float driftWanderPeriod = 0.15f;
+constexpr float driftWanderTime   = 0.1f;
 constexpr float sqrt2       = 1.41421356f;
 constexpr float fadeSeconds = 0.004f;  // 差し替え・止めるときのフェードアウトの長さ
 constexpr float silentGain  = 1.0e-6f; // これより小さいユニゾンの音は描かない
@@ -41,7 +48,7 @@ void Voice::prepare (double newSampleRate)
 
     for (auto* s : { &lfoPitchSmooth, &lfoAmpSmooth, &subSmooth, &noiseSmooth })
         s->prepare (sampleRate, smoothSeconds);
-    for (auto* s : { &cutoffSmooth, &qSmooth, &envAmountSmooth, &lfoFilterSmooth, &keyTrackSmooth })
+    for (auto* s : { &cutoffSmooth, &qSmooth, &envAmountSmooth, &lfoFilterSmooth, &keyTrackSmooth, &driveSmooth })
         s->prepare (sampleRate, smoothSeconds, filterEvery);
 
     stopNote (false);
@@ -52,7 +59,7 @@ void Voice::snapSmoothing()
     // 新しく鳴らす音は、今のつまみの値から始める（前の音の途中の値から滑らせない）
     unisonReady = false;
     for (auto* s : { &lfoPitchSmooth, &lfoAmpSmooth, &subSmooth, &noiseSmooth, &cutoffSmooth, &qSmooth,
-                     &envAmountSmooth, &lfoFilterSmooth, &keyTrackSmooth })
+                     &envAmountSmooth, &lfoFilterSmooth, &keyTrackSmooth, &driveSmooth })
         s->snapNext();
 }
 
@@ -74,6 +81,12 @@ void Voice::startNote (int midiNote, float velocity)
             // 1枚だけなら頭から（発音がそろう）。2枚目以降は鳴らしながらユニゾンを増やしたときのためにもばらばらに
             phases[o][i] = (p.osc[o].unison > 1 || i > 0) ? random.next() : 0.0f;
     subPhase = 0.0f;
+    // ドリフト：音ごとに少しずれた高さ・明るさで鳴らす（量が 0 なら使わないが、乱数の並びは量によらずそろえる）
+    driftPitch    = random.bipolar();
+    driftCutoff   = random.bipolar();
+    wander        = 0.0f;
+    wanderTarget  = random.bipolar();
+    wanderCounter = 0;
     if (! p.lfoRetrigger) lfoPhase = random.next();  // 同時に弾いた音どうしの揺れがそろいすぎないように
     snapSmoothing();
 
@@ -135,7 +148,10 @@ void Voice::trigger (float velocity)
 {
     const auto& p = *shared->params;
     if (velocity >= 0.0f)
-        velocityGain = 1.0f - p.velocitySens * (1.0f - std::clamp (velocity, 0.0f, 1.0f));
+    {
+        noteVelocity = std::clamp (velocity, 0.0f, 1.0f);
+        velocityGain = 1.0f - p.velocitySens * (1.0f - noteVelocity);
+    }
     released = false;
     pitchEnvLevel = 1.0f;
     if (p.lfoRetrigger)
@@ -353,6 +369,11 @@ void Voice::render (float* left, float* right, int numSamples)
     const auto maxCutoff     = std::min (20000.0f, sr * 0.45f);
     const auto lowpass24     = p.filterType == FilterType::lowpass24;
     const auto bend          = shared->bendSemis;
+    const auto drift         = p.drift;
+    const auto wanderPeriod  = std::max (1, (int) (driftWanderPeriod * sr));
+    const auto wanderCoeff   = 1.0f - std::exp (-1.0f / (driftWanderTime * sr));
+    const auto driftNote     = drift * driftPitch * driftPitchSemis;
+    const auto driftCut      = drift * driftCutoff * driftCutoffSemis;
 
     auto lastResonance = -1.0f, q = 0.7071f;
 
@@ -383,7 +404,21 @@ void Voice::render (float* left, float* right, int numSamples)
         const auto lfo = lfoValue (p.lfoWave);
 
         pitchEnvLevel = flushDenormal (pitchEnvLevel * pitchEnvCoeff);
-        const auto note = currentNote + bend + p.pitchEnvSemis * pitchEnvLevel + lfo * lfoPitchSmooth.next (p.lfoPitchSemis);
+
+        // ドリフトの高さのゆっくりした揺れ：ときどき目指す値を選び直し、そこへ1次でなめらかに近づく
+        if (drift > 0.0f)
+        {
+            if (--wanderCounter <= 0)
+            {
+                wanderCounter = wanderPeriod;
+                wanderTarget  = random.bipolar();
+            }
+            wander = flushDenormal (wander + (wanderTarget - wander) * wanderCoeff);
+        }
+        const auto driftSemis = driftNote + drift * wander * driftWanderSemis;
+
+        const auto note = currentNote + bend + driftSemis + p.pitchEnvSemis * pitchEnvLevel
+                          + lfo * lfoPitchSmooth.next (p.lfoPitchSemis);
 
         const auto ampLevel    = ampEnv.next();
         const auto filterLevel = filterEnv.next();
@@ -430,9 +465,14 @@ void Voice::render (float* left, float* right, int numSamples)
             const auto cutoff = cutoffSmooth.next (cutoffTarget)
                                 + filterLevel * envAmountSmooth.next (p.filterEnvSemis)
                                 + lfo * lfoFilterSmooth.next (p.lfoFilterSemis)
-                                + (currentNote - 60.0f) * keyTrackSmooth.next (p.keyTrack);
+                                + (currentNote - 60.0f) * keyTrackSmooth.next (p.keyTrack)
+                                + driftCut
+                                - (1.0f - noteVelocity) * p.velocitySemis;
             const auto hz = std::clamp (noteToHz (cutoff), 20.0f, maxCutoff);
             const auto resonance = qSmooth.next (p.resonance);
+            const auto filterDrive = driveSmooth.next (p.filterDrive);
+            filter1.setDrive (filterDrive);
+            filter2.setDrive (filterDrive);
             if (resonance != lastResonance)
             {
                 lastResonance = resonance;

@@ -23,9 +23,9 @@ export type ChordInstrument = "grow" | "soft" | "epiano" | "strings" | "organ" |
 // FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
 export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
 
-// grow で鳴らすパッド・アルペジオ・シグネチャーの音作り。preset はコアのプリセットの番号（null = ジャンルの標準。Grow.ts）、
+// grow で鳴らすベース・パッド・アルペジオ・シグネチャーの音作り。preset はコアのプリセットの番号（null = ジャンルの標準。Grow.ts）、
 // params はそこから変えた値（パラメーターの ID → 値。null = プリセットのまま）
-export type GrowPartName = "pad" | "arp" | "signature";
+export type GrowPartName = "bass" | "pad" | "arp" | "signature";
 export interface GrowSound {
   preset: number | null;
   params: Record<string, number> | null;
@@ -153,7 +153,7 @@ export interface AppState {
   // コードを grow で鳴らすときの音作り（メロディとは別に持つ。形は growPreset / growParams と同じ）
   growChordPreset:  number;
   growChordParams:  Record<string, number> | null;
-  // パッド・アルペジオ・シグネチャーの grow の音作り（どれも grow で鳴らす。wasm がないときは Tone.js の音色）
+  // ベース・パッド・アルペジオ・シグネチャーの grow の音作り（どれも grow で鳴らす。wasm がないときは Tone.js の音色）
   growSounds:       Record<GrowPartName, GrowSound>;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
@@ -244,6 +244,7 @@ export const defaultState: AppState = {
   growChordPreset:  5,  // ワイドパッド
   growChordParams:  null,
   growSounds: {
+    bass:      { preset: null, params: null },
     pad:       { preset: null, params: null },
     arp:       { preset: null, params: null },
     signature: { preset: null, params: null },

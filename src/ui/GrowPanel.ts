@@ -1,4 +1,4 @@
-import { getState } from "../engine/AppState";
+import { getState, type GrowPartName } from "../engine/AppState";
 import {
   loadGrow, isGrowLoaded, growParamList, growPresetNames, currentGrowValues, growSettings, applyGrowLive,
   storedGrowSound, setGrowSound, standardGrowPreset,
@@ -22,22 +22,22 @@ let built = false;
 let target: GrowPart = "melody";
 
 const TARGET_LABELS: Record<GrowPart, string> = {
-  melody: "メロディ", chord: "コード", pad: "パッド", arp: "アルペジオ", signature: "シグネチャー",
+  melody: "メロディ", chord: "コード", bass: "ベース", pad: "パッド", arp: "アルペジオ", signature: "シグネチャー",
 };
 
-// grow で鳴らしているパート（パッド・アルペジオ・シグネチャーはいつも grow）
+// grow で鳴らしているパート（ベース・パッド・アルペジオ・シグネチャーはいつも grow）
 function growTargets(): GrowPart[] {
   const s = getState();
   const list: GrowPart[] = [];
   if (s.melodyInstrument === "grow") list.push("melody");
   if (s.chordInstrument === "grow")  list.push("chord");
-  list.push("pad", "arp", "signature");
+  list.push("bass", "pad", "arp", "signature");
   return list;
 }
 
-// パッド・アルペジオ・シグネチャーはプリセットに「ジャンルの標準」（null）を選べる
-function hasStandard(part: GrowPart): boolean {
-  return part === "pad" || part === "arp" || part === "signature";
+// ベース・パッド・アルペジオ・シグネチャーはプリセットに「ジャンルの標準」（null）を選べる
+function hasStandard(part: GrowPart): part is GrowPartName {
+  return part === "bass" || part === "pad" || part === "arp" || part === "signature";
 }
 
 // プリセットのセレクトの「ジャンルの標準」の値
@@ -152,7 +152,7 @@ function renderPanel(): void {
   const standard = $("c-grow-standard") as HTMLOptionElement;
   standard.hidden = !hasStandard(target);
   if (hasStandard(target)) {
-    const name = growPresetNames()[standardGrowPreset(target as "pad" | "arp" | "signature")] ?? "";
+    const name = growPresetNames()[standardGrowPreset(target)] ?? "";
     standard.textContent = `ジャンルの標準（${name}）`;
   }
   ($("c-grow-preset") as HTMLSelectElement).value = stored.preset === null ? STANDARD_VALUE : String(settings.preset);
@@ -190,7 +190,7 @@ function render(): void {
 
   const status = $("c-grow-status");
   status.textContent =
-    loadState === "failed"  ? "grow の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色、コードはソフトパッド、パッド・アルペジオ・シグネチャーは Tone.js の音色で鳴ります。"
+    loadState === "failed"  ? "grow の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色、コードはソフトパッド、ベース・パッド・アルペジオ・シグネチャー・FX / SE は Tone.js の音色で鳴ります。"
     : loadState === "loading" ? "grow を読み込んでいます…"
     : "テスト中の暫定のパネルです。最終的にはプリセットを選ぶだけになる予定です。";
 
