@@ -367,6 +367,8 @@
             <label class="form-row">
               <span class="form-label" data-term="instrument">インスト</span>
               <select class="select" id="c-instrument">
+                <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
+                <option value="grow">grow</option>
                 <option value="auto">ジャンルに合わせる</option>
                 <option value="supersaw">SuperSaw リード（EDM）</option>
                 <option value="epiano">エレピ（ローファイ）</option>
@@ -376,8 +378,6 @@
                 <option value="lead">シンセリード</option>
                 <option value="pluck">プラック（ハウス）</option>
                 <option value="soft">ソフトサイン（アンビエント）</option>
-                <!-- 内部シンセ grow（テスト中）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow">grow（テスト中）</option>
               </select>
             </label>
 
@@ -488,6 +488,8 @@
             <label class="form-row">
               <span class="form-label" data-term="instrument">音色</span>
               <select class="select" id="c-chord-instrument">
+                <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
+                <option value="grow">grow</option>
                 <option value="soft">ソフトパッド</option>
                 <option value="epiano">エレピ</option>
                 <option value="strings">ストリングス</option>

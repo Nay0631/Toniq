@@ -9,12 +9,16 @@ import { getState } from "./AppState";
 //   - 音は AudioWorklet（growWorklet.js）の中の wasm で作る。AudioWorklet はオーディオコンテキストごとに登録する
 //     （再生用と、WAV / MP3 書き出し用のオフラインのコンテキスト）
 //   - 音符は AudioParam の1サンプルだけの合図で渡す（書き出しでもサンプル単位で合う）
-// wasm がないとき（まだビルドしていない）は使えず、メロディはジャンルの標準の音色で鳴る。
+//   - メロディとコードで別々の音作り（GrowTarget）を持つ。コードは和音なので、同じ時刻の合図は少しずらして渡す
+// wasm がないとき（まだビルドしていない）は使えず、メロディはジャンルの標準の音色、コードはソフトパッドで鳴る。
 
 const WASM_URL = "grow/grow.wasm";  // 開発サーバー（http）とビルド後の Electron（file://）の両方で読めるよう相対パス
 // 音の終わりの合図を少し遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。
 // 同じ高さの音が続くときは、ワークレットが前の音の終わりを無視する
 const OFF_DELAY = 0.002;
+
+// grow を鳴らすパート（音作りの値はパートごとに AppState に持つ）
+export type GrowTarget = "melody" | "chord";
 
 export type GrowParamKind = "continuous" | "integer" | "choice" | "toggle";
 const KINDS: GrowParamKind[] = ["continuous", "integer", "choice", "toggle"];
@@ -140,14 +144,29 @@ export function growFromNormalised(index: number, normalised: number): number {
   return ex ? ex.grow_param_from_normalised(index, normalised) : 0;
 }
 
+// パートの grow の音作り（プリセットの番号と、そこから変えた値）が AppState のどの項目か
+export function growSettings(target: GrowTarget): { preset: number; params: Record<string, number> | null } {
+  const s = getState();
+  return target === "chord"
+    ? { preset: s.growChordPreset, params: s.growChordParams }
+    : { preset: s.growPreset,      params: s.growParams };
+}
+
 // 今の曲の grow の値（パラメーターの番号順）。プリセットの値に、曲で変えた値（growParams）を重ねる
-export function currentGrowValues(): number[] | null {
+export function currentGrowValues(target: GrowTarget = "melody"): number[] | null {
   if (!ex) return null;
-  const { growPreset, growParams } = getState();
+  const { preset, params: edited } = growSettings(target);
   return params.map(p => {
-    const edited = growParams?.[p.id];
-    return typeof edited === "number" ? edited : ex!.grow_preset_value(growPreset, p.index);
+    const value = edited?.[p.id];
+    return typeof value === "number" ? value : ex!.grow_preset_value(preset, p.index);
   });
+}
+
+// 今の曲で grow を使うパートがあるか（再生・試聴・書き出しの前に grow の準備を待つかどうか）。
+// 試聴は OFF のパートも鳴らすので、パートの ON/OFF は見ない
+export function songUsesGrow(): boolean {
+  const s = getState();
+  return s.melodyInstrument === "grow" || s.chordInstrument === "grow";
 }
 
 // ===== AudioWorklet の登録（オーディオコンテキストごと） =====
@@ -186,14 +205,32 @@ export function isGrowReady(): boolean {
   return wasmBytes !== null && registered.has(rawContext());
 }
 
-// メロディの音色としての grow（ほかの音色の Synth と同じ呼び方で鳴らせる）。isGrowReady() のときだけ作る
+// 今鳴らせる状態の GrowInstrument（音作りの値・BPM の変更をすぐ当てるため）
+const live = new Set<GrowInstrument>();
+
+// 音作りの値と BPM（テンポ同期の LFO・ディレイ）を、鳴っている grow（メロディ・コード）にすぐ当てる（作り直さない）
+export function applyGrowLive(): void {
+  const bpm = getState().bpm;
+  live.forEach(inst => {
+    const values = currentGrowValues(inst.target);
+    if (values) inst.setValues(values);
+    inst.setBpm(bpm);
+  });
+}
+
+// メロディ・コードの音色としての grow（ほかの音色の Synth と同じ呼び方で鳴らせる）。isGrowReady() のときだけ作る
 export class GrowInstrument {
   readonly output: Tone.Gain;
+  readonly target: GrowTarget;
   private node: AudioWorkletNode;
   private onParam: AudioParam;
   private offParam: AudioParam;
+  // 合図を入れたサンプルの位置（合図ごと）。同じサンプルに2つ入れると後のものしか届かないので、空いている位置へずらす
+  private onFrames  = new Set<number>();
+  private offFrames = new Set<number>();
 
-  constructor(values: number[], bpm: number) {
+  constructor(target: GrowTarget, values: number[], bpm: number) {
+    this.target = target;
     const raw = rawContext();
     const options: AudioWorkletNodeOptions = {
       numberOfInputs:     0,
@@ -208,6 +245,7 @@ export class GrowInstrument {
     this.offParam = this.node.parameters.get("off")!;
     this.output   = new Tone.Gain(1);
     Tone.connect(this.node as unknown as Tone.ToneAudioNode, this.output);
+    live.add(this);
   }
 
   connect(destination: Tone.InputNode): this {
@@ -219,15 +257,26 @@ export class GrowInstrument {
     const start = time === undefined ? Tone.now() : Tone.Time(time).toSeconds();
     const midi  = Math.round(Tone.Frequency(note).toMidi());
     if (midi < 0 || midi > 127) return this;
-    const sample = 1 / this.node.context.sampleRate;
-    const vel    = Math.max(0, Math.min(1, velocity));
-
-    this.onParam.setValueAtTime(midi + 1 + vel * 0.5, start);
-    this.onParam.setValueAtTime(0, start + sample);
+    const vel = Math.max(0, Math.min(1, velocity));
     const end = start + Tone.Time(duration).toSeconds() + OFF_DELAY;
-    this.offParam.setValueAtTime(midi + 1, end);
-    this.offParam.setValueAtTime(0, end + sample);
+    this.signal(this.onParam,  this.onFrames,  midi + 1 + vel * 0.5, start);
+    this.signal(this.offParam, this.offFrames, midi + 1, end);
     return this;
+  }
+
+  // 1サンプルだけの合図を入れる（値のあとは 0 に戻す）。和音のように同じ時刻に重なるときは2サンプルずつ後ろへずらす
+  private signal(param: AudioParam, used: Set<number>, value: number, time: number): void {
+    const rate = this.node.context.sampleRate;
+    let frame = Math.max(Math.round(time * rate), Math.ceil(this.node.context.currentTime * rate));
+    while (used.has(frame) || used.has(frame - 1) || used.has(frame + 1)) frame += 2;
+    used.add(frame);
+    param.setValueAtTime(value, frame / rate);
+    param.setValueAtTime(0, (frame + 1) / rate);
+    // 過ぎた位置は忘れる
+    if (used.size > 256) {
+      const now = Math.floor(this.node.context.currentTime * rate);
+      used.forEach(f => { if (f < now) used.delete(f); });
+    }
   }
 
   // 音作りの値（番号順）と BPM を当てる（鳴っている音にもすぐ反映される）
@@ -240,6 +289,7 @@ export class GrowInstrument {
   }
 
   dispose(): void {
+    live.delete(this);
     this.node.port.postMessage({ type: "dispose" });
     this.node.disconnect();
     this.output.dispose();

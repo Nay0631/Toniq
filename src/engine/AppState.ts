@@ -13,12 +13,12 @@ export type Tab = "settings" | "arranger" | "pianoroll";
 export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
 // メロディの音色（auto = ジャンルの標準。melody_params.json の instrument。
-// grow = 内部シンセ grow（テスト中。Grow.ts。wasm がないときはジャンルの標準で鳴る））
+// grow = 内部シンセ grow（初期値。Grow.ts。wasm がないときはジャンルの標準で鳴る））
 export type MelodyInstrument =
   "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid" | "grow";
 
-// コードの音色
-export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
+// コードの音色（grow = 内部シンセ grow（初期値。growChordPreset / growChordParams で鳴らす。wasm がないときはソフトパッド））
+export type ChordInstrument = "grow" | "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
 
 // FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
 export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
@@ -142,6 +142,9 @@ export interface AppState {
   // そこから変えた値（パラメーターの ID → 実際の値。null = プリセットのまま）
   growPreset:       number;
   growParams:       Record<string, number> | null;
+  // コードを grow で鳴らすときの音作り（メロディとは別に持つ。形は growPreset / growParams と同じ）
+  growChordPreset:  number;
+  growChordParams:  Record<string, number> | null;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
@@ -217,9 +220,9 @@ export const defaultState: AppState = {
   melodyMethod:  "auto",
   melodyVersion: 0,
 
-  melodyInstrument: "auto",
+  melodyInstrument: "grow",
   chordRhythm:      "whole",
-  chordInstrument:  "soft",
+  chordInstrument:  "grow",
   fxType:           "auto",
   swing:            null,
   sidechain:        null,
@@ -228,6 +231,8 @@ export const defaultState: AppState = {
   drumSource:       "synth",
   growPreset:       1,  // シンセリード
   growParams:       null,
+  growChordPreset:  5,  // ワイドパッド
+  growChordParams:  null,
 
   arrangement: null,
   startBar:    0,
@@ -267,7 +272,7 @@ export const SONG_FIELDS = [
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
   "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
-  "growPreset", "growParams",
+  "growPreset", "growParams", "growChordPreset", "growChordParams",
   "arrangement", "parts", "volumes",
 ] as const;
 

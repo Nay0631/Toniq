@@ -165,7 +165,7 @@ export function initMelodySynth() {
   const sound = resolveMelodySound();
   if (sound === "grow") {
     // grow は自前のエフェクト（リバーブを含む）を持つので、そのままメロディの Volume へ
-    melodySynth = new GrowInstrument(currentGrowValues()!, getState().bpm).connect(melodyVol);
+    melodySynth = new GrowInstrument("melody", currentGrowValues("melody")!, getState().bpm).connect(melodyVol);
     return;
   }
   const inst   = INSTRUMENTS[sound];
@@ -210,14 +210,6 @@ export async function previewMelodyNote(note: string) {
   if (getState().melodyInstrument === "grow") await prepareGrowContext();
   if (!melodySynth) initMelodySynth();
   melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);
-}
-
-// grow の音作りの値と BPM（テンポ同期の LFO・ディレイ）を、鳴っているメロディにすぐ当てる（作り直さない）
-export function applyGrowLive(): void {
-  if (!(melodySynth instanceof GrowInstrument)) return;
-  const values = currentGrowValues();
-  if (values) melodySynth.setValues(values);
-  melodySynth.setBpm(getState().bpm);
 }
 
 // メロディの Synth を今の設定で作り直す（再生中なら鳴っている Part はそのまま新しい Synth で鳴る）

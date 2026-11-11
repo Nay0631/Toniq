@@ -4,6 +4,7 @@ import { voiceProgression, VOICING_RANGES } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState, ChordRhythm, ChordInstrument } from "./AppState";
+import { GrowInstrument, currentGrowValues, isGrowReady } from "./Grow";
 
 // リズムごとの刻みの長さ（16分音符の数）。whole はコードの長さいっぱいに伸ばす
 const RHYTHM_STEPS: Record<ChordRhythm, number | null> = {
@@ -25,7 +26,8 @@ interface ChordVoice {
   chorus:  number;
 }
 
-const INSTRUMENTS: Record<ChordInstrument, () => ChordVoice> = {
+// grow は INSTRUMENTS ではなく Grow.ts で鳴らす
+const INSTRUMENTS: Record<Exclude<ChordInstrument, "grow">, () => ChordVoice> = {
   // ソフトパッド：少しずらした三角波2本で、やわらかく厚みを出す
   soft: () => ({
     synth: new Tone.PolySynth(Tone.Synth, {
@@ -109,17 +111,25 @@ const INSTRUMENTS: Record<ChordInstrument, () => ChordVoice> = {
 const STRUM_SEC = { long: 0.012, short: 0.005 };
 
 let chordPart:    Tone.Part | null = null;
-let padSynth:     Tone.PolySynth<any> | null = null;
+let padSynth:     Tone.PolySynth<any> | GrowInstrument | null = null;
 let chordVol:     Tone.Volume | null = null;
 let chordEffects: Tone.ToneAudioNode[] = [];
 
 // 音色は AppState.chordInstrument から決める。変更は次に Synth を作り直したとき（再生開始時）に反映される
 // 音の流れ：Synth → 音色専用のエフェクト → ローパス → コーラス（左右の広がり）→ Volume
-// リバーブはミキサーの送りでかける
+// リバーブはミキサーの送りでかける。
+// grow は今のオーディオコンテキストで準備ができていれば grow（自前のエフェクトを持つのでそのまま Volume へ）、
+// できていなければソフトパッドで鳴らす
 export function initChordSynth() {
   disposeSynth();
   chordVol = createVolumeNode("chord");  // 現在のオーディオコンテキスト用のノード
-  const voice  = (INSTRUMENTS[getState().chordInstrument] ?? INSTRUMENTS.soft)();
+  const s = getState();
+  if (s.chordInstrument === "grow" && isGrowReady()) {
+    padSynth = new GrowInstrument("chord", currentGrowValues("chord")!, s.bpm).connect(chordVol);
+    return;
+  }
+  const name   = s.chordInstrument === "grow" ? "soft" : s.chordInstrument;
+  const voice  = (INSTRUMENTS[name] ?? INSTRUMENTS.soft)();
   const filter = new Tone.Filter({ type: "lowpass", frequency: voice.cutoff, rolloff: -12 });
   const chorus = voice.chorus > 0
     ? new Tone.Chorus({ frequency: 1.2, delayTime: 3.5, depth: 0.3, spread: 180, wet: voice.chorus }).start()

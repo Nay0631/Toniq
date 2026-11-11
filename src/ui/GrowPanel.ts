@@ -1,21 +1,39 @@
 import { getState, setState } from "../engine/AppState";
 import {
-  loadGrow, isGrowLoaded, growParamList, growPresetNames, currentGrowValues,
-  formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta,
+  loadGrow, isGrowLoaded, growParamList, growPresetNames, currentGrowValues, growSettings, applyGrowLive,
+  formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta, type GrowTarget,
 } from "../engine/Grow";
-import { applyGrowLive } from "../engine/MelodyPlayer";
 import { onRender, render as renderAll } from "./Router";
 
-// grow（テスト中）の音作りのパネル（カスタムモードの設定タブの下 #c-grow。メロディのインストが grow のときだけ出す）。
+// grow（テスト中）の音作りのパネル（カスタムモードの設定タブの下 #c-grow。メロディかコードの音色が grow のときだけ出す）。
 // 暫定のパネルで、最終的にはプリセットを選ぶだけにする予定。
 // パラメーターの並び・名前・範囲・表示は grow のコアの表（wasm）から作るので、ここでは持たない。
-// 値は AppState.growPreset（プリセット）と growParams（変えた値。null = プリセットのまま）に置く
+// 値はメロディが AppState.growPreset（プリセット）と growParams（変えた値。null = プリセットのまま）、
+// コードが growChordPreset / growChordParams。どちらを編集するかはパネル上部の「対象」で切り替える
 
 const RANGE_STEPS = 1000;  // 連続値のつまみの細かさ（0〜1 の位置をこの数で刻む）
 
 type LoadState = "idle" | "loading" | "ok" | "failed";
 let loadState: LoadState = "idle";
 let built = false;
+// 編集している対象（表示上の一時的な状態。grow で鳴らしているパートのどれか）
+let target: GrowTarget = "melody";
+
+// grow で鳴らしているパート
+function growTargets(): GrowTarget[] {
+  const s = getState();
+  const list: GrowTarget[] = [];
+  if (s.melodyInstrument === "grow") list.push("melody");
+  if (s.chordInstrument === "grow")  list.push("chord");
+  return list;
+}
+
+// 対象のプリセット・変えた値を書き換える
+function setTargetSettings(preset: number, params: Record<string, number> | null): void {
+  setState(target === "chord"
+    ? { growChordPreset: preset, growChordParams: params }
+    : { growPreset: preset, growParams: params });
+}
 
 function $(id: string): HTMLElement {
   return document.getElementById(id)!;
@@ -27,11 +45,11 @@ function escapeHtml(text: string): string {
 
 // 1つのパラメーターの値を変える。曲には変えた値を全部まとめて持つ（プリセットを差し替えても音が変わらないように）
 function setGrowValue(index: number, value: number): void {
-  const values = currentGrowValues();
+  const values = currentGrowValues(target);
   if (!values) return;
   const map: Record<string, number> = {};
   growParamList().forEach(p => { map[p.id] = p.index === index ? value : values[p.index]; });
-  setState({ growParams: map });
+  setTargetSettings(growSettings(target).preset, map);
   applyGrowLive();
   renderPanel();
 }
@@ -69,6 +87,11 @@ function build(): void {
 
   panel.querySelector(".grow-body")!.innerHTML = `
     <div class="grow-toolbar">
+      <label class="grow-control grow-preset" id="c-grow-target-wrap"><span class="grow-name">対象</span>
+        <select class="select" id="c-grow-target">
+          <option value="melody">メロディ</option>
+          <option value="chord">コード</option>
+        </select></label>
       <label class="grow-control grow-preset"><span class="grow-name">プリセット</span>
         <select class="select" id="c-grow-preset">${presets}</select></label>
       <button class="btn btn-small" id="c-grow-reset">プリセットに戻す</button>
@@ -76,13 +99,17 @@ function build(): void {
     </div>
     <div class="grow-grid">${modules}</div>`;
 
+  ($("c-grow-target") as HTMLSelectElement).addEventListener("change", e => {
+    target = (e.target as HTMLSelectElement).value as GrowTarget;
+    renderPanel();
+  });
   ($("c-grow-preset") as HTMLSelectElement).addEventListener("change", e => {
-    setState({ growPreset: Number((e.target as HTMLSelectElement).value), growParams: null });
+    setTargetSettings(Number((e.target as HTMLSelectElement).value), null);
     applyGrowLive();
     renderPanel();
   });
   $("c-grow-reset").addEventListener("click", () => {
-    setState({ growParams: null });
+    setTargetSettings(growSettings(target).preset, null);
     applyGrowLive();
     renderPanel();
   });
@@ -102,14 +129,18 @@ function build(): void {
 
 // 値の表示を AppState にそろえる（曲の内容は書き換えない）
 function renderPanel(): void {
-  const values = currentGrowValues();
+  const values = currentGrowValues(target);
   if (!values) return;
-  const s = getState();
+  const settings = growSettings(target);
+  const targets  = growTargets();
   const panel = $("c-grow");
 
-  ($("c-grow-preset") as HTMLSelectElement).value = String(s.growPreset);
-  ($("c-grow-reset") as HTMLButtonElement).disabled = s.growParams === null;
-  $("c-grow-edited").textContent = s.growParams === null ? "" : "プリセットから変更しています";
+  // 対象はメロディとコードの両方が grow のときだけ選べる
+  $("c-grow-target-wrap").hidden = targets.length < 2;
+  ($("c-grow-target") as HTMLSelectElement).value = target;
+  ($("c-grow-preset") as HTMLSelectElement).value = String(settings.preset);
+  ($("c-grow-reset") as HTMLButtonElement).disabled = settings.params === null;
+  $("c-grow-edited").textContent = settings.params === null ? "" : "プリセットから変更しています";
 
   panel.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-grow-index]").forEach(el => {
     const index = Number(el.dataset.growIndex);
@@ -128,8 +159,10 @@ function render(): void {
   const s = getState();
   if (s.screen !== "custom") return;
   const panel = $("c-grow");
-  panel.hidden = s.melodyInstrument !== "grow";
+  const targets = growTargets();
+  panel.hidden = targets.length === 0;
   if (panel.hidden) return;
+  if (!targets.includes(target)) target = targets[0];
 
   if (loadState === "idle") {
     loadState = "loading";
@@ -141,7 +174,7 @@ function render(): void {
 
   const status = $("c-grow-status");
   status.textContent =
-    loadState === "failed"  ? "grow の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色で鳴ります。"
+    loadState === "failed"  ? "grow の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色、コードはソフトパッドで鳴ります。"
     : loadState === "loading" ? "grow を読み込んでいます…"
     : "テスト中の暫定のパネルです。最終的にはプリセットを選ぶだけになる予定です。";
 
