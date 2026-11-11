@@ -2,7 +2,7 @@ import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import type { LayerName } from "./LayerManager";
 import type { DrumSource } from "./SynthFactory";
-import { DEFAULT_TONIQ_SYNTH, type ToniqSynthParams } from "./ToniqSynth";
+import { DEFAULT_TONIQ_SYNTH, cloneToniqSynth, type ToniqSynthParams } from "./ToniqSynth";
 
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings";
@@ -228,7 +228,7 @@ export const defaultState: AppState = {
   drumCategory:     "EDM",
   drumSource:       "synth",
   toniqSynthEnabled: false,
-  toniqSynth:       { ...DEFAULT_TONIQ_SYNTH },
+  toniqSynth:       cloneToniqSynth(DEFAULT_TONIQ_SYNTH),
 
   arrangement: null,
   startBar:    0,
