@@ -5,6 +5,7 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState } from "./AppState";
 import arpParams from "../data/arp_params.json";
+import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 
 // ===== ジャンル別のアルペジオ設定（arp_params.json） =====
 type ArpInstrument = "pluck" | "square" | "keys" | "bell" | "blip";
@@ -115,15 +116,22 @@ export function arpNotes(progression: ChordProgression, key: string, param: ArpP
 }
 
 let arpPart:    Tone.Part | null = null;
-let arpSynth:   Tone.PolySynth<any> | null = null;
+let arpSynth:   Tone.PolySynth<any> | GrowInstrument | null = null;
 let arpVol:     Tone.Volume | null = null;
 let arpEffects: Tone.ToneAudioNode[] = [];
 
-// 音色・ローパス・ディレイは AppState.genre から決める。変更は次に Synth を作り直したとき（再生開始時）に反映される
-// 音の流れ：Synth → ローパス → ピンポンディレイ（左右に跳ねる）→ Volume。リバーブはミキサーの送りでかける
+// grow（AppState.growSounds.arp。標準は arp_params.json の instrument に合わせたプリセット。Grow.ts）で鳴らす。
+// grow は自前のエフェクト（フィルター・ディレイ・リバーブ）を持つのでそのまま Volume へ。
+// grow の準備ができていない（wasm がない）ときは、音色・ローパス・ディレイを AppState.genre から決めた Tone.js の Synth で鳴らす
+// （Synth → ローパス → ピンポンディレイ（左右に跳ねる）→ Volume。リバーブはミキサーの送りでかける）。
+// 変更は次に Synth を作り直したとき（再生開始時）に反映される
 export function initArpSynth() {
   disposeSynth();
   arpVol = createVolumeNode("arp");  // 現在のオーディオコンテキスト用のノード
+  if (isGrowReady()) {
+    arpSynth = new GrowInstrument(growValues("arp")).connect(arpVol);
+    return;
+  }
   const param  = arpParam();
   const delay  = new Tone.PingPongDelay({
     delayTime: param.delay.time as Tone.Unit.Time,

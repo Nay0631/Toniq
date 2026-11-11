@@ -9,10 +9,10 @@ namespace
 {
 // 選択肢の番号（GrowParams.cpp の選択肢の並び）
 namespace wave   { constexpr float sine = 0, triangle = 1, saw = 2, square = 3; }
-namespace filter { constexpr float lp12 = 0, bp = 3; }
-namespace lfo    { constexpr float triangle = 1; }
+namespace filter { constexpr float lp12 = 0, lp24 = 1, hp = 2, bp = 3; }
+namespace lfo    { constexpr float sine = 0, triangle = 1; }
 namespace mode   { constexpr float mono = 1, legato = 2; }
-namespace delay  { constexpr float d8 = 1, d8dot = 2; }
+namespace delay  { constexpr float d8 = 1, d8dot = 2, d4 = 3; }
 
 struct Value
 {
@@ -108,6 +108,91 @@ const Value noiseSweep[] = {
     { chorusMix, 0.3f }, { reverbMix, 0.4f }, { reverbSize, 0.8f },
 };
 
+// ===== Toniq のパート（パッド・アルペジオ・シグネチャー）向け =====
+
+// 三角波を少し重ね、ゆっくり立ち上げてコーラスで広げる、やわらかいパッド
+const Value softPad[] = {
+    { osc1Wave, wave::triangle }, { osc1Level, 0.6f }, { osc1Unison, 3 }, { osc1Detune, 12 }, { osc1Width, 0.8f },
+    { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Level, 0.25f },
+    { filterType, filter::lp12 }, { filterCutoff, 2500 }, { filterResonance, 0.05f },
+    { aenvAttack, 0.4f }, { aenvDecay, 0.8f }, { aenvSustain, 0.8f }, { aenvRelease, 2 },
+    { chorusMix, 0.5f }, { reverbMix, 0.3f }, { reverbSize, 0.7f },
+};
+
+// 弾いた瞬間だけフィルターが開いてすぐ丸くなる、エレピ風の鍵盤。浅いトレモロ
+const Value keys[] = {
+    { osc1Wave, wave::triangle }, { osc1Level, 0.7f },
+    { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Level, 0.3f },
+    { filterType, filter::lp12 }, { filterCutoff, 1800 }, { filterResonance, 0.1f }, { filterEnvAmount, 24 },
+    { filterKeyTrack, 0.6f },
+    { fenvAttack, 0.002f }, { fenvDecay, 0.4f }, { fenvSustain, 0.2f }, { fenvRelease, 0.4f },
+    { aenvAttack, 0.003f }, { aenvDecay, 0.9f }, { aenvSustain, 0.2f }, { aenvRelease, 0.5f },
+    { lfoRate, 4 }, { lfoAmp, 0.1f },
+    { chorusMix, 0.3f }, { reverbMix, 0.2f },
+};
+
+// サインに1オクターブ＋5度上（約3倍）のサインを重ね、長く減衰させる鐘のような音
+const Value bell[] = {
+    { osc1Wave, wave::sine }, { osc1Level, 0.6f },
+    { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Semi, 7 }, { osc2Level, 0.35f },
+    { filterType, filter::lp12 }, { filterCutoff, 9000 }, { filterResonance, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 1.4f }, { aenvSustain, 0 }, { aenvRelease, 1.4f },
+    { delayMix, 0.15f }, { delayTime, delay::d4 }, { reverbMix, 0.35f }, { reverbSize, 0.7f },
+};
+
+// 短く切れる矩形波に、クセのあるレゾナンスのフィルター
+const Value blip[] = {
+    { osc1Wave, wave::square }, { osc1Level, 0.7f },
+    { filterType, filter::lp24 }, { filterCutoff, 300 }, { filterResonance, 0.55f }, { filterEnvAmount, 36 },
+    { fenvAttack, 0.001f }, { fenvDecay, 0.08f }, { fenvSustain, 0 }, { fenvRelease, 0.05f },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.1f }, { aenvSustain, 0 }, { aenvRelease, 0.05f },
+    { delayMix, 0.15f }, { reverbMix, 0.05f },
+};
+
+// 厚いノコギリ波を短く切るコードスタブ
+const Value stab[] = {
+    { osc1Unison, 5 }, { osc1Detune, 25 }, { osc1Width, 1 }, { osc1Level, 0.7f },
+    { osc2Wave, wave::saw }, { osc2Fine, -8 }, { osc2Level, 0.3f },
+    { filterType, filter::lp24 }, { filterCutoff, 2500 }, { filterResonance, 0.2f }, { filterEnvAmount, 24 },
+    { fenvAttack, 0.002f }, { fenvDecay, 0.12f }, { fenvSustain, 0 }, { fenvRelease, 0.08f },
+    { aenvAttack, 0.002f }, { aenvDecay, 0.15f }, { aenvSustain, 0.1f }, { aenvRelease, 0.08f },
+    { reverbMix, 0.2f },
+};
+
+// 細かく刻んでも濁らないよう、余韻を短くしたスーパーソウ（トランスゲート）
+const Value gateSaw[] = {
+    { osc1Unison, 7 }, { osc1Detune, 30 }, { osc1Width, 1 }, { osc1Level, 0.7f },
+    { osc2Wave, wave::saw }, { osc2Octave, 1 }, { osc2Unison, 3 }, { osc2Detune, 20 }, { osc2Level, 0.3f },
+    { filterType, filter::lp12 }, { filterCutoff, 5000 }, { filterResonance, 0.1f },
+    { aenvAttack, 0.003f }, { aenvDecay, 0.08f }, { aenvSustain, 0.6f }, { aenvRelease, 0.04f },
+    { delayMix, 0.15f }, { delayTime, delay::d8dot }, { reverbMix, 0.3f },
+};
+
+// レコードのサーッというヒス（ノイズだけ。音の高さによらない）
+const Value vinylHiss[] = {
+    { osc1Level, 0 }, { noiseLevel, 0.6f },
+    { filterType, filter::lp12 }, { filterCutoff, 5000 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.05f }, { aenvSustain, 1 }, { aenvRelease, 0.05f },
+    { reverbMix, 0 }, { master, -30 },
+};
+
+// レコードのプチッという音（ハイパスを通したノイズをごく短く）
+const Value vinylCrackle[] = {
+    { osc1Level, 0 }, { noiseLevel, 1 },
+    { filterType, filter::hp }, { filterCutoff, 1800 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.008f }, { aenvSustain, 0 }, { aenvRelease, 0.005f },
+    { reverbMix, 0 }, { master, -12 },
+};
+
+// ゆっくりうねる風（バンドパスのノイズを遅い LFO で動かす）
+const Value wind[] = {
+    { osc1Level, 0 }, { noiseLevel, 0.8f },
+    { filterType, filter::bp }, { filterCutoff, 400 }, { filterResonance, 0.6f }, { filterKeyTrack, 0 },
+    { lfoWave, lfo::sine }, { lfoRate, 0.07f }, { lfoFilter, 18 },
+    { aenvAttack, 0.5f }, { aenvSustain, 1 }, { aenvRelease, 0.5f },
+    { chorusMix, 0.3f }, { reverbMix, 0.4f }, { reverbSize, 0.8f }, { master, -12 },
+};
+
 template <std::size_t N>
 constexpr Preset preset (const char* name, const Value (&values)[N]) { return { name, values, (int) N }; }
 
@@ -121,6 +206,16 @@ const Preset presets[] = {
     preset ("サブベース", subBass),
     preset ("チップリード", chipLead),
     preset ("ノイズスイープ", noiseSweep),
+    // ここから Toniq のパート向け（Toniq は名前で探すので、名前を変えるときは src/engine/Grow.ts もそろえる）
+    preset ("ソフトパッド", softPad),
+    preset ("キーズ", keys),
+    preset ("ベル", bell),
+    preset ("ブリップ", blip),
+    preset ("スタブ", stab),
+    preset ("ゲートソウ", gateSaw),
+    preset ("レコードヒス", vinylHiss),
+    preset ("レコードプチ", vinylCrackle),
+    preset ("ウィンド", wind),
 };
 
 constexpr int presetCount = (int) (sizeof (presets) / sizeof (presets[0]));

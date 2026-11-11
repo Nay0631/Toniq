@@ -4,7 +4,7 @@ import { voiceProgression, VOICING_RANGES } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState, ChordRhythm, ChordInstrument } from "./AppState";
-import { GrowInstrument, currentGrowValues, isGrowReady } from "./Grow";
+import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 
 // リズムごとの刻みの長さ（16分音符の数）。whole はコードの長さいっぱいに伸ばす
 const RHYTHM_STEPS: Record<ChordRhythm, number | null> = {
@@ -125,7 +125,7 @@ export function initChordSynth() {
   chordVol = createVolumeNode("chord");  // 現在のオーディオコンテキスト用のノード
   const s = getState();
   if (s.chordInstrument === "grow" && isGrowReady()) {
-    padSynth = new GrowInstrument("chord", currentGrowValues("chord")!, s.bpm).connect(chordVol);
+    padSynth = new GrowInstrument(growValues("chord"), s.bpm).connect(chordVol);
     return;
   }
   const name   = s.chordInstrument === "grow" ? "soft" : s.chordInstrument;

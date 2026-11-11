@@ -76,7 +76,9 @@ OSC 1・OSC 2（ユニゾンで最大7枚重ね、左右に広げる）＋サブ
 - `src/engine/growWorklet.js`：AudioWorklet。wasm をインスタンス化して 128 サンプルずつ描く。
 - 音符は AudioParam（`on` / `off`）の1サンプルだけの合図で渡す（`on` = ノート番号 + 1 + 強さ × 0.5、`off` = ノート番号 + 1）。port のメッセージは書き出しのときに届くのが遅れることがあるので、音符には使わない。パラメーター・BPM は port で送る。
 - 音の終わりの合図は 2ms 遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。同じ高さの音が続くときは、ワークレットが前の音の終わりを無視する。
-- 曲に保存するのは `AppState.growPreset`（プリセットの番号）と `growParams`（変えた値。ID → 値。null = プリセットのまま）。
+- Toniq ではメロディ・コード（音色が grow のとき）とパッド・アルペジオ・シグネチャー（いつも）を grow で鳴らす。和音は同じサンプルに重なる合図を2サンプルずつずらして渡す。
+- 曲に保存するのはパートごとのプリセットの番号と変えた値（ID → 値。null = プリセットのまま）：メロディ `AppState.growPreset` / `growParams`、コード `growChordPreset` / `growChordParams`、パッド・アルペジオ・シグネチャー `growSounds`（プリセットの null = ジャンルの標準）。
+- パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを **名前** で探す（候補を前から順に。今の wasm にない名前は飛ばす）。Toniq 向けのプリセット（ソフトパッド〜ウィンド）の名前を変えるときは `GROW_STANDARD` と `SignaturePlayer.ts`（レコードプチ）もそろえる。
 
 ## 決まりごと
 

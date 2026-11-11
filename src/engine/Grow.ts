@@ -1,7 +1,8 @@
 import * as Tone from "tone";
 import workletSource from "./growWorklet.js?raw";
 import { fetchArrayBuffer } from "./DrumSamples";
-import { getState } from "./AppState";
+import { getState, setState, GrowPartName } from "./AppState";
+import arpParams from "../data/arp_params.json";
 
 // grow（Toniq の内部シンセ。C++ のコアを WebAssembly にしたもの。ソースは grow/）を Toniq の再生で鳴らす。
 //   - wasm（public/grow/grow.wasm。npm run grow:wasm でビルド）を読み込み、画面のスレッドにも1つインスタンスを作って
@@ -9,8 +10,10 @@ import { getState } from "./AppState";
 //   - 音は AudioWorklet（growWorklet.js）の中の wasm で作る。AudioWorklet はオーディオコンテキストごとに登録する
 //     （再生用と、WAV / MP3 書き出し用のオフラインのコンテキスト）
 //   - 音符は AudioParam の1サンプルだけの合図で渡す（書き出しでもサンプル単位で合う）
-//   - メロディとコードで別々の音作り（GrowTarget）を持つ。コードは和音なので、同じ時刻の合図は少しずらして渡す
-// wasm がないとき（まだビルドしていない）は使えず、メロディはジャンルの標準の音色、コードはソフトパッドで鳴る。
+//   - パートごとに別々の音作り（GrowPart）を持つ。和音は同じ時刻の合図を少しずらして渡す
+//   - パッド・アルペジオ・シグネチャーはジャンルの標準のプリセット（GROW_STANDARD）を名前で探す。
+//     今の wasm にない名前（コアに足したがビルドし直していない）は、後ろの候補の既存のプリセットで鳴らす
+// wasm がないとき（まだビルドしていない）は使えず、各パートは Tone.js の音色で鳴る。
 
 const WASM_URL = "grow/grow.wasm";  // 開発サーバー（http）とビルド後の Electron（file://）の両方で読めるよう相対パス
 // 音の終わりの合図を少し遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。
@@ -18,7 +21,35 @@ const WASM_URL = "grow/grow.wasm";  // 開発サーバー（http）とビルド�
 const OFF_DELAY = 0.002;
 
 // grow を鳴らすパート（音作りの値はパートごとに AppState に持つ）
-export type GrowTarget = "melody" | "chord";
+export type GrowPart = "melody" | "chord" | GrowPartName;
+
+// ジャンルの標準のプリセット（名前。前から順に探し、今の wasm にあるものを使う）。
+// アルペジオは arp_params.json の instrument、シグネチャーはジャンル（SignaturePlayer.ts の SIGNATURES）ごと
+const ARP_STANDARD: Record<string, string[]> = {
+  pluck:  ["プラック"],
+  square: ["チップリード"],
+  keys:   ["キーズ", "プラック"],
+  bell:   ["ベル", "プラック"],
+  blip:   ["ブリップ", "プラック"],
+};
+const SIGNATURE_STANDARD: Record<string, string[]> = {
+  "EDM":       ["スタブ", "スーパーソウ"],
+  "テクノ":     ["アシッド"],
+  "8bit":      ["チップリード"],
+  "ローファイ":  ["レコードヒス", "ノイズスイープ"],
+  "ゲームBGM":  ["ベル", "プラック"],
+  "ハウス":     ["キーズ", "プラック"],
+  "トランス":   ["ゲートソウ", "スーパーソウ"],
+  "アンビエント": ["ウィンド", "ノイズスイープ"],
+};
+const GROW_STANDARD: Record<GrowPartName, (genre: string) => string[]> = {
+  pad:       () => ["ソフトパッド", "ワイドパッド"],
+  arp:       genre => {
+    const params = arpParams as unknown as Record<string, { instrument: string }>;
+    return ARP_STANDARD[(params[genre] ?? params["ローファイ"]).instrument] ?? ARP_STANDARD.pluck;
+  },
+  signature: genre => SIGNATURE_STANDARD[genre] ?? SIGNATURE_STANDARD["ローファイ"],
+};
 
 export type GrowParamKind = "continuous" | "integer" | "choice" | "toggle";
 const KINDS: GrowParamKind[] = ["continuous", "integer", "choice", "toggle"];
@@ -144,29 +175,59 @@ export function growFromNormalised(index: number, normalised: number): number {
   return ex ? ex.grow_param_from_normalised(index, normalised) : 0;
 }
 
-// パートの grow の音作り（プリセットの番号と、そこから変えた値）が AppState のどの項目か
-export function growSettings(target: GrowTarget): { preset: number; params: Record<string, number> | null } {
-  const s = getState();
-  return target === "chord"
-    ? { preset: s.growChordPreset, params: s.growChordParams }
-    : { preset: s.growPreset,      params: s.growParams };
+// 名前の前から順に探し、最初に見つかったプリセットの番号（どれもなければ -1）
+export function findGrowPreset(...names: string[]): number {
+  for (const name of names) {
+    const index = presetNames.indexOf(name);
+    if (index >= 0) return index;
+  }
+  return -1;
 }
 
-// 今の曲の grow の値（パラメーターの番号順）。プリセットの値に、曲で変えた値（growParams）を重ねる
-export function currentGrowValues(target: GrowTarget = "melody"): number[] | null {
+function isPartName(part: GrowPart): part is GrowPartName {
+  return part === "pad" || part === "arp" || part === "signature";
+}
+
+// パッド・アルペジオ・シグネチャーの、今のジャンルの標準のプリセットの番号（見つからなければ 0 = 初期化）
+export function standardGrowPreset(part: GrowPartName, genre: string = getState().genre): number {
+  return Math.max(0, findGrowPreset(...GROW_STANDARD[part](genre)));
+}
+
+// AppState に保存しているパートの音作り（パッド・アルペジオ・シグネチャーの preset は null = ジャンルの標準）
+export function storedGrowSound(part: GrowPart): { preset: number | null; params: Record<string, number> | null } {
+  const s = getState();
+  if (part === "melody") return { preset: s.growPreset,      params: s.growParams };
+  if (part === "chord")  return { preset: s.growChordPreset, params: s.growChordParams };
+  return s.growSounds[part];
+}
+
+// パートの音作りを書き換える（メロディ・コードは preset に null を渡さない）
+export function setGrowSound(part: GrowPart, preset: number | null, params: Record<string, number> | null): void {
+  if (part === "melody")     setState({ growPreset: preset ?? 0, growParams: params });
+  else if (part === "chord") setState({ growChordPreset: preset ?? 0, growChordParams: params });
+  else setState({ growSounds: { ...getState().growSounds, [part]: { preset, params } } });
+}
+
+// パートの grow の音作り（実際に使うプリセットの番号と、そこから変えた値）
+export function growSettings(part: GrowPart): { preset: number; params: Record<string, number> | null } {
+  const { preset, params } = storedGrowSound(part);
+  return { preset: preset ?? (isPartName(part) ? standardGrowPreset(part) : 0), params };
+}
+
+// プリセットそのままの値（パラメーターの番号順）
+export function growPresetValues(preset: number): number[] | null {
   if (!ex) return null;
-  const { preset, params: edited } = growSettings(target);
+  return params.map(p => ex!.grow_preset_value(preset, p.index));
+}
+
+// 今の曲の grow の値（パラメーターの番号順）。プリセットの値に、曲で変えた値（growParams など）を重ねる
+export function currentGrowValues(part: GrowPart = "melody"): number[] | null {
+  if (!ex) return null;
+  const { preset, params: edited } = growSettings(part);
   return params.map(p => {
     const value = edited?.[p.id];
     return typeof value === "number" ? value : ex!.grow_preset_value(preset, p.index);
   });
-}
-
-// 今の曲で grow を使うパートがあるか（再生・試聴・書き出しの前に grow の準備を待つかどうか）。
-// 試聴は OFF のパートも鳴らすので、パートの ON/OFF は見ない
-export function songUsesGrow(): boolean {
-  const s = getState();
-  return s.melodyInstrument === "grow" || s.chordInstrument === "grow";
 }
 
 // ===== AudioWorklet の登録（オーディオコンテキストごと） =====
@@ -205,23 +266,30 @@ export function isGrowReady(): boolean {
   return wasmBytes !== null && registered.has(rawContext());
 }
 
+// パートの音作りの値を返す関数（GrowInstrument に渡す）
+export function growValues(part: GrowPart): () => number[] | null {
+  return () => currentGrowValues(part);
+}
+
 // 今鳴らせる状態の GrowInstrument（音作りの値・BPM の変更をすぐ当てるため）
 const live = new Set<GrowInstrument>();
 
-// 音作りの値と BPM（テンポ同期の LFO・ディレイ）を、鳴っている grow（メロディ・コード）にすぐ当てる（作り直さない）
+// 音作りの値と BPM（テンポ同期の LFO・ディレイ）を、鳴っている grow（全パート）にすぐ当てる（作り直さない）
 export function applyGrowLive(): void {
   const bpm = getState().bpm;
   live.forEach(inst => {
-    const values = currentGrowValues(inst.target);
+    const values = inst.values();
     if (values) inst.setValues(values);
     inst.setBpm(bpm);
   });
 }
 
-// メロディ・コードの音色としての grow（ほかの音色の Synth と同じ呼び方で鳴らせる）。isGrowReady() のときだけ作る
+// 各パートの音色としての grow（ほかの音色の Synth と同じ呼び方で鳴らせる）。isGrowReady() のときだけ作る。
+// values は音作りの値を返す関数（作るときと、applyGrowLive で値を当て直すときに呼ぶ）。
+// パートの音作りで鳴らすなら growValues(part) を渡す
 export class GrowInstrument {
   readonly output: Tone.Gain;
-  readonly target: GrowTarget;
+  readonly values: () => number[] | null;
   private node: AudioWorkletNode;
   private onParam: AudioParam;
   private offParam: AudioParam;
@@ -229,14 +297,14 @@ export class GrowInstrument {
   private onFrames  = new Set<number>();
   private offFrames = new Set<number>();
 
-  constructor(target: GrowTarget, values: number[], bpm: number) {
-    this.target = target;
+  constructor(values: () => number[] | null, bpm: number = getState().bpm) {
+    this.values = values;
     const raw = rawContext();
     const options: AudioWorkletNodeOptions = {
       numberOfInputs:     0,
       numberOfOutputs:    1,
       outputChannelCount: [2],
-      processorOptions:   { wasm: wasmBytes!.slice(0), values, bpm, overlap: OFF_DELAY },
+      processorOptions:   { wasm: wasmBytes!.slice(0), values: values() ?? [], bpm, overlap: OFF_DELAY },
     };
     this.node = isNativeContext(raw)
       ? new AudioWorkletNode(raw, "grow", options)

@@ -4,7 +4,7 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState, MelodyInstrument } from "./AppState";
 import melodyParams from "../data/melody_params.json";
-import { GrowInstrument, currentGrowValues, isGrowReady, prepareGrowContext } from "./Grow";
+import { GrowInstrument, growValues, isGrowReady, prepareGrowContext } from "./Grow";
 
 
 let melodyPart:  Tone.Part | null = null;
@@ -165,7 +165,7 @@ export function initMelodySynth() {
   const sound = resolveMelodySound();
   if (sound === "grow") {
     // grow は自前のエフェクト（リバーブを含む）を持つので、そのままメロディの Volume へ
-    melodySynth = new GrowInstrument("melody", currentGrowValues("melody")!, getState().bpm).connect(melodyVol);
+    melodySynth = new GrowInstrument(growValues("melody"), getState().bpm).connect(melodyVol);
     return;
   }
   const inst   = INSTRUMENTS[sound];

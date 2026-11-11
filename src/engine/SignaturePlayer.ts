@@ -4,9 +4,12 @@ import { resolveChord } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState } from "./AppState";
+import { GrowInstrument, growValues, isGrowReady, findGrowPreset, growPresetValues } from "./Grow";
 
 // シグネチャー：ジャンルの特徴を出す追加パート（パッド・アルペジオと同じく任意で ON/OFF）
-// 鳴り方はジャンルごとに SIGNATURES で定義する。音色・鳴り方は Synth を作り直したとき（再生開始時）に反映される
+// 鳴り方はジャンルごとに SIGNATURES で定義する。音色・鳴り方は Synth を作り直したとき（再生開始時）に反映される。
+// 音は grow（AppState.growSounds.signature。標準はジャンルに合わせたプリセット。Grow.ts の SIGNATURE_STANDARD）で出す。
+// grow の準備ができていない（wasm がない）ときは各定義の create（Tone.js の Synth）で鳴らす
 
 interface SignatureEvent {
   time:   string;    // 小節:拍:16分
@@ -17,14 +20,26 @@ interface SignatureEvent {
 
 interface SignatureVoice {
   trigger: (event: SignatureEvent, time: number) => void;
-  nodes:   Tone.ToneAudioNode[];  // 破棄するノード（Synth・エフェクト）
+  nodes:   { dispose(): unknown }[];  // 破棄するノード（Synth・エフェクト・grow）
 }
 
 interface SignatureDef {
   label:  string;  // アレンジャーなどの表示名
   create: (out: Tone.ToneAudioNode) => SignatureVoice;
+  // grow で鳴らすときの鳴らし方（main はパートの音作りの grow）。省略すると growTrigger で鳴らす。
+  // null を返すと grow では鳴らせない（必要なプリセットがない）ので create で鳴らす
+  growCreate?: (out: Tone.ToneAudioNode, main: GrowInstrument) => SignatureVoice | null;
   // コードごとに呼ばれる。notes はオクターブ4のコード構成音、bar はコードの先頭小節（0始まり）
   events: (notes: string[], bar: number, bars: number) => SignatureEvent[];
+}
+
+// ノイズの音（音の高さを持たないイベント）を grow で鳴らすときの音の高さ（ノイズの音色はキー追従 0 なので何でもよい）
+const NOISE_NOTE = "C4";
+
+// grow での標準の鳴らし方：イベントの音をすべて鳴らす（音を持たないイベントは NOISE_NOTE。アクセントは強く）
+function growTrigger(grow: GrowInstrument, e: SignatureEvent, time: number): void {
+  const velocity = e.accent === undefined ? 0.8 : e.accent ? 1 : 0.6;
+  (e.notes ?? [NOISE_NOTE]).forEach(note => grow.triggerAttackRelease(note, e.dur ?? "16n", time, velocity));
 }
 
 const t = (bar: number, step: number) => `${bar}:${Math.floor(step / 4)}:${step % 4}`;
@@ -161,6 +176,25 @@ const vinylNoise: SignatureDef = {
         }
       },
       nodes: [hiss, hissFilter, crackle, crackleFilter],
+    };
+  },
+  // grow：ヒスはパートの音作り（標準はレコードヒス）、プチプチ音はプリセット「レコードプチ」のまま（ランダムに鳴らす）
+  growCreate: (out, main) => {
+    const preset = findGrowPreset("レコードプチ");
+    if (preset < 0) return null;
+    const crackle = new GrowInstrument(() => growPresetValues(preset)).connect(out);
+    return {
+      trigger: (e, time) => {
+        if (e.dur) {
+          main.triggerAttackRelease(NOISE_NOTE, e.dur, time, 0.8);
+          return;
+        }
+        if (Math.random() < 0.35) {
+          const jitter = Math.random() * Tone.Time("32n").toSeconds();
+          crackle.triggerAttackRelease(NOISE_NOTE, 0.01, time + jitter, 0.3 + Math.random() * 0.7);
+        }
+      },
+      nodes: [main, crackle],
     };
   },
   events: (_notes, bar, bars) => {
@@ -311,10 +345,20 @@ export function signatureLabel(genre?: string): string {
 let sigPart:  Tone.Part | null = null;
 let sigVoice: SignatureVoice | null = null;
 
-// 音色は AppState.genre から決める
+// 音色は AppState.genre（grow なら AppState.growSounds.signature も）から決める
 export function initSignatureSynth() {
   const vol = createVolumeNode("signature");  // 現在のオーディオコンテキスト用のノード
-  sigVoice = signatureDef().create(vol);
+  const def = signatureDef();
+  sigVoice = (isGrowReady() ? growVoice(def, vol) : null) ?? def.create(vol);
+}
+
+// grow で鳴らす（grow は自前のエフェクトを持つのでそのまま Volume へ）。鳴らせなければ null
+function growVoice(def: SignatureDef, out: Tone.ToneAudioNode): SignatureVoice | null {
+  const main = new GrowInstrument(growValues("signature")).connect(out);
+  if (!def.growCreate) return { trigger: (e, time) => growTrigger(main, e, time), nodes: [main] };
+  const voice = def.growCreate(out, main);
+  if (!voice) main.dispose();
+  return voice;
 }
 
 export function loadSignature(progression: ChordProgression, key: string = "A") {
