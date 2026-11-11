@@ -2,7 +2,8 @@
 #
 # ふつうは build_docx.ps1 から呼ぶ（PNG の用意 → このスクリプト → Word で目次の更新と保存）。
 # 手本の docx の本文を「段落・表の並び」に分け、番号で場所を決めて使っている
-# （表紙・改訂履歴・目次 = 0〜148、裏表紙 = 460〜、機能定義の表の手本 = 203、改訂履歴の表 = 33、表紙の日付 = 23）。
+# （表紙・改訂履歴・目次 = 0〜148、裏表紙 = 460〜、機能定義の表の手本 = 203、改訂履歴の表 = 33、表紙の日付 = 23、表紙の文書番号 = 10）。
+# 改訂履歴の 02 以降は tools/改訂履歴.tsv に残し、今回の版（rev）を足して書き戻す。表紙の文書番号の「(01)」は rev にする。
 # 手本の docx を編集すると番号がずれるので、そのときは番号を見直す（ずれると assert で止まる）。
 # 6.2 ユースケース記述の表は手本にないので usecase_table で組み立てる（表の行が足りないと assert で止まる）。
 #
@@ -452,16 +453,38 @@ body = ''.join(out)
 front = els[:149]
 back = els[460:]
 
-# 改訂履歴に行を追加（手本の 01 の行を写して、版数・日付・概要を差し替える）
+# 改訂履歴（02 以降）は tools/改訂履歴.tsv に残す。今回の版を足し（同じ版なら上書き）、版数の順に書き戻す
+REV_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '改訂履歴.tsv')
+rev_head, revs = [], {}
+if os.path.exists(REV_FILE):
+    for line in open(REV_FILE, encoding='utf-8').read().splitlines():
+        if line.startswith('#') or not line.strip():
+            rev_head.append(line)
+            continue
+        v, d, note = line.split('\t', 2)
+        revs[v] = (d, note)
+assert '\t' not in args.rev_note, '改訂の概要にタブは使えません'
+revs[args.rev] = (f'{Y:04d}/{M:02d}/{D:02d}', args.rev_note)
+rev_list = sorted(revs.items(), key=lambda kv: int(kv[0]))
+with open(REV_FILE, 'w', encoding='utf-8', newline='\n') as f:
+    f.write('\n'.join(rev_head + [f'{v}\t{d}\t{n}' for v, (d, n) in rev_list]) + '\n')
+
+# 改訂履歴の表に行を並べる（手本の 01 の行を写して、版数・日付・概要を差し替え、01 の下の空の行に順に入れる。足りなければ足す）
 rev = front[33]
 rws = re.findall(r'<w:tr\b.*?</w:tr>', rev, re.S)
-r1, r2 = rws[1], rws[2]
+r1, blanks = rws[1], rws[2:]
 assert '>01<' in r1 and '2026/10/19' in r1 and '初版発行' in r1
-new = r1.replace('>01<', f'>{escape(args.rev)}<').replace('2026/10/19', f'{Y:04d}/{M:02d}/{D:02d}')
-new = new.replace('初版発行', escape(args.rev_note))
-front[33] = rev.replace(r2, new, 1)
+last = r1
+for k, (v, (d, note)) in enumerate(rev_list):
+    new = r1.replace('>01<', f'>{escape(v)}<').replace('2026/10/19', d).replace('初版発行', escape(note))
+    if k < len(blanks):
+        rev = rev.replace(blanks[k], new, 1)
+    else:
+        rev = rev.replace(last, last + new, 1)
+    last = new
+front[33] = rev
 
-# 改訂の概要は 700 と 4025 の2つのセルに分かれている（見出し行は gridSpan=2）。01・02 の行はセルを結合して広い1つのセルにする
+# 改訂の概要は 700 と 4025 の2つのセルに分かれている（見出し行は gridSpan=2）。版の行はセルを結合して広い1つのセルにする
 def merge_summary(row):
     tcs = re.findall(r'<w:tc>.*?</w:tc>', row, re.S)
     a, b = tcs[2], tcs[3]
@@ -469,8 +492,12 @@ def merge_summary(row):
     merged = a.replace('<w:tcW w:w="700" w:type="dxa"/>', '<w:tcW w:w="4725" w:type="dxa"/><w:gridSpan w:val="2"/>')
     return row.replace(a + b, merged, 1) if a + b in row else row.replace(b, '', 1).replace(a, merged, 1)
 rws = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)
-for r in rws[1:3]:
+for r in rws[1:2 + len(rev_list)]:
     front[33] = front[33].replace(r, merge_summary(r), 1)
+
+# 表紙の文書番号の末尾「(01)」は版数にする
+assert 'アプリオリ(01)' in front[10], '表紙の文書番号が見つかりません'
+front[10] = front[10].replace('アプリオリ(01)', f'アプリオリ({escape(args.rev)})', 1)
 
 # 表が長くなって白紙ページができるので、改訂履歴の後と目次の後の空行を消す
 EMPTY_IDX = list(range(34, 54)) + list(range(132, 140)) + list(range(144, 148))
