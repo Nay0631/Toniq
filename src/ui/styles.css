@@ -3290,8 +3290,8 @@ span[data-term],
   border: 1px solid var(--hw-line);
 }
 
-/* 共通の欄は3列 */
-.toniq-grid-common { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* テンポ同期中の「速さ」など、今は使わないノブ */
+.toniq-ctl.is-disabled { opacity: 0.4; pointer-events: none; }
 
 /* 区切り線：右と下に線を引き、1px はみ出させて、外枠に重なる最後の列・行の線は外枠の内側で切る（列数によらない） */
 .toniq-module {
@@ -3349,11 +3349,11 @@ span[data-term],
 .toniq-hint { margin: 12px 0 0; color: var(--hw-label); font-size: 12px; }
 
 @media (max-width: 1000px) {
-  .toniq-grid, .toniq-grid-common { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .toniq-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 720px) {
-  .toniq-grid, .toniq-grid-common { grid-template-columns: 1fr; }
+  .toniq-grid { grid-template-columns: 1fr; }
 }
 
 /* ===== WAV書き出しの進み具合（ExportProgress.ts） ===== */

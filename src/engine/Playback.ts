@@ -12,6 +12,7 @@ import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
 import { applySwing } from "./Groove";
 import { endingBar, songMelody, songProgression } from "./SongForm";
+import { applyToniqSynthLive } from "./MelodyPlayer";
 
 // 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
 async function audioReady(genre: string): Promise<void> {
@@ -209,6 +210,7 @@ export function isPlaying(): boolean {
 // 再生中の BPM 変更（タップテンポなど）を Transport に反映する
 export function applyBpm(): void {
   Tone.getTransport().bpm.value = getState().bpm;
+  applyToniqSynthLive();  // Toniq シンセのテンポ同期の LFO も合わせる
 }
 
 // 曲全体の長さ（秒）

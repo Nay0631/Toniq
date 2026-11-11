@@ -28,6 +28,11 @@ interface Module<C> {
 
 const WAVES: [string, string][] = [["sawtooth", "ノコギリ"], ["square", "矩形"], ["triangle", "三角"], ["sine", "サイン"]];
 const OCTAVES: [string, string][] = [["-2", "-2"], ["-1", "-1"], ["0", "0"], ["1", "+1"], ["2", "+2"]];
+// LFO のテンポ同期（1周の長さ。OFF なら「速さ」のノブで決める）
+const LFO_SYNCS: [string, string][] = [
+  ["off", "OFF"], ["2m", "2小節"], ["1m", "1小節"], ["2n", "2分"], ["4n", "4分"],
+  ["8n", "8分"], ["8t", "8分3連"], ["16n", "16分"], ["16t", "16分3連"], ["32n", "32分"],
+];
 const lknob = (key: ToniqLayerKnobKey, label: string): LayerCtl => ({ key, label, kind: "knob" });
 const gknob = (key: ToniqGlobalKnobKey, label: string): GlobalCtl => ({ key, label, kind: "knob" });
 
@@ -74,8 +79,13 @@ const GLOBAL_MODULES: Module<GlobalCtl>[] = [
   { title: "LFO", term: "lfo", controls: [
     { key: "lfoTarget", label: "行き先", kind: "select",
       options: [["off", "OFF"], ["pitch", "音の高さ"], ["filter", "フィルター"], ["amp", "音量"]] },
+    { key: "lfoSync", label: "テンポ同期", kind: "select", options: LFO_SYNCS },
     gknob("lfoRate", "速さ"),
     gknob("lfoDepth", "深さ"),
+  ] },
+  { title: "ピッチ EG", term: "pitchEnv", controls: [
+    gknob("pitchEnvAmount", "量"),
+    gknob("pitchEnvTime", "時間"),
   ] },
   { title: "エフェクト", controls: [
     gknob("drive", "ドライブ"),
@@ -224,6 +234,11 @@ export function renderToniqSynthPanel(): void {
   for (const m of GLOBAL_MODULES) {
     for (const c of m.controls) setControlValue(globalId(c.key), c.kind, c.key, p[c.key] as number | string);
   }
+  // テンポ同期のあいだは「速さ」のノブを使わない
+  const rate = $(globalId("lfoRate"))!;
+  const synced = p.lfoSync !== "off";
+  rate.closest(".toniq-ctl")?.classList.toggle("is-disabled", synced);
+  if (synced) $(`${globalId("lfoRate")}-value`)!.textContent = "同期中";
   syncControls();
 
   // レイヤーのタブ・B の ON/OFF

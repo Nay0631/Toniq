@@ -14,6 +14,8 @@ import * as Tone from "tone";
 export type ToniqWave = "sawtooth" | "square" | "triangle" | "sine";
 export type ToniqFilterType = "lowpass" | "highpass" | "bandpass";
 export type ToniqLfoTarget = "off" | "pitch" | "filter" | "amp";
+// LFO のテンポ同期（"off" = 速さのノブで Hz を決める。ほかは1周の長さを音符で表す。t = 3連）
+export type ToniqLfoSync = "off" | "2m" | "1m" | "2n" | "4n" | "8n" | "8t" | "16n" | "16t" | "32n";
 
 // レイヤー1つ分の音作り
 export interface ToniqLayerParams {
@@ -52,9 +54,13 @@ export interface ToniqLayerParams {
 export interface ToniqSynthParams {
   layers:     [ToniqLayerParams, ToniqLayerParams];  // [A, B]
   glide:      number;  // 音のつながりを滑らせる時間
+  // ピッチ EG（発音の瞬間に高さをずらし、時間をかけて元の高さへ戻す）
+  pitchEnvAmount: number;  // 0〜100（50 = かけない。上ほど高い所から下がり、下ほど低い所から上がる。最大 ±36 半音）
+  pitchEnvTime:   number;  // 元の高さへ戻るまでの時間
   // LFO
   lfoTarget:  ToniqLfoTarget;
-  lfoRate:    number;
+  lfoSync:    ToniqLfoSync;
+  lfoRate:    number;  // テンポ同期が OFF のときの速さ
   lfoDepth:   number;
   // エフェクト・出力
   drive:      number;
@@ -89,6 +95,19 @@ export function unisonCount(v: number): number {
 export function detuneCents(v: number): number {
   return v - 50;
 }
+// ピッチ EG の量（半音）。0 の近くを細かく動かせるよう2乗のカーブにする
+export function pitchEnvSemitones(v: number): number {
+  const d = (v - 50) / 50;
+  return Math.sign(d) * d * d * 36;
+}
+// テンポ同期の1周の長さ（拍）
+export const LFO_SYNC_BEATS: Record<Exclude<ToniqLfoSync, "off">, number> = {
+  "2m": 8, "1m": 4, "2n": 2, "4n": 1, "8n": 0.5, "8t": 1 / 3, "16n": 0.25, "16t": 1 / 6, "32n": 0.125,
+};
+// LFO の速さ（Hz）。テンポ同期なら BPM から決める
+export function lfoRateHz(p: Pick<ToniqSynthParams, "lfoSync" | "lfoRate">, bpm: number): number {
+  return p.lfoSync === "off" ? lfoHz(p.lfoRate) : bpm / 60 / LFO_SYNC_BEATS[p.lfoSync];
+}
 export function glideSeconds(v: number): number {
   return Math.pow(v / 100, 2) * 0.5;  // 0〜0.5秒
 }
@@ -103,7 +122,7 @@ export function formatParam(key: ToniqKnobKey, v: number): string {
   const sec = (s: number) => s < 1 ? `${Math.round(s * 1000)}ms` : `${s.toFixed(2)}s`;
   switch (key) {
     case "attack": case "decay": case "release":
-    case "fAttack": case "fDecay": case "fRelease":
+    case "fAttack": case "fDecay": case "fRelease": case "pitchEnvTime":
       return sec(toSeconds(v));
     case "cutoff": {
       const hz = cutoffHz(v);
@@ -117,6 +136,10 @@ export function formatParam(key: ToniqKnobKey, v: number): string {
       return `${c > 0 ? "+" : ""}${c}c`;
     }
     case "width":     return `${Math.round(v)}%`;
+    case "pitchEnvAmount": {
+      const st = pitchEnvSemitones(v);
+      return st === 0 ? "OFF" : `${st > 0 ? "+" : ""}${st.toFixed(Math.abs(st) < 10 ? 1 : 0)}st`;
+    }
     case "glide":     return v === 0 ? "OFF" : sec(glideSeconds(v));
     case "osc2Octave": case "octave": return `${v > 0 ? "+" : ""}${v}`;
     default:          return `${Math.round(v)}`;
@@ -154,7 +177,8 @@ const LAYER_KEYS = Object.keys(DEFAULT_TONIQ_LAYER) as (keyof ToniqLayerParams)[
 export const DEFAULT_TONIQ_SYNTH: ToniqSynthParams = {
   layers: [DEFAULT_TONIQ_LAYER, DEFAULT_TONIQ_LAYER_B],
   glide: 20,
-  lfoTarget: "pitch", lfoRate: 76, lfoDepth: 12,
+  pitchEnvAmount: 50, pitchEnvTime: 40,
+  lfoTarget: "pitch", lfoSync: "off", lfoRate: 76, lfoDepth: 12,
   drive: 0, chorus: 20, delay: 20, level: 70,
 };
 
@@ -231,6 +255,24 @@ export const TONIQ_PRESETS: ToniqPreset[] = [
     filterType: "highpass", cutoff: 55, resonance: 5, envAmount: 0,
     attack: 75, decay: 70, sustain: 80, release: 82,
   }),
+  preset("gate", "ゲートパッド", { glide: 0, lfoTarget: "amp", lfoSync: "16n", lfoDepth: 85, chorus: 35, delay: 20, level: 64 }, {
+    // 音量の LFO をテンポに合わせて 16 分で揺らし、伸ばした音を刻む（トランスゲート風）
+    osc1Wave: "sawtooth", osc1Level: 75, osc2Wave: "sawtooth", osc2Level: 50, osc2Detune: 55,
+    subLevel: 10, unison: 67, spread: 45, width: 90,
+    cutoff: 50, resonance: 10, envAmount: 20, fAttack: 40, fDecay: 70, fSustain: 60,
+    attack: 15, decay: 70, sustain: 90, release: 60,
+  }, {
+    octave: 1, volume: 35, osc1Wave: "triangle", osc1Level: 60, noiseLevel: 8,
+    unison: 33, spread: 30, width: 100, filterType: "highpass", cutoff: 52, envAmount: 0,
+    attack: 15, sustain: 85, release: 60,
+  }),
+  preset("laser", "レーザー", { glide: 0, pitchEnvAmount: 92, pitchEnvTime: 55, lfoTarget: "off", chorus: 10, delay: 35, level: 64 }, {
+    // ピッチ EG で2オクターブ上から一気に下ろす
+    osc1Wave: "square", osc1Level: 75, osc2Wave: "sawtooth", osc2Level: 35, osc2Detune: 53,
+    subLevel: 0, unison: 0, spread: 0, width: 20,
+    cutoff: 78, resonance: 20, envAmount: 15, fAttack: 0, fDecay: 55, fSustain: 30,
+    attack: 0, decay: 58, sustain: 30, release: 45,
+  }),
   preset("acid", "アシッド", { glide: 30, lfoTarget: "off", drive: 40, chorus: 0, delay: 30, level: 62 }, {
     osc1Wave: "sawtooth", osc1Level: 90, osc2Wave: "square", osc2Level: 0,
     subLevel: 10, unison: 0, spread: 0, width: 0,
@@ -287,6 +329,19 @@ const LAYER_VOLUME_REF = 80;
 const levelGain = (v: number) => Math.pow(v / 100, 2);
 const cents = (c: number) => Math.pow(2, c / 1200);
 
+// LFO の位相を time で頭に戻す（Tone.js の LFO は start し直しても位相が戻らないので、止めてすぐかけ直す）
+function retriggerLfo(lfo: Tone.LFO, time: number): void {
+  try {
+    lfo.stop(time);
+    lfo.start(time + 0.0005);
+  } catch { /* 前の発音と同じ時刻など。位相はそのまま */ }
+}
+
+// LFO の位相（かけ直したときの始まりの位置）。変わったときだけ当てる（当てるたびに波形を作り直すため）
+function setLfoPhase(lfo: Tone.LFO, deg: number): void {
+  if (lfo.phase !== deg) lfo.phase = deg;
+}
+
 // ユニゾンの1枚（オシレーター → 左右の振り分け）
 interface UnisonVoice {
   osc: Tone.Oscillator;
@@ -317,7 +372,8 @@ class ToniqLayer {
   private p: ToniqLayerParams;
   private freq = Tone.Frequency("A4").toFrequency();  // 今の音の高さ（レイヤーのオクターブをかける前）
 
-  constructor(params: ToniqLayerParams, private lfoPitch: Tone.LFO) {
+  // pitchMods：各オシレーターの detune（セント）につなぐ共通の変調（音の高さの LFO・ピッチ EG）
+  constructor(params: ToniqLayerParams, private pitchMods: Tone.ToneAudioNode[]) {
     this.p = { ...params };
     this.g1 = new Tone.Gain(0);
     this.g2 = new Tone.Gain(0);
@@ -354,7 +410,7 @@ class ToniqLayer {
         const osc = new Tone.Oscillator({ type, volume: -6 - count * 1.1, phase: Math.random() * 360 });
         const pan = new Tone.Panner(0).connect(dest);
         osc.connect(pan);
-        this.lfoPitch.connect(osc.detune);
+        this.pitchMods.forEach(m => m.connect(osc.detune));
         osc.start(now);
         return { osc, pan, pos };
       });
@@ -362,7 +418,7 @@ class ToniqLayer {
     this.voices2 = makeVoices(this.p.osc2Wave, this.g2);
 
     this.sub = new Tone.Oscillator({ type: "sine" }).connect(this.gSub);
-    this.lfoPitch.connect(this.sub.detune);
+    this.pitchMods.forEach(m => m.connect(this.sub!.detune));
     this.sub.start(now);
 
     // ノイズは左右別々に鳴らして、ステレオ幅に合わせて広げる
@@ -378,8 +434,10 @@ class ToniqLayer {
   }
 
   private disposeSources(): void {
-    // 共通の音の高さの LFO からも切り離す（つないだままだと破棄した音源が残る）
-    const unlink = (osc: Tone.Oscillator) => { try { this.lfoPitch.disconnect(osc.detune); } catch { /* つながっていない */ } };
+    // 共通の音の高さの変調からも切り離す（つないだままだと破棄した音源が残る）
+    const unlink = (osc: Tone.Oscillator) => {
+      for (const m of this.pitchMods) { try { m.disconnect(osc.detune); } catch { /* つながっていない */ } }
+    };
     for (const v of [...this.voices1, ...this.voices2]) { unlink(v.osc); v.osc.dispose(); v.pan.dispose(); }
     for (const n of this.noises) { n.noise.dispose(); n.pan.dispose(); }
     if (this.sub) { unlink(this.sub); this.sub.dispose(); }
@@ -435,7 +493,7 @@ class ToniqLayer {
   }
 
   // 値を当てる（鳴らしている途中でも変えられる。active でなければ音源を止める）
-  set(params: ToniqLayerParams, g: ToniqSynthParams, active: boolean, ramp: number): void {
+  set(params: ToniqLayerParams, g: ToniqSynthParams, lfoRate: number, active: boolean, ramp: number): void {
     const prev = this.p;
     this.p = { ...params };
     const p = this.p;
@@ -471,7 +529,8 @@ class ToniqLayer {
     this.filterEnv.release = toSeconds(p.fRelease);
     to(this.filter.Q, resonanceQ(p.resonance));
     // フィルターの LFO（行き先がフィルターのときだけ、カットオフに合わせた幅で揺らす）
-    this.lfoFilter.frequency.value = lfoHz(g.lfoRate);
+    this.lfoFilter.frequency.value = lfoRate;
+    setLfoPhase(this.lfoFilter, g.lfoSync === "off" ? 0 : 90);  // テンポ同期では発音の瞬間にいちばん開いた所から
     const swing = g.lfoTarget === "filter" ? base * (g.lfoDepth / 100) * 0.9 : 0;
     this.lfoFilter.min = -swing;
     this.lfoFilter.max = swing;
@@ -483,9 +542,10 @@ class ToniqLayer {
     this.amp.release = toSeconds(p.release);
   }
 
-  trigger(dur: number, time: number, velocity: number): void {
+  trigger(dur: number, time: number, velocity: number, retrigLfo: boolean): void {
     this.amp.triggerAttackRelease(dur, time, velocity);
     this.filterEnv.triggerAttackRelease(dur, time);
+    if (retrigLfo) retriggerLfo(this.lfoFilter, time);
   }
 
   dispose(): void {
@@ -500,6 +560,7 @@ export class ToniqVoice {
   private layers: ToniqLayer[];
   private bus:    Tone.Gain;   // レイヤーを足す所
   private lfoPitch: Tone.LFO;
+  private pitchEnv: Tone.Signal<"number">;  // ピッチ EG（セント）
   private lfoAmp:  Tone.LFO;
   private ampMod:  Tone.Gain;  // 音量の LFO で揺らすゲイン
   private drive:  Tone.Distortion;
@@ -510,12 +571,16 @@ export class ToniqVoice {
   private p: ToniqSynthParams;
   private lastFreq: number | null = null;
   private lastEnd = -Infinity;
+  private bpm: number;
 
-  constructor(params: ToniqSynthParams) {
+  // bpm：LFO のテンポ同期に使う（曲の BPM が変わったら setBpm）
+  constructor(params: ToniqSynthParams, bpm: number) {
     this.p = cloneToniqSynth(params);
+    this.bpm = bpm;
 
     // 音の高さの LFO は各オシレーターの detune（セント）へ（両方のレイヤーで共通）
     this.lfoPitch = new Tone.LFO({ frequency: 5, min: 0, max: 0 }).start();
+    this.pitchEnv = new Tone.Signal(0);
     this.bus      = new Tone.Gain(1);
     this.ampMod   = new Tone.Gain(1);
     this.lfoAmp   = new Tone.LFO({ frequency: 5, min: 1, max: 1 }).start();
@@ -527,13 +592,13 @@ export class ToniqVoice {
     this.bus.chain(this.ampMod, this.drive, this.chorus, this.delay, this.output);
 
     this.layers = params.layers.map(lp => {
-      const layer = new ToniqLayer(lp, this.lfoPitch);
+      const layer = new ToniqLayer(lp, [this.lfoPitch, this.pitchEnv]);
       layer.output.connect(this.bus);
       return layer;
     });
 
     this.nodes = [
-      this.lfoPitch, this.bus, this.lfoAmp, this.ampMod, this.drive, this.chorus, this.delay, this.output,
+      this.lfoPitch, this.pitchEnv, this.bus, this.lfoAmp, this.ampMod, this.drive, this.chorus, this.delay, this.output,
     ];
 
     this.set(params, true);
@@ -552,14 +617,17 @@ export class ToniqVoice {
     const to = (param: Tone.Param<any> | Tone.Signal<any>, v: number) =>
       ramp === 0 ? (param.value = v) : param.rampTo(v, ramp);
 
-    // レイヤー（A は常に鳴らす）
-    this.layers.forEach((layer, i) => layer.set(p.layers[i], p, i === 0 || p.layers[i].on, ramp));
+    // LFO の速さ（テンポ同期なら BPM から）。行き先以外の LFO は振れ幅 0 にしておく。フィルターの LFO は各レイヤーが持つ
+    const rate  = lfoRateHz(p, this.bpm);
 
-    // LFO（行き先以外の LFO は振れ幅 0 にしておく。フィルターの LFO は各レイヤーが持つ）
-    const rate  = lfoHz(p.lfoRate);
+    // レイヤー（A は常に鳴らす）
+    this.layers.forEach((layer, i) => layer.set(p.layers[i], p, rate, i === 0 || p.layers[i].on, ramp));
+
     const depth = p.lfoDepth / 100;
     this.lfoPitch.frequency.value = rate;
     this.lfoAmp.frequency.value   = rate;
+    // テンポ同期では発音ごとに位相を頭に戻す。音量はいちばん大きい所から始める（音の高さは真ん中から）
+    setLfoPhase(this.lfoAmp, p.lfoSync === "off" ? 0 : 90);
     const c = p.lfoTarget === "pitch" ? depth * 100 : 0;  // 最大 ±1半音
     this.lfoPitch.min = -c;
     this.lfoPitch.max = c;
@@ -576,6 +644,13 @@ export class ToniqVoice {
     to(this.output.gain, OUTPUT_GAIN * Math.pow(p.level / 70, 2));
   }
 
+  // 曲の BPM が変わったとき（テンポ同期の LFO の速さを合わせ直す）
+  setBpm(bpm: number): void {
+    if (bpm === this.bpm) return;
+    this.bpm = bpm;
+    this.set(this.p);
+  }
+
   // ほかのメロディの Synth と同じ呼び方で鳴らす
   triggerAttackRelease(note: Tone.Unit.Frequency, duration: Tone.Unit.Time, time?: Tone.Unit.Time, velocity = 1): this {
     const t   = time === undefined ? Tone.now() : Tone.Time(time).toSeconds();
@@ -587,9 +662,24 @@ export class ToniqVoice {
     this.lastFreq = f;
     this.lastEnd  = t + dur;
 
+    // ピッチ EG とテンポ同期の LFO は、滑らせてつなぐ音では掛け直さない（つながりが途切れないように）
+    const st = pitchEnvSemitones(this.p.pitchEnvAmount);
+    this.pitchEnv.cancelScheduledValues(t);
+    if (st !== 0 && !legato) {
+      this.pitchEnv.setValueAtTime(st * 100, t);
+      this.pitchEnv.setTargetAtTime(0, t, toSeconds(this.p.pitchEnvTime) / 4);  // 時間の4分の1を時定数にして、ほぼ戻りきる
+    } else if (st === 0) {
+      this.pitchEnv.setValueAtTime(0, t);
+    }
+    const retrig = this.p.lfoSync !== "off" && !legato;
+    if (retrig) {
+      retriggerLfo(this.lfoAmp, t);
+      retriggerLfo(this.lfoPitch, t);
+    }
+
     for (const layer of this.layers) {
       layer.setPitch(f, t, glide);
-      layer.trigger(dur, t, velocity);
+      layer.trigger(dur, t, velocity, retrig);
     }
     return this;
   }

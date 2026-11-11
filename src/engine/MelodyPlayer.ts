@@ -168,7 +168,7 @@ export function initMelodySynth() {
   const sound = resolveMelodySound();
   if (sound === "toniq") {
     // Toniq シンセは自前のリバーブを持たない（マスターのリバーブ送りで響きを付ける）
-    melodySynth = new ToniqVoice(getState().toniqSynth).connect(melodyVol);
+    melodySynth = new ToniqVoice(getState().toniqSynth, getState().bpm).connect(melodyVol);
     return;
   }
   const inst   = INSTRUMENTS[sound];
@@ -214,11 +214,14 @@ export async function previewMelodyNote(note: string) {
   melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);
 }
 
-// Toniq シンセの音作りを、鳴っているメロディと試聴の音にすぐ当てる（Synth は作り直さない）
+// Toniq シンセの音作り（と LFO のテンポ同期に使う BPM）を、鳴っているメロディと試聴の音にすぐ当てる（Synth は作り直さない）
 export function applyToniqSynthLive(): void {
-  const params = getState().toniqSynth;
-  if (melodySynth instanceof ToniqVoice) melodySynth.set(params);
-  previewVoice?.set(params);
+  const { toniqSynth: params, bpm } = getState();
+  for (const voice of [melodySynth, previewVoice]) {
+    if (!(voice instanceof ToniqVoice)) continue;
+    voice.setBpm(bpm);
+    voice.set(params);
+  }
 }
 
 // メロディの Synth を今の設定で作り直す（再生中なら鳴っている Part はそのまま新しい Synth で鳴る）
@@ -231,7 +234,7 @@ export function refreshMelodySynth(): void {
 export async function previewToniqPhrase(notes: [string, number][], bpm: number): Promise<number> {
   await Tone.start();
   stopToniqPreview();
-  const voice = new ToniqVoice(getState().toniqSynth).connect(createVolumeNode("melody"));
+  const voice = new ToniqVoice(getState().toniqSynth, bpm).connect(createVolumeNode("melody"));
   previewVoice = voice;
   const beat  = 60 / bpm;
   const start = Tone.now() + 0.05;
