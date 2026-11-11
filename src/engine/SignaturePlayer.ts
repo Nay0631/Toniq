@@ -180,7 +180,7 @@ const vinylNoise: SignatureDef = {
   },
   // grow：ヒスはパートの音作り（標準はレコードヒス）、プチプチ音はプリセット「レコードプチ」のまま（ランダムに鳴らす）
   growCreate: (out, main) => {
-    const preset = findGrowPreset("レコードプチ");
+    const preset = findGrowPreset("vinyl_crackle");  // レコードプチ
     if (preset < 0) return null;
     const crackle = new GrowInstrument(() => growPresetValues(preset)).connect(out);
     return {

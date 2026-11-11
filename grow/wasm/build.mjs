@@ -18,7 +18,7 @@ const exported = [
   "grow_param_count", "grow_param_id", "grow_param_group", "grow_param_name", "grow_param_kind",
   "grow_param_min", "grow_param_max", "grow_param_default", "grow_param_num_choices", "grow_param_choice",
   "grow_param_to_normalised", "grow_param_from_normalised", "grow_param_format",
-  "grow_preset_count", "grow_preset_name", "grow_preset_value",
+  "grow_preset_count", "grow_preset_name", "grow_preset_id", "grow_preset_value",
 ].map(name => `_${name}`);
 
 const sources = [

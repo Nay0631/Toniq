@@ -77,14 +77,14 @@ OSC 1・OSC 2（ユニゾンで最大7枚重ね、左右に広げる）＋サブ
 - 音符は AudioParam（`on` / `off`）の1サンプルだけの合図で渡す（`on` = ノート番号 + 1 + 強さ × 0.5、`off` = ノート番号 + 1）。port のメッセージは書き出しのときに届くのが遅れることがあるので、音符には使わない。パラメーター・BPM は port で送る。
 - 音の終わりの合図は 2ms 遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。同じ高さの音が続くときは、ワークレットが前の音の終わりを無視する。
 - Toniq ではメロディ・コード（音色が grow のとき）とベース・パッド・アルペジオ・シグネチャー・FX / SE（いつも）を grow で鳴らす。和音は同じサンプルに重なる合図を2サンプルずつずらして渡す。
-- 曲に保存するのはパートごとのプリセットの番号と変えた値（ID → 値。null = プリセットのまま）：メロディ `AppState.growPreset` / `growParams`、コード `growChordPreset` / `growChordParams`、ベース・パッド・アルペジオ・シグネチャー `growSounds`（プリセットの null = ジャンルの標準）。
-- FX / SE（`src/engine/FxPlayer.ts` の `GROW_FX`）は「FX …」のプリセットを名前で探して鳴らし、テンポで変わる EG の時間などをその場で上書きする。プリセットがなければ Tone.js の音で鳴る。
-- パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを **名前** で探す（候補を前から順に。今の wasm にない名前は飛ばす）。Toniq 向けのプリセット（ソフトパッド〜ウィンド、「FX …」、ソウベース〜ソフトベース）の名前を変えるときは `GROW_STANDARD`・`SignaturePlayer.ts`（レコードプチ）・`FxPlayer.ts`（`GROW_FX`）もそろえる。
+- 曲に保存するのはパートごとのプリセットの ID（`GrowPresets.cpp` の `id`。wasm の `grow_preset_id`）と変えた値（ID → 値。null = プリセットのまま）：メロディ `AppState.growPreset` / `growParams`、コード `growChordPreset` / `growChordParams`、ベース・パッド・アルペジオ・シグネチャー `growSounds`（プリセットの null = ジャンルの標準）。
+- FX / SE（`src/engine/FxPlayer.ts` の `GROW_FX`）は「FX …」のプリセット（ID は `fx_…`）を探して鳴らし、テンポで変わる EG の時間などをその場で上書きする。プリセットがなければ Tone.js の音で鳴る。
+- パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを ID で探す（候補を前から順に。今の wasm にない ID は飛ばす）。
 
 ## 決まりごと
 
 - パラメーターを足すときは `core/GrowParams.h` の `Param` と `GrowParams`、`core/GrowParams.cpp` の `table`（並びは `Param` と同じ）と `makeParams()` に足す。単体版の画面・Toniq の暫定のパネルは表から作るので、新しいモジュール名を足したときだけ `Source/PluginEditor.cpp` の `layoutRows` にも足す。ID は一度出したら変えない（保存した状態・曲・ホストのオートメーションが読めなくなる）。
-- プリセットの並びを変えると、曲に保存した `growPreset`（番号）が別のプリセットを指す。足すときは後ろに足す。
+- プリセットには変えない ID（ASCII）を付ける。Toniq は曲に ID を保存し、ID で探す（名前・並びを変えても曲の音は変わらない）。ID は一度出したら変えず、消すときは Toniq の `GROW_STANDARD` などの候補から外す。並びは JUCE 版のプログラム番号になるので、足すときは後ろに足す。番号で保存していた頃の曲は、Toniq の `LEGACY_PRESET_IDS`（`src/engine/Grow.ts`。その時点の並び）で ID に読み替えるので、この表は変えない。
 - つまみの値は段差で当てない（ジッパーノイズになる）。音量・カットオフ・レゾナンス・ユニゾン・エフェクトの量などは `Smoother`（`GrowDsp.h`。時定数 `smoothSeconds`）か、ブロックの中で直線につなぐ形で滑らかに変える。新しく鳴らす音は今の値から始める（`snapNext`）。連続的なパラメーターを足したら同じようにする。
 - 鳴っている音をいきなり止めない（クリックになる）。差し替えは `Voice::steal`（約 4ms フェードしてから鳴らす）、まとめて止めるときは `Voice::fadeOut`。すぐ止める `allNotesOff` は再生の停止・初期化だけに使う。
 - wasm には FTZ / DAZ がないので、フィードバック・減衰で 0 に近づく状態（フィルター・コム・オールパス・ディレイ・EG など）は `flushDenormal` を通す（極小の値で計算が10倍ほど遅くなる）。

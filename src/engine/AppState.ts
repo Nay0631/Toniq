@@ -23,11 +23,11 @@ export type ChordInstrument = "grow" | "soft" | "epiano" | "strings" | "organ" |
 // FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
 export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
 
-// grow で鳴らすベース・パッド・アルペジオ・シグネチャーの音作り。preset はコアのプリセットの番号（null = ジャンルの標準。Grow.ts）、
+// grow で鳴らすベース・パッド・アルペジオ・シグネチャーの音作り。preset はコアのプリセットの ID（null = ジャンルの標準。Grow.ts）、
 // params はそこから変えた値（パラメーターの ID → 値。null = プリセットのまま）
 export type GrowPartName = "bass" | "pad" | "arp" | "signature";
 export interface GrowSound {
-  preset: number | null;
+  preset: string | null;
   params: Record<string, number> | null;
 }
 
@@ -146,12 +146,12 @@ export interface AppState {
   // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
   // 設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
   drumSource:       DrumSource;
-  // grow の音作り（曲に保存する）。プリセットの番号（grow のコアの GrowPresets.cpp の並び）と、
+  // grow の音作り（曲に保存する）。プリセットの ID（grow のコアの GrowPresets.cpp の id）と、
   // そこから変えた値（パラメーターの ID → 実際の値。null = プリセットのまま）
-  growPreset:       number;
+  growPreset:       string;
   growParams:       Record<string, number> | null;
   // コードを grow で鳴らすときの音作り（メロディとは別に持つ。形は growPreset / growParams と同じ）
-  growChordPreset:  number;
+  growChordPreset:  string;
   growChordParams:  Record<string, number> | null;
   // ベース・パッド・アルペジオ・シグネチャーの grow の音作り（どれも grow で鳴らす。wasm がないときは Tone.js の音色）
   growSounds:       Record<GrowPartName, GrowSound>;
@@ -239,9 +239,9 @@ export const defaultState: AppState = {
   scaleLock:        true,
   drumCategory:     "EDM",
   drumSource:       "synth",
-  growPreset:       1,  // シンセリード
+  growPreset:       "lead",      // シンセリード
   growParams:       null,
-  growChordPreset:  5,  // ワイドパッド
+  growChordPreset:  "wide_pad",  // ワイドパッド
   growChordParams:  null,
   growSounds: {
     bass:      { preset: null, params: null },

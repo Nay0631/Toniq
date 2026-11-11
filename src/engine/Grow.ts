@@ -1,7 +1,7 @@
 import * as Tone from "tone";
 import workletSource from "./growWorklet.js?raw";
 import { fetchArrayBuffer } from "./DrumSamples";
-import { getState, setState, GrowPartName } from "./AppState";
+import { getState, setState, defaultState, GrowPartName } from "./AppState";
 import arpParams from "../data/arp_params.json";
 
 // grow（Toniq の内部シンセ。C++ のコアを WebAssembly にしたもの。ソースは grow/）を Toniq の再生で鳴らす。
@@ -11,8 +11,8 @@ import arpParams from "../data/arp_params.json";
 //     （再生用と、WAV / MP3 書き出し用のオフラインのコンテキスト）
 //   - 音符は AudioParam の1サンプルだけの合図で渡す（書き出しでもサンプル単位で合う）
 //   - パートごとに別々の音作り（GrowPart）を持つ。和音は同じ時刻の合図を少しずらして渡す
-//   - ベース・パッド・アルペジオ・シグネチャーはジャンルの標準のプリセット（GROW_STANDARD）を名前で探す。
-//     今の wasm にない名前（コアに足したがビルドし直していない）は、後ろの候補の既存のプリセットで鳴らす
+//   - ベース・パッド・アルペジオ・シグネチャーはジャンルの標準のプリセット（GROW_STANDARD）を ID で探す。
+//     今の wasm にない ID（コアに足したがビルドし直していない）は、後ろの候補の既存のプリセットで鳴らす
 // wasm がないとき（まだビルドしていない）は使えず、各パートは Tone.js の音色で鳴る。
 
 const WASM_URL = "grow/grow.wasm";  // 開発サーバー（http）とビルド後の Electron（file://）の両方で読めるよう相対パス
@@ -23,39 +23,39 @@ const OFF_DELAY = 0.002;
 // grow を鳴らすパート（音作りの値はパートごとに AppState に持つ）
 export type GrowPart = "melody" | "chord" | GrowPartName;
 
-// ジャンルの標準のプリセット（名前。前から順に探し、今の wasm にあるものを使う）。
+// ジャンルの標準のプリセット（ID。前から順に探し、今の wasm にあるものを使う）。
 // アルペジオは arp_params.json の instrument、シグネチャーはジャンル（SignaturePlayer.ts の SIGNATURES）ごと
 const ARP_STANDARD: Record<string, string[]> = {
-  pluck:  ["プラック"],
-  square: ["チップリード"],
-  keys:   ["キーズ", "プラック"],
-  bell:   ["ベル", "プラック"],
-  blip:   ["ブリップ", "プラック"],
+  pluck:  ["pluck"],
+  square: ["chip_lead"],
+  keys:   ["keys", "pluck"],
+  bell:   ["bell", "pluck"],
+  blip:   ["blip", "pluck"],
 };
 const SIGNATURE_STANDARD: Record<string, string[]> = {
-  "EDM":       ["スタブ", "スーパーソウ"],
-  "テクノ":     ["アシッド"],
-  "8bit":      ["チップリード"],
-  "ローファイ":  ["レコードヒス", "ノイズスイープ"],
-  "ゲームBGM":  ["ベル", "プラック"],
-  "ハウス":     ["キーズ", "プラック"],
-  "トランス":   ["ゲートソウ", "スーパーソウ"],
-  "アンビエント": ["ウィンド", "ノイズスイープ"],
+  "EDM":       ["stab", "supersaw"],
+  "テクノ":     ["acid"],
+  "8bit":      ["chip_lead"],
+  "ローファイ":  ["vinyl_hiss", "noise_sweep"],
+  "ゲームBGM":  ["bell", "pluck"],
+  "ハウス":     ["keys", "pluck"],
+  "トランス":   ["gate_saw", "supersaw"],
+  "アンビエント": ["wind", "noise_sweep"],
 };
 // ベースは bass_params.json の音色（ジャンル）に合わせる。どれもなければサブベース
 const BASS_STANDARD: Record<string, string[]> = {
-  "EDM":       ["ソウベース", "サブベース"],
-  "テクノ":     ["スクエアベース", "サブベース"],
-  "8bit":      ["チップベース", "サブベース"],
-  "ローファイ":  ["サブベース"],
-  "ゲームBGM":  ["ソウベース", "サブベース"],
-  "ハウス":     ["スクエアベース", "サブベース"],
-  "トランス":   ["ローリングベース", "サブベース"],
-  "アンビエント": ["ソフトベース", "サブベース"],
+  "EDM":       ["saw_bass", "sub_bass"],
+  "テクノ":     ["square_bass", "sub_bass"],
+  "8bit":      ["chip_bass", "sub_bass"],
+  "ローファイ":  ["sub_bass"],
+  "ゲームBGM":  ["saw_bass", "sub_bass"],
+  "ハウス":     ["square_bass", "sub_bass"],
+  "トランス":   ["rolling_bass", "sub_bass"],
+  "アンビエント": ["soft_bass", "sub_bass"],
 };
 const GROW_STANDARD: Record<GrowPartName, (genre: string) => string[]> = {
   bass:      genre => BASS_STANDARD[genre] ?? BASS_STANDARD["ローファイ"],
-  pad:       () => ["ソフトパッド", "ワイドパッド"],
+  pad:       () => ["soft_pad", "wide_pad"],
   arp:       genre => {
     const params = arpParams as unknown as Record<string, { instrument: string }>;
     return ARP_STANDARD[(params[genre] ?? params["ローファイ"]).instrument] ?? ARP_STANDARD.pluck;
@@ -97,6 +97,7 @@ interface GrowExports {
   grow_param_format(i: number, v: number): number;
   grow_preset_count(): number;
   grow_preset_name(i: number): number;
+  grow_preset_id?(i: number): number;  // 古い wasm にはない
   grow_preset_value(preset: number, i: number): number;
 }
 
@@ -104,6 +105,7 @@ let wasmBytes: ArrayBuffer | null = null;
 let ex: GrowExports | null = null;
 let params: GrowParamMeta[] = [];
 let presetNames: string[] = [];
+let presetIds:   string[] = [];
 let loading: Promise<boolean> | null = null;
 
 const decoder = new TextDecoder();
@@ -153,6 +155,8 @@ export function loadGrow(): Promise<boolean> {
         choices:      Array.from({ length: ex!.grow_param_num_choices(i) }, (_, c) => readString(ex!.grow_param_choice(i, c))),
       }));
       presetNames = Array.from({ length: ex.grow_preset_count() }, (_, i) => readString(ex!.grow_preset_name(i)));
+      // 古い wasm（grow_preset_id がない）は、番号の並びを LEGACY_PRESET_IDS とみなす
+      presetIds = presetNames.map((_, i) => ex!.grow_preset_id ? readString(ex!.grow_preset_id(i)) : LEGACY_PRESET_IDS[i] ?? "");
       return true;
     } catch (e) {
       console.warn("grow の wasm を読み込めませんでした:", e);
@@ -174,6 +178,58 @@ export function growPresetNames(): string[] {
   return presetNames;
 }
 
+// プリセットの ID（番号順。曲にはこれを保存する）
+export function growPresetIds(): string[] {
+  return presetIds;
+}
+
+// プリセットを番号で保存していた頃の並び（番号 → ID）。古い曲の growPreset などを ID に読み替える（SongLibrary.ts）。
+// コアのプリセットの並びを変えてもこの表は変えない
+export const LEGACY_PRESET_IDS: readonly string[] = [
+  "init",
+  "lead",
+  "supersaw",
+  "pluck",
+  "acid",
+  "wide_pad",
+  "sub_bass",
+  "chip_lead",
+  "noise_sweep",
+  "soft_pad",
+  "keys",
+  "bell",
+  "blip",
+  "stab",
+  "gate_saw",
+  "vinyl_hiss",
+  "vinyl_crackle",
+  "wind",
+  "epiano",
+  "organ",
+  "strings",
+  "square",
+  "fx_riser_noise",
+  "fx_riser_pitch",
+  "fx_boom",
+  "fx_burst",
+  "fx_down_noise",
+  "fx_down_tone",
+  "fx_reverse",
+  "fx_chip",
+  "saw_bass",
+  "square_bass",
+  "rolling_bass",
+  "chip_bass",
+  "soft_bass",
+];
+
+// 番号で保存していた値を ID にする（文字列ならそのまま。読めなければ fallback）
+export function presetIdFromSaved<T extends string | null>(saved: unknown, fallback: T): string | T {
+  if (typeof saved === "string") return saved;
+  if (typeof saved === "number") return LEGACY_PRESET_IDS[saved] ?? fallback;
+  return fallback;
+}
+
 export function formatGrowParam(index: number, value: number): string {
   return ex ? readString(ex.grow_param_format(index, value)) : String(value);
 }
@@ -187,10 +243,10 @@ export function growFromNormalised(index: number, normalised: number): number {
   return ex ? ex.grow_param_from_normalised(index, normalised) : 0;
 }
 
-// 名前の前から順に探し、最初に見つかったプリセットの番号（どれもなければ -1）
-export function findGrowPreset(...names: string[]): number {
-  for (const name of names) {
-    const index = presetNames.indexOf(name);
+// ID の前から順に探し、最初に見つかったプリセットの番号（どれもなければ -1）
+export function findGrowPreset(...ids: string[]): number {
+  for (const id of ids) {
+    const index = presetIds.indexOf(id);
     if (index >= 0) return index;
   }
   return -1;
@@ -206,7 +262,7 @@ export function standardGrowPreset(part: GrowPartName, genre: string = getState(
 }
 
 // AppState に保存しているパートの音作り（ベース・パッド・アルペジオ・シグネチャーの preset は null = ジャンルの標準）
-export function storedGrowSound(part: GrowPart): { preset: number | null; params: Record<string, number> | null } {
+export function storedGrowSound(part: GrowPart): { preset: string | null; params: Record<string, number> | null } {
   const s = getState();
   if (part === "melody") return { preset: s.growPreset,      params: s.growParams };
   if (part === "chord")  return { preset: s.growChordPreset, params: s.growChordParams };
@@ -214,16 +270,21 @@ export function storedGrowSound(part: GrowPart): { preset: number | null; params
 }
 
 // パートの音作りを書き換える（メロディ・コードは preset に null を渡さない）
-export function setGrowSound(part: GrowPart, preset: number | null, params: Record<string, number> | null): void {
-  if (part === "melody")     setState({ growPreset: preset ?? 0, growParams: params });
-  else if (part === "chord") setState({ growChordPreset: preset ?? 0, growChordParams: params });
+export function setGrowSound(part: GrowPart, preset: string | null, params: Record<string, number> | null): void {
+  if (part === "melody")     setState({ growPreset: preset ?? defaultState.growPreset, growParams: params });
+  else if (part === "chord") setState({ growChordPreset: preset ?? defaultState.growChordPreset, growChordParams: params });
   else setState({ growSounds: { ...getState().growSounds, [part]: { preset, params } } });
 }
 
-// パートの grow の音作り（実際に使うプリセットの番号と、そこから変えた値）
+// パートの grow の音作り（実際に使うプリセットの番号と、そこから変えた値）。
+// 保存した ID が今の wasm にないとき（プリセットを消した・古い wasm）は、ジャンルの標準（メロディ・コードは初期値のプリセット）
 export function growSettings(part: GrowPart): { preset: number; params: Record<string, number> | null } {
   const { preset, params } = storedGrowSound(part);
-  return { preset: preset ?? (isPartName(part) ? standardGrowPreset(part) : 0), params };
+  const found = preset === null ? -1 : findGrowPreset(preset);
+  if (found >= 0) return { preset: found, params };
+  if (isPartName(part)) return { preset: standardGrowPreset(part), params };
+  const initial = part === "chord" ? defaultState.growChordPreset : defaultState.growPreset;
+  return { preset: Math.max(0, findGrowPreset(initial)), params };
 }
 
 // プリセットそのままの値（パラメーターの番号順）

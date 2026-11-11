@@ -295,7 +295,7 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
 };
 
 // ===== grow で鳴らす定義 =====
-// 各音はコアの「FX …」のプリセット。テンポで長さが変わる値（EG の時間）は、作るときに今の BPM から計算して上書きする
+// 各音はコアの「FX …」のプリセット（ID は fx_…）。テンポで長さが変わる値（EG の時間）は、作るときに今の BPM から計算して上書きする
 // （AudioParam の合図で渡す音符と違い、値の変更は書き出しで届くのが遅れることがあるので、作るときに決めておく。
 //   BPM を変えたときは applyGrowLive で当て直す）
 
@@ -309,9 +309,9 @@ function fxTiming(): FxTiming {
 
 const PITCH_ENV_MAX = 2;  // ピッチ EG の時間の上限（秒。コアの penv_time の最大）
 
-// プリセット（名前）の grow を1台作る。overrides は長さからその音の上書きする値を作る。プリセットがなければ null
-function growFx(out: Tone.ToneAudioNode, name: string, overrides: (t: FxTiming) => Record<string, number> = () => ({})) {
-  const preset = findGrowPreset(name);
+// プリセット（ID）の grow を1台作る。overrides は長さからその音の上書きする値を作る。プリセットがなければ null
+function growFx(out: Tone.ToneAudioNode, id: string, overrides: (t: FxTiming) => Record<string, number> = () => ({})) {
+  const preset = findGrowPreset(id);
   if (preset < 0) return null;
   return new GrowInstrument(() => growPresetValuesWith(preset, overrides(fxTiming()))).connect(out);
 }
@@ -324,8 +324,8 @@ function disposeAll(list: ({ dispose(): unknown } | null | undefined)[]): null {
 
 // ライザー（ノイズ＋音程）。音量・フィルター・音程が rise の長さをかけて上がる
 function growRiser(out: Tone.ToneAudioNode) {
-  const noise = growFx(out, "FX ライザーノイズ", t => ({ fenv_attack: t.rise, aenv_attack: t.rise }));
-  const pitch = growFx(out, "FX ライザーピッチ", t => ({
+  const noise = growFx(out, "fx_riser_noise", t => ({ fenv_attack: t.rise, aenv_attack: t.rise }));
+  const pitch = growFx(out, "fx_riser_pitch", t => ({
     fenv_attack: t.rise, aenv_attack: t.rise, penv_time: Math.min(PITCH_ENV_MAX, t.rise),
   }));
   if (!noise || !pitch) return disposeAll([noise, pitch]);
@@ -340,8 +340,8 @@ function growRiser(out: Tone.ToneAudioNode) {
 
 // インパクト（沈むブーム＋閉じていくノイズ）
 function growImpact(out: Tone.ToneAudioNode) {
-  const boom  = growFx(out, "FX ブーム");
-  const burst = growFx(out, "FX バースト");
+  const boom  = growFx(out, "fx_boom");
+  const burst = growFx(out, "fx_burst");
   if (!boom || !burst) return disposeAll([boom, burst]);
   return {
     hit: (time: number) => {
@@ -369,8 +369,8 @@ const GROW_FX: Record<FxKind, (out: Tone.ToneAudioNode) => FxVoice | null> = {
   },
   // ダウンリフター：ループの頭から1小節かけてノイズと音程が下がる
   downlifter: out => {
-    const noise = growFx(out, "FX ダウンノイズ", t => ({ fenv_decay: t.bar, aenv_decay: t.bar }));
-    const tone  = growFx(out, "FX ダウントーン", t => ({
+    const noise = growFx(out, "fx_down_noise", t => ({ fenv_decay: t.bar, aenv_decay: t.bar }));
+    const tone  = growFx(out, "fx_down_tone", t => ({
       aenv_decay: t.bar * 0.6, penv_time: Math.min(PITCH_ENV_MAX, t.bar * 0.6),
     }));
     if (!noise || !tone) return disposeAll([noise, tone]);
@@ -385,7 +385,7 @@ const GROW_FX: Record<FxKind, (out: Tone.ToneAudioNode) => FxVoice | null> = {
   },
   // リバースシンバル：最後の2拍でふくらみ、ループの頭で切れる
   reverse: out => {
-    const cymbal = growFx(out, "FX リバース", t => ({ aenv_attack: t.half }));
+    const cymbal = growFx(out, "fx_reverse", t => ({ aenv_attack: t.half }));
     if (!cymbal) return null;
     return {
       rise:    (time, dur) => cymbal.triggerAttackRelease("C4", dur - 0.02, time),
@@ -395,8 +395,8 @@ const GROW_FX: Record<FxKind, (out: Tone.ToneAudioNode) => FxVoice | null> = {
   },
   // チップSE：最後の2拍で32分音符の駆け上がり（3半音ずつ4オクターブ）、ループの頭で「ピュン」
   chip: out => {
-    const run = growFx(out, "FX チップ");
-    const zap = growFx(out, "FX チップ", () => ({ penv_amount: 36, penv_time: 0.35, aenv_decay: 0.35, aenv_sustain: 0 }));
+    const run = growFx(out, "fx_chip");
+    const zap = growFx(out, "fx_chip", () => ({ penv_amount: 36, penv_time: 0.35, aenv_decay: 0.35, aenv_sustain: 0 }));
     if (!run || !zap) return disposeAll([run, zap]);
     return {
       rise: (time, dur) => {

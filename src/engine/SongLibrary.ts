@@ -3,6 +3,7 @@ import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./SimpleModeResolver";
 import { emptyArrangement } from "./LoopArranger";
 import { resetHistory } from "./History";
+import { presetIdFromSaved } from "./Grow";
 
 export { SONG_FIELDS };
 export type { SongFields };
@@ -95,6 +96,18 @@ export function deleteSong(id: string): void {
   if (getState().songId === id) setState({ songId: null });
 }
 
+// 保存した grow の音作り（ベースなど）。足りないパートは初期値で補い、番号のプリセットは ID に読み替える
+function growSoundsFromSaved(saved: unknown): SongFields["growSounds"] {
+  const sounds = structuredClone(defaultState.growSounds);
+  if (typeof saved !== "object" || saved === null) return sounds;
+  (Object.keys(sounds) as (keyof typeof sounds)[]).forEach(part => {
+    const s = (saved as Record<string, { preset?: unknown; params?: Record<string, number> | null }>)[part];
+    if (!s) return;
+    sounds[part] = { preset: presetIdFromSaved(s.preset, null), params: s.params ?? null };
+  });
+  return sounds;
+}
+
 // 保存した曲の内容を取り出す。あとから増えた項目（FX の種類・シグネチャーなど）は、古い曲では初期値で補う
 function songFields(song: Partial<SongFields>): SongFields {
   const fields = {} as Record<string, unknown>;
@@ -104,7 +117,10 @@ function songFields(song: Partial<SongFields>): SongFields {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
     volumes:     { ...defaultState.volumes, ...loaded.volumes },
-    growSounds:  { ...structuredClone(defaultState.growSounds), ...loaded.growSounds },
+    // grow のプリセットは以前は番号で保存していた（今は ID）。番号なら ID に読み替える
+    growPreset:      presetIdFromSaved(loaded.growPreset, defaultState.growPreset),
+    growChordPreset: presetIdFromSaved(loaded.growChordPreset, defaultState.growChordPreset),
+    growSounds:      growSoundsFromSaved(loaded.growSounds),
     // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）。
     // 今の grow は "grow"（growPreset / growParams）
     melodyInstrument: (loaded.melodyInstrument as string) === "toniq" ? "auto" : loaded.melodyInstrument,
@@ -133,7 +149,8 @@ export function loadSong(id: string): boolean {
 // ミュージックリストの曲を JSON ファイルにして、バックアップや別の PC への持ち運びに使う
 
 const FILE_FORMAT  = "toniq-song";
-const FILE_VERSION = 1;
+// 2：grow のプリセットを番号ではなく ID で保存する（1 の番号は読み込み時に ID へ読み替える）
+const FILE_VERSION = 2;
 export const SONG_FILE_EXT = ".toniq.json";
 
 interface SongFile {

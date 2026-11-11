@@ -1,6 +1,6 @@
 import { getState, type GrowPartName } from "../engine/AppState";
 import {
-  loadGrow, isGrowLoaded, growParamList, growPresetNames, currentGrowValues, growSettings, applyGrowLive,
+  loadGrow, isGrowLoaded, growParamList, growPresetNames, growPresetIds, currentGrowValues, growSettings, applyGrowLive,
   storedGrowSound, setGrowSound, standardGrowPreset,
   formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta, type GrowPart,
 } from "../engine/Grow";
@@ -41,7 +41,7 @@ function hasStandard(part: GrowPart): part is GrowPartName {
 }
 
 // プリセットのセレクトの「ジャンルの標準」の値
-const STANDARD_VALUE = "-1";
+const STANDARD_VALUE = "";  // ID は空にならないので、空を「ジャンルの標準」に使う
 
 function $(id: string): HTMLElement {
   return document.getElementById(id)!;
@@ -86,7 +86,8 @@ function build(): void {
     if (!groups.has(p.group)) groups.set(p.group, []);
     groups.get(p.group)!.push(p);
   });
-  const presets = growPresetNames().map((n, i) => `<option value="${i}">${escapeHtml(n)}</option>`).join("");
+  const ids = growPresetIds();
+  const presets = growPresetNames().map((n, i) => `<option value="${escapeHtml(ids[i])}">${escapeHtml(n)}</option>`).join("");
   const modules = [...groups].map(([group, list]) => `
     <section class="grow-module">
       <h4 class="grow-module-title">${escapeHtml(group)}</h4>
@@ -112,7 +113,7 @@ function build(): void {
   });
   ($("c-grow-preset") as HTMLSelectElement).addEventListener("change", e => {
     const value = (e.target as HTMLSelectElement).value;
-    setGrowSound(target, value === STANDARD_VALUE ? null : Number(value), null);
+    setGrowSound(target, value === STANDARD_VALUE ? null : value, null);
     applyGrowLive();
     renderPanel();
   });
@@ -155,7 +156,7 @@ function renderPanel(): void {
     const name = growPresetNames()[standardGrowPreset(target)] ?? "";
     standard.textContent = `ジャンルの標準（${name}）`;
   }
-  ($("c-grow-preset") as HTMLSelectElement).value = stored.preset === null ? STANDARD_VALUE : String(settings.preset);
+  ($("c-grow-preset") as HTMLSelectElement).value = stored.preset === null ? STANDARD_VALUE : growPresetIds()[settings.preset] ?? "";
   ($("c-grow-reset") as HTMLButtonElement).disabled = settings.params === null;
   $("c-grow-edited").textContent = settings.params === null ? "" : "プリセットから変更しています";
 

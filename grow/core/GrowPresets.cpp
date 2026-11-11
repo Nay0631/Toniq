@@ -22,6 +22,7 @@ struct Value
 
 struct Preset
 {
+    const char* id;       // 変えない ID（Toniq は曲にこれを保存し、これで探す）
     const char* name;
     const Value* values;  // 初期値から変える値
     int count;
@@ -390,47 +391,48 @@ const Value softBass[] = {
 };
 
 template <std::size_t N>
-constexpr Preset preset (const char* name, const Value (&values)[N]) { return { name, values, (int) N }; }
+constexpr Preset preset (const char* id, const char* name, const Value (&values)[N]) { return { id, name, values, (int) N }; }
 
+// 並びは番号（JUCE 版のプログラム番号）になる。足すときは後ろに足す。ID は一度出したら変えない
 const Preset presets[] = {
-    { "初期化", nullptr, 0 },
-    preset ("シンセリード", lead),
-    preset ("スーパーソウ", supersaw),
-    preset ("プラック", pluck),
-    preset ("アシッド", acid),
-    preset ("ワイドパッド", pad),
-    preset ("サブベース", subBass),
-    preset ("チップリード", chipLead),
-    preset ("ノイズスイープ", noiseSweep),
-    // ここから Toniq のパート向け（Toniq は名前で探すので、名前を変えるときは src/engine/Grow.ts もそろえる）
-    preset ("ソフトパッド", softPad),
-    preset ("キーズ", keys),
-    preset ("ベル", bell),
-    preset ("ブリップ", blip),
-    preset ("スタブ", stab),
-    preset ("ゲートソウ", gateSaw),
-    preset ("レコードヒス", vinylHiss),
-    preset ("レコードプチ", vinylCrackle),
-    preset ("ウィンド", wind),
-    preset ("エレピ", ePiano),
-    preset ("オルガン", organ),
-    preset ("ストリングス", strings),
-    preset ("スクエア", squareChord),
-    // FX / SE 向け（FxPlayer.ts が名前で探す）
-    preset ("FX ライザーノイズ", fxRiserNoise),
-    preset ("FX ライザーピッチ", fxRiserPitch),
-    preset ("FX ブーム", fxBoom),
-    preset ("FX バースト", fxBurst),
-    preset ("FX ダウンノイズ", fxDownNoise),
-    preset ("FX ダウントーン", fxDownTone),
-    preset ("FX リバース", fxReverse),
-    preset ("FX チップ", fxChip),
-    // ベース向け（Toniq は名前で探す。src/engine/Grow.ts の GROW_STANDARD）
-    preset ("ソウベース", sawBass),
-    preset ("スクエアベース", squareBass),
-    preset ("ローリングベース", rollingBass),
-    preset ("チップベース", chipBass),
-    preset ("ソフトベース", softBass),
+    { "init", "初期化", nullptr, 0 },
+    preset ("lead", "シンセリード", lead),
+    preset ("supersaw", "スーパーソウ", supersaw),
+    preset ("pluck", "プラック", pluck),
+    preset ("acid", "アシッド", acid),
+    preset ("wide_pad", "ワイドパッド", pad),
+    preset ("sub_bass", "サブベース", subBass),
+    preset ("chip_lead", "チップリード", chipLead),
+    preset ("noise_sweep", "ノイズスイープ", noiseSweep),
+    // ここから Toniq のパート向け（Toniq は ID で探す。src/engine/Grow.ts の GROW_STANDARD）
+    preset ("soft_pad", "ソフトパッド", softPad),
+    preset ("keys", "キーズ", keys),
+    preset ("bell", "ベル", bell),
+    preset ("blip", "ブリップ", blip),
+    preset ("stab", "スタブ", stab),
+    preset ("gate_saw", "ゲートソウ", gateSaw),
+    preset ("vinyl_hiss", "レコードヒス", vinylHiss),
+    preset ("vinyl_crackle", "レコードプチ", vinylCrackle),
+    preset ("wind", "ウィンド", wind),
+    preset ("epiano", "エレピ", ePiano),
+    preset ("organ", "オルガン", organ),
+    preset ("strings", "ストリングス", strings),
+    preset ("square", "スクエア", squareChord),
+    // FX / SE 向け（FxPlayer.ts が ID で探す）
+    preset ("fx_riser_noise", "FX ライザーノイズ", fxRiserNoise),
+    preset ("fx_riser_pitch", "FX ライザーピッチ", fxRiserPitch),
+    preset ("fx_boom", "FX ブーム", fxBoom),
+    preset ("fx_burst", "FX バースト", fxBurst),
+    preset ("fx_down_noise", "FX ダウンノイズ", fxDownNoise),
+    preset ("fx_down_tone", "FX ダウントーン", fxDownTone),
+    preset ("fx_reverse", "FX リバース", fxReverse),
+    preset ("fx_chip", "FX チップ", fxChip),
+    // ベース向け（Toniq は ID で探す。src/engine/Grow.ts の GROW_STANDARD）
+    preset ("saw_bass", "ソウベース", sawBass),
+    preset ("square_bass", "スクエアベース", squareBass),
+    preset ("rolling_bass", "ローリングベース", rollingBass),
+    preset ("chip_bass", "チップベース", chipBass),
+    preset ("soft_bass", "ソフトベース", softBass),
 };
 
 constexpr int presetCount = (int) (sizeof (presets) / sizeof (presets[0]));
@@ -444,6 +446,11 @@ int numPresets()
 const char* presetName (int index)
 {
     return index >= 0 && index < presetCount ? presets[index].name : "";
+}
+
+const char* presetId (int index)
+{
+    return index >= 0 && index < presetCount ? presets[index].id : "";
 }
 
 void presetValues (int index, float* values)

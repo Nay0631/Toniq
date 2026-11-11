@@ -73,6 +73,7 @@ GROW_EXPORT const char* grow_param_format (int i, float value)
 
 GROW_EXPORT int grow_preset_count()               { return grow::numPresets(); }
 GROW_EXPORT const char* grow_preset_name (int i)  { return grow::presetName (i); }
+GROW_EXPORT const char* grow_preset_id (int i)    { return grow::presetId (i); }
 
 // プリセットの値（index 番目のパラメーター）
 GROW_EXPORT float grow_preset_value (int preset, int index)
