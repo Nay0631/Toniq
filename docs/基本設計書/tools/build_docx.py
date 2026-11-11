@@ -289,9 +289,9 @@ def strip_num(t):
     return re.sub(r'^\d+(\.\d+)*\.?\s+', '', t)
 
 FIG_INTRO = {
-    'ロバストネス図': '実装済みの機能ごとのロバストネス図を示す。未実装の K01-3・A01-4 は実装後に作成する。',
-    'シーケンス図': '実装済みの機能ごとのシーケンス図を示す。未実装の K01-3・A01-4 は実装後に作成する。',
-    'クラス図': 'システム全体のクラス図と、実装済みの機能ごとのクラス図を示す。未実装の K01-3・A01-4 は実装後に作成する。',
+    'ロバストネス図': '機能ごとのロバストネス図を示す。',
+    'シーケンス図': '機能ごとのシーケンス図を示す。',
+    'クラス図': 'システム全体のクラス図と、機能ごとのクラス図を示す。',
 }
 
 def flush_fig():
@@ -354,7 +354,8 @@ for b in blocks:
         m = re.match(r'([A-Z]\d\d-\d+)\s+(.*)', text)
         if lvl == 4 and m:
             func = m.group(1)
-            out.append(heading(3, text))
+            # 見出しは機能名だけにする（機能IDは機能定義の表の「機能ID」の行に書く。「（追加）」などの注記も外す）
+            out.append(heading(3, re.sub(r'（[^）]*）$', '', m.group(2)).strip()))
             continue
         if chapter and chapter.startswith('6.') and lvl == 4:
             out.append(heading(2, text))
@@ -373,7 +374,7 @@ for b in blocks:
     if kind == 'p':
         t = b[1]
         if chapter and chapter.startswith('6.') and t.startswith('ファイル名の決まり'):
-            t = '全体と機能グループごとのユースケース図を示す。未実装の K01-3・A01-4 は図に含めない（実装後に追加する）。'
+            t = '全体と機能グループごとのユースケース図を示す。'
         out.append(para(t))
     elif kind == 'b':
         out.append(bullet(b[1]))
