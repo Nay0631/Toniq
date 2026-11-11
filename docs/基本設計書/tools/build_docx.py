@@ -4,6 +4,7 @@
 # 手本の docx の本文を「段落・表の並び」に分け、番号で場所を決めて使っている
 # （表紙・改訂履歴・目次 = 0〜148、裏表紙 = 460〜、機能定義の表の手本 = 203、改訂履歴の表 = 33、表紙の日付 = 23）。
 # 手本の docx を編集すると番号がずれるので、そのときは番号を見直す（ずれると assert で止まる）。
+# 6.2 ユースケース記述の表は手本にないので usecase_table で組み立てる（表の行が足りないと assert で止まる）。
 #
 # 使い方:
 #   py build_docx.py 仕様書.md 手本.docx PNGフォルダ 図フォルダ 出力.docx 日付(YYYY/MM/DD) 改訂番号 改訂の概要
@@ -203,6 +204,45 @@ def function_table(fid, fname, kv):
     rows = [set_value(r, v) for r, v in zip(FT_ROWS, vals)]
     return FT_HEAD + ''.join(rows) + '</w:tbl>' + empty()
 
+# ---------- ユースケース記述の表（6.2。手本の docx にはないので組み立てる） ----------
+# 1行目は「作成日｜値｜版数｜値｜作者｜値」の6列、2行目からは「項目｜内容（5列分を結合）」。
+UC_W = [1900, 1750, 1000, 650, 1000, 2983]
+assert sum(UC_W) == TBL_W
+UC_HEAD = ['作成日', '版数', '作者']
+UC_ROWS = ['ユースケース名', '概要', '主アクタ', '支援アクタ', '事前条件', '事後条件', 'トリガー',
+           '基本フロー', '代替フロー', '例外フロー', '備考・注記']
+UC_LABEL_RPR = '<w:rPr><w:rFonts w:hAnsiTheme="minorEastAsia" w:hint="eastAsia"/><w:sz w:val="21"/><w:szCs w:val="21"/></w:rPr>'
+UC_VAL_RPR = '<w:rPr><w:rFonts w:hAnsiTheme="minorEastAsia" w:hint="eastAsia"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>'
+
+def uc_cell(w, text, rpr, span=1, center=False):
+    gs = f'<w:gridSpan w:val="{span}"/>' if span > 1 else ''
+    jc = 'center' if center else 'left'
+    lines = [x.strip() for x in text.split('<br>')] if text else ['']
+    paras = ''.join(f'<w:p><w:pPr><w:spacing w:line="300" w:lineRule="auto"/><w:jc w:val="{jc}"/></w:pPr>{runs(x, rpr)}</w:p>' for x in lines)
+    return f'<w:tc><w:tcPr><w:tcW w:w="{w}" w:type="dxa"/>{gs}<w:vAlign w:val="center"/></w:tcPr>{paras}</w:tc>'
+
+def usecase_table(kv):
+    missing = [k for k in UC_HEAD + UC_ROWS if k not in kv]
+    assert not missing, ('ユースケース記述の表に行がない', kv.get('ユースケース名'), missing)
+    tblpr = ('<w:tblPr><w:tblW w:w="9283" w:type="dxa"/><w:tblInd w:w="210" w:type="dxa"/><w:tblBorders>'
+             + ''.join(f'<w:{b} w:val="single" w:sz="8" w:space="0" w:color="auto"/>' for b in ['top', 'left', 'bottom', 'right'])
+             + ''.join(f'<w:{b} w:val="single" w:sz="4" w:space="0" w:color="auto"/>' for b in ['insideH', 'insideV'])
+             + '</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="85" w:type="dxa"/><w:right w:w="85" w:type="dxa"/></w:tblCellMar>'
+               '<w:tblLook w:val="04A0" w:firstRow="0" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr>')
+    grid = '<w:tblGrid>' + ''.join(f'<w:gridCol w:w="{w}"/>' for w in UC_W) + '</w:tblGrid>'
+    xml = '<w:tbl>' + tblpr + grid
+    # 1行目：作成日・版数・作者
+    xml += '<w:tr><w:trPr><w:cantSplit/></w:trPr>'
+    for i, k in enumerate(UC_HEAD):
+        xml += uc_cell(UC_W[i * 2], k, UC_LABEL_RPR)
+        xml += uc_cell(UC_W[i * 2 + 1], kv[k], UC_LABEL_RPR, center=True)
+    xml += '</w:tr>'
+    # 2行目から：項目と内容
+    for k in UC_ROWS:
+        xml += ('<w:tr><w:trPr><w:cantSplit/></w:trPr>' + uc_cell(UC_W[0], k, UC_LABEL_RPR)
+                + uc_cell(TBL_W - UC_W[0], kv[k], UC_VAL_RPR, span=5) + '</w:tr>')
+    return xml + '</w:tbl>' + empty()
+
 # ---------- 図 ----------
 IMG = []   # (rid_png, rid_svg, png_path, svg_path)
 def svg_size(path):
@@ -357,8 +397,16 @@ for b in blocks:
             # 見出しは機能名だけにする（機能IDは機能定義の表の「機能ID」の行に書く。「（追加）」などの注記も外す）
             out.append(heading(3, re.sub(r'（[^）]*）$', '', m.group(2)).strip()))
             continue
-        if chapter and chapter.startswith('6.') and lvl == 4:
-            out.append(heading(2, text))
+        if chapter and chapter.startswith('6.'):
+            # 6.1 ユースケース図・6.2 ユースケース記述 → 見出し2、図名・機能グループ → 見出し3、
+            # ユースケース（##### B01-1 BPM選択機能）→ 見出し4（機能名だけ。「（追加）」などの注記も外す）
+            if lvl == 3:
+                out.append(heading(2, strip_num(text)))
+            elif lvl == 4:
+                out.append(heading(3, text))
+            else:
+                t = re.sub(r'^[A-Z]\d\d-\d+\s+', '', text)
+                out.append(heading(4, re.sub(r'（[^）]*）$', '', t).strip()))
             continue
         out.append(heading(min(lvl - 1, 3), strip_num(text)))
         continue
@@ -388,6 +436,8 @@ for b in blocks:
             kv = {r[0]: r[1] for r in rows[1:]}
             out.append(function_table(func, FNAME.get(func, ''), kv))
             func = None
+        elif rows[0] == ['項目', '記述'] and chapter and chapter.startswith('6.'):
+            out.append(usecase_table({r[0]: r[1] for r in rows[1:]}))
         elif chapter and chapter.startswith('16.') and rows[0][0] == '節':
             for r in rows[1:]:
                 out.append(heading(2, strip_num(r[0])))
