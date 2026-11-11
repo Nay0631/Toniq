@@ -105,6 +105,12 @@ function registerFileHandlers(): void {
     shell.openPath(kind ? outputDir(kind) : outputRoot));
 }
 
+// ウィンドウのアイコン。ビルド後は dist/（public の中身がコピーされる）、開発時は public/ にある
+function windowIcon(): string | undefined {
+  return [path.join(__dirname, "../dist/icon.png"), path.join(__dirname, "../public/icon.png")]
+    .find(p => fs.existsSync(p));
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width:  1200,
@@ -112,6 +118,7 @@ function createWindow() {
     minWidth:  800,
     minHeight: 600,
     title: "Toniq",
+    icon: windowIcon(),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
