@@ -52,7 +52,7 @@ private:
     void updateBlockSettings (const GrowParams& p, int numSamples);
     void snapSmoothing();
     void finishFade();
-    float lfoValue (LfoWave wave) const noexcept;
+    static float lfoShape (LfoWave wave, float phase, float hold) noexcept;
 
     VoiceShared* shared = nullptr;
     double sampleRate = 44100.0;
@@ -72,10 +72,12 @@ private:
     float pendingVelocity = 1.0f;
     bool  pendingStopped = false;  // 鳴らす前にその鍵盤を離した
 
-    Adsr ampEnv, filterEnv;
+    Adsr ampEnv, filterEnv, eg2;
 
     float phases[2][maxUnison] {};
     float subPhase = 0.0f;
+    // OSC 変調：変調の元（OSC 2 の高さの1本の波）の位相と、ハードシンクの親（OSC 1 の高さ）の位相
+    float modPhase = 0.0f, syncPhase = 0.0f;
     // ユニゾンの1枚ずつの高さの比と左右の音量。target はブロックの頭に求めた目標、cur は今の値（1サンプルずつ inc だけ動かす）
     float targetRatio[2][maxUnison] {}, targetLeft[2][maxUnison] {}, targetRight[2][maxUnison] {};
     float curRatio[2][maxUnison] {}, curLeft[2][maxUnison] {}, curRight[2][maxUnison] {};
@@ -84,13 +86,18 @@ private:
     bool  unisonReady = false;  // false なら次のブロックで今の値を目標にそろえる（発音の頭）
 
     // 1サンプルごとに滑らかにする値
-    Smoother lfoPitchSmooth, lfoAmpSmooth, subSmooth, noiseSmooth;
+    Smoother lfoPitchSmooth, lfoAmpSmooth, subSmooth, noiseSmooth, fmSmooth, ringSmooth, pwSmooth[2], lfoPwSmooth;
     // フィルターの計算し直し（filterEvery サンプルごと）に合わせて滑らかにする値
     Smoother cutoffSmooth, qSmooth, envAmountSmooth, lfoFilterSmooth, keyTrackSmooth, driveSmooth;
 
     float lfoPhase = 0.0f;
     float lfoHold  = 0.0f;  // ランダム（サンプル＆ホールド）の今の値
     float pitchEnvLevel = 0.0f;
+    // LFO 2 の位相・ランダムの今の値、LFO 1 / 2 のフェードインの進み具合（0〜1）、音ごとのランダム（-1〜1）
+    float lfo2Phase = 0.0f, lfo2Hold = 0.0f;
+    float lfoFadeLevel = 1.0f, lfo2FadeLevel = 1.0f;
+    float noteRandom = 0.0f;
+    Smoother modAmountSmooth[numModSlots];
 
     // ドリフト（アナログらしいずれ。量は GrowParams::drift）。
     // 音ごとに決める高さ・カットオフのずれ（-1〜1）と、高さのゆっくりした揺れ（今の値・目指す値・次に目指す値を選び直すまでのサンプル数）

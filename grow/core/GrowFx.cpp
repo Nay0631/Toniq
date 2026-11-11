@@ -11,10 +11,22 @@ namespace
 constexpr double maxDelaySeconds  = 4.0;
 constexpr double chorusMaxSeconds = 0.05;
 
-// Freeverb の長さ（44.1kHz のサンプル数。サンプリング周波数に合わせて伸ばす）。右は少しずらして左右に広げる
-constexpr int combTunings[]    = { 1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617 };
-constexpr int allpassTunings[] = { 556, 441, 341, 225 };
-constexpr int stereoSpread     = 23;
+// リバーブ（FDN）の8本のディレイの長さ（ミリ秒。互いに割り切れない長さにして、響きの山がそろわないようにする）
+constexpr float reverbLineMs[]    = { 29.7f, 37.1f, 41.1f, 43.7f, 47.3f, 53.9f, 59.3f, 67.1f };
+// 入口の拡散のオールパスの長さ（ミリ秒）と、くり返しの量
+constexpr float diffuserMs[]      = { 4.7f, 3.6f, 12.7f, 9.3f };
+constexpr float diffuserGain      = 0.6f;
+// 「広さ」0〜1 → 響きが 60dB 下がるまでの時間（秒）。0.5 で 2 秒
+constexpr float reverbMinSeconds  = 0.5f;
+constexpr float reverbRatio       = 16.0f;
+constexpr float reverbDampHz      = 6500.0f;  // くり返しのたびに高域を吸うローパス
+constexpr float reverbModHz       = 0.3f;     // 2本の長さをゆっくり揺らす（金属的な鳴きを抑える）
+constexpr float reverbModMs       = 0.4f;
+constexpr float reverbWetGain     = 2.0f;    // 響きの大きさ（以前の Freeverb と同じくらいの大きさに合わせた値）
+
+// ディレイのくり返しの中のフィルター（テープ風に、くり返すほど丸く・細くなる）
+constexpr float delayLowHz  = 4500.0f;
+constexpr float delayHighHz = 120.0f;
 
 constexpr float limiterThreshold = 0.891f;  // -1 dB
 constexpr float dcCutoffHz       = 10.0f;   // DC カットの周波数（聞こえる低音は削らない）
@@ -46,27 +58,37 @@ float Fx::DelayLine::read (float delay) const
     return a + (b - a) * frac;
 }
 
-float Fx::Comb::process (float input, float damp, float feedback)
-{
-    const auto out = buffer[(size_t) index];
-    last = flushDenormal (out * (1.0f - damp) + last * damp);
-    buffer[(size_t) index] = flushDenormal (input + last * feedback);
-    if (++index >= (int) buffer.size()) index = 0;
-    return out;
-}
-
-float Fx::Allpass::process (float input)
+// Schroeder のオールパス（響きの色を変えずに位相だけ散らす）
+float Fx::Allpass::process (float input, float gain)
 {
     const auto buffered = buffer[(size_t) index];
-    buffer[(size_t) index] = flushDenormal (input + buffered * 0.5f);
+    const auto v = flushDenormal (input + buffered * gain);
+    buffer[(size_t) index] = v;
     if (++index >= (int) buffer.size()) index = 0;
-    return buffered - input;
+    return buffered - v * gain;
+}
+
+float Fx::Halfband::process (float x, const float* coeffs)
+{
+    history[index] = x;
+    history[index + halfbandTaps] = x;
+    if (++index >= halfbandTaps) index = 0;
+    auto y = 0.0f;
+    const auto* h = history + index;  // いちばん古い値から
+    for (int i = 0; i < halfbandTaps; ++i) y += h[i] * coeffs[i];
+    return y;
+}
+
+void Fx::Halfband::clear()
+{
+    std::fill (std::begin (history), std::end (history), 0.0f);
+    index = 0;
 }
 
 void Fx::prepare (double newSampleRate)
 {
     sampleRate = newSampleRate;
-    const auto scale = sampleRate / 44100.0;
+    const auto scale = sampleRate / 44100.0;  // （以前の Freeverb の長さの基準。今は使わない）
     dcCoeff = 1.0f - twoPi * dcCutoffHz / (float) sampleRate;
     for (auto* s : { &driveSmooth, &chorusMixSmooth, &chorusDepthSmooth, &delayMixSmooth, &delayFeedbackSmooth,
                      &reverbMixSmooth, &reverbSizeSmooth })
@@ -76,11 +98,37 @@ void Fx::prepare (double newSampleRate)
     {
         chorusLine[ch].resize ((int) (chorusMaxSeconds * sampleRate) + 4);
         delayLine[ch].resize ((int) (maxDelaySeconds * sampleRate) + 4);
-        for (int i = 0; i < numCombs; ++i)
-            combs[ch][i].buffer.assign ((size_t) ((combTunings[i] + ch * stereoSpread) * scale), 0.0f);
-        for (int i = 0; i < numAllpasses; ++i)
-            allpasses[ch][i].buffer.assign ((size_t) ((allpassTunings[i] + ch * stereoSpread) * scale), 0.0f);
     }
+
+    // ハーフバンド（2倍の速さで 1/4 周波数で切るローパス）：窓（Blackman）をかけた sinc。合計 1 にそろえる
+    auto sum = 0.0f;
+    const auto mid = (halfbandTaps - 1) / 2;
+    for (int i = 0; i < halfbandTaps; ++i)
+    {
+        const auto n = (float) (i - mid);
+        const auto sinc = n == 0.0f ? 0.5f : std::sin (pi * 0.5f * n) / (pi * n);
+        const auto w = 0.42f - 0.5f * std::cos (twoPi * (float) i / (float) (halfbandTaps - 1))
+                     + 0.08f * std::cos (2.0f * twoPi * (float) i / (float) (halfbandTaps - 1));
+        halfbandCoeffs[i] = sinc * w;
+        sum += halfbandCoeffs[i];
+    }
+    for (auto& c : halfbandCoeffs) c /= sum;
+
+    // ディレイのくり返しのフィルターの係数
+    delayLowCoeff  = 1.0f - std::exp (-twoPi * delayLowHz / (float) sampleRate);
+    delayHighCoeff = std::exp (-twoPi * delayHighHz / (float) sampleRate);
+
+    // リバーブ
+    for (int i = 0; i < numDiffusers; ++i)
+        diffusers[i].buffer.assign ((size_t) std::max (1.0, diffuserMs[i] * 0.001 * sampleRate), 0.0f);
+    const auto modSamples = reverbModMs * 0.001f * (float) sampleRate;
+    for (int i = 0; i < numLines; ++i)
+    {
+        lineLength[i] = reverbLineMs[i] * 0.001f * (float) sampleRate;
+        reverbLine[i].resize ((int) (lineLength[i] + modSamples) + 4);
+    }
+    reverbDampCoeff = 1.0f - std::exp (-twoPi * reverbDampHz / (float) sampleRate);
+    (void) scale;
     reset();
 }
 
@@ -90,14 +138,14 @@ void Fx::reset()
     {
         chorusLine[ch].clear();
         delayLine[ch].clear();
-        for (auto& c : combs[ch])
-        {
-            std::fill (c.buffer.begin(), c.buffer.end(), 0.0f);
-            c.last = 0.0f;
-        }
-        for (auto& a : allpasses[ch])
-            std::fill (a.buffer.begin(), a.buffer.end(), 0.0f);
+        driveUp[ch].clear();
+        driveDown[ch].clear();
+        delayLow[ch] = delayHigh[ch] = delayHighIn[ch] = 0.0f;
     }
+    for (auto& d : diffusers) std::fill (d.buffer.begin(), d.buffer.end(), 0.0f);
+    for (auto& line : reverbLine) line.clear();
+    for (auto& d : lineDamp) d = 0.0f;
+    reverbModPhase = 0.0f;
     chorusPhase  = 0.0f;
     delaySamples = 0.0f;
     masterGain   = 0.0f;
@@ -110,7 +158,9 @@ void Fx::reset()
 
 void Fx::processDrive (float* left, float* right, int numSamples, const GrowParams& p)
 {
-    // tanh で丸く歪ませる。tanh (k) で割って、強くしても一番大きい所の音量はそろえる
+    // tanh で丸く歪ませる。tanh (k) で割って、強くしても一番大きい所の音量はそろえる。
+    // 歪みで増えた高い倍音が折り返さないよう、2倍の速さにしてから歪ませ、ハーフバンドで切って戻す
+    // （ドライブが 0 の間は何もしない。上げると FIR の分だけ約 7.5 サンプル遅れる）
     for (int n = 0; n < numSamples; ++n)
     {
         const auto drive = driveSmooth.next (std::clamp (p.drive, 0.0f, 1.0f));
@@ -118,15 +168,26 @@ void Fx::processDrive (float* left, float* right, int numSamples, const GrowPara
         const auto k    = 1.0f + drive * 9.0f;
         const auto norm = 1.0f / std::tanh (k);
         const auto wet  = std::min (1.0f, drive / driveFadeIn);
-        const auto l = left[n], r = right[n];
-        left[n]  = l + (std::tanh (k * l) * norm - l) * wet;
-        right[n] = r + (std::tanh (k * r) * norm - r) * wet;
+        float* io[2] = { left + n, right + n };
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            const auto x = *io[ch];
+            auto y = 0.0f;
+            for (int phase = 0; phase < 2; ++phase)
+            {
+                // 0 を挟んで2倍にし（振幅を 2 倍して戻す）、ローパスで間を埋める
+                const auto up = driveUp[ch].process (phase == 0 ? 2.0f * x : 0.0f, halfbandCoeffs);
+                const auto shaped = up + (std::tanh (k * up) * norm - up) * wet;
+                y = driveDown[ch].process (shaped, halfbandCoeffs);  // 2つ目（間引いて残す方）を使う
+            }
+            *io[ch] = flushDenormal (y);
+        }
     }
 }
 
 void Fx::processChorus (float* left, float* right, int numSamples, const GrowParams& p)
 {
-    // 左右で揺れを 90° ずらした2本の揺れるディレイ。量で元の音と混ぜる
+    // 揺れるディレイを左右3本ずつ（揺れの位相を 120° ずつずらし、右は左から 60° ずらす）。量で元の音と混ぜる
     const auto sr     = (float) sampleRate;
     const auto step   = p.chorusRate / sr;
     const auto centre = 0.008f * sr;
@@ -144,8 +205,13 @@ void Fx::processChorus (float* left, float* right, int numSamples, const GrowPar
         for (int ch = 0; ch < 2; ++ch)
         {
             chorusLine[ch].push (in[ch]);
-            const auto lfo = std::sin (twoPi * (chorusPhase + 0.25f * (float) ch));
-            const auto wet = chorusLine[ch].read (std::max (1.0f, centre + depth * lfo));
+            auto wet = 0.0f;
+            for (int v = 0; v < 3; ++v)
+            {
+                const auto lfo = std::sin (twoPi * (chorusPhase + (float) v / 3.0f + (float) ch / 6.0f));
+                wet += chorusLine[ch].read (std::max (1.0f, centre + depth * lfo));
+            }
+            wet *= 1.0f / 3.0f;
             out[ch] = in[ch] * (1.0f - mix) + wet * mix;
         }
         left[n]  = out[0];
@@ -172,16 +238,27 @@ void Fx::processDelay (float* left, float* right, int numSamples, const GrowPara
         const auto dr  = delayLine[1].read (delaySamples);
         const auto inL = left[n], inR = right[n];
 
+        // くり返しの音：ローパス・ハイパスを通し、弱く飽和させる（テープ風。くり返すほど丸く細くなる）
+        float back[2];
+        const float raw[2] = { dl, dr };
+        for (int ch = 0; ch < 2; ++ch)
+        {
+            delayLow[ch]  = flushDenormal (delayLow[ch] + (raw[ch] - delayLow[ch]) * delayLowCoeff);
+            delayHigh[ch] = flushDenormal (delayHighCoeff * (delayHigh[ch] + delayLow[ch] - delayHighIn[ch]));
+            delayHighIn[ch] = delayLow[ch];
+            back[ch] = std::tanh (delayHigh[ch] * feedback);
+        }
+
         if (p.delayPingPong)
         {
             // 入力は左から入れ、くり返すたびに左右を入れ替える
-            delayLine[0].push (flushDenormal (0.5f * (inL + inR) + dr * feedback));
-            delayLine[1].push (flushDenormal (dl * feedback));
+            delayLine[0].push (flushDenormal (0.5f * (inL + inR) + back[1]));
+            delayLine[1].push (flushDenormal (back[0]));
         }
         else
         {
-            delayLine[0].push (flushDenormal (inL + dl * feedback));
-            delayLine[1].push (flushDenormal (inR + dr * feedback));
+            delayLine[0].push (flushDenormal (inL + back[0]));
+            delayLine[1].push (flushDenormal (inR + back[1]));
         }
         left[n]  = inL + dl * mix;
         right[n] = inR + dr * mix;
@@ -190,28 +267,56 @@ void Fx::processDelay (float* left, float* right, int numSamples, const GrowPara
 
 void Fx::processReverb (float* left, float* right, int numSamples, const GrowParams& p)
 {
-    // Freeverb（JUCE の Reverb と同じ作り）。量が 0 でも響きの残りは鳴らし切る
-    const auto damp       = 0.5f * 0.4f;
-    const auto wet2       = 0.0f;
-    const auto gain       = 0.015f;
+    // FDN：入口の音をオールパスで散らし、8本のディレイに入れる。各ディレイの出力を Householder 行列
+    // （全体の平均の 2 倍を引く。エネルギーを保ったまま全部の線を混ぜる）で混ぜて、減衰・ローパスをかけて戻す。
+    // 左右は8本の出力を別々の符号の組で足して作る（左右で違う響きになり、広がる）。量が 0 でも響きの残りは鳴らし切る
+    const auto sr         = (float) sampleRate;
     const auto sizeTarget = std::clamp (p.reverbSize, 0.0f, 1.0f);
     const auto mixTarget  = std::clamp (p.reverbMix, 0.0f, 1.0f);
+    const auto modStep    = reverbModHz / sr;
+    const auto modDepth   = reverbModMs * 0.001f * sr;
+    static constexpr float signL[numLines] = { 1, -1, 1, -1, 1, -1, 1, -1 };
+    static constexpr float signR[numLines] = { 1, 1, -1, -1, 1, 1, -1, -1 };
+
+    // 響きの長さは「広さ」をブロックの頭で読んで決める（滑らかに変わる）
+    const auto size  = reverbSizeSmooth.next (sizeTarget);
+    const auto rt60  = reverbMinSeconds * std::pow (reverbRatio, size);
+    float lineGain[numLines];
+    for (int i = 0; i < numLines; ++i) lineGain[i] = std::pow (10.0f, -3.0f * lineLength[i] / (rt60 * sr));
 
     for (int n = 0; n < numSamples; ++n)
     {
-        const auto feedback = reverbSizeSmooth.next (sizeTarget) * 0.28f + 0.7f;
-        const auto mix      = reverbMixSmooth.next (mixTarget);
-        const auto wet1     = 0.5f * mix * 3.0f * 2.0f;  // 左右の広がり 1（いっぱい）
-        const auto dry      = 1.0f - 0.4f * mix;
-        const auto input = (left[n] + right[n]) * gain;
-        float out[2] = { 0.0f, 0.0f };
-        for (int ch = 0; ch < 2; ++ch)
+        const auto mix = reverbMixSmooth.next (mixTarget);
+        reverbModPhase += modStep;
+        if (reverbModPhase >= 1.0f) reverbModPhase -= 1.0f;
+        const auto mod = std::sin (twoPi * reverbModPhase) * modDepth;
+
+        auto input = (left[n] + right[n]) * 0.5f;
+        for (auto& d : diffusers) input = d.process (input, diffuserGain);
+
+        float out[numLines];
+        auto total = 0.0f;
+        for (int i = 0; i < numLines; ++i)
         {
-            for (auto& c : combs[ch]) out[ch] += c.process (input, damp, feedback);
-            for (auto& a : allpasses[ch]) out[ch] = a.process (out[ch]);
+            // 2本だけ長さを揺らす（逆向き）
+            const auto wobble = i == 1 ? mod : i == 6 ? -mod : 0.0f;
+            out[i] = reverbLine[i].read (lineLength[i] + wobble);
+            total += out[i];
         }
-        left[n]  = out[0] * wet1 + out[1] * wet2 + left[n] * dry;
-        right[n] = out[1] * wet1 + out[0] * wet2 + right[n] * dry;
+        const auto householder = total * (2.0f / (float) numLines);
+        auto wetL = 0.0f, wetR = 0.0f;
+        for (int i = 0; i < numLines; ++i)
+        {
+            wetL += out[i] * signL[i];
+            wetR += out[i] * signR[i];
+            const auto mixed = out[i] - householder;
+            lineDamp[i] = flushDenormal (lineDamp[i] + (mixed - lineDamp[i]) * reverbDampCoeff);
+            reverbLine[i].push (flushDenormal (input + lineDamp[i] * lineGain[i]));
+        }
+        const auto wet = mix * reverbWetGain / (float) numLines * 2.0f;
+        const auto dry = 1.0f - 0.4f * mix;
+        left[n]  = left[n] * dry + wetL * wet;
+        right[n] = right[n] * dry + wetR * wet;
     }
 }
 

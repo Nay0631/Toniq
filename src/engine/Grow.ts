@@ -192,6 +192,11 @@ export function growParamList(): GrowParamMeta[] {
   return params;
 }
 
+// パラメーターの ID → 番号（見つからなければ -1）
+export function growParamIndex(id: string): number {
+  return params.findIndex(p => p.id === id);
+}
+
 export function growPresetNames(): string[] {
   return presetNames;
 }
@@ -383,36 +388,112 @@ export function applyGrowLive(): void {
   });
 }
 
+// ===== マルチティンバー：1つの AudioWorkletNode（1つの wasm）で複数の GrowInstrument を鳴らす =====
+// 同じ処理の流れ（同じタスク）で作った GrowInstrument をマイクロタスクでまとめ、1つのノード（最大 MAX_SLOTS）にする。
+// 再生の開始・書き出しでは全パートの grow が1つのノードになる。各スロットの最初の値は processorOptions で渡すので、
+// 書き出しでも確実に間に合う。ノードができる前に呼ばれた発音・パラメーターは、ためておいてできたときに当てる
+const MAX_SLOTS = 16;  // growWorklet.js の MAX_SLOTS と同じ
+
+interface GrowHub {
+  node:      AudioWorkletNode;
+  openSlots: number;
+}
+
+// まだノードにしていない GrowInstrument（作ったコンテキストごと）
+const pendingBatches = new Map<Tone.BaseContext, GrowInstrument[]>();
+
+function enqueue(inst: GrowInstrument, ctx: Tone.BaseContext): void {
+  let batch = pendingBatches.get(ctx);
+  if (!batch) {
+    batch = [];
+    pendingBatches.set(ctx, batch);
+    queueMicrotask(() => flush(ctx));
+  }
+  batch.push(inst);
+}
+
+function dequeue(inst: GrowInstrument, ctx: Tone.BaseContext): void {
+  const batch = pendingBatches.get(ctx);
+  const i = batch?.indexOf(inst) ?? -1;
+  if (batch && i >= 0) batch.splice(i, 1);
+}
+
+// ためた GrowInstrument を MAX_SLOTS ずつ1つのノードにする
+function flush(ctx: Tone.BaseContext): void {
+  const batch = pendingBatches.get(ctx) ?? [];
+  pendingBatches.delete(ctx);
+  for (let i = 0; i < batch.length; i += MAX_SLOTS) {
+    const group = batch.slice(i, i + MAX_SLOTS);
+    const raw = ctx.rawContext as unknown as BaseAudioContext;
+    const options: AudioWorkletNodeOptions = {
+      numberOfInputs:     0,
+      numberOfOutputs:    group.length,
+      outputChannelCount: group.map(() => 2),
+      processorOptions:   {
+        wasm:    wasmBytes!.slice(0),
+        slots:   group.map(inst => ({ values: inst.currentValues(), bpm: inst.bpm })),
+        overlap: OFF_DELAY,
+      },
+    };
+    const node = isNativeContext(raw)
+      ? new AudioWorkletNode(raw, "grow", options)
+      : ctx.createAudioWorkletNode("grow", options) as unknown as AudioWorkletNode;
+    const hub: GrowHub = { node, openSlots: group.length };
+    group.forEach((inst, slot) => inst.attach(hub, slot));
+  }
+}
+
 // 各パートの音色としての grow（ほかの音色の Synth と同じ呼び方で鳴らせる）。isGrowReady() のときだけ作る。
 // values は音作りの値を返す関数（作るときと、applyGrowLive で値を当て直すときに呼ぶ）。
 // パートの音作りで鳴らすなら growValues(part) を渡す
 export class GrowInstrument {
   readonly output: Tone.Gain;
   readonly values: () => number[] | null;
-  private node: AudioWorkletNode;
-  private onParam: AudioParam;
-  private offParam: AudioParam;
+  bpm: number;
+  private readonly ctx: Tone.BaseContext;
+  private readonly raw: BaseAudioContext;
+  private hub: GrowHub | null = null;
+  private slot = -1;
+  private disposed = false;
+  private latestValues: number[] | null = null;  // ノードができる前に setValues された値
+  private pending: (() => void)[] = [];          // ノードができる前に呼ばれた発音・パラメーター
+  private onParam!: AudioParam;
+  private offParam!: AudioParam;
+  private pidxParam!: AudioParam;
+  private pvalParam!: AudioParam;
   // 合図を入れたサンプルの位置（合図ごと）。同じサンプルに2つ入れると後のものしか届かないので、空いている位置へずらす
   private onFrames  = new Set<number>();
   private offFrames = new Set<number>();
+  private paramFrames = new Set<number>();
 
   constructor(values: () => number[] | null, bpm: number = getState().bpm) {
     this.values = values;
-    const raw = rawContext();
-    const options: AudioWorkletNodeOptions = {
-      numberOfInputs:     0,
-      numberOfOutputs:    1,
-      outputChannelCount: [2],
-      processorOptions:   { wasm: wasmBytes!.slice(0), values: values() ?? [], bpm, overlap: OFF_DELAY },
-    };
-    this.node = isNativeContext(raw)
-      ? new AudioWorkletNode(raw, "grow", options)
-      : Tone.getContext().createAudioWorkletNode("grow", options) as unknown as AudioWorkletNode;
-    this.onParam  = this.node.parameters.get("on")!;
-    this.offParam = this.node.parameters.get("off")!;
-    this.output   = new Tone.Gain(1);
-    Tone.connect(this.node as unknown as Tone.ToneAudioNode, this.output);
+    this.bpm    = bpm;
+    this.ctx    = Tone.getContext();
+    this.raw    = this.ctx.rawContext as unknown as BaseAudioContext;
+    this.output = new Tone.Gain(1);
+    enqueue(this, this.ctx);
     live.add(this);
+  }
+
+  // ノードを作るときに渡す最初の値
+  currentValues(): number[] {
+    return this.latestValues ?? this.values() ?? [];
+  }
+
+  // ノードのスロットにつなぐ（flush から呼ぶ）。ためていた発音・パラメーターを当てる
+  attach(hub: GrowHub, slot: number): void {
+    this.hub  = hub;
+    this.slot = slot;
+    const param = (name: string) => hub.node.parameters.get(`${name}${slot}`)!;
+    this.onParam   = param("on");
+    this.offParam  = param("off");
+    this.pidxParam = param("pidx");
+    this.pvalParam = param("pval");
+    Tone.connect(hub.node as unknown as Tone.ToneAudioNode, this.output, slot, 0);
+    const pending = this.pending;
+    this.pending = [];
+    pending.forEach(run => run());
   }
 
   connect(destination: Tone.InputNode): this {
@@ -423,45 +504,80 @@ export class GrowInstrument {
   // 時間・音の高さの換算は、このノードのコンテキスト（とその Transport の BPM）で行う
   // （WAV / MP3 書き出しの合成中は Tone.getContext() が再生用のコンテキストに戻っているため）
   triggerAttackRelease(note: Tone.Unit.Frequency, duration: Tone.Unit.Time, time?: Tone.Unit.Time, velocity = 0.8): this {
+    if (this.disposed) return this;
     const ctx   = this.output.context;
     const start = time === undefined ? ctx.now() : new Tone.TimeClass(ctx, time).toSeconds();
     const midi  = Math.round(new Tone.FrequencyClass(ctx, note).toMidi());
     if (midi < 0 || midi > 127) return this;
     const vel = Math.max(0, Math.min(1, velocity));
     const end = start + new Tone.TimeClass(ctx, duration).toSeconds() + OFF_DELAY;
-    this.signal(this.onParam,  this.onFrames,  midi + 1 + vel * 0.5, start);
-    this.signal(this.offParam, this.offFrames, midi + 1, end);
+    this.whenAttached(() => {
+      this.signal(this.onParam,  this.onFrames,  midi + 1 + vel * 0.5, start);
+      this.signal(this.offParam, this.offFrames, midi + 1, end);
+    });
     return this;
   }
 
-  // 1サンプルだけの合図を入れる（値のあとは 0 に戻す）。和音のように同じ時刻に重なるときは2サンプルずつ後ろへずらす
-  private signal(param: AudioParam, used: Set<number>, value: number, time: number): void {
-    const rate = this.node.context.sampleRate;
-    let frame = Math.max(Math.round(time * rate), Math.ceil(this.node.context.currentTime * rate));
+  // パラメーター（ID）を時刻を決めて当てる（書き出しでもサンプル単位で合う。同じ時刻の発音より先に当たる）。
+  // 同じ時刻に複数当てると2サンプルずつ後ろへずれるので、発音に間に合わせたいときは少し前の時刻にする
+  setParamAtTime(id: string, value: number, time: Tone.Unit.Time): this {
+    const index = growParamIndex(id);
+    if (index < 0 || this.disposed) return this;
+    const seconds = new Tone.TimeClass(this.output.context, time).toSeconds();
+    this.whenAttached(() => {
+      const frame = this.signal(this.pidxParam, this.paramFrames, index + 1, seconds);
+      this.pvalParam.setValueAtTime(value, frame / this.raw.sampleRate);
+    });
+    return this;
+  }
+
+  private whenAttached(run: () => void): void {
+    if (this.hub) run();
+    else this.pending.push(run);
+  }
+
+  // 1サンプルだけの合図を入れる（値のあとは 0 に戻す）。和音のように同じ時刻に重なるときは2サンプルずつ後ろへずらす。
+  // 入れたサンプルの位置を返す
+  private signal(param: AudioParam, used: Set<number>, value: number, time: number): number {
+    const rate = this.raw.sampleRate;
+    let frame = Math.max(Math.round(time * rate), Math.ceil(this.raw.currentTime * rate));
     while (used.has(frame) || used.has(frame - 1) || used.has(frame + 1)) frame += 2;
     used.add(frame);
     param.setValueAtTime(value, frame / rate);
     param.setValueAtTime(0, (frame + 1) / rate);
     // 過ぎた位置は忘れる
     if (used.size > 256) {
-      const now = Math.floor(this.node.context.currentTime * rate);
+      const now = Math.floor(this.raw.currentTime * rate);
       used.forEach(f => { if (f < now) used.delete(f); });
     }
+    return frame;
   }
 
   // 音作りの値（番号順）と BPM を当てる（鳴っている音にもすぐ反映される）
   setValues(values: number[]): void {
-    this.node.port.postMessage({ type: "params", values: values.map((v, i) => [i, v]) });
+    this.latestValues = values;
+    this.hub?.node.port.postMessage({ type: "params", slot: this.slot, values: values.map((v, i) => [i, v]) });
   }
 
   setBpm(bpm: number): void {
-    this.node.port.postMessage({ type: "bpm", bpm });
+    this.bpm = bpm;
+    this.hub?.node.port.postMessage({ type: "bpm", slot: this.slot, bpm });
   }
 
+  // スロットを閉じる（ノードの全部のスロットを閉じたらノードも外す）
   dispose(): void {
+    if (this.disposed) return;
+    this.disposed = true;
     live.delete(this);
-    this.node.port.postMessage({ type: "dispose" });
-    this.node.disconnect();
+    this.pending = [];
+    if (this.hub) {
+      const hub = this.hub;
+      hub.node.port.postMessage({ type: "close", slot: this.slot });
+      try { hub.node.disconnect(this.slot); } catch { /* もう外れている */ }
+      if (--hub.openSlots <= 0) hub.node.disconnect();
+    } else {
+      dequeue(this, this.ctx);
+    }
     this.output.dispose();
   }
 }

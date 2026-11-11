@@ -92,7 +92,8 @@ inline float polyBlep (float t, float dt) noexcept
     return 0.0f;
 }
 
-inline float oscillatorSample (Wave wave, float phase, float dt) noexcept
+// pulseWidth は矩形波の「上」の長さの割合（0.5 = 普通の矩形波）。幅を変えると平均がずれるので差し引いて 0 を中心にする
+inline float oscillatorSample (Wave wave, float phase, float dt, float pulseWidth = 0.5f) noexcept
 {
     switch (wave)
     {
@@ -101,9 +102,11 @@ inline float oscillatorSample (Wave wave, float phase, float dt) noexcept
         case Wave::saw:      return 2.0f * phase - 1.0f - polyBlep (phase, dt);
         case Wave::square:
         {
-            auto half = phase + 0.5f;
-            if (half >= 1.0f) half -= 1.0f;
-            return (phase < 0.5f ? 1.0f : -1.0f) + polyBlep (phase, dt) - polyBlep (half, dt);
+            // 上がる辺（位相 0）と下がる辺（位相 pulseWidth）の両方に PolyBLEP をかける
+            auto fall = phase + (1.0f - pulseWidth);
+            if (fall >= 1.0f) fall -= 1.0f;
+            const auto raw = (phase < pulseWidth ? 1.0f : -1.0f) + polyBlep (phase, dt) - polyBlep (fall, dt);
+            return raw - (2.0f * pulseWidth - 1.0f);
         }
     }
     return 0.0f;

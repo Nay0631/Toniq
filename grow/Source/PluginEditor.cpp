@@ -24,9 +24,10 @@ juce::Font uiFont (float height, bool bold = false)
 
 // 画面の行ごとに並べるモジュール（コアのパラメーターの表の group）
 const std::vector<std::vector<const char*>> layoutRows {
-    { "OSC 1", "OSC 2" },
+    { "OSC 1", "OSC 2", "OSC 変調" },
     { "サブ・ノイズ", "フィルター", "フィルター EG", "アンプ EG" },
-    { "LFO", "ピッチ EG", "ボイス" },
+    { "LFO", "LFO 2", "EG 2", "ピッチ EG", "ボイス" },
+    { "モジュレーション" },
     { "ドライブ", "コーラス", "ディレイ", "リバーブ", "出力" },
 };
 } // namespace

@@ -22,7 +22,7 @@ cd grow && cmake -B build -G "Visual Studio 17 2022" && cmake --build build --co
                     # 単体版（JUCE の Standalone・VST3。Visual Studio 2022・CMake 3.22 以上）
 ```
 
-grow のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルドし直す（Toniq は wasm を読むので、ビルドしないと変更が鳴らない）。
+grow のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルドし直す（Toniq は wasm を読むので、ビルドしないと変更が鳴らない）。GitHub に push すると `.github/workflows/grow-wasm.yml` が同じ版の Emscripten（7.0.0）でビルドし、全プリセットを確かめる（Git に入れた `grow.wasm` と違えば警告）。
 ビルドしたら `npm run grow:render` で全プリセットを Node で鳴らして確かめる（無音・NaN・直流・余韻が消えない・音量。`--wav` で `output/grow/` に WAV、`--suggest` で音量をそろえる master の提案、`--analyze <WAV>` で書き出した曲のピーク・ラウドネス。詳しくは `grow/README.md`）。
 
 ## ディレクトリ構成
@@ -84,8 +84,8 @@ src/engine/
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
-  Grow.ts                 grow（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット、AudioWorklet の登録、メロディの音色 GrowInstrument
-  growWorklet.js          grow の AudioWorklet（wasm を 128 サンプルずつ描く。音符は AudioParam の合図で受ける）
+  Grow.ts                 grow（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット、AudioWorklet の登録、各パートの音色 GrowInstrument（同じタスクで作ったものを1つのノードにまとめるマルチティンバー）
+  growWorklet.js          grow の AudioWorklet（1つのノードで最大16の音色を鳴らす。wasm を 128 サンプルずつ描く。音符・時刻を決めたパラメーターは AudioParam の合図で受ける）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラムのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
@@ -138,7 +138,7 @@ src/engine/
 - Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメントでは「grow」と呼ぶ。
 - grow（`grow/`）は C++ のシンセサイザー。音を作るコア（`grow/core/`。JUCE なし）を、Toniq では WebAssembly＋AudioWorklet で、単体では JUCE の Standalone・VST3 で鳴らす。作り・決まりごとは `grow/README.md`。
   - Toniq ではメロディの音色 `melodyInstrument: "grow"`（初期値。選択肢の先頭の「grow」）、コード・ベース・パッド・アルペジオ・シグネチャー・FX / SE はいつも grow で鳴らす（準備ができていない・wasm がないときは各 Player の Tone.js の音色。シグネチャーは `SIGNATURES` の `create`）。シグネチャーはジャンルの鳴り方（`events`）のまま、音だけ grow で出す（`growTrigger`。ノイズのイベントは `NOISE_NOTE`。レコードノイズはプチプチ音をプリセット「レコードプチ」の2台目で鳴らす `growCreate`）。コードは16音ポリで和音を鳴らし、`GrowInstrument` は同じサンプルに重なる合図（和音の発音・消音）を2サンプルずつずらして渡す。準備ができていない・wasm がないとき、コードはソフトパッドで鳴る。`Grow.ts` が `public/grow/grow.wasm` を読み込み、AudioWorklet（`growWorklet.js`。`?raw` で読み込んで Blob の URL で登録）をオーディオコンテキストごとに登録する。再生・試聴・サンプルは `Playback.audioReady`、WAV / MP3 書き出しは `renderSong` の `schedule` で、`prepareGrowContext()` を待つ（パッドなどはいつも grow なので毎回）。準備ができていない・wasm がないときは `resolveMelodySound()` がジャンルの標準の音色にする。
-  - `GrowInstrument`（`Grow.ts`）はほかの音色の Synth と同じ `triggerAttackRelease` で鳴らす。音符は AudioParam（`on` / `off`）の1サンプルの合図で渡す（書き出しでも合う）。音の終わりは 2ms 遅らせてレガートでつながるようにし、同じ高さが続くときはワークレットが前の音の終わりを無視する。自前のエフェクト（リバーブを含む）を持つので、メロディの Volume に直接つなぐ。
+  - `GrowInstrument`（`Grow.ts`）はほかの音色の Synth と同じ `triggerAttackRelease` で鳴らす。音符は AudioParam（`on` / `off`）の1サンプルの合図で渡す（書き出しでも合う）。時刻を決めて当てるパラメーターも `setParamAtTime(ID, 値, 時刻)` で AudioParam（`pidx` / `pval`）の合図で渡す。音の終わりは 2ms 遅らせてレガートでつながるようにし、同じ高さが続くときはワークレットが前の音の終わりを無視する。自前のエフェクト（リバーブを含む）を持つので、各パートの Volume に直接つなぐ。同じタスクで作った `GrowInstrument` はマイクロタスクでまとめて1つの AudioWorkletNode（1つの wasm。最大16スロット）にする（`flush`）。スロットの最初の値は `processorOptions` で渡し、ノードができる前の発音・パラメーターはためておいて当てる。
   - コードの音色は grow のプリセットだけ（`chordInstrument` はいつも `"grow"`。Tone.js の音色は wasm がないときのソフトパッドだけ）。カスタムモードの「コード進行」欄の「音色」は「ジャンルに合わせる（〇〇）」と `CHORD_PRESET_CHOICES`（`Grow.ts`。ソフトパッド・ワイドパッド・エレピ・ストリングス・オルガン・スクエア・スーパーソウ）で、`growChordPreset` を書き換える（選び直すと `growChordParams` は捨てる）。以前の Tone.js の音色（`soft` / `epiano` / `strings` / `organ` / `square` / `supersaw`）を保存した曲は、`loadSong()`（`songFields`）が同じ音の grow のプリセット（`LEGACY_CHORD_PRESETS`）に読み替える。
   - 音作りの値はメロディが `AppState.growPreset`（コアのプリセットの ID。初期値 `"lead"` = シンセリード）と `growParams`（変えた値。パラメーターの ID → 値。`null` = プリセットのまま）、コードが `growChordPreset`（初期値 `null` = ジャンルの標準 `CHORD_STANDARD`。パッドのパートのパッド系の音と重ならない和音の音：EDM・トランス = スーパーソウ、8bit = スクエア、ローファイ = エレピ、ゲームBGM・アンビエント = ストリングス、テクノ・ハウス = オルガン）と `growChordParams`、ベース・パッド・アルペジオ・シグネチャーが `growSounds`（`{ preset, params }`。`preset` の `null` = ジャンルの標準。`GROW_STANDARD`（`Grow.ts`）がプリセットを ID で探し、今の wasm にない ID は後ろの候補の既存のプリセットにする）。プリセットは曲に ID で保存する（以前は番号。番号で保存した古い曲は `loadSong()`（`songFields`）が `LEGACY_PRESET_IDS` で ID に読み替える。曲ファイルの `FILE_VERSION` は 2）。保存した ID が今の wasm にないときはジャンルの標準（メロディは初期値のプリセット）で鳴らす。どれも `SONG_FIELDS` に含む。パートごとの値は `currentGrowValues(part)`（`GrowPart`）で読み、書き換えは `setGrowSound()`。`GrowInstrument` には値を返す関数（`growValues(part)`）を渡す。ジャンルを足すときは `GROW_STANDARD` のコード（`CHORD_STANDARD`）・ベース（`BASS_STANDARD`）・シグネチャーにも足す（なければローファイの定義）。パラメーターの表・プリセット・値の表示はコア（wasm）から読み、TypeScript 側では持たない。
   - 音作りのパネル（`GrowPanel.ts`、カスタムモードの設定タブの下 `#c-grow`。いつも出す。「対象」で編集するパートを選ぶ。メロディは音色が grow のときだけ選べ、メロディ以外はプリセットに「ジャンルの標準」を選べる）はテスト用の暫定。最終的にはプリセットを選ぶだけにする予定。値を変えると `applyGrowLive()`（`Grow.ts`）で鳴っている grow（全パート）にすぐ当てる（作り直さない）。BPM の変更も `Playback.applyBpm()` から当てる。
@@ -150,7 +150,7 @@ src/engine/
   - 音源はジャンルのドラムバス（高域カット→歪み→コンプ→持ち上げ）を通る。音源の音量は `SynthFactory.ts` の `SAMPLE_TRIM_DB` で下げており、`mix_presets.json` の `gain` はシンセのドラムで測った値のまま。
 - 音の流れ：各パートの Volume ノード（`VolumeManager.createVolumeNode`）→ サイドチェイン用の Gain → `connectToMixer` でマスター入口とリバーブ送りにつなぐ。リバーブはマスターに直接かけず送りで混ぜる（送り量はパートごとに `MixerEngine.ts` の `REVERB_SENDS`、全体量は `mix_presets.json` の `reverb.wet`。ベースは送らない）。FX / SE はさらに、ジャンルによらない長い響きのロングリバーブ（`LONG_REVERB` / `LONG_REVERB_SENDS`）にも送る。マスター（`MixerEngine.ts`）はコンテキストごとに1つで作り直さない。WAV書き出しと再生開始前は `mixerReady()` でリバーブの準備を待つ。
 - コード・パッド・アルペジオのボイシングは `voiceProgression(progression, key, VOICING_RANGES.*)`（`degree_resolver.ts`）で決める。最低音を範囲内に収め、前のコードから一番近い転回形を選ぶ（ループの継ぎ目も考慮。進行の `inversion` は動きが同じくらいなら優先）。パッドは `spread`（開離配置）。MIDI書き出しも同じボイシングを使う。各 Player は自前のリバーブを持たず（ローパス・コーラス・ディレイなどだけ）、エフェクトのノードは `dispose*` で一緒に破棄する。強さ（ベロシティ）は拍の位置で付けて少し揺らし、和音は数msずつずらして鳴らす（ストラム）。
-- `mix_presets.json` の `gain` は全ジャンルでクリップしない（ピーク −1dB 以下）ように測って決めた値。音源やパートを大きく変えたら測り直す（書き出した WAV を `npm run grow:render -- --analyze <WAV>` で測れる）。grow のプリセットは聞こえる大きさを −18 LUFS にそろえてある（`grow/README.md`）。grow にしたあと（2026-11-11）、全ジャンル・全パート ON・32小節・ドラムはシンセ／サンプルで測り直し、ピークはすべて −1.5dB 以下だった。アンビエントだけ統合ラウドネスがほかより 6〜10dB 小さかったので、`gain` を −4 → 1 に上げた（ほかのジャンルはそのまま）。
+- `mix_presets.json` の `gain` は全ジャンルでクリップしない（ピーク −1dB 以下）ように測って決めた値。音源やパートを大きく変えたら測り直す（書き出した WAV を `npm run grow:render -- --analyze <WAV>` で測れる）。grow のプリセットは聞こえる大きさを −18 LUFS にそろえてある（`grow/README.md`）。grow にしたあと（2026-11-11）、全ジャンル・全パート ON・32小節・ドラムはシンセ／サンプルで測り直し、ピークはすべて −1.5dB 以下だった。アンビエントだけ統合ラウドネスがほかより 6〜10dB 小さかったので、`gain` を −4 → 1 に上げた（ほかのジャンルはそのまま）。そのあと grow を作り直した（モジュレーション・エフェクト・マルチティンバー、コードの標準の音色）ので測り直し、アンビエントのシンセのドラムが −0.6dB になったため `gain` を −1 にした（全ジャンルのピークは −1.6dB 以下）。
 - グルーヴ（`Groove.ts`）：量は `AppState.swing` / `sidechain`（0〜100、`SONG_FIELDS` に含む。`null` = ジャンルの標準で、`mix_presets.json` の `swing` / `sidechain`）。カスタムモードの基本設定の「グルーヴ」のノブで決め、「標準」で `null` に戻す。シンプルモード・ジャンルのサンプルはジャンルの標準で鳴る。ジャンルを足すときは `mix_presets.json` に `swing` / `sidechain` も入れる。
   - スウィング：`applySwing()` が Transport の `swing`（`swingSubdivision` は `16n`。100 で `SWING_MAX` = 0.67 ≒ 3連のシャッフル）を設定する。再生・試聴・サンプル・WAV書き出し（Offline の Transport）の開始時と、量を変えたとき（再生中もすぐ反映）に呼ぶ。16分音符の裏拍に当たる全パートのイベントがずれる。MIDI書き出しも同じずらし方（8分音符の中の位置に応じた sin の形）で発音位置に反映する。
   - サイドチェイン：ドラムのキックが鳴るたびに `sidechainHit(time, velocity)` が、`SIDECHAIN_PARTS`（ベース・パッド 1、コード 0.8、アルペジオ・シグネチャー 0.6。メロディ・ドラム・FX は沈めない）のサイドチェイン用 Gain を数msで下げ（100 で 0.2 倍 ≒ −14dB）、拍の6割で戻す。量はキックのたびに AppState から読むので再生中の変更もすぐ反映される。ドラムが OFF・キックがない小節では沈まない。音量を下げるだけなので `gain` の測り直しは要らない。
@@ -195,7 +195,7 @@ src/engine/
   - 種類（`FX_DEFS`）：`riser` = ライザー（ノイズのバンドパス掃き上げ＋2オクターブ上がる重ねたノコギリ波、トレモロ・オートパンが加速）、`build` = ライザー＋インパクト、`impact` = インパクト（沈むブーム＋閉じていくノイズ）、`downlifter` = ダウンリフター、`reverse` = リバースシンバル、`chip` = チップSE（8bit。矩形波の駆け上がり＋「ピュン」）。
   - 各種類は `rise`（ループの終わりに向けて鳴り、ループの頭ちょうどで終わる。`riseLen` が `bars` なら1小節＝8小節以上の進行は2小節、`2n` なら最後の2拍）と `hit`（ループの頭）の片方または両方を持つ。音量の山は `setValueCurveAtTime` の曲線でかけ、終わりは短いフェードでクリックを防ぐ。
   - 広がり：ノイズは左右別々のノイズ（`stereoNoise`）で鳴らし、各種類の音は `space()`（左右で揺れのずれたコーラス → 左右に跳ねるディレイ）を通す。インパクトの低音のブームは中央のまま広げない。チップSE はコーラスなし（ディレイだけ）。後ろの響きは自前のリバーブを持たず、マスターのリバーブ送りとロングリバーブで付ける。
-  - 音は grow で出す（`GROW_FX`。コアの「FX …」のプリセット（ID は `fx_…`）を ID で探し、テンポで長さが変わる EG の時間などは作るときに BPM から計算して上書きする（`growPresetValuesWith`）。ライザーの長さが変わったら作り直す（`fxRiseBars`））。grow の準備ができていない・プリセットがない（wasm が古い）ときは `FX_DEFS`（Tone.js）で鳴らす。grow のピッチ EG は指定した量から 0 へ戻る形（最大 2 秒）なので、音程のライザーは2オクターブ下から上がる形にしている。
+  - 音は grow で出す（`GROW_FX`。コアの「FX …」のプリセット（ID は `fx_…`）を ID で探し、長さで変わる EG の時間などは、鳴らすたびに `GrowInstrument.setParamAtTime` で発音の少し前（`PARAM_LEAD`）に当てる。AudioParam の合図なので書き出しでもサンプル単位で合う）。grow の準備ができていない・プリセットがない（wasm が古い）ときは `FX_DEFS`（Tone.js）で鳴らす。ライザー・ダウンリフターの音程は、ピッチ EG を直線のカーブにし、時間を長さいっぱいにして一定の速さで動かす（2オクターブ下から上がる／3オクターブ上から下がる）。
   - 種類を足すときは `FxType`（`AppState.ts`）・`FX_DEFS`・`GROW_FX`・`index.html` の `#c-fx-type` にそろえて足す。音色は再生開始時に反映される。
 - パートを増やしたときは、保存済みの曲に新しいパートの項目がないので、`loadSong()`（`SongLibrary.ts`）で `parts` / `volumes` / `arrangement` を初期値で補っている。
 - ピアノロール（`PianoRollTab.ts`）はコード進行1周分（メロディのループの長さ）を表示し、`AppState.melodyNotes`（サビを選んでいるときは `chorusMelodyNotes`）を直接編集する（鳴る音だけを持ち、休符は持たない）。編集中のセクションは表示上の一時的な状態としてモジュール内に持つ。「自動生成」は Aメロとサビの両方を作り直す。編集すると `melodyMethod` は `"manual"` になり、「自動生成」で `"auto"` に戻る。メロディは単音なので、重なる音は手前で切るか消す。再生中の編集はメロディだけ読み込み直して（`reloadLayer("melody")`）すぐ反映する。

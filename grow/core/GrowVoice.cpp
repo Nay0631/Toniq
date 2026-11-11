@@ -16,6 +16,8 @@ constexpr float driftCutoffSemis  = 2.0f;
 constexpr float driftWanderSemis  = 0.04f;
 constexpr float driftWanderPeriod = 0.15f;
 constexpr float driftWanderTime   = 0.1f;
+// FM の量が最大（1）のときに OSC 1 の位相をずらす大きさ（周期。1.5 周期 ≒ 変調指数 9.4）
+constexpr float fmDepth = 1.5f;
 constexpr float sqrt2       = 1.41421356f;
 constexpr float fadeSeconds = 0.004f;  // 差し替え・止めるときのフェードアウトの長さ
 constexpr float silentGain  = 1.0e-6f; // これより小さいユニゾンの音は描かない
@@ -42,12 +44,15 @@ void Voice::prepare (double newSampleRate)
     sampleRate = newSampleRate;
     ampEnv.setSampleRate (sampleRate);
     filterEnv.setSampleRate (sampleRate);
+    eg2.setSampleRate (sampleRate);
     filter1.setSampleRate (sampleRate);
     filter2.setSampleRate (sampleRate);
     fadeStep = 1.0f / (fadeSeconds * (float) sampleRate);
 
-    for (auto* s : { &lfoPitchSmooth, &lfoAmpSmooth, &subSmooth, &noiseSmooth })
+    for (auto* s : { &lfoPitchSmooth, &lfoAmpSmooth, &subSmooth, &noiseSmooth, &fmSmooth, &ringSmooth,
+                     &pwSmooth[0], &pwSmooth[1], &lfoPwSmooth })
         s->prepare (sampleRate, smoothSeconds);
+    for (auto& s : modAmountSmooth) s.prepare (sampleRate, smoothSeconds);
     for (auto* s : { &cutoffSmooth, &qSmooth, &envAmountSmooth, &lfoFilterSmooth, &keyTrackSmooth, &driveSmooth })
         s->prepare (sampleRate, smoothSeconds, filterEvery);
 
@@ -58,7 +63,9 @@ void Voice::snapSmoothing()
 {
     // 新しく鳴らす音は、今のつまみの値から始める（前の音の途中の値から滑らせない）
     unisonReady = false;
-    for (auto* s : { &lfoPitchSmooth, &lfoAmpSmooth, &subSmooth, &noiseSmooth, &cutoffSmooth, &qSmooth,
+    for (auto* s : { &lfoPitchSmooth, &lfoAmpSmooth, &subSmooth, &noiseSmooth, &fmSmooth, &ringSmooth,
+                     &pwSmooth[0], &pwSmooth[1], &lfoPwSmooth, &modAmountSmooth[0], &modAmountSmooth[1],
+                     &modAmountSmooth[2], &modAmountSmooth[3], &cutoffSmooth, &qSmooth,
                      &envAmountSmooth, &lfoFilterSmooth, &keyTrackSmooth, &driveSmooth })
         s->snapNext();
 }
@@ -80,7 +87,9 @@ void Voice::startNote (int midiNote, float velocity)
         for (int i = 0; i < maxUnison; ++i)
             // 1枚だけなら頭から（発音がそろう）。2枚目以降は鳴らしながらユニゾンを増やしたときのためにもばらばらに
             phases[o][i] = (p.osc[o].unison > 1 || i > 0) ? random.next() : 0.0f;
-    subPhase = 0.0f;
+    subPhase  = 0.0f;
+    modPhase  = 0.0f;
+    syncPhase = 0.0f;
     // ドリフト：音ごとに少しずれた高さ・明るさで鳴らす（量が 0 なら使わないが、乱数の並びは量によらずそろえる）
     driftPitch    = random.bipolar();
     driftCutoff   = random.bipolar();
@@ -88,6 +97,8 @@ void Voice::startNote (int midiNote, float velocity)
     wanderTarget  = random.bipolar();
     wanderCounter = 0;
     if (! p.lfoRetrigger) lfoPhase = random.next();  // 同時に弾いた音どうしの揺れがそろいすぎないように
+    if (! p.lfo2Retrigger) lfo2Phase = random.next();
+    noteRandom = random.bipolar();  // モジュレーションの元「ランダム」（音ごとに決める）
     snapSmoothing();
 
     active    = true;
@@ -98,6 +109,7 @@ void Voice::startNote (int midiNote, float velocity)
     pendingStopped = false;
     ampEnv.reset();
     filterEnv.reset();
+    eg2.reset();
     trigger (velocity);
 }
 
@@ -159,10 +171,20 @@ void Voice::trigger (float velocity)
         lfoPhase = 0.0f;
         lfoHold  = random.bipolar();
     }
+    if (p.lfo2Retrigger)
+    {
+        lfo2Phase = 0.0f;
+        lfo2Hold  = random.bipolar();
+    }
+    // フェードイン：発音から LFO の深さを 0 から上げていく
+    lfoFadeLevel  = p.lfoFade  > 0.0f ? 0.0f : 1.0f;
+    lfo2FadeLevel = p.lfo2Fade > 0.0f ? 0.0f : 1.0f;
     ampEnv.setParams (p.ampEnv);
     filterEnv.setParams (p.filterEnv);
+    eg2.setParams (p.eg2);
     ampEnv.noteOn();
     filterEnv.noteOn();
+    eg2.noteOn();
 }
 
 void Voice::stopNote (bool allowTailOff)
@@ -179,11 +201,13 @@ void Voice::stopNote (bool allowTailOff)
         released = true;
         ampEnv.noteOff();
         filterEnv.noteOff();
+        eg2.noteOff();
         if (! ampEnv.isActive()) active = false;
         return;
     }
     ampEnv.reset();
     filterEnv.reset();
+    eg2.reset();
     released = false;
     active   = false;
     fading   = false;
@@ -219,15 +243,15 @@ void Voice::finishFade()
     else sustained = wasSustained;
 }
 
-float Voice::lfoValue (LfoWave wave) const noexcept
+float Voice::lfoShape (LfoWave wave, float phase, float hold) noexcept
 {
     switch (wave)
     {
-        case LfoWave::sine:     return std::sin (twoPi * lfoPhase);
-        case LfoWave::triangle: return 1.0f - 4.0f * std::fabs (lfoPhase - 0.5f);
-        case LfoWave::saw:      return 2.0f * lfoPhase - 1.0f;
-        case LfoWave::square:   return lfoPhase < 0.5f ? 1.0f : -1.0f;
-        case LfoWave::random:   return lfoHold;
+        case LfoWave::sine:     return std::sin (twoPi * phase);
+        case LfoWave::triangle: return 1.0f - 4.0f * std::fabs (phase - 0.5f);
+        case LfoWave::saw:      return 2.0f * phase - 1.0f;
+        case LfoWave::square:   return phase < 0.5f ? 1.0f : -1.0f;
+        case LfoWave::random:   return hold;
     }
     return 0.0f;
 }
@@ -236,6 +260,7 @@ void Voice::updateBlockSettings (const GrowParams& p, int numSamples)
 {
     ampEnv.setParams (p.ampEnv);
     filterEnv.setParams (p.filterEnv);
+    eg2.setParams (p.eg2);
 
     // ユニゾンの目標の値。重ねた中の位置 pos（-1〜1）で高さのずれと左右の位置を決める（OSC 2 は左右を逆に振る）
     //   ・デチューンは |pos| を detuneCurve 乗で曲げる（内側は少し、外側は大きく）
@@ -365,6 +390,21 @@ void Voice::render (float* left, float* right, int numSamples)
     const auto glideCoeff    = p.glideTime > 0.0f ? std::exp (-3.0f / (p.glideTime * sr)) : 0.0f;
     const auto pitchEnvCoeff = std::exp (-3.0f / (std::max (0.001f, p.pitchEnvTime) * sr));
     const auto lfoStep       = p.lfoHz / sr;
+    const auto lfo2Step      = p.lfo2Hz / sr;
+    const auto lfoFadeStep   = p.lfoFade  > 0.0f ? 1.0f / (p.lfoFade  * sr) : 1.0f;
+    const auto lfo2FadeStep  = p.lfo2Fade > 0.0f ? 1.0f / (p.lfo2Fade * sr) : 1.0f;
+    // ピッチ EG：指数は時間の約 5% まで戻る係数、直線は1サンプルで減らす量
+    const auto pitchEnvStep  = 1.0f / (std::max (0.001f, p.pitchEnvTime) * sr);
+    // モジュレーションの割り当てで、量 1 のときに動かす大きさ（行き先ごと）
+    static constexpr float modScale[numModDests] = {
+        24.0f,   // 高さ（半音）
+        24.0f,   // OSC 2 の高さ（半音）
+        48.0f,   // カットオフ（半音）
+        0.45f,   // パルス幅
+        1.0f,    // 音量（1 + 量 × 元 を掛ける）
+        1.0f,    // FM の量
+        1.0f,    // リングの量
+    };
     const auto cutoffTarget  = hzToNote (p.cutoffHz);
     const auto maxCutoff     = std::min (20000.0f, sr * 0.45f);
     const auto lowpass24     = p.filterType == FilterType::lowpass24;
@@ -401,9 +441,45 @@ void Voice::render (float* left, float* right, int numSamples)
             lfoPhase -= std::floor (lfoPhase);
             lfoHold = random.bipolar();
         }
-        const auto lfo = lfoValue (p.lfoWave);
+        lfo2Phase += lfo2Step;
+        if (lfo2Phase >= 1.0f)
+        {
+            lfo2Phase -= std::floor (lfo2Phase);
+            lfo2Hold = random.bipolar();
+        }
+        if (lfoFadeLevel  < 1.0f) lfoFadeLevel  = std::min (1.0f, lfoFadeLevel  + lfoFadeStep);
+        if (lfo2FadeLevel < 1.0f) lfo2FadeLevel = std::min (1.0f, lfo2FadeLevel + lfo2FadeStep);
+        const auto lfo  = lfoShape (p.lfoWave,  lfoPhase,  lfoHold)  * lfoFadeLevel;
+        const auto lfo2 = lfoShape (p.lfo2Wave, lfo2Phase, lfo2Hold) * lfo2FadeLevel;
 
-        pitchEnvLevel = flushDenormal (pitchEnvLevel * pitchEnvCoeff);
+        pitchEnvLevel = p.pitchEnvLinear ? std::max (0.0f, pitchEnvLevel - pitchEnvStep)
+                                         : flushDenormal (pitchEnvLevel * pitchEnvCoeff);
+
+        const auto ampLevel    = ampEnv.next();
+        const auto filterLevel = filterEnv.next();
+        const auto eg2Level    = eg2.next();
+
+        // モジュレーションの割り当て：元 × 量 × 大きさ を行き先ごとに足す
+        float modTo[numModDests] {};
+        for (int m = 0; m < numModSlots; ++m)
+        {
+            const auto& slot   = p.mods[m];
+            const auto  amount = modAmountSmooth[m].next (slot.amount);
+            if (slot.source == ModSource::none || amount == 0.0f) continue;
+            auto source = 0.0f;
+            switch (slot.source)
+            {
+                case ModSource::none:      break;
+                case ModSource::velocity:  source = noteVelocity; break;
+                case ModSource::eg2:       source = eg2Level; break;
+                case ModSource::lfo1:      source = lfo; break;
+                case ModSource::lfo2:      source = lfo2; break;
+                case ModSource::filterEnv: source = filterLevel; break;
+                case ModSource::key:       source = ((float) targetNote - 60.0f) / 60.0f; break;
+                case ModSource::random:    source = noteRandom; break;
+            }
+            modTo[(int) slot.dest] += source * amount * modScale[(int) slot.dest];
+        }
 
         // ドリフトの高さのゆっくりした揺れ：ときどき目指す値を選び直し、そこへ1次でなめらかに近づく
         if (drift > 0.0f)
@@ -418,25 +494,64 @@ void Voice::render (float* left, float* right, int numSamples)
         const auto driftSemis = driftNote + drift * wander * driftWanderSemis;
 
         const auto note = currentNote + bend + driftSemis + p.pitchEnvSemis * pitchEnvLevel
-                          + lfo * lfoPitchSmooth.next (p.lfoPitchSemis);
+                          + lfo * lfoPitchSmooth.next (p.lfoPitchSemis) + modTo[(int) ModDest::pitch];
 
-        const auto ampLevel    = ampEnv.next();
-        const auto filterLevel = filterEnv.next();
+        // OSC ごとの基準の高さ（Hz）
+        float baseHz[2];
+        for (int o = 0; o < 2; ++o)
+        {
+            const auto& osc = p.osc[o];
+            baseHz[o] = noteToHz (note + (float) (osc.octave * 12 + osc.semitone) + osc.fineCents / 100.0f
+                                  + (o == 1 ? modTo[(int) ModDest::osc2Pitch] : 0.0f));
+        }
 
+        // OSC 変調：変調の元（OSC 2 の高さで鳴る1本の波。OSC 2 の音量・ユニゾンによらない）
+        const auto fm   = std::clamp (fmSmooth.next (p.fmAmount) + modTo[(int) ModDest::fm], 0.0f, 1.0f);
+        const auto ring = std::clamp (ringSmooth.next (p.ringAmount) + modTo[(int) ModDest::ring], 0.0f, 1.0f);
+        auto mod = 0.0f;
+        if (fm > 0.0f || ring > 0.0f)
+        {
+            const auto dt = std::min (0.5f, baseHz[1] / sr);
+            mod = oscillatorSample (p.osc[1].wave, modPhase, dt, p.osc[1].pulseWidth);
+            advancePhase (modPhase, dt);
+        }
+        // ハードシンク：OSC 1 の高さで回る位相が1周したら、OSC 2 の位相を頭に戻す
+        auto syncReset = false;
+        if (p.hardSync)
+        {
+            syncPhase += std::min (0.5f, baseHz[0] / sr);
+            if (syncPhase >= 1.0f) { syncPhase -= std::floor (syncPhase); syncReset = true; }
+        }
+
+        const auto lfoPw = lfo * lfoPwSmooth.next (p.lfoPulseWidth) + modTo[(int) ModDest::pulseWidth];
         auto l = 0.0f, r = 0.0f;
         for (int o = 0; o < 2; ++o)
         {
             const auto count = renderCount[o];
-            if (count == 0) continue;
             const auto& osc = p.osc[o];
-            const auto baseHz = noteToHz (note + (float) (osc.octave * 12 + osc.semitone) + osc.fineCents / 100.0f);
+            const auto pulseWidth = std::clamp (pwSmooth[o].next (osc.pulseWidth) + lfoPw, 0.05f, 0.95f);
+            if (o == 1 && syncReset)
+                for (int i = 0; i < maxUnison; ++i) phases[1][i] = 0.0f;
+            if (count == 0) continue;
             for (int i = 0; i < count; ++i)
             {
                 curRatio[o][i] += incRatio[o][i];
                 curLeft[o][i]  += incLeft[o][i];
                 curRight[o][i] += incRight[o][i];
-                const auto dt = std::min (0.5f, baseHz * curRatio[o][i] / sr);
-                const auto s  = oscillatorSample (osc.wave, phases[o][i], dt);
+                const auto dt = std::min (0.5f, baseHz[o] * curRatio[o][i] / sr);
+                auto s = 0.0f;
+                if (o == 0 && fm > 0.0f)
+                {
+                    // FM（位相変調）：変調の元の値だけ位相をずらして読む（最大 ±fmDepth 周期）
+                    auto shifted = phases[0][i] + fm * fmDepth * mod;
+                    shifted -= std::floor (shifted);
+                    s = oscillatorSample (osc.wave, shifted, dt, pulseWidth);
+                }
+                else
+                {
+                    s = oscillatorSample (osc.wave, phases[o][i], dt, pulseWidth);
+                }
+                if (o == 0 && ring > 0.0f) s += (s * mod - s) * ring;  // リング：掛けた音へ量の分だけ寄せる
                 advancePhase (phases[o][i], dt);
                 l += s * curLeft[o][i];
                 r += s * curRight[o][i];
@@ -467,7 +582,8 @@ void Voice::render (float* left, float* right, int numSamples)
                                 + lfo * lfoFilterSmooth.next (p.lfoFilterSemis)
                                 + (currentNote - 60.0f) * keyTrackSmooth.next (p.keyTrack)
                                 + driftCut
-                                - (1.0f - noteVelocity) * p.velocitySemis;
+                                - (1.0f - noteVelocity) * p.velocitySemis
+                                + modTo[(int) ModDest::cutoff];
             const auto hz = std::clamp (noteToHz (cutoff), 20.0f, maxCutoff);
             const auto resonance = qSmooth.next (p.resonance);
             const auto filterDrive = driveSmooth.next (p.filterDrive);
@@ -497,7 +613,8 @@ void Voice::render (float* left, float* right, int numSamples)
         }
 
         const auto tremolo = 1.0f - lfoAmpSmooth.next (p.lfoAmp) * (0.5f - 0.5f * lfo);
-        const auto gain    = ampLevel * velocityGain * tremolo * voiceGain * (fading ? fadeGain : 1.0f);
+        const auto modGain = std::max (0.0f, 1.0f + modTo[(int) ModDest::amp]);
+        const auto gain    = ampLevel * velocityGain * tremolo * modGain * voiceGain * (fading ? fadeGain : 1.0f);
         left[n]  += l * gain;
         right[n] += r * gain;
 

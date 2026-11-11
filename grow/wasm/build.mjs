@@ -12,6 +12,8 @@ const out  = join(root, "public", "grow", "grow.wasm");
 
 // grow_wasm.cpp の GROW_EXPORT の関数（wasm に残す関数）
 const exported = [
+  "grow_max_slots", "grow_set_sample_rate", "grow_open", "grow_close", "grow_render_slot",
+  "grow_note_on_slot", "grow_note_off_slot", "grow_all_notes_off_slot", "grow_set_bpm_slot", "grow_set_param_slot",
   "grow_init", "grow_block_size", "grow_left", "grow_right", "grow_render",
   "grow_note_on", "grow_note_off", "grow_all_notes_off", "grow_set_bpm",
   "grow_set_param", "grow_get_param", "grow_load_preset",
@@ -32,8 +34,9 @@ const args = [
   "-O3", "-std=c++17", "-fno-exceptions", "-fno-rtti",
   // JS の糊なしの wasm 単体（AudioWorklet の中で直接インスタンス化する）
   "-sSTANDALONE_WASM=1", "--no-entry", "-sFILESYSTEM=0",
-  // メモリは固定（オーディオスレッドで ArrayBuffer が差し替わらないように）
-  "-sINITIAL_MEMORY=16777216", "-sALLOW_MEMORY_GROWTH=0",
+  // メモリはスロットを開く（エンジンを作る）たびに必要な分だけ伸びる（最大 256MB）。
+  // 伸びると ArrayBuffer が差し替わるので、ワークレットは描くたびに参照を確かめ直す（growWorklet.js の views）
+  "-sINITIAL_MEMORY=8388608", "-sALLOW_MEMORY_GROWTH=1", "-sMAXIMUM_MEMORY=268435456",
   // カンマ区切り（Windows の cmd でも引用符なしで渡せる形）
   `-sEXPORTED_FUNCTIONS=${exported.join(",")}`,
   ...sources.map(s => relative(root, s)),

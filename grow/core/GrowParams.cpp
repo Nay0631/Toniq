@@ -14,6 +14,9 @@ const char* const filterNames[]    = { "ローパス 12", "ローパス 24", "�
 const char* const lfoWaveNames[]   = { "サイン", "三角", "ノコギリ", "矩形", "ランダム" };
 const char* const voiceModeNames[] = { "ポリ", "モノ", "レガート" };
 const char* const toggleNames[]    = { "オフ", "オン" };
+const char* const modSourceNames[] = { "なし", "ベロシティ", "EG 2", "LFO 1", "LFO 2", "フィルター EG", "キー", "ランダム" };
+const char* const modDestNames[]   = { "高さ", "OSC 2 の高さ", "カットオフ", "パルス幅", "音量", "FM", "リング" };
+const char* const curveNames[]     = { "指数", "直線" };
 
 // LFO のテンポ同期（1周の長さを拍で表す。0 = 同期しない＝「速さ」の Hz で揺らす）
 const char* const lfoSyncNames[] = { "オフ（Hz）", "1/1", "1/2", "1/4", "1/8", "1/16",
@@ -51,6 +54,12 @@ const ParamInfo table[] = {
     { "sub_level",   "サブ・ノイズ", "サブ",   K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "noise_level", "サブ・ノイズ", "ノイズ", K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
 
+    { "osc1_pw",   "OSC 変調", "OSC 1 パルス幅", K::continuous, 0.05f, 0.95f, 0.5f, 0, U::percent, GROW_NO_CHOICES },
+    { "osc2_pw",   "OSC 変調", "OSC 2 パルス幅", K::continuous, 0.05f, 0.95f, 0.5f, 0, U::percent, GROW_NO_CHOICES },
+    { "fm_amount", "OSC 変調", "FM（2 → 1）",    K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "ring",      "OSC 変調", "リング",         K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "hard_sync", "OSC 変調", "ハードシンク",   K::toggle,     0, 1, 0, 0, U::none, GROW_CHOICES (toggleNames) },
+
     { "filter_type",     "フィルター", "タイプ",     K::choice,     0, 3, 1, 0, U::none, GROW_CHOICES (filterNames) },
     { "filter_cutoff",   "フィルター", "カットオフ", K::continuous, 20, 20000, 6000, 1000, U::hertz, GROW_NO_CHOICES },
     { "filter_reso",     "フィルター", "レゾナンス", K::continuous, 0, 1, 0.15f, 0, U::percent, GROW_NO_CHOICES },
@@ -76,9 +85,36 @@ const ParamInfo table[] = {
     { "lfo_pitch",     "LFO", "→ 高さ",       K::continuous, 0, 12, 0, 1, U::semitones, GROW_NO_CHOICES },
     { "lfo_filter",    "LFO", "→ フィルター", K::continuous, 0, 48, 0, 0, U::semitones, GROW_NO_CHOICES },
     { "lfo_amp",       "LFO", "→ 音量",       K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "lfo_pw",        "LFO", "→ パルス幅",   K::continuous, 0, 0.45f, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "lfo_fade",      "LFO", "フェードイン", K::continuous, 0, 5, 0, 0.5f, U::seconds, GROW_NO_CHOICES },
+
+    { "lfo2_wave",      "LFO 2", "波形",         K::choice,     0, 4, 0, 0, U::none, GROW_CHOICES (lfoWaveNames) },
+    { "lfo2_sync",      "LFO 2", "テンポ同期",   K::choice,     0, 9, 0, 0, U::none, GROW_CHOICES (lfoSyncNames) },
+    { "lfo2_rate",      "LFO 2", "速さ",         K::continuous, 0.05f, 20, 2, 3, U::hertz, GROW_NO_CHOICES },
+    { "lfo2_retrigger", "LFO 2", "リトリガー",   K::toggle,     0, 1, 0, 0, U::none, GROW_CHOICES (toggleNames) },
+    { "lfo2_fade",      "LFO 2", "フェードイン", K::continuous, 0, 5, 0, 0.5f, U::seconds, GROW_NO_CHOICES },
+
+    { "eg2_attack",  "EG 2", "A", K::continuous, 0.001f, 10, 0.005f, 0.5f, U::seconds, GROW_NO_CHOICES },
+    { "eg2_decay",   "EG 2", "D", K::continuous, 0.001f, 10, 0.3f, 0.5f, U::seconds, GROW_NO_CHOICES },
+    { "eg2_sustain", "EG 2", "S", K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "eg2_release", "EG 2", "R", K::continuous, 0.001f, 15, 0.3f, 0.5f, U::seconds, GROW_NO_CHOICES },
+
+    { "mod1_source", "モジュレーション", "1：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
+    { "mod1_dest",   "モジュレーション", "1：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod1_amount", "モジュレーション", "1：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "mod2_source", "モジュレーション", "2：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
+    { "mod2_dest",   "モジュレーション", "2：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod2_amount", "モジュレーション", "2：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "mod3_source", "モジュレーション", "3：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
+    { "mod3_dest",   "モジュレーション", "3：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod3_amount", "モジュレーション", "3：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "mod4_source", "モジュレーション", "4：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
+    { "mod4_dest",   "モジュレーション", "4：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod4_amount", "モジュレーション", "4：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
 
     { "penv_amount", "ピッチ EG", "量",   K::continuous, -36, 36, 0, 0, U::semitones, GROW_NO_CHOICES },
-    { "penv_time",   "ピッチ EG", "時間", K::continuous, 0.001f, 2, 0.08f, 0.5f, U::seconds, GROW_NO_CHOICES },
+    { "penv_time",   "ピッチ EG", "時間", K::continuous, 0.001f, 10, 0.08f, 0.5f, U::seconds, GROW_NO_CHOICES },
+    { "penv_curve",  "ピッチ EG", "カーブ", K::choice,   0, 1, 0, 0, U::none, GROW_CHOICES (curveNames) },
 
     { "voice_mode", "ボイス", "モード",     K::choice,     0, 2, 0, 0, U::none, GROW_CHOICES (voiceModeNames) },
     { "glide",      "ボイス", "グライド",   K::continuous, 0, 2, 0, 0.3f, U::seconds, GROW_NO_CHOICES },
@@ -215,7 +251,11 @@ GrowParams makeParams (const float* values, double bpm)
         osc.unison      = std::clamp (intValue (values, (Param) (base + 5)), 1, maxUnison);
         osc.detuneCents = value (values, (Param) (base + 6));
         osc.width       = value (values, (Param) (base + 7));
+        osc.pulseWidth  = value (values, o == 0 ? osc1PulseWidth : osc2PulseWidth);
     }
+    p.fmAmount   = value (values, fmAmount);
+    p.ringAmount = value (values, ringAmount);
+    p.hardSync   = value (values, hardSync) > 0.5f;
     p.subLevel   = value (values, subLevel);
     p.noiseLevel = value (values, noiseLevel);
 
@@ -229,16 +269,38 @@ GrowParams makeParams (const float* values, double bpm)
     p.filterEnv      = envelope (values, fenvAttack);
     p.ampEnv         = envelope (values, aenvAttack);
 
+    // LFO の速さ（テンポ同期なら拍の長さから求める）
+    auto lfoHz = [&] (Param syncParam, Param rateParam)
+    {
+        const auto sync = std::clamp (intValue (values, syncParam), 0, countOf (lfoSyncBeats) - 1);
+        return sync == 0 ? value (values, rateParam) : 1.0f / (lfoSyncBeats[sync] * beatSeconds);
+    };
     p.lfoWave = (LfoWave) intValue (values, lfoWave);
-    const auto sync = std::clamp (intValue (values, lfoSync), 0, countOf (lfoSyncBeats) - 1);
-    p.lfoHz          = sync == 0 ? value (values, lfoRate) : 1.0f / (lfoSyncBeats[sync] * beatSeconds);
+    p.lfoHz          = lfoHz (lfoSync, lfoRate);
     p.lfoRetrigger   = value (values, lfoRetrigger) > 0.5f;
     p.lfoPitchSemis  = value (values, lfoPitch);
     p.lfoFilterSemis = value (values, lfoFilter);
     p.lfoAmp         = value (values, lfoAmp);
+    p.lfoPulseWidth  = value (values, lfoPulseWidth);
+    p.lfoFade        = value (values, lfoFade);
+
+    p.lfo2Wave      = (LfoWave) intValue (values, lfo2Wave);
+    p.lfo2Hz        = lfoHz (lfo2Sync, lfo2Rate);
+    p.lfo2Retrigger = value (values, lfo2Retrigger) > 0.5f;
+    p.lfo2Fade      = value (values, lfo2Fade);
+    p.eg2           = envelope (values, eg2Attack);
+
+    for (int m = 0; m < numModSlots; ++m)
+    {
+        const auto base = (Param) (mod1Source + m * 3);
+        p.mods[m].source = (ModSource) std::clamp (intValue (values, base), 0, 7);
+        p.mods[m].dest   = (ModDest) std::clamp (intValue (values, (Param) (base + 1)), 0, numModDests - 1);
+        p.mods[m].amount = value (values, (Param) (base + 2));
+    }
 
     p.pitchEnvSemis = value (values, pitchEnvAmount);
     p.pitchEnvTime  = value (values, pitchEnvTime);
+    p.pitchEnvLinear = intValue (values, pitchEnvCurve) == 1;
 
     p.voiceMode    = (VoiceMode) intValue (values, voiceMode);
     p.glideTime    = value (values, glide);

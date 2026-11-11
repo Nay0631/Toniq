@@ -48,7 +48,7 @@ const ROLES = {
   epiano: "chord", organ: "chord", strings: "chord", square: "chord",
   fx_riser_noise: "fx", fx_riser_pitch: "fx", fx_boom: "fx", fx_burst: "fx", fx_down_noise: "fx",
   fx_down_tone: "fx", fx_reverse: "fx", fx_chip: "pluck",
-  saw_bass: "bass", square_bass: "bass", rolling_bass: "bass", chip_bass: "bass", soft_bass: "bass",
+  saw_bass: "bass", square_bass: "bass", rolling_bass: "bass", chip_bass: "bass", soft_bass: "bass", brass: "lead", sync_lead: "lead",
 };
 // わざと小さくしている音（ヒス・プチプチは背景の質感）
 const FIXED = new Set(["vinyl_hiss", "vinyl_crackle"]);

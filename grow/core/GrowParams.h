@@ -12,6 +12,11 @@ enum class Wave       { sine, triangle, saw, square };
 enum class FilterType { lowpass12, lowpass24, highpass, bandpass };
 enum class LfoWave    { sine, triangle, saw, square, random };
 enum class VoiceMode  { poly, mono, legato };
+// モジュレーションの元と行き先（GrowParams.cpp の modSourceNames / modDestNames の並び）
+enum class ModSource  { none, velocity, eg2, lfo1, lfo2, filterEnv, key, random };
+enum class ModDest    { pitch, osc2Pitch, cutoff, pulseWidth, amp, fm, ring };
+inline constexpr int numModDests = 7;
+inline constexpr int numModSlots = 4;  // モジュレーションの割り当ての数
 
 enum class ParamKind { continuous, integer, choice, toggle };
 enum class ParamUnit { none, percent, hertz, seconds, semitones, cents, decibels, signedInteger };
@@ -35,11 +40,16 @@ enum Param : int
     osc1Wave, osc1Octave, osc1Semi, osc1Fine, osc1Level, osc1Unison, osc1Detune, osc1Width,
     osc2Wave, osc2Octave, osc2Semi, osc2Fine, osc2Level, osc2Unison, osc2Detune, osc2Width,
     subLevel, noiseLevel,
+    osc1PulseWidth, osc2PulseWidth, fmAmount, ringAmount, hardSync,
     filterType, filterCutoff, filterResonance, filterEnvAmount, filterKeyTrack, filterDrive, filterVelocity,
     fenvAttack, fenvDecay, fenvSustain, fenvRelease,
     aenvAttack, aenvDecay, aenvSustain, aenvRelease,
-    lfoWave, lfoSync, lfoRate, lfoRetrigger, lfoPitch, lfoFilter, lfoAmp,
-    pitchEnvAmount, pitchEnvTime,
+    lfoWave, lfoSync, lfoRate, lfoRetrigger, lfoPitch, lfoFilter, lfoAmp, lfoPulseWidth, lfoFade,
+    lfo2Wave, lfo2Sync, lfo2Rate, lfo2Retrigger, lfo2Fade,
+    eg2Attack, eg2Decay, eg2Sustain, eg2Release,
+    mod1Source, mod1Dest, mod1Amount, mod2Source, mod2Dest, mod2Amount,
+    mod3Source, mod3Dest, mod3Amount, mod4Source, mod4Dest, mod4Amount,
+    pitchEnvAmount, pitchEnvTime, pitchEnvCurve,
     voiceMode, glide, velocity, drift,
     drive, chorusMix, chorusRate, chorusDepth,
     delayMix, delayTime, delayFeedback, delayPingPong,
@@ -72,6 +82,7 @@ struct OscParams
     int   unison      = 1;     // 重ねる音の数（1〜maxUnison）
     float detuneCents = 0.0f;  // 重ねた音の高さのずれ（いちばん外側の音のずれ）
     float width       = 0.0f;  // 重ねた音の左右の広がり（0〜1）
+    float pulseWidth  = 0.5f;  // 矩形波の幅（0.5 = 普通の矩形波）
 };
 
 // 音を作る側（Voice / Fx）が読む値。makeParams() でパラメーターの値と BPM から作る
@@ -80,6 +91,11 @@ struct GrowParams
     OscParams osc[2];
     float subLevel   = 0.0f;  // 1オクターブ下のサイン波
     float noiseLevel = 0.0f;  // ホワイトノイズ（左右別々）
+
+    // OSC 変調。変調の元は OSC 2 の高さで鳴る1本の波（OSC 2 の波形。OSC 2 の音量が 0 でも使える）
+    float fmAmount   = 0.0f;   // OSC 2 → OSC 1 の FM（位相変調）の量（0〜1）
+    float ringAmount = 0.0f;   // OSC 1 に OSC 2 を掛けるリングモジュレーションの量（0〜1。1 で掛けた音だけ）
+    bool  hardSync   = false;  // OSC 2 の位相を OSC 1 の周期ごとに頭に戻す（ハードシンク）
 
     FilterType filterType = FilterType::lowpass24;
     float cutoffHz        = 6000.0f;
@@ -98,9 +114,30 @@ struct GrowParams
     float   lfoPitchSemis  = 0.0f;
     float   lfoFilterSemis = 0.0f;
     float   lfoAmp         = 0.0f;   // 0〜1
+    float   lfoPulseWidth  = 0.0f;   // 矩形波の幅を揺らす量（PWM。0〜0.45）
+    float   lfoFade        = 0.0f;   // 発音から LFO が最大の深さになるまでの時間（秒。0 = すぐ）
+
+    // LFO 2（行き先はモジュレーションの割り当てで決める）
+    LfoWave lfo2Wave      = LfoWave::sine;
+    float   lfo2Hz        = 2.0f;
+    bool    lfo2Retrigger = false;
+    float   lfo2Fade      = 0.0f;
+
+    // EG 2（モジュレーション用の ADSR。行き先はモジュレーションの割り当てで決める）
+    EnvParams eg2;
+
+    // モジュレーションの割り当て（元 × 量 → 行き先。量は -1〜1）
+    struct ModSlot
+    {
+        ModSource source = ModSource::none;
+        ModDest   dest   = ModDest::pitch;
+        float     amount = 0.0f;
+    };
+    ModSlot mods[numModSlots];
 
     float pitchEnvSemis = 0.0f;   // 発音の瞬間にずらす高さ（半音。0 に向かって戻る）
     float pitchEnvTime  = 0.08f;  // 戻るまでの時間（秒）
+    bool  pitchEnvLinear = false; // true = 半音で一定の速さで戻る（直線）、false = はじめ速く戻る（指数）
 
     VoiceMode voiceMode    = VoiceMode::poly;
     float     glideTime    = 0.0f;  // 前の音から滑らせる時間（秒）
