@@ -9,6 +9,9 @@ entity ":アプリの状態" as L4
 control ":再生" as L5
 control ":メロディ演奏" as L6
 entity ":メロディ設定マスタ" as L7
+control ":Toniqシンセ" as L8
+
+note over L2 : 「Toniq シンセ（テスト中）」は設定画面で\nToniq シンセが ON のときだけ選べる
 
 L1 -> L2 : メロディの音色を選ぶ() : void
 activate L2
@@ -22,13 +25,17 @@ opt 再生中
   activate L5
   L5 -> L6 : メロディの音源を作り直す() : void
   activate L6
-  L6 -> L4 : 音色を取得する() : void
+  L6 -> L4 : 音色・Toniqシンセの使用を取得する() : void
   activate L4
   deactivate L4
-  opt 音色が「ジャンルに合わせる」
+  alt 音色が「ジャンルに合わせる」、または Toniqシンセで Toniqシンセが OFF
     L6 -> L7 : ジャンルの標準の音色を取得する() : void
     activate L7
     deactivate L7
+  else 音色が Toniqシンセで Toniqシンセが ON
+    L6 -> L8 : 音作りの値で音源を作る() : void
+    activate L8
+    deactivate L8
   end
   deactivate L6
   deactivate L5
