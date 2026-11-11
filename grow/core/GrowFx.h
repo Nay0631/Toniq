@@ -2,12 +2,15 @@
 
 #include <algorithm>
 #include <vector>
+#include "GrowDsp.h"
 #include "GrowParams.h"
 
 namespace grow
 {
 // 全ボイスを足した後ろのエフェクト（左右）：
-// ドライブ → コーラス → ディレイ（テンポ同期・左右に跳ねる）→ リバーブ（Freeverb）→ マスター → リミッター
+// ドライブ → コーラス → ディレイ（テンポ同期・左右に跳ねる）→ リバーブ（Freeverb）
+//   → マスター → DC カット → ソフトクリップ → リミッター
+// 量・深さなどのつまみの値は数 ms かけて滑らかに変える
 class Fx
 {
 public:
@@ -46,6 +49,7 @@ private:
         float process (float input);
     };
 
+    void processDrive (float* left, float* right, int numSamples, const GrowParams& p);
     void processChorus (float* left, float* right, int numSamples, const GrowParams& p);
     void processDelay (float* left, float* right, int numSamples, const GrowParams& p);
     void processReverb (float* left, float* right, int numSamples, const GrowParams& p);
@@ -65,5 +69,13 @@ private:
 
     float masterGain = 0.0f;
     float limiterGain = 1.0f;
+
+    // DC カット（1次のハイパス）の前の入力・出力
+    float dcIn[2] {}, dcOut[2] {};
+    float dcCoeff = 0.9995f;
+
+    Smoother driveSmooth, chorusMixSmooth, chorusDepthSmooth;
+    Smoother delayMixSmooth, delayFeedbackSmooth;
+    Smoother reverbMixSmooth, reverbSizeSmooth;
 };
 } // namespace grow

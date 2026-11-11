@@ -18,6 +18,45 @@ inline float noteToHz (float note) noexcept { return 440.0f * std::exp2 ((note -
 inline float hzToNote (float hz) noexcept { return 69.0f + 12.0f * std::log2 (hz / 440.0f); }
 inline float dbToGain (float db) noexcept { return std::pow (10.0f, db / 20.0f); }
 
+// ===== デノーマル対策 =====
+// wasm には FTZ / DAZ（とても小さい値を 0 にする CPU の設定）がないので、
+// フィードバックや減衰で 0 に近づいていく値は自前で 0 にする（極小の値の計算はとても遅くなる）
+inline float flushDenormal (float x) noexcept { return std::fabs (x) < 1.0e-15f ? 0.0f : x; }
+
+// ===== パラメーターのスムージング（1次ローパス） =====
+// ノブの値が段差で変わると「ジジッ」と鳴る（ジッパーノイズ）ので、目標の値へ数 ms かけて近づける。
+// 最初の1回（と snapNext のあと）は目標の値から始める
+class Smoother
+{
+public:
+    // seconds = 時定数（約 3 倍の時間でほぼ届く）。every = 何サンプルごとに next() を呼ぶか
+    void prepare (double sampleRate, float seconds, int every = 1) noexcept
+    {
+        coeff = 1.0f - std::exp (-(float) every / (seconds * (float) sampleRate));
+        ready = false;
+    }
+    void snapNext() noexcept { ready = false; }
+
+    float next (float target) noexcept
+    {
+        if (! ready)
+        {
+            value = target;
+            ready = true;
+            return value;
+        }
+        value += (target - value) * coeff;
+        if (std::fabs (target - value) < 1.0e-6f) value = target;  // 届いたら止める（極小の差を残さない）
+        return value;
+    }
+
+private:
+    float value = 0.0f, coeff = 1.0f;
+    bool ready = false;
+};
+
+inline constexpr float smoothSeconds = 0.01f;  // パラメーターのスムージングの時定数（約 30ms でほぼ届く）
+
 // ===== 乱数（xorshift。オーディオスレッドで使えるよう軽く・確保なし） =====
 class Random
 {
@@ -77,39 +116,43 @@ inline void advancePhase (float& phase, float dt) noexcept
     if (phase >= 1.0f) phase -= std::floor (phase);
 }
 
-// ===== ADSR（直線。鳴っている途中で掛け直すと、今の大きさから立ち上がり直す） =====
+// ===== ADSR（指数カーブ。鳴っている途中で掛け直すと、今の大きさから立ち上がり直す） =====
+// アナログのエンベロープと同じく、目標より少し先の値へ1次で近づく形（Nigel Redmon の方式）：
+//   アタック            ：1 より上（1 + attackRatio）を目指す、上に膨らんだ形
+//   ディケイ・リリース  ：目標より少し下を目指す、はじめ速く後ろがゆっくり減る形（音量の dB が一定の速さで下がる）
+// 目標を少し越えた所を目指すので、各段の時間ちょうどで目標に届いて次の段へ進む
 class Adsr
 {
 public:
-    void setSampleRate (double sr) noexcept { sampleRate = (float) sr; }
+    void setSampleRate (double sr) noexcept
+    {
+        sampleRate = (float) sr;
+        sustainCoeff = 1.0f - std::exp (-1.0f / (0.005f * sampleRate));  // サスティンの値を変えたときに約 15ms で寄せる
+        computed = false;
+    }
 
     void setParams (const EnvParams& p) noexcept
     {
-        params = p;
-        attackRate = p.attack > 0.0f ? 1.0f / (p.attack * sampleRate) : 0.0f;
-        decayRate  = p.decay > 0.0f ? (1.0f - p.sustain) / (p.decay * sampleRate) : 0.0f;
-        if (state == State::sustain) value = p.sustain;
+        if (computed && p.attack == params.attack && p.decay == params.decay && p.sustain == params.sustain
+            && p.release == params.release)
+            return;
+        params   = p;
+        computed = true;
+        attackCoeff  = coeffFor (p.attack, attackRatio);
+        attackBase   = (1.0f + attackRatio) * (1.0f - attackCoeff);
+        decayCoeff   = coeffFor (p.decay, decayRatio);
+        decayBase    = (p.sustain - decayRatio) * (1.0f - decayCoeff);
+        releaseCoeff = coeffFor (p.release, decayRatio);
+        releaseBase  = -decayRatio * (1.0f - releaseCoeff);
     }
 
-    void noteOn() noexcept
-    {
-        if (attackRate > 0.0f)      state = State::attack;
-        else if (decayRate > 0.0f) { value = 1.0f; state = State::decay; }
-        else                       { value = params.sustain; state = State::sustain; }
-    }
+    void noteOn() noexcept { state = State::attack; }
 
     void noteOff() noexcept
     {
         if (state == State::idle) return;
-        if (params.release > 0.0f && value > 0.0f)
-        {
-            releaseRate = value / (params.release * sampleRate);
-            state = State::release;
-        }
-        else
-        {
-            reset();
-        }
+        if (value > 0.0f) state = State::release;
+        else              reset();
     }
 
     void reset() noexcept
@@ -127,15 +170,15 @@ public:
             case State::idle:
                 return 0.0f;
             case State::attack:
-                value += attackRate;
+                value = attackBase + value * attackCoeff;
                 if (value >= 1.0f)
                 {
                     value = 1.0f;
-                    state = decayRate > 0.0f ? State::decay : State::sustain;
+                    state = State::decay;
                 }
                 break;
             case State::decay:
-                value -= decayRate;
+                value = decayBase + value * decayCoeff;
                 if (value <= params.sustain)
                 {
                     value = params.sustain;
@@ -143,10 +186,12 @@ public:
                 }
                 break;
             case State::sustain:
-                value = params.sustain;
+                // サスティンのつまみを動かしても段差にならないよう、滑らかに寄せる
+                value += (params.sustain - value) * sustainCoeff;
+                value = flushDenormal (value);
                 break;
             case State::release:
-                value -= releaseRate;
+                value = releaseBase + value * releaseCoeff;
                 if (value <= 0.0f) reset();
                 break;
         }
@@ -154,11 +199,28 @@ public:
     }
 
 private:
+    // 目標を越えて目指す量。小さいほど曲がりが強い
+    static constexpr float attackRatio = 0.3f;
+    static constexpr float decayRatio  = 0.03f;
+
+    // time 秒で目標に届く係数（time が 0 なら 1 サンプルで届く）
+    float coeffFor (float time, float ratio) const noexcept
+    {
+        const auto samples = time * sampleRate;
+        if (samples <= 1.0f) return 0.0f;
+        return std::exp (-std::log ((1.0f + ratio) / ratio) / samples);
+    }
+
     enum class State { idle, attack, decay, sustain, release };
     State state = State::idle;
     EnvParams params;
+    bool  computed = false;
     float sampleRate = 44100.0f;
-    float value = 0.0f, attackRate = 0.0f, decayRate = 0.0f, releaseRate = 0.0f;
+    float value = 0.0f;
+    float attackCoeff = 0.0f, attackBase = 1.3f;
+    float decayCoeff = 0.0f, decayBase = 0.0f;
+    float releaseCoeff = 0.0f, releaseBase = 0.0f;
+    float sustainCoeff = 1.0f;
 };
 
 // ===== ステートバリアブルフィルター（TPT。左右2チャンネル） =====
@@ -171,6 +233,14 @@ public:
     void setType (Type t) noexcept { type = t; }
     void setCutoff (float hz) noexcept { if (hz != cutoff) { cutoff = hz; update(); } }
     void setQ (float q) noexcept { if (q != resonance) { resonance = q; update(); } }
+    // カットオフと Q を一緒に変える（計算し直しは1回）
+    void setCutoffAndQ (float hz, float q) noexcept
+    {
+        if (hz == cutoff && q == resonance) return;
+        cutoff = hz;
+        resonance = q;
+        update();
+    }
     void reset() noexcept { s1[0] = s1[1] = s2[0] = s2[1] = 0.0f; }
 
     float process (int ch, float x) noexcept
@@ -179,9 +249,9 @@ public:
         auto& b = s2[ch];
         const auto hp = h * (x - a * (g + r2) - b);
         const auto bp = hp * g + a;
-        a = hp * g + bp;
+        a = flushDenormal (hp * g + bp);
         const auto lp = bp * g + b;
-        b = bp * g + lp;
+        b = flushDenormal (bp * g + lp);
         return type == Type::lowpass ? lp : type == Type::bandpass ? bp : hp;
     }
 

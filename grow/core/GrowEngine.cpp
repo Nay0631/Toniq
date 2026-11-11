@@ -59,22 +59,29 @@ void Engine::updateParams()
     params = makeParams (values, bpm);
     if (params.voiceMode != voiceMode)
     {
-        allNotesOff();  // 切り替えの途中で音が残らないように止める
+        // 切り替えの途中で音が残らないように、すべての音を短くフェードアウトして止める（いきなり切るとクリックになる）
+        for (auto& v : voices) v.fadeOut();
+        numHeld = 0;
+        sustainPedal = false;
         voiceMode = params.voiceMode;
     }
 }
 
 Voice* Engine::findVoiceForNewNote()
 {
+    Voice* fadingOut = nullptr;
     Voice* oldestReleased = nullptr;
     Voice* oldest = nullptr;
     for (auto& v : voices)
     {
         if (! v.isActive()) return &v;
+        if (v.isFading() && ! v.hasPendingNote()) fadingOut = &v;
         if (v.isReleased() && (oldestReleased == nullptr || v.age < oldestReleased->age)) oldestReleased = &v;
         if (oldest == nullptr || v.age < oldest->age) oldest = &v;
     }
-    // 空きがなければ、余韻だけの音 → いちばん古い音の順に差し替える
+    // 空きがなければ、消えていく途中の音 → 余韻だけの音 → いちばん古い音の順に差し替える
+    // （差し替える音は Voice::steal で短くフェードアウトしてから鳴らす）
+    if (fadingOut != nullptr) return fadingOut;
     return oldestReleased != nullptr ? oldestReleased : oldest;
 }
 
@@ -91,7 +98,7 @@ void Engine::noteOn (int midiNote, float velocity)
 
         if (auto* v = findVoiceForNewNote())
         {
-            v->startNote (midiNote, velocity);
+            v->steal (midiNote, velocity);  // 空いていればすぐ鳴らす
             v->age = ++noteCounter;
         }
         return;
