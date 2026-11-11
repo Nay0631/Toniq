@@ -3327,3 +3327,35 @@ span[data-term],
 
 .export-percent { font-variant-numeric: tabular-nums; font-weight: 600; }
 .export-elapsed { margin-top: 4px; font-size: 12px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+
+/* 書き出すファイルの名前のダイアログ（FileNameDialog.ts） */
+.filename-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+
+.filename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.filename-input:focus { outline: none; border-color: var(--custom); }
+.filename-ext { font-size: 14px; color: var(--text-muted); }
+.filename-error { margin: 4px 0 0; font-size: 12px; color: var(--danger); }
+.filename-error[hidden] { display: none; }
+
+.filename-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}

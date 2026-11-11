@@ -67,7 +67,7 @@
     "eq":        { "low": 0, "mid": -1, "high": 1 },
     "compressor":{ "threshold": -20, "ratio": 2, "attack": 0.05, "release": 0.5 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4,
+    "gain":      1,
     "swing":     0,
     "sidechain": 0
   }

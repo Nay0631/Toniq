@@ -5,12 +5,11 @@ import { generateMelody } from "../engine/MelodyGenerator";
 import { isArrangedAt, LAYERS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
-import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
 import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, formatTime } from "./format";
 import { startPianoRollPlayhead } from "./PianoRollTab";
-import { exportAudioWithProgress } from "./ExportProgress";
+import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -394,16 +393,12 @@ export function initSimpleScreen(): void {
   });
 
   // 書き出し
-  $("s-export-midi")?.addEventListener("click", () => {
-    const s = getState();
-    exportMidi(`toniq_${s.genre}_${s.mood}.mid`);
-  });
+  $("s-export-midi")?.addEventListener("click", () => exportMidiWithName());
 
   (["wav", "mp3"] as const).forEach(format => {
     const btn = $(`s-export-${format}`) as HTMLButtonElement | null;
     btn?.addEventListener("click", async () => {
-      const s = getState();
-      await exportAudioWithProgress(format, `toniq_${s.genre}_${s.mood}.${format}`, btn);
+      await exportAudioWithProgress(format, btn);
       render();
     });
   });

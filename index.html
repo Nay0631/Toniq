@@ -487,16 +487,8 @@
 
             <label class="form-row">
               <span class="form-label" data-term="instrument">音色</span>
-              <select class="select" id="c-chord-instrument">
-                <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow">grow</option>
-                <option value="soft">ソフトパッド</option>
-                <option value="epiano">エレピ</option>
-                <option value="strings">ストリングス</option>
-                <option value="organ">オルガン</option>
-                <option value="square">スクエア（8bit）</option>
-                <option value="supersaw">SuperSaw</option>
-              </select>
+              <!-- grow のプリセット（AppState.growChordPreset。値は ID、空 = ジャンルに合わせる）。CustomScreen.ts が作る -->
+              <select class="select" id="c-chord-instrument"></select>
             </label>
           </div>
 

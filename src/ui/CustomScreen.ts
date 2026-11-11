@@ -1,4 +1,4 @@
-import { getState, setState, ChordRhythm, ChordInstrument, MelodyInstrument, FxType } from "../engine/AppState";
+import { getState, setState, ChordRhythm, MelodyInstrument, FxType } from "../engine/AppState";
 import { fxLabel } from "../engine/FxPlayer";
 import { resolveTempoPreset, chorusCandidates, pickChorus } from "../engine/SimpleModeResolver";
 import { chorusFits, chorusProgression, generateChorusMelody, generateSongMelodies } from "../engine/SongForm";
@@ -9,7 +9,6 @@ import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from
 import {
   isScalePreviewOn, onScalePreviewChange, playScalePreview, scalePreviewNotes, scalePreviewStep, stopScalePreview,
 } from "../engine/ScalePreview";
-import { exportMidi } from "../engine/MidiExporter";
 import { applySwing, swingAmount, sidechainAmount } from "../engine/Groove";
 import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
@@ -21,9 +20,34 @@ import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerT
 import { initMixer, renderMixer } from "./MixerPanel";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { attachKnob, attachStepper, syncControls } from "./Controls";
-import { exportAudioWithProgress } from "./ExportProgress";
+import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import type { AudioFormat } from "../engine/Playback";
 import { initGrowPanel } from "./GrowPanel";
+import {
+  CHORD_PRESET_CHOICES, growPresetIds, growPresetNames, isGrowLoaded, setGrowSound, standardGrowPreset,
+} from "../engine/Grow";
+
+// コードの音色の選択肢の表示名（grow の wasm を読み込むまでの仮の名前。読み込んだらコアのプリセット名を使う）
+const CHORD_PRESET_LABELS: Record<string, string> = {
+  soft_pad: "ソフトパッド", wide_pad: "ワイドパッド", epiano: "エレピ", strings: "ストリングス",
+  organ: "オルガン", square: "スクエア（8bit）", supersaw: "スーパーソウ",
+};
+
+// コードの音色のセレクト（grow のプリセット。空 = ジャンルに合わせる）。
+// grow のパネルで選択肢にないプリセットを選んでいたら、その音も選択肢に足す
+function renderChordInstrument(): void {
+  const s = getState();
+  const select = $select("c-chord-instrument");
+  const ids = growPresetIds(), names = growPresetNames();
+  const label = (id: string) => (isGrowLoaded() ? names[ids.indexOf(id)] : undefined) ?? CHORD_PRESET_LABELS[id] ?? id;
+  const standard = isGrowLoaded() ? label(ids[standardGrowPreset("chord")]) : "";
+  const choices = [...CHORD_PRESET_CHOICES];
+  if (s.growChordPreset && !choices.includes(s.growChordPreset)) choices.push(s.growChordPreset);
+  const html = `<option value="">ジャンルに合わせる${standard ? `（${standard}）` : ""}</option>`
+    + choices.map(id => `<option value="${id}">${label(id)}</option>`).join("");
+  if (select.innerHTML !== html) select.innerHTML = html;
+  select.value = s.growChordPreset ?? "";
+}
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -250,7 +274,7 @@ function render(): void {
   fillSelect($select("c-chord"), chordCandidates(), s.chordPattern, c => chordLabel(c, s.key));
   renderChorusSelect();
   $select("c-rhythm").value = s.chordRhythm;
-  $select("c-chord-instrument").value = s.chordInstrument;
+  renderChordInstrument();
 
   // ドラム
   $select("c-drum-category").value = s.drumCategory;
@@ -488,9 +512,10 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  // コードの音色：Synth は再生開始時に作り直されるので、再生中なら再生し直す
+  // コードの音色（grow のプリセット。選び直したら grow のパネルで変えた値は捨てる）。
+  // Synth は再生開始時に作り直されるので、再生中なら再生し直す
   $select("c-chord-instrument").addEventListener("change", async e => {
-    setState({ chordInstrument: (e.target as HTMLSelectElement).value as ChordInstrument });
+    setGrowSound("chord", (e.target as HTMLSelectElement).value || null, null);
     render();
     await restartIfPlaying();
   });
@@ -581,10 +606,7 @@ export function initCustomScreen(): void {
 
   // ===== 書き出し（設定タブとアレンジャータブ） =====
   ["c-export-midi", "c-arr-export-midi"].forEach(id =>
-    $(id)?.addEventListener("click", () => {
-      const s = getState();
-      exportMidi(`toniq_${s.genre}_${s.key}.mid`);
-    }));
+    $(id)?.addEventListener("click", () => exportMidiWithName()));
 
   const audioButtons: [string, AudioFormat][] = [
     ["c-export-wav", "wav"], ["c-arr-export-wav", "wav"],
@@ -593,8 +615,7 @@ export function initCustomScreen(): void {
   audioButtons.forEach(([id, format]) => {
     const btn = $(id) as HTMLButtonElement | null;
     btn?.addEventListener("click", async () => {
-      const s = getState();
-      await exportAudioWithProgress(format, `toniq_${s.genre}_${s.key}.${format}`, btn);
+      await exportAudioWithProgress(format, btn);
       render();
     });
   });

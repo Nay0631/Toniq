@@ -17,8 +17,9 @@ export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 export type MelodyInstrument =
   "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid" | "grow";
 
-// コードの音色（grow = 内部シンセ grow（初期値。growChordPreset / growChordParams で鳴らす。wasm がないときはソフトパッド））
-export type ChordInstrument = "grow" | "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
+// コードの音色。いつも grow（growChordPreset / growChordParams で鳴らす。wasm がないときは Tone.js のソフトパッド）。
+// 以前の Tone.js の音色（soft / epiano / strings / organ / square / supersaw）は、同じ音の grow のプリセットに読み替える（SongLibrary.ts）
+export type ChordInstrument = "grow";
 
 // FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
 export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
@@ -151,7 +152,7 @@ export interface AppState {
   growPreset:       string;
   growParams:       Record<string, number> | null;
   // コードを grow で鳴らすときの音作り（メロディとは別に持つ。形は growPreset / growParams と同じ）
-  growChordPreset:  string;
+  growChordPreset:  string | null;  // null = ジャンルの標準（Grow.ts の CHORD_STANDARD）
   growChordParams:  Record<string, number> | null;
   // ベース・パッド・アルペジオ・シグネチャーの grow の音作り（どれも grow で鳴らす。wasm がないときは Tone.js の音色）
   growSounds:       Record<GrowPartName, GrowSound>;
@@ -241,7 +242,7 @@ export const defaultState: AppState = {
   drumSource:       "synth",
   growPreset:       "lead",      // シンセリード
   growParams:       null,
-  growChordPreset:  "wide_pad",  // ワイドパッド
+  growChordPreset:  null,  // ジャンルの標準
   growChordParams:  null,
   growSounds: {
     bass:      { preset: null, params: null },

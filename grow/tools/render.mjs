@@ -11,7 +11,7 @@
 // 鳴らすフレーズはプリセットの使われ方（ROLES）で変える。音量は「聞こえる大きさ」＝ モーメンタリーラウドネスの最大
 // （ITU-R BS.1770 の K 特性で重み付けした 400ms の窓の大きさ。LUFS）で比べる。耳に近い重み付けなので、
 // 低音だけ大きく・高いノイズだけ小さく出ることがなく、短く切れる音も鳴っている所の大きさで比べられる。
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -273,13 +273,26 @@ function readWav(path) {
   return { L, R, sr: fmt.sr };
 }
 
+// ファイル名の * / ? を展開する（フォルダの部分は展開しない）。一致するものがなければ空
+function expandWildcard(path) {
+  if (!/[*?]/.test(path)) return [path];
+  const dir = dirname(path), name = path.slice(dir.length).replace(/^[\\/]/, "");
+  const pattern = new RegExp("^" + name.replace(/[.+^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*").replace(/\?/g, ".") + "$", "i");
+  try {
+    return readdirSync(dir).filter(f => pattern.test(f)).sort().map(f => join(dir, f));
+  } catch {
+    return [];
+  }
+}
+
 // ===== 実行 =====
 // --analyze <WAV …>：Toniq で書き出した曲などの WAV を測る（ピーク・統合ラウドネス・聞こえる大きさの最大）。
 // mix_presets.json の gain の確認（ピーク -1dB 以下）に使う
 const analyzeAt = args.indexOf("--analyze");
 if (analyzeAt >= 0) {
-  const files = args.slice(analyzeAt + 1).filter(a => !a.startsWith("--"));
-  if (files.length === 0) console.error("--analyze のあとに WAV のパスを指定してください");
+  // PowerShell・cmd はワイルドカード（*.wav など）を展開せずに渡すので、ここで展開する
+  const files = args.slice(analyzeAt + 1).filter(a => !a.startsWith("--")).flatMap(expandWildcard);
+  if (files.length === 0) console.error("--analyze のあとに WAV のパスを指定してください（見つかりませんでした）");
   for (const file of files) {
     const { L, R, sr } = readWav(file);
     let peak = 0;

@@ -253,9 +253,11 @@ function createSampleVoice(buffer: AudioBuffer): DrumVoice {
 
   return {
     output,
-    // 発音のたびに再生用のノードを作る（同じ音が重なっても前の音を切らない）
+    // 発音のたびに再生用のノードを作る（同じ音が重なっても前の音を切らない）。
+    // ノードは output と同じコンテキストに作る（WAV / MP3 書き出しの合成中は Tone.getContext() が再生用のコンテキストに
+    // 戻っているので、指定しないと別のコンテキストのノードになり、つなぐときに例外になる）
     trigger: (time, velocity) => {
-      const src = new Tone.ToneBufferSource({ url: buffer, fadeOut: CHOKE_FADE }).connect(output);
+      const src = new Tone.ToneBufferSource({ context: output.context, url: buffer, fadeOut: CHOKE_FADE }).connect(output);
       // 鳴り終わったノードは Tone.js が自動で破棄する（通常のコンテキストのみ）
       src.onended = () => active.delete(src);
       active.add(src);

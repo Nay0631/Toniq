@@ -96,6 +96,11 @@ export function deleteSong(id: string): void {
   if (getState().songId === id) setState({ songId: null });
 }
 
+// 以前の Tone.js のコードの音色 → 同じ音の grow のプリセットの ID
+const LEGACY_CHORD_PRESETS: Record<string, string> = {
+  soft: "soft_pad", epiano: "epiano", strings: "strings", organ: "organ", square: "square", supersaw: "supersaw",
+};
+
 // 保存した grow の音作り（ベースなど）。足りないパートは初期値で補い、番号のプリセットは ID に読み替える
 function growSoundsFromSaved(saved: unknown): SongFields["growSounds"] {
   const sounds = structuredClone(defaultState.growSounds);
@@ -119,7 +124,10 @@ function songFields(song: Partial<SongFields>): SongFields {
     volumes:     { ...defaultState.volumes, ...loaded.volumes },
     // grow のプリセットは以前は番号で保存していた（今は ID）。番号なら ID に読み替える
     growPreset:      presetIdFromSaved(loaded.growPreset, defaultState.growPreset),
-    growChordPreset: presetIdFromSaved(loaded.growChordPreset, defaultState.growChordPreset),
+    // コードの音色は grow だけ。以前の Tone.js の音色を選んでいた曲は、同じ音の grow のプリセットで鳴らす
+    chordInstrument: "grow",
+    growChordPreset: LEGACY_CHORD_PRESETS[loaded.chordInstrument as string]
+                     ?? presetIdFromSaved(loaded.growChordPreset, defaultState.growChordPreset),
     growSounds:      growSoundsFromSaved(loaded.growSounds),
     // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）。
     // 今の grow は "grow"（growPreset / growParams）
