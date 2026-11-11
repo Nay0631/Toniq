@@ -14,6 +14,9 @@ namespace lfo    { constexpr float sine = 0, triangle = 1; }
 namespace mode   { constexpr float mono = 1, legato = 2; }
 namespace delay  { constexpr float d8 = 1, d8dot = 2, d4 = 3, d4dot = 4; }
 
+// 各プリセットの master（出力の大きさ）は、聞こえる大きさ（モーメンタリーラウドネスの最大）が -18 LUFS になるようにそろえた値
+// （npm run grow:render -- --suggest で測る。FX は組み合わせる音どうしの差を残した目標。ヒス・プチプチはわざと小さい）。
+// 音色を変えたら測り直して、提案の値に書き換える
 struct Value
 {
     Param param;
@@ -39,6 +42,7 @@ const Value lead[] = {
     { delayMix, 0.2f }, { reverbMix, 0.2f },
     { drift, 0.3f },
     { filterDrive, 0.2f },
+    { master, -3.2f },
 };
 
 // 7枚重ねたノコギリ波を左右いっぱいに広げ、1オクターブ上も重ねる（EDM・トランス）
@@ -49,6 +53,7 @@ const Value supersaw[] = {
     { aenvAttack, 0.01f }, { aenvSustain, 0.8f }, { aenvRelease, 0.4f },
     { chorusMix, 0.25f }, { delayMix, 0.2f }, { reverbMix, 0.3f },
     { drift, 0.25f },
+    { master, -7.2f },
 };
 
 // フィルターが素早く閉じる、弦をはじいたような音（ハウス）
@@ -59,6 +64,7 @@ const Value pluck[] = {
     { aenvAttack, 0.001f }, { aenvDecay, 0.4f }, { aenvSustain, 0 }, { aenvRelease, 0.3f },
     { delayMix, 0.25f }, { reverbMix, 0.2f },
     { filterVelocity, 0.3f },
+    { master, 1.6f },
 };
 
 // レゾナンスの強いフィルターを短く開閉させ、レガートで滑らせる（テクノ）
@@ -70,6 +76,7 @@ const Value acid[] = {
     { voiceMode, mode::legato }, { glide, 0.05f },
     { drive, 0.35f }, { delayMix, 0.15f }, { delayTime, delay::d8dot }, { reverbMix, 0.05f },
     { filterDrive, 0.5f },
+    { master, -7.3f },
 };
 
 // こもった厚い本体に、1オクターブ上の三角波を広げて重ねる。フィルターをゆっくり揺らす（アンビエント）
@@ -83,6 +90,7 @@ const Value pad[] = {
     { lfoWave, lfo::triangle }, { lfoRate, 0.3f }, { lfoFilter, 6 },
     { chorusMix, 0.4f }, { reverbMix, 0.45f }, { reverbSize, 0.8f },
     { drift, 0.4f },
+    { master, -6.9f },
 };
 
 // サイン波とサブで低音を支える。モノで少しだけ滑らせる
@@ -92,6 +100,7 @@ const Value subBass[] = {
     { subLevel, 0.5f }, { filterCutoff, 600 }, { filterResonance, 0 },
     { aenvAttack, 0.003f }, { aenvSustain, 0.9f }, { aenvRelease, 0.15f },
     { voiceMode, mode::mono }, { glide, 0.03f }, { reverbMix, 0 },
+    { master, -4.5f },
 };
 
 // 矩形波の8bit 風。発音の瞬間に少し上から下ろし、ビブラートをかける
@@ -103,6 +112,7 @@ const Value chipLead[] = {
     { lfoRate, 6 }, { lfoPitch, 0.3f },
     { voiceMode, mode::mono },
     { delayMix, 0.15f }, { delayTime, delay::d8 }, { reverbMix, 0.05f },
+    { master, -2.5f },
 };
 
 // ノイズをバンドパスで細くし、フィルター EG でゆっくり掃き上げる効果音向けの音
@@ -113,6 +123,7 @@ const Value noiseSweep[] = {
     { fenvAttack, 2 }, { fenvDecay, 1 }, { fenvSustain, 1 }, { fenvRelease, 1.5f },
     { aenvAttack, 1.5f }, { aenvSustain, 1 }, { aenvRelease, 1.5f },
     { chorusMix, 0.3f }, { reverbMix, 0.4f }, { reverbSize, 0.8f },
+    { master, -3.8f },
 };
 
 // ===== Toniq のパート（パッド・アルペジオ・シグネチャー）向け =====
@@ -125,6 +136,7 @@ const Value softPad[] = {
     { aenvAttack, 0.4f }, { aenvDecay, 0.8f }, { aenvSustain, 0.8f }, { aenvRelease, 2 },
     { chorusMix, 0.5f }, { reverbMix, 0.3f }, { reverbSize, 0.7f },
     { drift, 0.35f },
+    { master, -3.4f },
 };
 
 // 弾いた瞬間だけフィルターが開いてすぐ丸くなる、エレピ風の鍵盤。浅いトレモロ
@@ -139,6 +151,7 @@ const Value keys[] = {
     { chorusMix, 0.3f }, { reverbMix, 0.2f },
     { drift, 0.2f },
     { filterVelocity, 0.4f },
+    { master, -0.1f },
 };
 
 // サインに1オクターブ＋5度上（約3倍）のサインを重ね、長く減衰させる鐘のような音
@@ -148,6 +161,7 @@ const Value bell[] = {
     { filterType, filter::lp12 }, { filterCutoff, 9000 }, { filterResonance, 0 },
     { aenvAttack, 0.001f }, { aenvDecay, 1.4f }, { aenvSustain, 0 }, { aenvRelease, 1.4f },
     { delayMix, 0.15f }, { delayTime, delay::d4 }, { reverbMix, 0.35f }, { reverbSize, 0.7f },
+    { master, -7.3f },
 };
 
 // 短く切れる矩形波に、クセのあるレゾナンスのフィルター
@@ -158,6 +172,7 @@ const Value blip[] = {
     { aenvAttack, 0.001f }, { aenvDecay, 0.1f }, { aenvSustain, 0 }, { aenvRelease, 0.05f },
     { delayMix, 0.15f }, { reverbMix, 0.05f },
     { filterDrive, 0.3f },
+    { master, 4 },
 };
 
 // 厚いノコギリ波を短く切るコードスタブ
@@ -170,6 +185,7 @@ const Value stab[] = {
     { reverbMix, 0.2f },
     { drift, 0.2f },
     { filterDrive, 0.2f },
+    { master, 3 },
 };
 
 // 細かく刻んでも濁らないよう、余韻を短くしたスーパーソウ（トランスゲート）
@@ -180,6 +196,7 @@ const Value gateSaw[] = {
     { aenvAttack, 0.003f }, { aenvDecay, 0.08f }, { aenvSustain, 0.6f }, { aenvRelease, 0.04f },
     { delayMix, 0.15f }, { delayTime, delay::d8dot }, { reverbMix, 0.3f },
     { drift, 0.2f },
+    { master, -4.5f },
 };
 
 // レコードのサーッというヒス（ノイズだけ。音の高さによらない）
@@ -204,7 +221,7 @@ const Value wind[] = {
     { filterType, filter::bp }, { filterCutoff, 400 }, { filterResonance, 0.6f }, { filterKeyTrack, 0 },
     { lfoWave, lfo::sine }, { lfoRate, 0.07f }, { lfoFilter, 18 },
     { aenvAttack, 0.5f }, { aenvSustain, 1 }, { aenvRelease, 0.5f },
-    { chorusMix, 0.3f }, { reverbMix, 0.4f }, { reverbSize, 0.8f }, { master, -12 },
+    { chorusMix, 0.3f }, { reverbMix, 0.4f }, { reverbSize, 0.8f }, { master, 2.5f },
 };
 
 // ===== Toniq のコードの音色（ChordPlayer.ts の INSTRUMENTS に合わせたもの） =====
@@ -221,6 +238,7 @@ const Value ePiano[] = {
     { chorusMix, 0.15f }, { reverbMix, 0.2f },
     { drift, 0.2f },
     { filterVelocity, 0.5f },
+    { master, -2.9f },
 };
 
 // オルガン：サインを1オクターブ上と下（サブ）に重ねたドローバー風。押している間は減らない。ビブラート＋トレモロ
@@ -232,6 +250,7 @@ const Value organ[] = {
     { aenvAttack, 0.005f }, { aenvDecay, 0.05f }, { aenvSustain, 1 }, { aenvRelease, 0.08f },
     { lfoRate, 6 }, { lfoPitch, 0.1f }, { lfoAmp, 0.2f },
     { chorusMix, 0.2f }, { reverbMix, 0.15f },
+    { master, -6.8f },
 };
 
 // ストリングス：ずらしたノコギリ波をフィルターでゆっくり開き、ゆっくり立ち上げる
@@ -243,6 +262,7 @@ const Value strings[] = {
     { aenvAttack, 0.5f }, { aenvDecay, 0.3f }, { aenvSustain, 0.85f }, { aenvRelease, 2 },
     { chorusMix, 0.4f }, { reverbMix, 0.3f },
     { drift, 0.4f },
+    { master, -4.2f },
 };
 
 // スクエア（8bit）：矩形波の和音。広げずに乾いた音のまま
@@ -251,6 +271,7 @@ const Value squareChord[] = {
     { filterType, filter::lp12 }, { filterCutoff, 6000 }, { filterResonance, 0 },
     { aenvAttack, 0.003f }, { aenvDecay, 0.15f }, { aenvSustain, 0.4f }, { aenvRelease, 0.08f },
     { reverbMix, 0.05f },
+    { master, -1.5f },
 };
 
 // ===== Toniq の FX / SE（FxPlayer.ts）向け =====
@@ -265,6 +286,7 @@ const Value fxRiserNoise[] = {
     { aenvAttack, 2 }, { aenvSustain, 1 }, { aenvRelease, 0.03f },
     { lfoWave, lfo::sine }, { lfoRate, 2 }, { lfoAmp, 0.2f },
     { chorusMix, 0.5f }, { delayMix, 0.25f }, { delayTime, delay::d8dot }, { reverbMix, 0.2f },
+    { master, 2.5f },
 };
 
 // ライザーの音程：重ねたノコギリ波がピッチ EG で2オクターブ下から上がり、フィルターが開く。トレモロ
@@ -277,6 +299,7 @@ const Value fxRiserPitch[] = {
     { pitchEnvAmount, -24 }, { pitchEnvTime, 2 },
     { lfoWave, lfo::sine }, { lfoRate, 8 }, { lfoAmp, 0.5f },
     { chorusMix, 0.5f }, { delayMix, 0.25f }, { delayTime, delay::d8dot }, { reverbMix, 0.2f },
+    { master, -0.6f },
 };
 
 // インパクトのブーム：低いサインがピッチ EG で沈む。中央に置いたまま広げない
@@ -286,27 +309,30 @@ const Value fxBoom[] = {
     { aenvAttack, 0.002f }, { aenvDecay, 1.4f }, { aenvSustain, 0 }, { aenvRelease, 0.6f },
     { pitchEnvAmount, 36 }, { pitchEnvTime, 0.25f },
     { drive, 0.25f }, { reverbMix, 0.1f },
+    { master, -10.8f },
 };
 
 // インパクトのノイズ：明るさが閉じていくノイズの一撃
 const Value fxBurst[] = {
-    { osc1Level, 0 }, { noiseLevel, 0.7f },
+    { osc1Level, 0 }, { noiseLevel, 1 },
     { filterType, filter::lp24 }, { filterCutoff, 350 }, { filterResonance, 0.1f }, { filterEnvAmount, 48 },
     { filterKeyTrack, 0 },
     { fenvAttack, 0.001f }, { fenvDecay, 1.2f }, { fenvSustain, 0 }, { fenvRelease, 0.3f },
     { aenvAttack, 0.001f }, { aenvDecay, 1.2f }, { aenvSustain, 0 }, { aenvRelease, 0.3f },
     { chorusMix, 0.4f }, { delayMix, 0.2f }, { delayTime, delay::d4 }, { reverbMix, 0.3f },
+    { master, 3.6f },
 };
 
 // ダウンリフターのノイズ：バンドパスのノイズが下がりながら消えていく
 const Value fxDownNoise[] = {
-    { osc1Level, 0 }, { noiseLevel, 0.8f },
+    { osc1Level, 0 }, { noiseLevel, 1 },
     { filterType, filter::bp }, { filterCutoff, 250 }, { filterResonance, 0.3f }, { filterEnvAmount, 48 },
     { filterKeyTrack, 0 },
     { fenvAttack, 0.001f }, { fenvDecay, 2 }, { fenvSustain, 0 }, { fenvRelease, 0.1f },
     { aenvAttack, 0.001f }, { aenvDecay, 2 }, { aenvSustain, 0 }, { aenvRelease, 0.1f },
     { lfoWave, lfo::sine }, { lfoRate, 0.3f }, { lfoAmp, 0.2f },
     { chorusMix, 0.5f }, { delayMix, 0.3f }, { delayTime, delay::d4dot }, { reverbMix, 0.3f },
+    { master, 5.6f },
 };
 
 // ダウンリフターの音程：三角波がピッチ EG で3オクターブ下がる
@@ -316,6 +342,7 @@ const Value fxDownTone[] = {
     { aenvAttack, 0.001f }, { aenvDecay, 1.2f }, { aenvSustain, 0 }, { aenvRelease, 0.1f },
     { pitchEnvAmount, 36 }, { pitchEnvTime, 1.2f },
     { chorusMix, 0.5f }, { delayMix, 0.3f }, { delayTime, delay::d4dot }, { reverbMix, 0.3f },
+    { master, 3.9f },
 };
 
 // リバースシンバル：ハイパスの金属的なノイズがふくらみ、ぷつっと切れる
@@ -324,6 +351,7 @@ const Value fxReverse[] = {
     { filterType, filter::hp }, { filterCutoff, 3500 }, { filterResonance, 0.35f }, { filterKeyTrack, 0 },
     { aenvAttack, 1 }, { aenvSustain, 1 }, { aenvRelease, 0.02f },
     { chorusMix, 0.4f }, { delayMix, 0.2f }, { delayTime, delay::d8 }, { delayFeedback, 0.4f }, { reverbMix, 0.2f },
+    { master, -4.1f },
 };
 
 // チップSE：乾いた矩形波（駆け上がりは音符で、「ピュン」はピッチ EG を上書きして鳴らす）
@@ -332,6 +360,7 @@ const Value fxChip[] = {
     { filterType, filter::lp12 }, { filterCutoff, 12000 }, { filterResonance, 0 },
     { aenvAttack, 0.001f }, { aenvDecay, 0.1f }, { aenvSustain, 0.8f }, { aenvRelease, 0.01f },
     { delayMix, 0.3f }, { delayTime, delay::d8dot }, { delayFeedback, 0.4f }, { reverbMix, 0.05f },
+    { master, -0.6f },
 };
 
 // ===== Toniq のベース（bass_params.json のジャンルごとの音色に合わせたもの） =====
@@ -347,6 +376,7 @@ const Value sawBass[] = {
     { aenvAttack, 0.005f }, { aenvDecay, 0.15f }, { aenvSustain, 0.6f }, { aenvRelease, 0.1f },
     { voiceMode, mode::mono }, { reverbMix, 0 },
     { filterDrive, 0.3f },
+    { master, 1.9f },
 };
 
 // スクエアベース：矩形波にクセのあるフィルター。短く切る（テクノ・ハウス）
@@ -359,18 +389,21 @@ const Value squareBass[] = {
     { aenvAttack, 0.002f }, { aenvDecay, 0.15f }, { aenvSustain, 0.3f }, { aenvRelease, 0.06f },
     { voiceMode, mode::mono }, { reverbMix, 0 },
     { filterDrive, 0.4f },
+    { master, 4.6f },
 };
 
 // ローリングベース：ノコギリ波を短くはじく、16分で転がすベース（トランス）
 const Value rollingBass[] = {
-    { osc1Level, 0.7f },
-    { osc2Wave, wave::saw }, { osc2Octave, -1 }, { osc2Level, 0.4f },
-    { filterType, filter::lp24 }, { filterCutoff, 160 }, { filterResonance, 0.3f }, { filterEnvAmount, 36 },
+    { osc1Level, 1 },
+    { osc2Wave, wave::saw }, { osc2Octave, -1 }, { osc2Level, 0.6f },
+    { filterType, filter::lp24 }, { filterCutoff, 220 }, { filterResonance, 0.3f }, { filterEnvAmount, 36 },
     { filterKeyTrack, 0.3f },
     { fenvAttack, 0.003f }, { fenvDecay, 0.08f }, { fenvSustain, 0.15f }, { fenvRelease, 0.04f },
     { aenvAttack, 0.003f }, { aenvDecay, 0.09f }, { aenvSustain, 0.25f }, { aenvRelease, 0.04f },
     { voiceMode, mode::mono }, { reverbMix, 0 },
     { filterDrive, 0.3f },
+    { subLevel, 0.3f },
+    { master, 5.9f },
 };
 
 // チップベース：三角波のまま（ファミコンの三角波チャンネル風。8bit）
@@ -379,6 +412,7 @@ const Value chipBass[] = {
     { filterType, filter::lp12 }, { filterCutoff, 12000 }, { filterResonance, 0 },
     { aenvAttack, 0.001f }, { aenvDecay, 0.05f }, { aenvSustain, 0.9f }, { aenvRelease, 0.02f },
     { voiceMode, mode::mono }, { reverbMix, 0 },
+    { master, -0.3f },
 };
 
 // ソフトベース：サインに三角波を薄く重ね、ゆっくり立ち上がって長く残る（アンビエント）
@@ -388,6 +422,7 @@ const Value softBass[] = {
     { filterType, filter::lp12 }, { filterCutoff, 800 }, { filterResonance, 0 },
     { aenvAttack, 0.3f }, { aenvDecay, 1 }, { aenvSustain, 0.8f }, { aenvRelease, 1.5f },
     { voiceMode, mode::mono }, { reverbMix, 0 },
+    { master, -2.8f },
 };
 
 template <std::size_t N>

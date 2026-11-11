@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "electron:build": "vite build && electron-builder",
-    "grow:wasm": "node grow/wasm/build.mjs"
+    "grow:wasm": "node grow/wasm/build.mjs",
+    "grow:render": "node grow/tools/render.mjs"
   },
   "keywords": [],
   "author": "",

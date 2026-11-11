@@ -20,6 +20,8 @@ core/                     音を作るコア（JUCE なし。単体版・wasm �
 wasm/
   grow_wasm.cpp             wasm 版の入口（C の関数。Toniq の src/engine/growWorklet.js・Grow.ts が呼ぶ）
   build.mjs                 wasm のビルド（npm run grow:wasm → public/grow/grow.wasm）
+tools/
+  render.mjs                wasm を Node で鳴らしてプリセットを測る・WAV に書き出す・WAV を測る（npm run grow:render）
 Source/                   JUCE の単体版
   PluginProcessor.h/.cpp    コアの表から JUCE のパラメーターを作り、MIDI の位置でブロックを区切ってエンジンに渡す
   PluginEditor.h/.cpp       画面（コアの表のモジュールごとにノブ・セレクトを並べる、プリセット、鍵盤）
@@ -80,6 +82,17 @@ OSC 1・OSC 2（ユニゾンで最大7枚重ね、左右に広げる）＋サブ
 - 曲に保存するのはパートごとのプリセットの ID（`GrowPresets.cpp` の `id`。wasm の `grow_preset_id`）と変えた値（ID → 値。null = プリセットのまま）：メロディ `AppState.growPreset` / `growParams`、コード `growChordPreset` / `growChordParams`、ベース・パッド・アルペジオ・シグネチャー `growSounds`（プリセットの null = ジャンルの標準）。
 - FX / SE（`src/engine/FxPlayer.ts` の `GROW_FX`）は「FX …」のプリセット（ID は `fx_…`）を探して鳴らし、テンポで変わる EG の時間などをその場で上書きする。プリセットがなければ Tone.js の音で鳴る。
 - パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを ID で探す（候補を前から順に。今の wasm にない ID は飛ばす）。
+
+## 確認・測定（`grow/tools/render.mjs`。`npm run grow:render`）
+
+wasm を Node で直接鳴らして、全プリセット（`--preset id,…` で絞れる）を測る。ブラウザも Toniq も要らない。
+
+- プリセットの使われ方（`ROLES`：リード・和音・ベース・速い刻み・FX・ノイズ）に合わせたフレーズを 48kHz・120 BPM で鳴らし、ピーク・聞こえる大きさ・直流・余韻（最後の音から5秒後に消えているか）・NaN を出す。壊れた音があれば終了コード 1。
+- 聞こえる大きさはモーメンタリーラウドネスの最大（ITU-R BS.1770 の K 特性・400ms の窓。LUFS）。
+- `--wav`：`output/grow/<ID>.wav` に書き出す（Git 管理外）。
+- `--suggest`：聞こえる大きさを目標にそろえる `master` の値を出す。目標は −18 LUFS。FX は組み合わせて鳴らす音どうしの差を Tone.js 版と同じに残す（`TARGETS`：ライザーの音程 −24、インパクトのノイズ −26、ダウンリフターの音程 −19）。ヒス・プチプチはわざと小さいのでそろえない（`FIXED`）。提案が `master` の上限（+6dB）を超えるときは、OSC・ノイズの量を上げてから測り直す。
+- `--analyze <WAV …>`：書き出した曲などの WAV のピーク・統合ラウドネス（ゲート付き）・聞こえる大きさの最大を測る。
+- プリセットの `master` は `--suggest` の値にしてある。音色を変えたら測り直して書き換える（初期化のプリセットは対象外）。
 
 ## 決まりごと
 
