@@ -1,0 +1,90 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-10_Toniqシンセ音作り機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":Toniqシンセパネル" as L2
+control ":音作り設定" as L3
+entity ":Toniqシンセプリセット" as L4
+entity ":アプリの状態" as L5
+control ":メロディ演奏" as L6
+control ":Toniqシンセ" as L7
+control ":Toniqシンセ試聴の切り替え" as L8
+control ":再生" as L9
+
+note over L2 : ノブ・セレクトを動かしたときは、\nプリセットの値の取得を除いて同じ流れ
+
+L1 -> L2 : プリセットを選ぶ() : void
+activate L2
+L2 -> L3 : 音作りの値を設定する() : void
+activate L3
+L3 -> L4 : プリセットの値を取得する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 音作りの値を更新する() : void
+activate L5
+deactivate L5
+opt メロディ・試聴の音が鳴っている
+  L3 -> L6 : 音作りの値をすぐ反映する() : void
+  activate L6
+  L6 -> L7 : 音作りの値を当てる() : void
+  activate L7
+  deactivate L7
+  deactivate L6
+end
+L3 -> L2 : ノブの値とプリセット名を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : 試聴ボタンを押下する() : void
+activate L2
+L2 -> L8 : 試聴を切り替える() : void
+activate L8
+alt 試聴が鳴っていない
+  L8 -> L9 : 再生中の曲を止める() : void
+  activate L9
+  deactivate L9
+  L8 -> L6 : フレーズを鳴らす() : void
+  activate L6
+  L6 -> L5 : キー・スケール・BPM・音作りの値を取得する() : void
+  activate L5
+  deactivate L5
+  L6 -> L7 : Toniqシンセで鳴らす() : void
+  activate L7
+  deactivate L7
+  deactivate L6
+  L8 -> L2 : 停止ボタンを表示する() : void
+  activate L2
+  deactivate L2
+else 試聴が鳴っている
+  L8 -> L6 : 試聴を止める() : void
+  activate L6
+  deactivate L6
+  L8 -> L2 : 試聴ボタンを表示する() : void
+  activate L2
+  deactivate L2
+end
+deactivate L8
+deactivate L2
+
+L1 -> L2 : メロディに使うボタンを押下する() : void
+activate L2
+L2 -> L3 : メロディに使う() : void
+activate L3
+L3 -> L5 : メロディの音色をToniqシンセにする() : void
+activate L5
+deactivate L5
+opt 再生中
+  L3 -> L9 : 再生し直す() : void
+  activate L9
+  deactivate L9
+end
+L3 -> L2 : メロディで使用中と表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

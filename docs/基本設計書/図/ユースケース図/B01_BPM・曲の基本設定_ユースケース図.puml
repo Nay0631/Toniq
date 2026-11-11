@@ -14,6 +14,7 @@ rectangle "楽曲生成システム Toniq" {
   usecase "ジャンル試聴機能" as UC7
   usecase "リード選択機能" as UC8
   usecase "グルーヴ調整機能" as UC9
+  usecase "Toniqシンセ音作り機能" as UC10
 }
 
 A1 -- UC1
@@ -25,5 +26,6 @@ A1 -- UC6
 A1 -- UC7
 A1 -- UC8
 A1 -- UC9
+A1 -- UC10
 
 @enduml

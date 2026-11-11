@@ -11,6 +11,7 @@ class "ミュージックリスト画面" as B6 <<boundary>>
 class "音楽クイズ画面" as B7 <<boundary>>
 class "設定画面" as B8 <<boundary>>
 class "書き出しダイアログ" as B9 <<boundary>>
+class "Toniqシンセパネル" as B10 <<boundary>>
 class "パターン選出" as C1 <<control>>
 class "メロディ生成" as C2 <<control>>
 class "タップテンポ" as C3 <<control>>
@@ -33,6 +34,7 @@ class "曲の構成" as C19 <<control>>
 class "グルーヴ" as C20 <<control>>
 class "自動チェック" as C21 <<control>>
 class "スケール試聴" as C22 <<control>>
+class "Toniqシンセ" as C23 <<control>>
 class "アプリの状態" as E1 <<entity>>
 class "コード進行マスタ・ドラムパターンマスタ・\nシンプルモード表マスタ・テンポマスタ" as E2 <<entity>>
 class "メロディ設定マスタ・ベース設定マスタ・\nアルペジオ設定マスタ・ミックス設定マスタ" as E3 <<entity>>
@@ -42,6 +44,7 @@ class "楽曲データ・曲ファイル" as E6 <<entity>>
 class "端末の設定データ" as E7 <<entity>>
 class "ドラム音源ファイル" as E8 <<entity>>
 class "MIDIファイル・WAVファイル・MP3ファイル" as E9 <<entity>>
+class "Toniqシンセプリセット" as E10 <<entity>>
 
 B1 --> C18
 B2 --> C18
@@ -113,5 +116,8 @@ C21 --> C12
 C21 --> E1
 C21 --> E2
 C22 --> E4
+B10 --> C18
+C18 --> E10
+C8 --> C23
 
 @enduml
