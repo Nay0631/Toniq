@@ -4,20 +4,22 @@ mainframe **uc** 全体_楽曲生成システムToniq_ユースケース図
 
 actor "利用者" as A1
 
-rectangle "楽曲生成システム Toniq" {
-  usecase "BPM・曲の基本設定" as UC1
-  usecase "キー・スケール" as UC2
-  usecase "コード進行" as UC3
-  usecase "ドラム" as UC4
-  usecase "特殊音" as UC5
-  usecase "ピアノロール" as UC6
-  usecase "アレンジ・書き出し" as UC7
-  usecase "楽曲再生" as UC8
-  usecase "音楽クイズ" as UC9
-  usecase "楽曲生成" as UC10
-  usecase "曲の管理" as UC11
-  usecase "履歴" as UC12
-  usecase "設定" as UC13
+rectangle "楽曲生成システム Toniq" <<システム名>> {
+  rectangle " " {
+    usecase "曲の基本設定システム" as UC1
+    usecase "キー・スケール設定システム" as UC2
+    usecase "コード進行設定システム" as UC3
+    usecase "ドラム設定システム" as UC4
+    usecase "特殊音設定システム" as UC5
+    usecase "メロディ編集システム" as UC6
+    usecase "アレンジ・書き出しシステム" as UC7
+    usecase "楽曲再生システム" as UC8
+    usecase "音楽クイズシステム" as UC9
+    usecase "自動作曲システム" as UC10
+    usecase "楽曲管理システム" as UC11
+    usecase "操作履歴システム" as UC12
+    usecase "環境設定システム" as UC13
+  }
 }
 
 A1 -- UC1

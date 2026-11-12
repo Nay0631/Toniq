@@ -1,0 +1,15 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** H01_操作履歴システム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "操作履歴システム" <<システム名>> {
+  rectangle " " {
+    usecase "元に戻す・やり直す機能" as UC1
+  }
+}
+
+A1 -- UC1
+
+@enduml

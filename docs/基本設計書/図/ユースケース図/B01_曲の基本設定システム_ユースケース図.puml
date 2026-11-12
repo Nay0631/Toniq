@@ -1,0 +1,33 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** B01_曲の基本設定システム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "曲の基本設定システム" <<システム名>> {
+  rectangle " " {
+    usecase "BPM選択機能" as UC1
+    usecase "テンポ選択機能" as UC2
+    usecase "BPMクリック選択機能" as UC3
+    usecase "BPM試聴機能" as UC4
+    usecase "小節数選択機能" as UC5
+    usecase "ジャンル選択機能" as UC6
+    usecase "ジャンル試聴機能" as UC7
+    usecase "リード選択機能" as UC8
+    usecase "グルーヴ調整機能" as UC9
+    usecase "Toniqシンセ音作り機能" as UC10
+  }
+}
+
+A1 -- UC1
+A1 -- UC2
+A1 -- UC3
+A1 -- UC4
+A1 -- UC5
+A1 -- UC6
+A1 -- UC7
+A1 -- UC8
+A1 -- UC9
+A1 -- UC10
+
+@enduml

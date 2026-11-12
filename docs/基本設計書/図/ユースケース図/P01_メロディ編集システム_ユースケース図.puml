@@ -1,0 +1,19 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** P01_メロディ編集システム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "メロディ編集システム" <<システム名>> {
+  rectangle " " {
+    usecase "メロディ入力機能" as UC1
+    usecase "スケールロック機能" as UC2
+    usecase "ノーツ選択機能" as UC3
+  }
+}
+
+A1 -- UC1
+A1 -- UC2
+A1 -- UC3
+
+@enduml
