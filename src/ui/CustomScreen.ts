@@ -16,7 +16,7 @@ import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
-import { onRender, render as renderAll } from "./Router";
+import { onRender, render as renderAll, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, displayNote, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { initMixer, renderMixer } from "./MixerPanel";
@@ -25,7 +25,7 @@ import { attachKnob, attachStepper, syncControls } from "./Controls";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import type { AudioFormat } from "../engine/Playback";
 import { initGrowPanel } from "./GrowPanel";
-import { initCustomMore, renderCustomMore } from "./CustomMore";
+import { initCustomMore, renderCustomMore, EXTRA_PARTS } from "./CustomMore";
 import {
   CHORD_PRESET_CHOICES, growPresetIds, growPresetNames, isGrowLoaded, setGrowSound, standardGrowPreset,
 } from "../engine/Grow";
@@ -51,6 +51,11 @@ function renderChordInstrument(): void {
   if (select.innerHTML !== html) select.innerHTML = html;
   select.value = s.growChordPreset ?? "";
 }
+
+// 追加パートの表示名（設定タブではまとめて ON/OFF するだけ。並びは CustomMore.ts の EXTRA_PARTS）
+const EXTRA_PART_LABELS: Partial<Record<LayerName, string>> = {
+  pad: "パッド", arp: "アルペジオ", signature: "シグネチャー", counter: "カウンターメロディ", perc: "パーカッション",
+};
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
@@ -294,20 +299,23 @@ function render(): void {
   fxSelect.value = s.fxType;
   fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
 
-  // 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション / サブベース）
-  const sigLabel = document.getElementById("c-signature-label");
-  if (sigLabel) sigLabel.textContent = `（${signatureLabel(s.genre)}）`;
-  const percNote = document.getElementById("c-perc-label");
-  if (percNote) percNote.textContent = `（${percLabel(s.genre)}）`;
+  // 追加パート：まとめて ON/OFF する入り口と、今 ON のパートの一覧（表示だけ。1つずつの切り替えはアレンジャー・ミキサー）
+  const onCount = EXTRA_PARTS.filter(p => s.parts[p]).length;
+  const extra = $("c-extra-parts")!;
+  extra.classList.toggle("is-on", onCount > 0);
+  extra.textContent = onCount === EXTRA_PARTS.length ? "ON" : onCount === 0 ? "OFF" : "一部";
+  extra.setAttribute("aria-pressed", onCount === EXTRA_PARTS.length ? "true" : onCount === 0 ? "false" : "mixed");
+  extra.title = onCount === EXTRA_PARTS.length ? "追加パートをすべて止める" : "追加パートをすべて鳴らす";
+  const partNotes: Partial<Record<LayerName, string>> = { signature: signatureLabel(s.genre), perc: percLabel(s.genre) };
+  $("c-extra-parts-list")!.innerHTML = EXTRA_PARTS.map(p => {
+    const note = partNotes[p] ? `<span class="pill-note">（${partNotes[p]}）</span>` : "";
+    return `<span class="extra-part${s.parts[p] ? "" : " is-off"}" data-part="${p}"><span data-term="${p}">${EXTRA_PART_LABELS[p]}</span>${note}</span>`;
+  }).join("");
+
+  // サブベース
   const subSelect = $select("c-bass-sub");
   subSelect.options[0].textContent = `ジャンルに合わせる（${bassSubStandard(s.genre) ? "ON" : "OFF"}）`;
   subSelect.value = s.bassSub === null ? "auto" : s.bassSub ? "on" : "off";
-  document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el => {
-    const on = s.parts[el.dataset.partToggle as LayerName];
-    el.classList.toggle("is-on", on);
-    el.textContent = on ? "ON" : "OFF";
-    el.setAttribute("aria-pressed", String(on));
-  });
 
   renderMixer();
   renderCustomMore();
@@ -325,6 +333,26 @@ function renderChorusSelect(): void {
     .map(c => `<option value="${c.id}">${chordLabel(c, s.key)}</option>`).join("");
   select.value = chorusProgression()?.id ?? "";
   ($("c-chorus-reroll") as HTMLButtonElement).disabled = candidates.length === 0;
+}
+
+// スケールに合わせてコード進行を変えたことを、スケールの下に少しの間だけ出し、進行の欄を光らせる
+// （出している間かどうかは表示上の一時的な状態としてここに持つ）
+const NOTICE_MS = 4000;
+let noticeTimer: ReturnType<typeof setTimeout> | undefined;
+
+function notifyChordChange(next: ChordProgression): void {
+  const notice = $("c-scale-notice")!;
+  notice.textContent = `スケールに合わせてコード進行を「${chordLabel(next, getState().key)}」に変えました`;
+  notice.hidden = false;
+  const row = $select("c-chord").closest(".form-row");
+  row?.classList.remove("is-flash");
+  void (row as HTMLElement | null)?.offsetWidth;  // 続けて変えたときもアニメーションをやり直す
+  row?.classList.add("is-flash");
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => {
+    notice.hidden = true;
+    row?.classList.remove("is-flash");
+  }, NOTICE_MS);
 }
 
 // キー・スケールの試聴中なら、今のキー・スケールで鳴らし直す
@@ -457,7 +485,8 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  // スケール：そのスケールのコード進行に切り替える（同じカテゴリのものを優先）
+  // スケール：そのスケールのコード進行に切り替える（同じ雰囲気のものを優先）。
+  // スケールはコード進行から決まるので、進行が変わったことを知らせる
   $select("c-scale").addEventListener("change", async e => {
     const scale = (e.target as HTMLSelectElement).value;
     const s = getState();
@@ -466,6 +495,7 @@ export function initCustomScreen(): void {
     if (next) setChordPattern(next);
     replayScalePreview();
     render();
+    if (next && next.id !== s.chordPattern?.id) notifyChordChange(next);
     await restartIfPlaying();
   });
 
@@ -589,12 +619,15 @@ export function initCustomScreen(): void {
   });
 
   // ===== 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション） =====
-  document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el =>
-    el.addEventListener("click", () => {
-      const part = el.dataset.partToggle as LayerName;
-      setLayerEnabled(part, !getState().parts[part]);
-      render();
-    }));
+  // すべて ON ならすべて止め、それ以外（一部・すべて OFF）ならすべて鳴らす
+  $("c-extra-parts")?.addEventListener("click", () => {
+    const parts = getState().parts;
+    const next = !EXTRA_PARTS.every(p => parts[p]);
+    for (const p of EXTRA_PARTS) if (parts[p] !== next) setLayerEnabled(p, next);
+    render();
+  });
+  // 1つずつの切り替えはアレンジャー（レーンの ON ボタン・ミキサー）で行う
+  $("c-extra-parts-open")?.addEventListener("click", () => showTab("arranger"));
 
   // ===== ミキサー（パート別音量。アレンジャータブ） =====
   initMixer(["c-arr-mixer"], render);

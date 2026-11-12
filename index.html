@@ -419,6 +419,8 @@
               <span class="form-label" data-term="scale">スケール</span>
               <select class="select" id="c-scale"></select>
             </label>
+            <!-- スケールを変えてコード進行が切り替わったことを少しの間だけ知らせる（CustomScreen.ts の notifyChordChange） -->
+            <p class="panel-notice" id="c-scale-notice" role="status" aria-live="polite" hidden></p>
 
             <div class="form-row">
               <span class="form-label">響き</span>
@@ -438,7 +440,7 @@
             </div>
 
             <label class="form-row">
-              <span class="form-label" data-term="chordCategory">カテゴリ</span>
+              <span class="form-label" data-term="chordCategory">コード進行の雰囲気</span>
               <select class="select" id="c-mood">
                 <option value="明るい">明るい</option>
                 <option value="暗い">暗い</option>
@@ -527,26 +529,14 @@
               <span>追加パート</span>
             </div>
 
+            <!-- 追加パートの入り口：まとめて ON/OFF するだけ。1つずつの切り替えはアレンジャー（レーン・ミキサー）で行う -->
             <div class="pill-row">
-              <span data-std="part.pad"><span data-term="pad">パッド</span> / <span data-term="strings">Str</span></span>
-              <button class="pill" data-part-toggle="pad"></button>
+              <span data-std="extraParts"><span data-term="extraParts">追加パートを使う</span></span>
+              <button class="pill" id="c-extra-parts"></button>
             </div>
-            <div class="pill-row">
-              <span data-std="part.arp"><span data-term="arp">アルペジオ</span></span>
-              <button class="pill" data-part-toggle="arp"></button>
-            </div>
-            <div class="pill-row">
-              <span data-std="part.signature"><span data-term="signature">シグネチャー</span><span class="pill-note" id="c-signature-label"></span></span>
-              <button class="pill" data-part-toggle="signature"></button>
-            </div>
-            <div class="pill-row">
-              <span data-std="part.counter"><span data-term="counter">カウンターメロディ</span></span>
-              <button class="pill" data-part-toggle="counter"></button>
-            </div>
-            <div class="pill-row">
-              <span data-std="part.perc"><span data-term="perc">パーカッション</span><span class="pill-note" id="c-perc-label"></span></span>
-              <button class="pill" data-part-toggle="perc"></button>
-            </div>
+            <!-- 今 ON のパート（表示だけ。CustomScreen.ts が作る） -->
+            <div class="extra-parts-list" id="c-extra-parts-list"></div>
+            <button class="link-btn extra-parts-open" id="c-extra-parts-open">パートごとの ON/OFF はアレンジャーで →</button>
             <label class="form-row">
               <span class="form-label" data-term="subBass" data-std="bassSub">サブベース</span>
               <select class="select" id="c-bass-sub" aria-label="サブベース">
@@ -850,6 +840,8 @@
               <li>各欄の下の「もっと調整」には、触らなくてもジャンルに合った音で鳴る項目（インスト・グルーヴ・コードのリズムと音色・追加パート・FX など）が入っています。クリックで開閉します。</li>
               <li>見出しの「○件変更」は、その中で標準から変えている項目の数です。変えた項目の名前の左には印（●）が付きます。</li>
               <li>「この欄を標準に戻す」で、その欄の項目をまとめてジャンルの標準・初期値に戻します（<kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻せます）。</li>
+              <li>「追加パートを使う」は、パッド・アルペジオなどの追加パートをまとめて ON/OFF します。1つずつ切り替えるときはアレンジャー（レーンの ON ボタンやミキサー）を使います。</li>
+              <li>スケールを変えると、そのスケールのコード進行に切り替わります（切り替わった進行はスケールの下に少しの間表示されます）。</li>
             </ul>
           </details>
 

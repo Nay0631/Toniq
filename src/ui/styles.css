@@ -3372,6 +3372,40 @@ span[data-term],
   background: var(--hw-orange);
 }
 
+/* 追加パートの入り口（設定タブ）：今 ON のパートの一覧（表示だけ）と、アレンジャーへの案内 */
+.extra-parts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 2px 0 8px;
+  font-size: 12px;
+  color: var(--hw-text);
+}
+.extra-part::before { content: "✓"; display: inline-block; width: 1.1em; color: var(--hw-green); }  /* インラインブロックで取り消し線を付けない */
+.extra-part.is-off { color: var(--hw-faint); text-decoration: line-through; }
+.extra-part.is-off::before { content: "—"; color: var(--hw-faint); }
+.extra-parts-open { margin-bottom: 12px; font-size: 12px; color: var(--hw-label); }
+.extra-parts-open:hover { color: var(--hw-orange); }
+
+/* 一時的なお知らせ（スケールに合わせてコード進行を変えた など） */
+.panel-notice {
+  margin: -4px 0 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--hw-text);
+  border-left: 3px solid var(--hw-orange);
+  background: var(--hw-box);
+}
+/* お知らせに合わせて、変わった欄を少し光らせる */
+.form-row.is-flash { animation: row-flash 1.6s ease-out; border-radius: 4px; }
+@keyframes row-flash {
+  0%, 30% { box-shadow: 0 0 0 2px var(--hw-orange); }
+  100%    { box-shadow: 0 0 0 2px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-row.is-flash { animation: none; box-shadow: 0 0 0 2px var(--hw-orange); }
+}
+
 /* スタジオスキンの見出しの帯は、畳んだ中では上に詰めない */
 [data-skin="studio"] .hw .panel-more-body > .panel-title:first-child { margin-top: 0; }
 

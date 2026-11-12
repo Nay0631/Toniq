@@ -12,8 +12,10 @@ import { applyGrowLive, setGrowSound, storedGrowSound, type GrowPart } from "../
 
 type MoreGroup = "basic" | "chord" | "parts" | "grow";
 
+// 追加パート（設定タブの「追加パートを使う」でまとめて ON/OFF する。1つずつはアレンジャー・ミキサーで切り替える）
+export const EXTRA_PARTS: LayerName[] = ["pad", "arp", "signature", "counter", "perc"];
+
 // 標準から変えているか（data-std の名前 → 判定）
-const ADDITIONAL_PARTS: LayerName[] = ["pad", "arp", "signature", "counter", "perc"];
 const GROW_PARTS: GrowPart[] = ["melody", "chord", "bass", "pad", "arp", "signature", "counter"];
 
 function growChanged(part: GrowPart): boolean {
@@ -31,7 +33,7 @@ const CHANGED: Record<string, () => boolean> = {
   chordSound:  () => getState().growChordPreset !== null,
   bassSub:     () => getState().bassSub !== null,
   fxType:      () => getState().fxType !== "auto",
-  ...Object.fromEntries(ADDITIONAL_PARTS.map(p => [`part.${p}`, () => getState().parts[p] !== defaultState.parts[p]])),
+  extraParts:  () => EXTRA_PARTS.some(p => getState().parts[p] !== defaultState.parts[p]),
 };
 
 // 欄ごとの変更の数（grow の欄は音作りを変えているパートの数）
@@ -55,7 +57,7 @@ function resetGroup(group: MoreGroup): boolean {
       if (CHANGED.chordSound()) setGrowSound("chord", null, null);
       return true;
     case "parts":
-      for (const p of ADDITIONAL_PARTS) {
+      for (const p of EXTRA_PARTS) {
         if (s.parts[p] !== defaultState.parts[p]) setLayerEnabled(p, defaultState.parts[p]);
       }
       setState({ bassSub: null, fxType: "auto" });

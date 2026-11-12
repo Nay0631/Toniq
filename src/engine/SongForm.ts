@@ -148,24 +148,34 @@ function partsAt(bar: number): string {
   return LAYERS.filter(p => s.parts[p] && isArrangedAt(p, bar)).join(",");
 }
 
-// フィルを入れる小節か。ドラムが鳴っている周回の最後の小節で、次がセクションの変わり目・編成が変わる所・8小節ごと、
-// またはエンディングの直前の小節。使わないとき・試聴中は false
-export function isFillBar(bar: number): boolean {
+// フィルを入れる理由（次に何が来るか）。フィルの大きさを決めるのに使う
+//   ending = エンディングの直前、chorus = 次がサビ、section = サビが終わって Aメロへ、
+//   change = 編成が変わる所、regular = 同じセクションの中の8小節ごと
+export type FillKind = "ending" | "chorus" | "section" | "change" | "regular";
+
+// フィルを入れる小節ならその理由。ドラムが鳴っている周回の最後の小節で、次がセクションの変わり目・編成が変わる所・8小節ごと、
+// またはエンディングの直前の小節。入れないとき・使わないとき・試聴中は null
+export function fillKind(bar: number): FillKind | null {
   const s = getState();
-  if (!s.drumFill || isArrangementBypassed() || !s.chordPattern) return false;
-  if (!isArrangedAt("drum", bar)) return false;
+  if (!s.drumFill || isArrangementBypassed() || !s.chordPattern) return null;
+  if (!isArrangedAt("drum", bar)) return null;
   const end = endingBar();
-  if (end !== null && bar === end - 1) return true;
-  if (bar >= s.bars - 1) return false;
+  if (end !== null && bar === end - 1) return "ending";
+  if (bar >= s.bars - 1) return null;
 
   const L = loopBars();
-  if ((bar + 1) % L !== 0) return false;
+  if ((bar + 1) % L !== 0) return null;
   const loop     = Math.floor(bar / L);
   const sections = getSections();
-  if (sections[loop] !== sections[loop + 1]) return true;
-  if (partsAt(bar + 1) !== partsAt(loop * L)) return true;
+  if (sections[loop] !== sections[loop + 1]) return sections[loop + 1] === "B" ? "chorus" : "section";
+  if (partsAt(bar + 1) !== partsAt(loop * L)) return "change";
   const every = Math.max(1, Math.round(8 / L));
-  return (loop + 1) % every === 0;
+  return (loop + 1) % every === 0 ? "regular" : null;
+}
+
+// フィルを入れる小節か
+export function isFillBar(bar: number): boolean {
+  return fillKind(bar) !== null;
 }
 
 // ===== メロディの自動生成（Aメロとサビ） =====
