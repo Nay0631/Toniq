@@ -717,6 +717,38 @@ const Value drumRide[] = {
     { master, 2.5f },
 };
 
+// ===== アルペジオ・カウンターメロディのジャンル別 =====
+
+// ローファイキーズ：キーズ（FM）を暗く・短くし、テープのようにゆっくり音程を揺らす（ローファイのアルペジオ。
+// メロディの標準のキーズと聞き分けられるよう、こもった音で余韻を短くする）
+const Value lofiKeys[] = {
+    { osc1Wave, wave::sine }, { osc1Level, 0.8f },
+    { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Level, 0 },
+    { fmAmount, 0.015f },
+    { eg2Attack, 0.001f }, { eg2Decay, 0.25f }, { eg2Sustain, 0 }, { eg2Release, 0.2f },
+    { mod1Source, 2 }, { mod1Dest, 5 }, { mod1Amount, 0.18f },
+    { filterType, filter::lp12 }, { filterCutoff, 2200 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.004f }, { aenvDecay, 0.45f }, { aenvSustain, 0.1f }, { aenvRelease, 0.3f },
+    { lfoWave, lfo::triangle }, { lfoRate, 0.7f }, { lfoPitch, 0.08f },
+    { chorusMix, 0.45f }, { delayMix, 0.12f }, { delayTime, delay::d8dot }, { reverbMix, 0.25f },
+    { drift, 0.5f },
+    { master, 0.4f },
+};
+
+// ハウスプラック：ずらしたノコギリ波2枚を丸いフィルターで短くはじく。ピッチ EG なしで、付点8分のディレイを返す
+// （ハウスのカウンターメロディ。メロディの標準のプラックより柔らかく、奥で鳴る）
+const Value housePluck[] = {
+    { osc1Unison, 2 }, { osc1Detune, 14 }, { osc1Width, 0.7f }, { osc1Level, 0.6f },
+    { osc2Wave, wave::triangle }, { osc2Octave, 1 }, { osc2Level, 0.25f },
+    { filterType, filter::lp12 }, { filterCutoff, 700 }, { filterResonance, 0.15f }, { filterEnvAmount, 36 },
+    { fenvAttack, 0.001f }, { fenvDecay, 0.12f }, { fenvSustain, 0 }, { fenvRelease, 0.15f },
+    { aenvAttack, 0.002f }, { aenvDecay, 0.3f }, { aenvSustain, 0 }, { aenvRelease, 0.25f },
+    { delayMix, 0.3f }, { delayTime, delay::d8dot }, { delayPingPong, 1 }, { reverbMix, 0.25f },
+    { filterVelocity, 0.3f },
+    { drift, 0.2f },
+    { master, 2.3f },
+};
+
 template <std::size_t N>
 constexpr Preset preset (const char* id, const char* name, const Value (&values)[N]) { return { id, name, values, (int) N }; }
 
@@ -782,6 +814,9 @@ const Preset presets[] = {
     preset ("drum_tambourine", "パーカッション タンバリン", drumTambourine),
     preset ("drum_conga", "パーカッション コンガ", drumConga),
     preset ("drum_ride", "パーカッション ライド", drumRide),
+    // アルペジオ・カウンターメロディのジャンル別（src/engine/Grow.ts の GROW_STANDARD）
+    preset ("lofi_keys", "ローファイキーズ", lofiKeys),
+    preset ("house_pluck", "ハウスプラック", housePluck),
 };
 
 constexpr int presetCount = (int) (sizeof (presets) / sizeof (presets[0]));

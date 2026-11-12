@@ -34,6 +34,10 @@ const ARP_STANDARD: Record<string, string[]> = {
   bell:   ["bell", "pluck"],
   blip:   ["blip", "pluck"],
 };
+// アルペジオの標準をジャンルで上書きする（instrument の音色がメロディなどと重なるジャンル）
+const ARP_GENRE_STANDARD: Record<string, string[]> = {
+  "ローファイ": ["lofi_keys", "keys"],   // キーズはメロディの標準なので、こもったローファイキーズ
+};
 const SIGNATURE_STANDARD: Record<string, string[]> = {
   "EDM":       ["stab", "supersaw"],
   "テクノ":     ["acid"],
@@ -94,13 +98,13 @@ const BASS_STANDARD: Record<string, string[]> = {
 // カウンターメロディ（ハモり・合いの手）はメロディと聞き分けられる、粒の立った音（ほかのパートの標準と重ならないもの）。
 // どれもなければシンセリード
 const COUNTER_STANDARD: Record<string, string[]> = {
-  "EDM":       ["bell", "keys"],
+  "EDM":       ["keys", "bell"],
   "8bit":      ["pluck", "bell"],          // チップリード・スクエア・ブリップはほかのパートで使っている
   "ローファイ":  ["pluck", "lead"],
   "ゲームBGM":  ["pluck", "lead"],
   "テクノ":     ["pluck", "bell"],
-  "ハウス":     ["bell", "lead"],
-  "トランス":   ["bell", "keys"],
+  "ハウス":     ["house_pluck", "bell"],   // プラックはメロディの標準なので、柔らかいハウスプラック
+  "トランス":   ["keys", "bell"],
   "アンビエント": ["keys", "lead"],
 };
 // どのパートもジャンルの標準を持つ（プリセットの null = ジャンルの標準）
@@ -110,6 +114,7 @@ const GROW_STANDARD: Record<GrowPart, (genre: string) => string[]> = {
   bass:      genre => BASS_STANDARD[genre] ?? BASS_STANDARD["ローファイ"],
   pad:       genre => PAD_STANDARD[genre] ?? PAD_STANDARD["ローファイ"],
   arp:       genre => {
+    if (ARP_GENRE_STANDARD[genre]) return ARP_GENRE_STANDARD[genre];
     const params = arpParams as unknown as Record<string, { instrument: string }>;
     return ARP_STANDARD[(params[genre] ?? params["ローファイ"]).instrument] ?? ARP_STANDARD.pluck;
   },

@@ -54,6 +54,7 @@ const ROLES = {
   hard_pad: "chord", gate_pad: "chord", fat_bass: "bass", pulse_bass: "bass", wobble_bass: "bass", trance_lead: "lead", accel_se: "fx",
   drum_kick: "drum", drum_snare: "drum", drum_hat_closed: "drum", drum_hat_open: "drum", drum_clap: "drum", drum_rim: "drum",
   drum_shaker: "drum", drum_tambourine: "drum", drum_conga: "drum", drum_ride: "drum",
+  lofi_keys: "chord", house_pluck: "pluck",
 };
 // ドラムを鳴らす高さ（Toniq の標準のキット（src/engine/SynthFactory.ts の DEFAULT_KIT）と同じくらい）
 const DRUM_NOTES = { drum_kick: 24, drum_snare: 54, drum_hat_closed: 80, drum_hat_open: 80, drum_clap: 60, drum_rim: 92,

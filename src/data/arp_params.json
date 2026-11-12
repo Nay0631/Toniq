@@ -27,7 +27,7 @@
     "delay": { "time": "8n", "feedback": 0.1, "wet": 0.1 }
   },
   "ローファイ": {
-    "instrument": "bell",
+    "instrument": "keys",
     "step": "8n",
     "pattern": "updown",
     "octaves": 1,
