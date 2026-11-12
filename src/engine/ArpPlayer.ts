@@ -42,7 +42,7 @@ const INSTRUMENTS: Record<ArpInstrument, () => Tone.PolySynth<any>> = {
     envelope:   { attack: 0.002, decay: 0.1, sustain: 0.5, release: 0.05 },
     volume:     -22,
   }),
-  // キーズ：やわらかい FM のエレピ風（ローファイ・ハウス）
+  // キーズ：やわらかい FM のエレピ風（ゲームBGM・ハウス）
   keys: () => new Tone.PolySynth(Tone.FMSynth, {
     harmonicity:        2,
     modulationIndex:    1.5,
@@ -52,7 +52,7 @@ const INSTRUMENTS: Record<ArpInstrument, () => Tone.PolySynth<any>> = {
     modulationEnvelope: { attack: 0.005, decay: 0.3, sustain: 0.1, release: 0.4 },
     volume:             -10,
   }),
-  // ベル：非整数倍の FM で金属的な倍音、長い減衰（ゲームBGM・アンビエント）
+  // ベル：非整数倍の FM で金属的な倍音、長い減衰（ローファイ・アンビエント）
   bell: () => new Tone.PolySynth(Tone.FMSynth, {
     harmonicity:        3.5,
     modulationIndex:    8,

@@ -36,7 +36,7 @@
     "delay": { "time": "4n", "feedback": 0.2, "wet": 0.2 }
   },
   "ゲームBGM": {
-    "instrument": "bell",
+    "instrument": "keys",
     "step": "8n",
     "pattern": "up",
     "octaves": 2,

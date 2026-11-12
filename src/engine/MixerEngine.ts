@@ -18,6 +18,8 @@ const REVERB_SENDS: Record<string, number> = {
   pad:    0.8,
   signature: 0.4,
   melody: 0.5,
+  counter: 0.55,
+  perc:   0.25,
   fx:     0.7,
 };
 

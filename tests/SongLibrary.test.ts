@@ -31,12 +31,12 @@ function legacySong(overrides: Record<string, unknown> = {}): Record<string, unk
     melodyMethod: "manual", melodyVersion: 3,
     // grow のプリセットを番号で保存していた（FILE_VERSION 1）
     growPreset: 4,  // = "acid"（初期値の "lead" と違う番号にして、読み替えずに初期値になったのと区別する）
-    growSounds: { bass: { preset: 6, params: { 3: 0.5 } } },  // pad / arp / signature は無い
+    growSounds: { bass: { preset: 6, params: { 3: 0.5 } } },  // pad / arp / signature / counter は無い
     // 以前の Tone.js のコードの音色・旧 grow（Tone.js 版）のメロディの音色
     chordInstrument: "epiano",
     melodyInstrument: "toniq",
     toniqSynth: { cutoff: 1200 },
-    // パートを増やす前の曲（signature / fx が無い）
+    // パートを増やす前の曲（signature / fx / counter / perc が無い）。サブベースの設定（bassSub）も無い
     parts:   { drum: true, chord: true, bass: false, arp: false, pad: true, melody: true },
     volumes: { drum: 70, chord: 60, bass: 65, arp: 55, pad: 45, melody: 80 },
     arrangement: { drum: [{ start: 0, length: 16 }], chord: [], bass: [], arp: [], pad: [], melody: [{ start: 4, length: 12 }] },
@@ -67,6 +67,7 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(s.growSounds.pad).toEqual(defaultState.growSounds.pad);
     expect(s.growSounds.arp).toEqual(defaultState.growSounds.arp);
     expect(s.growSounds.signature).toEqual(defaultState.growSounds.signature);
+    expect(s.growSounds.counter).toEqual(defaultState.growSounds.counter);
   });
 
   it("以前の Tone.js のコードの音色は、同じ音の grow のプリセットにする（LEGACY_CHORD_PRESETS）", () => {
@@ -87,12 +88,20 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(s.volumes.melody).toBe(80);
     expect(s.arrangement?.signature).toEqual([]);
     expect(s.arrangement?.fx).toEqual([]);
+    expect(s.volumes.counter).toBe(defaultState.volumes.counter);
+    expect(s.volumes.perc).toBe(defaultState.volumes.perc);
+    expect(s.parts.counter).toBe(defaultState.parts.counter);
+    expect(s.parts.perc).toBe(defaultState.parts.perc);
+    // アレンジを編集して保存した曲には、カウンターメロディ・パーカッションのブロックは無い（鳴らない）
+    expect(s.arrangement?.counter).toEqual([]);
+    expect(s.arrangement?.perc).toEqual([]);
     expect(s.arrangement?.melody).toEqual([{ start: 4, length: 12 }]);
   });
 
   it("無い項目（スウィング・サビ・FX の種類など）は初期値、曲の情報はそのまま", () => {
     const s = getState();
     expect(s.swing).toBe(defaultState.swing);
+    expect(s.bassSub).toBe(defaultState.bassSub);  // サブベースはジャンルの標準（null）
     expect(s.chorusPattern).toBe(defaultState.chorusPattern);
     expect(s.fxType).toBe(defaultState.fxType);
     expect(s.sections).toBe(defaultState.sections);
@@ -112,10 +121,26 @@ describe("loadSong：そのほかの読み替え", () => {
     expect(getState().melodyInstrument).toBe("grow");
   });
 
-  it("範囲外の番号のプリセットは初期値にする", () => {
+  it("範囲外の番号のプリセットは初期値（ジャンルの標準）にする", () => {
     storeRaw([legacySong({ growPreset: 9999 })]);
     loadSong("song_old");
     expect(getState().growPreset).toBe(defaultState.growPreset);
+    expect(getState().growPreset).toBeNull();
+  });
+
+  it("メロディのプリセットが無い・null の曲はジャンルの標準（null）、以前の初期値の lead はそのまま", () => {
+    storeRaw([legacySong({ growPreset: undefined })]);
+    loadSong("song_old");
+    expect(getState().growPreset).toBeNull();
+
+    storeRaw([legacySong({ growPreset: null })]);
+    loadSong("song_old");
+    expect(getState().growPreset).toBeNull();
+
+    // メロディの標準がまだ無かった頃の曲（初期値の "lead" を保存している）は、保存した音のまま鳴らす
+    storeRaw([legacySong({ growPreset: "lead" })]);
+    loadSong("song_old");
+    expect(getState().growPreset).toBe("lead");
   });
 
   it("無い曲は false を返し、今の曲は変えない", () => {

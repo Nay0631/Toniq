@@ -2,7 +2,8 @@ import * as Tone from "tone";
 import { getState, ArrangeBlock, Arrangement, Section } from "./AppState";
 import type { LayerName } from "./LayerManager";
 
-export const LAYERS: LayerName[] = ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"];
+// すべてのパート（読み込み・破棄・アレンジの順）
+export const LAYERS: LayerName[] = ["drum", "perc", "chord", "bass", "arp", "pad", "signature", "melody", "counter", "fx"];
 
 // ジャンルごとの標準の構成。曲を8小節（SECTION_BARS）ずつのセクションに分け、A → A → サビ → A の順に並べる。
 // 標準アレンジ（AppState.arrangement が null のとき）はこれを小節ごとに展開して作る。
@@ -27,59 +28,61 @@ interface SectionPlan {
 // （割り切れないと 1 セクションが 8 小節からずれる。自動チェックの「コード進行DB」で確かめられる）
 export const SECTION_BARS = 8;
 
+// カウンターメロディ（counter）はサビではハモり、Aメロでは合いの手になるので、メロディのあるセクションに足す。
+// パーカッション（perc）はサビを中心に、ドラムが鳴っている所に足す
 const LOOP_SCHEDULE: Record<string, SectionPlan[]> = {
   // EDM：イントロ → ブレイク（ドラム・ベースを抜いてメロディを聴かせる）→ ドロップ（サビ）→ A に戻って薄くしていく
   "EDM": [
     { section: "A", parts: ["drum", "chord", "bass"], add: ["arp"] },
-    { section: "A", parts: ["chord", "pad", "melody"], add: ["arp", "fx"], build: ["drum"] },
-    { section: "B", parts: ["drum", "chord", "bass", "arp", "pad", "signature", "melody", "fx"] },
-    { section: "A", parts: ["drum", "chord", "bass", "pad", "arp", "melody"], drop: ["pad", "arp"] },
+    { section: "A", parts: ["chord", "pad", "melody"], add: ["arp", "fx", "counter"], build: ["drum"] },
+    { section: "B", parts: ["drum", "perc", "chord", "bass", "arp", "pad", "signature", "melody", "counter", "fx"] },
+    { section: "A", parts: ["drum", "perc", "chord", "bass", "pad", "arp", "melody"], drop: ["pad", "arp", "perc"] },
   ],
   // 8bit：サビでアルペジオをシグネチャー（高速アルペジオ）に持ち替える
   "8bit": [
     { section: "A", parts: ["drum", "chord"], add: ["melody"] },
     { section: "A", parts: ["drum", "chord", "melody", "bass"], add: ["arp"], gap: ["bass"] },
-    { section: "B", parts: ["drum", "chord", "melody", "bass", "signature", "fx"] },
-    { section: "A", parts: ["drum", "chord", "melody", "bass", "arp"] },
+    { section: "B", parts: ["drum", "perc", "chord", "melody", "counter", "bass", "signature", "fx"] },
+    { section: "A", parts: ["drum", "chord", "melody", "bass", "arp"], add: ["perc"] },
   ],
   // ローファイ：ドラムなしのイントロから後半でドラムが入る。サビはパッドをアルペジオに替える。最後はドラムを抜いて終わる
   "ローファイ": [
     { section: "A", parts: ["chord", "pad", "signature"], add: ["drum"] },
-    { section: "A", parts: ["drum", "chord", "pad", "bass", "melody", "signature"], gap: ["drum"] },
-    { section: "B", parts: ["drum", "chord", "bass", "melody", "arp", "signature"], add: ["pad"] },
-    { section: "A", parts: ["drum", "chord", "pad", "bass", "melody", "signature"], drop: ["drum"] },
+    { section: "A", parts: ["drum", "perc", "chord", "pad", "bass", "melody", "signature"], gap: ["drum", "perc"] },
+    { section: "B", parts: ["drum", "perc", "chord", "bass", "melody", "counter", "arp", "signature"], add: ["pad"] },
+    { section: "A", parts: ["drum", "perc", "chord", "pad", "bass", "melody", "counter", "signature"], drop: ["drum", "perc"] },
   ],
   "ゲームBGM": [
     { section: "A", parts: ["drum", "chord", "bass"], add: ["pad"] },
-    { section: "A", parts: ["drum", "chord", "bass", "pad", "melody"], gap: ["drum"] },
-    { section: "B", parts: ["drum", "chord", "bass", "pad", "melody", "arp", "signature", "fx"] },
-    { section: "A", parts: ["drum", "chord", "bass", "pad", "melody"], add: ["arp"] },
+    { section: "A", parts: ["drum", "chord", "bass", "pad", "melody"], add: ["counter"], gap: ["drum"] },
+    { section: "B", parts: ["drum", "perc", "chord", "bass", "pad", "melody", "counter", "arp", "signature", "fx"] },
+    { section: "A", parts: ["drum", "chord", "bass", "pad", "melody", "counter"], add: ["arp", "perc"] },
   ],
   // テクノ：キックとベースから。サビの前半はキックを抜いたブレイクで、後半でキック・ベースが戻る
   "テクノ": [
     { section: "A", parts: ["drum", "bass"], add: ["signature"] },
-    { section: "A", parts: ["drum", "bass", "signature", "fx"], add: ["arp"], gap: ["bass"] },
-    { section: "B", parts: ["chord", "pad", "signature", "arp", "melody", "fx"], add: ["drum", "bass"] },
-    { section: "A", parts: ["drum", "bass", "signature", "arp", "fx"], drop: ["arp"] },
+    { section: "A", parts: ["drum", "perc", "bass", "signature", "fx"], add: ["arp"], gap: ["bass"] },
+    { section: "B", parts: ["chord", "pad", "signature", "arp", "melody", "counter", "fx"], add: ["drum", "perc", "bass"] },
+    { section: "A", parts: ["drum", "perc", "bass", "signature", "arp", "fx"], drop: ["arp"] },
   ],
   "ハウス": [
-    { section: "A", parts: ["drum", "bass"], add: ["chord"] },
-    { section: "A", parts: ["drum", "bass", "chord", "melody", "fx"], gap: ["bass"] },
-    { section: "B", parts: ["drum", "bass", "chord", "pad", "melody", "signature", "fx"], add: ["arp"] },
-    { section: "A", parts: ["drum", "bass", "chord", "pad", "melody"], drop: ["pad"] },
+    { section: "A", parts: ["drum", "bass"], add: ["chord", "perc"] },
+    { section: "A", parts: ["drum", "perc", "bass", "chord", "melody", "fx"], add: ["counter"], gap: ["bass"] },
+    { section: "B", parts: ["drum", "perc", "bass", "chord", "pad", "melody", "counter", "signature", "fx"], add: ["arp"] },
+    { section: "A", parts: ["drum", "perc", "bass", "chord", "pad", "melody"], drop: ["pad"] },
   ],
   // トランス：ビルドアップ → サビの前半はブレイクダウン（ドラム・ベースを抜いてパッドとメロディだけ）→ 後半のドロップで全部そろう
   "トランス": [
     { section: "A", parts: ["drum", "bass"], add: ["arp"] },
-    { section: "A", parts: ["drum", "bass", "arp", "signature", "fx"], gap: ["bass"] },
-    { section: "B", parts: ["pad", "chord", "signature", "melody", "fx"], add: ["drum", "bass", "arp"] },
-    { section: "A", parts: ["drum", "bass", "arp", "chord", "melody", "signature"], drop: ["signature"] },
+    { section: "A", parts: ["drum", "perc", "bass", "arp", "signature", "fx"], gap: ["bass"] },
+    { section: "B", parts: ["pad", "chord", "signature", "melody", "counter", "fx"], add: ["drum", "perc", "bass", "arp"] },
+    { section: "A", parts: ["drum", "perc", "bass", "arp", "chord", "melody", "signature"], drop: ["signature"] },
   ],
   // アンビエント：パッドとコードから始め、ドラムはサビの後半に薄く足す
   "アンビエント": [
     { section: "A", parts: ["pad", "chord"], add: ["signature"] },
-    { section: "A", parts: ["pad", "chord", "melody", "signature"] },
-    { section: "B", parts: ["pad", "chord", "melody", "bass", "arp", "signature"], add: ["drum"] },
+    { section: "A", parts: ["pad", "chord", "melody", "signature"], add: ["counter"] },
+    { section: "B", parts: ["pad", "chord", "melody", "counter", "bass", "arp", "signature"], add: ["drum", "perc"] },
     { section: "A", parts: ["pad", "chord", "melody", "signature", "arp"], drop: ["arp"] },
   ],
 };
@@ -107,7 +110,7 @@ export function defaultSections(genre: string, loops: number, loopBars: number):
 // ===== アレンジ =====
 
 export function emptyArrangement(): Arrangement {
-  return { drum: [], chord: [], bass: [], arp: [], pad: [], signature: [], melody: [], fx: [] };
+  return { drum: [], perc: [], chord: [], bass: [], arp: [], pad: [], signature: [], melody: [], counter: [], fx: [] };
 }
 
 // ジャンルの標準アレンジ：小節ごとに LOOP_SCHEDULE のセクションの定義から鳴らすパートを決め、続いている小節は1つのブロックにまとめる。

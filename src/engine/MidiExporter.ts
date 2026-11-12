@@ -5,6 +5,8 @@ import { arpNotes, arpParam } from "./ArpPlayer";
 import { bassNotes, bassVelocity } from "./BassPlayer";
 import { chordEvents } from "./ChordPlayer";
 import { padEvents } from "./PadPlayer";
+import { counterNotes } from "./CounterPlayer";
+import { percStepHits } from "./PercPlayer";
 import { blockDrumPattern, drumStepHits } from "./DrumEngine";
 import { songMelody, songProgression } from "./SongForm";
 import { getArrangement, findBlock } from "./LoopArranger";
@@ -17,7 +19,8 @@ import { saveOutput } from "./OutputFiles";
 // - アレンジ（ブロックのある小節だけ鳴らす）と パートの ON/OFF に従う。ドラムはブロックごとのパターンも反映する
 // - ベースはジャンル別のパターン、コードはコードのリズム、アルペジオ・パッドは再生と同じボイシング
 // - スウィングは発音位置に反映する（Tone.js の Transport と同じずらし方）
-// シグネチャー・FX / SE は音色そのものが特徴のパートなので書き出さない。
+// - カウンターメロディ（CounterPlayer と同じ音）、パーカッション（ドラムと同じチャンネル 10 の別トラック）も書き出す
+// シグネチャー・FX / SE は音色そのものが特徴のパートなので書き出さない。サブベースはベースと同じ音なので書き出さない。
 
 // ===== 共通ユーティリティ =====
 const NOTE_INDEX: Record<string, number> = {
@@ -57,6 +60,12 @@ const GM_DRUMS: Record<string, number> = {
   clap:         39,
   hihat_closed: 42,
   hihat_open:   46,
+  // パーカッション（PercPlayer.ts）
+  ride:         51,
+  tambourine:   54,
+  conga_high:   63,
+  conga_low:    64,
+  shaker:       70,  // Maracas
 };
 
 // パートごとのトラック名・チャンネル・GM の音色番号（0 始まり）
@@ -66,7 +75,9 @@ const TRACKS: Record<Exclude<LayerName, "signature" | "fx">, { name: string; cha
   pad:    { name: "Pad",      channel: 2, program: 89 },  // Pad 2 (warm)
   arp:    { name: "Arpeggio", channel: 3, program: 81 },  // Lead 2 (sawtooth)
   bass:   { name: "Bass",     channel: 4, program: 38 },  // Synth Bass 1
+  counter: { name: "Counter Melody", channel: 5, program: 11 },  // Vibraphone
   drum:   { name: "Drums",    channel: 9, program: 0  },
+  perc:   { name: "Percussion", channel: 9, program: 0 },
 };
 
 // ===== MIDIエクスポート本体 =====
@@ -186,6 +197,29 @@ export async function exportMidi(filename?: string): Promise<void> {
       for (const { name, velocity } of drumStepHits(pattern, bar, step % 16)) {
         if (GM_DRUMS[name] === undefined) continue;
         drumTrack.addNote({
+          midi:          GM_DRUMS[name],
+          ticks:         toTicks(swung(step / 4)),
+          durationTicks: toTicks(0.25),
+          velocity,
+        });
+      }
+    }
+  }
+
+  // ===== カウンターメロディ（メロディとコード進行から作る。CounterPlayer と共通） =====
+  const counterTrack = addTrack("counter");
+  if (counterTrack) {
+    addLooped(counterTrack, "counter", counterNotes(progression, songMelody(), key).map(n =>
+      ({ beats: n.sixteenth / 4, length: n.length / 4, midi: n.midi, velocity: n.velocity })));
+  }
+
+  // ===== パーカッション（ドラムと同じチャンネル 10。PercPlayer と共通） =====
+  const percTrack = addTrack("perc");
+  if (percTrack) {
+    for (let step = 0; step < s.bars * 16; step++) {
+      if (!arranged("perc", step / 4)) continue;
+      for (const { name, velocity } of percStepHits(Math.floor(step / 16), step % 16)) {
+        percTrack.addNote({
           midi:          GM_DRUMS[name],
           ticks:         toTicks(swung(step / 4)),
           durationTicks: toTicks(0.25),

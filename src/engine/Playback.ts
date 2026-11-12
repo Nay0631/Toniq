@@ -137,8 +137,8 @@ export interface SampleSong {
   melodyNotes:  MelodyNote[];
 }
 
-// サンプルで鳴らすパート（ジャンルの特徴が出るようシグネチャーも鳴らす。FX は除く）
-const SAMPLE_LAYERS: LayerName[] = ["drum", "chord", "bass", "pad", "signature", "melody"];
+// サンプルで鳴らすパート（ジャンルの特徴が出るようシグネチャー・パーカッションも鳴らす。FX・カウンターメロディは除く）
+const SAMPLE_LAYERS: LayerName[] = ["drum", "perc", "chord", "bass", "pad", "signature", "melody"];
 
 // サンプル中だけ差し替えている曲の内容。stop() で AppState に戻す（null = サンプルを鳴らしていない）
 let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"> | null = null;
@@ -341,14 +341,18 @@ async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
     const { initSignatureSynth: initS, loadSignature: loadS }   = await import("./SignaturePlayer");
     const { initMelodySynth: initM, loadMelody: loadMel }        = await import("./MelodyPlayer");
     const { initFxSynth: initF,    loadFx: loadF }               = await import("./FxPlayer");
+    const { initCounterSynth: initCo, loadCounter: loadCo }      = await import("./CounterPlayer");
+    const { loadPerc }                                           = await import("./PercPlayer");
 
     if (s.parts.drum)   loadDrum(drumPattern);
+    if (s.parts.perc)   loadPerc();
     if (s.parts.chord)  { initC();  loadC(song, s.key); }
     if (s.parts.bass)   { initB();  loadB(song, s.key, 2); }
     if (s.parts.arp)    { initAr(); loadAr(song, s.key); }
     if (s.parts.pad)    { initP();  loadP(song, s.key); }
     if (s.parts.signature) { initS(); loadS(song, s.key); }
     if (s.parts.melody) { initM();  loadMel(melody, `${song.length_bars}m`); }
+    if (s.parts.counter) { initCo(); loadCo(song, melody, s.key); }
     if (s.parts.fx)     { initF();  loadF(chordPattern); }
     Tone.getTransport().start();
     onProgress?.("prepare", 1);

@@ -24,9 +24,9 @@ export type ChordInstrument = "grow";
 // FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
 export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
 
-// grow で鳴らすベース・パッド・アルペジオ・シグネチャーの音作り。preset はコアのプリセットの ID（null = ジャンルの標準。Grow.ts）、
+// grow で鳴らすベース・パッド・アルペジオ・シグネチャー・カウンターメロディの音作り。preset はコアのプリセットの ID（null = ジャンルの標準。Grow.ts）、
 // params はそこから変えた値（パラメーターの ID → 値。null = プリセットのまま）
-export type GrowPartName = "bass" | "pad" | "arp" | "signature";
+export type GrowPartName = "bass" | "pad" | "arp" | "signature" | "counter";
 export interface GrowSound {
   preset: string | null;
   params: Record<string, number> | null;
@@ -149,13 +149,15 @@ export interface AppState {
   drumSource:       DrumSource;
   // grow の音作り（曲に保存する）。プリセットの ID（grow のコアの GrowPresets.cpp の id）と、
   // そこから変えた値（パラメーターの ID → 実際の値。null = プリセットのまま）
-  growPreset:       string;
+  growPreset:       string | null;  // null = ジャンルの標準（Grow.ts の MELODY_STANDARD）
   growParams:       Record<string, number> | null;
   // コードを grow で鳴らすときの音作り（メロディとは別に持つ。形は growPreset / growParams と同じ）
   growChordPreset:  string | null;  // null = ジャンルの標準（Grow.ts の CHORD_STANDARD）
   growChordParams:  Record<string, number> | null;
-  // ベース・パッド・アルペジオ・シグネチャーの grow の音作り（どれも grow で鳴らす。wasm がないときは Tone.js の音色）
+  // ベース・パッド・アルペジオ・シグネチャー・カウンターメロディの grow の音作り（どれも grow で鳴らす。wasm がないときは Tone.js の音色）
   growSounds:       Record<GrowPartName, GrowSound>;
+  // ベースにサブベース（低いサイン）を重ねるか（null = ジャンルの標準。bass_params.json の sub）
+  bassSub:          boolean | null;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
@@ -175,6 +177,8 @@ export interface AppState {
     pad:     boolean;
     signature: boolean;
     melody:  boolean;
+    counter: boolean;  // カウンターメロディ（サビはハモり、Aメロは合いの手。CounterPlayer.ts）
+    perc:    boolean;  // パーカッション（シェイカー・タンバリン・コンガ・ライド。PercPlayer.ts）
     fx:      boolean;
   };
 
@@ -186,6 +190,8 @@ export interface AppState {
     pad:     number;
     signature: number;
     melody:  number;
+    counter: number;
+    perc:    number;
     fx:      number;
   };
 }
@@ -240,7 +246,7 @@ export const defaultState: AppState = {
   scaleLock:        true,
   drumCategory:     "EDM",
   drumSource:       "grow",
-  growPreset:       "lead",      // シンセリード
+  growPreset:       null,  // ジャンルの標準
   growParams:       null,
   growChordPreset:  null,  // ジャンルの標準
   growChordParams:  null,
@@ -249,7 +255,9 @@ export const defaultState: AppState = {
     pad:       { preset: null, params: null },
     arp:       { preset: null, params: null },
     signature: { preset: null, params: null },
+    counter:   { preset: null, params: null },
   },
+  bassSub:          null,  // ジャンルの標準
 
   arrangement: null,
   startBar:    0,
@@ -266,6 +274,8 @@ export const defaultState: AppState = {
     pad:    true,
     signature: true,
     melody: true,
+    counter: true,
+    perc:   true,
     fx:     true,
   },
 
@@ -277,6 +287,8 @@ export const defaultState: AppState = {
     pad:    50,
     signature: 60,
     melody: 75,
+    counter: 65,
+    perc:   55,
     fx:     55,
   },
 };
@@ -288,7 +300,7 @@ export const SONG_FIELDS = [
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
   "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
-  "growPreset", "growParams", "growChordPreset", "growChordParams", "growSounds",
+  "growPreset", "growParams", "growChordPreset", "growChordParams", "growSounds", "bassSub",
   "arrangement", "parts", "volumes",
 ] as const;
 

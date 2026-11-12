@@ -4,6 +4,8 @@ import { resolveTempoPreset, chorusCandidates, pickChorus } from "../engine/Simp
 import { chorusFits, chorusProgression, generateChorusMelody, generateSongMelodies } from "../engine/SongForm";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { signatureLabel } from "../engine/SignaturePlayer";
+import { percLabel } from "../engine/PercPlayer";
+import { bassSubStandard } from "../engine/BassPlayer";
 import { tap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
 import {
@@ -14,7 +16,7 @@ import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
-import { onRender, showTab } from "./Router";
+import { onRender } from "./Router";
 import { SCALE_LABELS, chordNames, displayNote, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { initMixer, renderMixer } from "./MixerPanel";
@@ -154,12 +156,6 @@ function modalOpen(): boolean {
     .some(el => el.getClientRects().length > 0);
 }
 
-// 差し替え：今のものとは別の候補から選ぶ
-function pickOther<T extends { id: string }>(items: T[], currentId: string | undefined): T | undefined {
-  const others = items.filter(i => i.id !== currentId);
-  return others[Math.floor(Math.random() * others.length)];
-}
-
 function setBpm(bpm: number): void {
   if (!Number.isFinite(bpm)) return;
   const clamped = Math.max(20, Math.min(240, Math.round(bpm)));
@@ -297,9 +293,14 @@ function render(): void {
   fxSelect.value = s.fxType;
   fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
 
-  // パッド / アルペジオ / シグネチャー
+  // 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション / サブベース）
   const sigLabel = document.getElementById("c-signature-label");
   if (sigLabel) sigLabel.textContent = `（${signatureLabel(s.genre)}）`;
+  const percNote = document.getElementById("c-perc-label");
+  if (percNote) percNote.textContent = `（${percLabel(s.genre)}）`;
+  const subSelect = $select("c-bass-sub");
+  subSelect.options[0].textContent = `ジャンルに合わせる（${bassSubStandard(s.genre) ? "ON" : "OFF"}）`;
+  subSelect.value = s.bassSub === null ? "auto" : s.bassSub ? "on" : "off";
   document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el => {
     const on = s.parts[el.dataset.partToggle as LayerName];
     el.classList.toggle("is-on", on);
@@ -311,21 +312,6 @@ function render(): void {
 
   // アレンジャー
   renderArranger();
-  let chordText = "";
-  try {
-    const chorus = chorusProgression();
-    chordText = s.chordPattern ? chordNames(s.chordPattern, s.key).replace(/ - /g, "-") : "";
-    if (chorus) chordText += `／サビ ${chordNames(chorus, s.key).replace(/ - /g, "-")}`;
-  } catch {
-    chordText = s.chordPattern?.name ?? "";
-  }
-  $("c-arr-chord")!.textContent = chordText;
-  $("c-arr-drum")!.textContent  = s.drumPattern ? drumLabel(s.drumPattern) : "";
-  $("c-arr-melody")!.textContent = s.melodyMethod === "manual"
-    ? "ピアノロールで入力"
-    : s.melodyNotes.length > 0
-      ? `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`
-      : "未作成（↻ で自動生成）";
 }
 
 // サビの進行：「なし」（Aメロと同じ進行）と、今の進行と同じ長さ・スケールの進行
@@ -586,7 +572,15 @@ export function initCustomScreen(): void {
     render();
   });
 
-  // ===== パッド / アルペジオ / シグネチャー =====
+  // サブベース（音色は再生開始時に作るので、再生中なら再生し直す）
+  $select("c-bass-sub").addEventListener("change", async e => {
+    const value = (e.target as HTMLSelectElement).value;
+    setState({ bassSub: value === "auto" ? null : value === "on" });
+    render();
+    await restartIfPlaying();
+  });
+
+  // ===== 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション） =====
   document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el =>
     el.addEventListener("click", () => {
       const part = el.dataset.partToggle as LayerName;
@@ -603,32 +597,6 @@ export function initCustomScreen(): void {
     if (Playback.isPlaying()) await startPlayback();
     else render();
   }, async () => {
-    render();
-    await restartIfPlaying();
-  });
-
-  $("c-arr-chord-reroll")?.addEventListener("click", async () => {
-    const next = pickOther(chordCandidates(), getState().chordPattern?.id);
-    if (next) setChordPattern(next);
-    render();
-    await restartIfPlaying();
-  });
-
-  $("c-arr-drum-reroll")?.addEventListener("click", async () => {
-    const next = pickOther(drumCandidates(), getState().drumPattern?.id);
-    if (next) setState({ drumPattern: next });
-    render();
-    await restartIfPlaying();
-  });
-
-  $("c-arr-melody-reroll")?.addEventListener("click", async () => {
-    const s = getState();
-    if (s.melodyMethod === "manual") {
-      showTab("pianoroll");
-      return;
-    }
-    setState({ melodyVersion: s.melodyVersion + 1 });
-    makeMelody();
     render();
     await restartIfPlaying();
   });

@@ -1,7 +1,7 @@
 import * as Tone from "tone";
 import workletSource from "./growWorklet.js?raw";
 import { fetchArrayBuffer } from "./DrumSamples";
-import { getState, setState, defaultState, GrowPartName } from "./AppState";
+import { getState, setState, GrowPartName } from "./AppState";
 import arpParams from "../data/arp_params.json";
 
 // grow（Toniq の内部シンセ。C++ のコアを WebAssembly にしたもの。ソースは grow/）を Toniq の再生で鳴らす。
@@ -11,7 +11,7 @@ import arpParams from "../data/arp_params.json";
 //     （再生用と、WAV / MP3 書き出し用のオフラインのコンテキスト）
 //   - 音符は AudioParam の1サンプルだけの合図で渡す（書き出しでもサンプル単位で合う）
 //   - パートごとに別々の音作り（GrowPart）を持つ。和音は同じ時刻の合図を少しずらして渡す
-//   - メロディ以外のパートはジャンルの標準のプリセット（GROW_STANDARD）を ID で探す。
+//   - プリセットを選んでいないパートはジャンルの標準のプリセット（GROW_STANDARD）を ID で探す。
 //     今の wasm にない ID（コアに足したがビルドし直していない）は、後ろの候補の既存のプリセットで鳴らす
 // wasm がないとき（まだビルドしていない）は使えず、各パートは Tone.js の音色で鳴る。
 
@@ -24,23 +24,51 @@ const OFF_DELAY = 0.002;
 export type GrowPart = "melody" | "chord" | GrowPartName;
 
 // ジャンルの標準のプリセット（ID。前から順に探し、今の wasm にあるものを使う）。
-// アルペジオは arp_params.json の instrument、シグネチャーはジャンル（SignaturePlayer.ts の SIGNATURES）ごと
+// アルペジオは arp_params.json の instrument、シグネチャーはジャンル（SignaturePlayer.ts の SIGNATURES）ごと。
+// 同じジャンルの中では、パート（メロディ・コード・ベース・パッド・アルペジオ・シグネチャー・カウンターメロディ）どうしで同じプリセットを使わない
+// （8bit のコードとアルペジオのスクエアだけは、ほかに 8bit らしい音がないので同じ）
 const ARP_STANDARD: Record<string, string[]> = {
   pluck:  ["pluck"],
-  square: ["chip_lead"],
+  square: ["square", "chip_lead"],
   keys:   ["keys", "pluck"],
   bell:   ["bell", "pluck"],
   blip:   ["blip", "pluck"],
 };
+// アルペジオの標準をジャンルで上書きする（instrument の音色がメロディなどと重なるジャンル）
+const ARP_GENRE_STANDARD: Record<string, string[]> = {
+  "ローファイ": ["lofi_keys", "keys"],   // キーズはメロディの標準なので、こもったローファイキーズ
+};
 const SIGNATURE_STANDARD: Record<string, string[]> = {
   "EDM":       ["stab", "supersaw"],
   "テクノ":     ["acid"],
-  "8bit":      ["chip_lead"],
+  "8bit":      ["blip", "chip_lead"],
   "ローファイ":  ["vinyl_hiss", "noise_sweep"],
-  "ゲームBGM":  ["bell", "pluck"],
-  "ハウス":     ["keys", "pluck"],
+  "ゲームBGM":  ["brass", "bell"],
+  "ハウス":     ["epiano", "keys"],      // ピアノスタブ（オルガンはコードの標準なので使わない）
   "トランス":   ["gate_saw", "supersaw"],
   "アンビエント": ["wind", "noise_sweep"],
+};
+// メロディはジャンルの雰囲気に合うリード（コード・シグネチャーの標準と重ならないもの）。どれもなければシンセリード
+const MELODY_STANDARD: Record<string, string[]> = {
+  "EDM":       ["lead"],
+  "8bit":      ["chip_lead", "lead"],
+  "ローファイ":  ["keys", "lead"],          // エレピはコードの標準なので、FM のキーズ
+  "ゲームBGM":  ["bell", "lead"],
+  "テクノ":     ["sync_lead", "lead"],     // アシッドはシグネチャーの標準なので、鋭いシンクリード
+  "ハウス":     ["pluck", "lead"],
+  "トランス":   ["trance_lead", "lead"],
+  "アンビエント": ["soft_pad", "lead"],
+};
+// パッドはジャンルに合わせる（コードの標準と重ならないもの）。どれもなければソフトパッド
+const PAD_STANDARD: Record<string, string[]> = {
+  "EDM":       ["wide_pad", "soft_pad"],
+  "8bit":      ["soft_pad"],
+  "ローファイ":  ["soft_pad"],
+  "ゲームBGM":  ["soft_pad"],
+  "テクノ":     ["gate_pad", "soft_pad"],
+  "ハウス":     ["soft_pad"],
+  "トランス":   ["wide_pad", "soft_pad"],
+  "アンビエント": ["wide_pad", "soft_pad"],  // メロディがソフトパッドなので、ワイドパッド
 };
 // コードはジャンルに合った和音の音（パッドのパートのパッド系の音と重ならないもの）。どれもなければワイドパッド
 const CHORD_STANDARD: Record<string, string[]> = {
@@ -67,18 +95,31 @@ const BASS_STANDARD: Record<string, string[]> = {
   "トランス":   ["rolling_bass", "sub_bass"],
   "アンビエント": ["soft_bass", "sub_bass"],
 };
-// ジャンルの標準を持つパート（メロディは持たない。初期値のプリセット）
-export type GrowStandardPart = Exclude<GrowPart, "melody">;
-
-const GROW_STANDARD: Record<GrowStandardPart, (genre: string) => string[]> = {
+// カウンターメロディ（ハモり・合いの手）はメロディと聞き分けられる、粒の立った音（ほかのパートの標準と重ならないもの）。
+// どれもなければシンセリード
+const COUNTER_STANDARD: Record<string, string[]> = {
+  "EDM":       ["keys", "bell"],
+  "8bit":      ["pluck", "bell"],          // チップリード・スクエア・ブリップはほかのパートで使っている
+  "ローファイ":  ["pluck", "lead"],
+  "ゲームBGM":  ["pluck", "lead"],
+  "テクノ":     ["pluck", "bell"],
+  "ハウス":     ["house_pluck", "bell"],   // プラックはメロディの標準なので、柔らかいハウスプラック
+  "トランス":   ["keys", "bell"],
+  "アンビエント": ["keys", "lead"],
+};
+// どのパートもジャンルの標準を持つ（プリセットの null = ジャンルの標準）
+const GROW_STANDARD: Record<GrowPart, (genre: string) => string[]> = {
+  melody:    genre => MELODY_STANDARD[genre] ?? MELODY_STANDARD["ローファイ"],
   chord:     genre => CHORD_STANDARD[genre] ?? CHORD_STANDARD["ローファイ"],
   bass:      genre => BASS_STANDARD[genre] ?? BASS_STANDARD["ローファイ"],
-  pad:       () => ["soft_pad", "wide_pad"],
+  pad:       genre => PAD_STANDARD[genre] ?? PAD_STANDARD["ローファイ"],
   arp:       genre => {
+    if (ARP_GENRE_STANDARD[genre]) return ARP_GENRE_STANDARD[genre];
     const params = arpParams as unknown as Record<string, { instrument: string }>;
     return ARP_STANDARD[(params[genre] ?? params["ローファイ"]).instrument] ?? ARP_STANDARD.pluck;
   },
   signature: genre => SIGNATURE_STANDARD[genre] ?? SIGNATURE_STANDARD["ローファイ"],
+  counter:   genre => [...(COUNTER_STANDARD[genre] ?? COUNTER_STANDARD["ローファイ"]), "lead"],
 };
 
 export type GrowParamKind = "continuous" | "integer" | "choice" | "toggle";
@@ -275,16 +316,12 @@ export function findGrowPreset(...ids: string[]): number {
   return -1;
 }
 
-export function hasGrowStandard(part: GrowPart): part is GrowStandardPart {
-  return part !== "melody";
-}
-
-// メロディ以外のパートの、今のジャンルの標準のプリセットの番号（見つからなければ 0 = 初期化）
-export function standardGrowPreset(part: GrowStandardPart, genre: string = getState().genre): number {
+// パートの、今のジャンルの標準のプリセットの番号（見つからなければ 0 = 初期化）
+export function standardGrowPreset(part: GrowPart, genre: string = getState().genre): number {
   return Math.max(0, findGrowPreset(...GROW_STANDARD[part](genre)));
 }
 
-// AppState に保存しているパートの音作り（メロディ以外の preset は null = ジャンルの標準）
+// AppState に保存しているパートの音作り（preset の null = ジャンルの標準）
 export function storedGrowSound(part: GrowPart): { preset: string | null; params: Record<string, number> | null } {
   const s = getState();
   if (part === "melody") return { preset: s.growPreset,      params: s.growParams };
@@ -292,21 +329,19 @@ export function storedGrowSound(part: GrowPart): { preset: string | null; params
   return s.growSounds[part];
 }
 
-// パートの音作りを書き換える（メロディは preset に null を渡さない。コードなどの null はジャンルの標準）
+// パートの音作りを書き換える（preset の null = ジャンルの標準）
 export function setGrowSound(part: GrowPart, preset: string | null, params: Record<string, number> | null): void {
-  if (part === "melody")     setState({ growPreset: preset ?? defaultState.growPreset, growParams: params });
+  if (part === "melody")     setState({ growPreset: preset, growParams: params });
   else if (part === "chord") setState({ growChordPreset: preset, growChordParams: params });
   else setState({ growSounds: { ...getState().growSounds, [part]: { preset, params } } });
 }
 
 // パートの grow の音作り（実際に使うプリセットの番号と、そこから変えた値）。
-// 保存した ID が今の wasm にないとき（プリセットを消した・古い wasm）は、ジャンルの標準（メロディは初期値のプリセット）
+// 保存した ID が今の wasm にないとき（プリセットを消した・古い wasm）は、ジャンルの標準
 export function growSettings(part: GrowPart): { preset: number; params: Record<string, number> | null } {
   const { preset, params } = storedGrowSound(part);
   const found = preset === null ? -1 : findGrowPreset(preset);
-  if (found >= 0) return { preset: found, params };
-  if (hasGrowStandard(part)) return { preset: standardGrowPreset(part), params };
-  return { preset: Math.max(0, findGrowPreset(defaultState.growPreset)), params };
+  return { preset: found >= 0 ? found : standardGrowPreset(part), params };
 }
 
 // プリセットそのままの値（パラメーターの番号順）

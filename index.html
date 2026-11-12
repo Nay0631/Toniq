@@ -369,7 +369,7 @@
               <span class="form-label" data-term="instrument">インスト</span>
               <select class="select" id="c-instrument">
                 <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow">grow</option>
+                <option value="grow">grow（Toniq専用シンセ）</option>
                 <option value="auto">ジャンルに合わせる</option>
                 <option value="supersaw">SuperSaw リード（EDM）</option>
                 <option value="epiano">エレピ（ローファイ）</option>
@@ -521,7 +521,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <path d="M3 12h3l2-6 3 12 3-9 2 3h5"/>
               </svg>
-              <span data-term="pad">パッド</span> / <span data-term="arp">アルペジオ</span> / <span data-term="signature">シグネチャー</span>
+              <span>追加パート</span>
             </div>
 
             <div class="pill-row">
@@ -536,6 +536,22 @@
               <span><span data-term="signature">シグネチャー</span><span class="pill-note" id="c-signature-label"></span></span>
               <button class="pill" data-part-toggle="signature"></button>
             </div>
+            <div class="pill-row">
+              <span><span data-term="counter">カウンターメロディ</span></span>
+              <button class="pill" data-part-toggle="counter"></button>
+            </div>
+            <div class="pill-row">
+              <span><span data-term="perc">パーカッション</span><span class="pill-note" id="c-perc-label"></span></span>
+              <button class="pill" data-part-toggle="perc"></button>
+            </div>
+            <label class="form-row">
+              <span class="form-label" data-term="subBass">サブベース</span>
+              <select class="select" id="c-bass-sub" aria-label="サブベース">
+                <option value="auto">ジャンルに合わせる</option>
+                <option value="on">ON</option>
+                <option value="off">OFF</option>
+              </select>
+            </label>
 
             <hr class="panel-divider">
 
@@ -607,25 +623,6 @@
         </div>
 
         <div class="arranger-bottom">
-          <div class="card panel">
-            <div class="panel-title panel-title-plain"><span data-term="layer">レイヤー</span>差し替え</div>
-            <div class="swap-row">
-              <span class="form-label" data-term="chord">コード</span>
-              <span class="swap-desc" id="c-arr-chord"></span>
-              <button class="btn btn-small btn-icon" id="c-arr-chord-reroll" aria-label="コード進行を差し替え" title="差し替え">↻</button>
-            </div>
-            <div class="swap-row">
-              <span class="form-label" data-term="drum">ドラム</span>
-              <span class="swap-desc" id="c-arr-drum"></span>
-              <button class="btn btn-small btn-icon" id="c-arr-drum-reroll" aria-label="ドラムを差し替え" title="差し替え">↻</button>
-            </div>
-            <div class="swap-row">
-              <span class="form-label" data-term="melody">メロディ</span>
-              <span class="swap-desc" id="c-arr-melody"></span>
-              <button class="btn btn-small btn-icon" id="c-arr-melody-reroll" aria-label="メロディを差し替え" title="差し替え">↻</button>
-            </div>
-          </div>
-
           <div class="card panel">
             <div class="panel-title panel-title-plain">エクスポート</div>
             <div class="export-buttons">
