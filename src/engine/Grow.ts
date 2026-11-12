@@ -518,6 +518,30 @@ export class GrowInstrument {
     return this;
   }
 
+  // 発音だけ（消音の合図を送らない）。サスティン 0 の音（ドラム）は鳴り終わればボイスが空く。
+  // 同じ高さを続けて鳴らすと、前の音は余韻（リリース）になる
+  triggerAttack(note: Tone.Unit.Frequency, time?: Tone.Unit.Time, velocity = 0.8): this {
+    if (this.disposed) return this;
+    const ctx   = this.output.context;
+    const start = time === undefined ? ctx.now() : new Tone.TimeClass(ctx, time).toSeconds();
+    const midi  = Math.round(new Tone.FrequencyClass(ctx, note).toMidi());
+    if (midi < 0 || midi > 127) return this;
+    const vel = Math.max(0, Math.min(1, velocity));
+    this.whenAttached(() => this.signal(this.onParam, this.onFrames, midi + 1 + vel * 0.5, start));
+    return this;
+  }
+
+  // 消音だけ（オープンハイハットを止める・クラップの短い音など）。遅らせずにその時刻で離す
+  triggerRelease(note: Tone.Unit.Frequency, time?: Tone.Unit.Time): this {
+    if (this.disposed) return this;
+    const ctx  = this.output.context;
+    const at   = time === undefined ? ctx.now() : new Tone.TimeClass(ctx, time).toSeconds();
+    const midi = Math.round(new Tone.FrequencyClass(ctx, note).toMidi());
+    if (midi < 0 || midi > 127) return this;
+    this.whenAttached(() => this.signal(this.offParam, this.offFrames, midi + 1, at));
+    return this;
+  }
+
   // パラメーター（ID）を時刻を決めて当てる（書き出しでもサンプル単位で合う。同じ時刻の発音より先に当たる）。
   // 同じ時刻に複数当てると2サンプルずつ後ろへずれるので、発音に間に合わせたいときは少し前の時刻にする
   setParamAtTime(id: string, value: number, time: Tone.Unit.Time): this {

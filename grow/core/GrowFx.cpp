@@ -132,22 +132,41 @@ void Fx::prepare (double newSampleRate)
     reset();
 }
 
-void Fx::reset()
+void Fx::clearChorus()
+{
+    for (auto& line : chorusLine) line.clear();
+    chorusPhase = 0.0f;
+}
+
+void Fx::clearDelay()
 {
     for (int ch = 0; ch < 2; ++ch)
     {
-        chorusLine[ch].clear();
         delayLine[ch].clear();
-        driveUp[ch].clear();
-        driveDown[ch].clear();
         delayLow[ch] = delayHigh[ch] = delayHighIn[ch] = 0.0f;
     }
+    delaySamples = 0.0f;
+}
+
+void Fx::clearReverb()
+{
     for (auto& d : diffusers) std::fill (d.buffer.begin(), d.buffer.end(), 0.0f);
     for (auto& line : reverbLine) line.clear();
     for (auto& d : lineDamp) d = 0.0f;
     reverbModPhase = 0.0f;
-    chorusPhase  = 0.0f;
-    delaySamples = 0.0f;
+}
+
+void Fx::reset()
+{
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        driveUp[ch].clear();
+        driveDown[ch].clear();
+    }
+    clearChorus();
+    clearDelay();
+    clearReverb();
+    chorusIdle = delayIdle = reverbIdle = true;
     masterGain   = 0.0f;
     limiterGain  = 1.0f;
     for (int ch = 0; ch < 2; ++ch) dcIn[ch] = dcOut[ch] = 0.0f;
@@ -193,6 +212,16 @@ void Fx::processChorus (float* left, float* right, int numSamples, const GrowPar
     const auto centre = 0.008f * sr;
     const auto depthTarget = std::clamp (p.chorusDepth, 0.0f, 1.0f);
     const auto mixTarget   = std::clamp (p.chorusMix, 0.0f, 1.0f);
+    if (mixTarget <= 0.0f && chorusMixSmooth.isAt (0.0f))
+    {
+        chorusIdle = true;  // 量が 0：元の音のまま
+        return;
+    }
+    if (chorusIdle)
+    {
+        clearChorus();  // 止めていた間の古い音を出さない（量は 0 から滑らかに上がる）
+        chorusIdle = false;
+    }
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -228,6 +257,16 @@ void Fx::processDelay (float* left, float* right, int numSamples, const GrowPara
     const auto smooth   = 1.0f - std::exp (-1.0f / (0.08f * (float) sampleRate / 3.0f));
     const auto feedbackTarget = std::clamp (p.delayFeedback, 0.0f, 0.95f);
     const auto mixTarget      = std::clamp (p.delayMix, 0.0f, 1.0f);
+    if (mixTarget <= 0.0f && delayMixSmooth.isAt (0.0f))
+    {
+        delayIdle = true;  // 量が 0：くり返しは聞こえないので計算しない
+        return;
+    }
+    if (delayIdle)
+    {
+        clearDelay();  // 止めていた間の古い音を出さない（量は 0 から滑らかに上がる）
+        delayIdle = false;
+    }
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -269,10 +308,20 @@ void Fx::processReverb (float* left, float* right, int numSamples, const GrowPar
 {
     // FDN：入口の音をオールパスで散らし、8本のディレイに入れる。各ディレイの出力を Householder 行列
     // （全体の平均の 2 倍を引く。エネルギーを保ったまま全部の線を混ぜる）で混ぜて、減衰・ローパスをかけて戻す。
-    // 左右は8本の出力を別々の符号の組で足して作る（左右で違う響きになり、広がる）。量が 0 でも響きの残りは鳴らし切る
+    // 左右は8本の出力を別々の符号の組で足して作る（左右で違う響きになり、広がる）
     const auto sr         = (float) sampleRate;
     const auto sizeTarget = std::clamp (p.reverbSize, 0.0f, 1.0f);
     const auto mixTarget  = std::clamp (p.reverbMix, 0.0f, 1.0f);
+    if (mixTarget <= 0.0f && reverbMixSmooth.isAt (0.0f))
+    {
+        reverbIdle = true;  // 量が 0：響きは聞こえないので計算しない
+        return;
+    }
+    if (reverbIdle)
+    {
+        clearReverb();  // 止めていた間の古い音を出さない（量は 0 から滑らかに上がる）
+        reverbIdle = false;
+    }
     const auto modStep    = reverbModHz / sr;
     const auto modDepth   = reverbModMs * 0.001f * sr;
     static constexpr float signL[numLines] = { 1, -1, 1, -1, 1, -1, 1, -1 };

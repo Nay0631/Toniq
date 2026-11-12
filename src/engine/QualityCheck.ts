@@ -2,9 +2,10 @@ import { getState } from "./AppState";
 import { ChordProgression } from "../data/types";
 import { resolveChord, NOTE_INDEX } from "../data/degree_resolver";
 import { noteToMidi, timeToUnits, durationToUnits } from "./MelodyGenerator";
-import { getArrangement, findBlock, LAYERS } from "./LoopArranger";
+import { getArrangement, findBlock, LAYERS, SECTION_BARS } from "./LoopArranger";
 import { chorusProgression, endingBar, getSections, isFillBar, loopBars, songMelody, songProgression } from "./SongForm";
 import chordDB from "../data/chord_progressions.json";
+import melodyParams from "../data/melody_params.json";
 
 // 自動チェック：今の曲を規則で調べ、作曲のよくある弱点（強拍でコードとぶつかる、言い切らずに終わる、
 // 大きく跳ぶ、サビが盛り上がらない、ずっと同じ編成 など）を数字で出す。アレンジャーのテスト中の機能の欄に表示する。
@@ -201,8 +202,9 @@ function formItems(x: SongMetrics): QualityItem[] {
   }];
 }
 
-// コード進行DBのチェック：すべての進行がディグリーから実音にできるか、サビに使える相方（同じ長さ・スケール）があるか
-export function chordDBIssues(): { total: number; broken: string[]; alone: string[] } {
+// コード進行DBのチェック：すべての進行がディグリーから実音にできるか、サビに使える相方（同じ長さ・スケール）があるか、
+// 長さが8小節のセクションに合うか（割り切れない長さだと周回とセクションの区切りがずれる）・コードが長さちょうどを埋めているか
+export function chordDBIssues(): { total: number; broken: string[]; alone: string[]; misfit: string[] } {
   const chords = chordDB as unknown as ChordProgression[];
   const broken: string[] = [];
   for (const c of chords) {
@@ -215,16 +217,47 @@ export function chordDBIssues(): { total: number; broken: string[]; alone: strin
   const alone = chords
     .filter(c => !chords.some(o => o.id !== c.id && o.length_bars === c.length_bars && o.base_scale === c.base_scale))
     .map(c => c.id);
-  return { total: chords.length, broken, alone };
+  const misfit = chords.filter(c => {
+    const L = c.length_bars;
+    const fitsSection = L > 0 && (SECTION_BARS % L === 0 || L % SECTION_BARS === 0);
+    const filled = Math.max(0, ...c.progression.map(p => p.bar - 1 + p.duration_bars));
+    return !fitsSection || filled !== L;
+  }).map(c => c.id);
+  return { total: chords.length, broken, alone, misfit };
+}
+
+// メロディのリズムDB（melody_params.json）のチェック：16ステップで x / - / . だけか、最初の音より前に「-」がないか、
+// フレーズ形式が英字だけか
+export function melodyParamIssues(): string[] {
+  const issues: string[] = [];
+  for (const [genre, p] of Object.entries(melodyParams as Record<string, { rhythmPatterns: string[]; chorusRhythmPatterns?: string[]; phraseForms: string[] }>)) {
+    for (const r of [...p.rhythmPatterns, ...(p.chorusRhythmPatterns ?? [])]) {
+      if (!/^[x.\-]{16}$/.test(r) || !r.includes("x") || /^\.*-/.test(r)) issues.push(`${genre} のリズム "${r}"`);
+    }
+    for (const f of p.phraseForms) if (!/^[A-Za-z]+$/.test(f)) issues.push(`${genre} のフレーズ形式 "${f}"`);
+  }
+  return issues;
 }
 
 function dataItems(): QualityItem[] {
-  const { total, broken, alone } = chordDBIssues();
+  const { total, broken, alone, misfit } = chordDBIssues();
+  const melody = melodyParamIssues();
+  const problems = [
+    broken.length > 0 ? `変換できない進行：${broken.join(", ")}` : "",
+    misfit.length > 0 ? `長さが8小節のセクションに合わない（またはコードが長さを埋めていない）進行：${misfit.join(", ")}` : "",
+    melody.length > 0 ? `書式が違うメロディのパラメータ：${melody.join("、")}` : "",
+  ].filter(Boolean);
   return [{
     label: "コード進行DB",
-    value: `${total} 件・変換できない進行 ${broken.length} 件・サビの相方がない進行 ${alone.length} 件`,
-    ok: broken.length === 0 && alone.length === 0,
-    hint: broken.length > 0 ? `変換できない進行：${broken.join(", ")}` : "全進行がディグリーから実音にでき、同じ長さ・スケールの相方があるか",
+    value: `${total} 件・変換できない進行 ${broken.length} 件・サビの相方がない進行 ${alone.length} 件・長さが合わない進行 ${misfit.length} 件`,
+    ok: broken.length === 0 && alone.length === 0 && misfit.length === 0,
+    hint: problems.length > 0 ? problems.join("／")
+      : "全進行がディグリーから実音にでき、同じ長さ・スケールの相方があり、長さが8小節のセクションに合うか（1・2・4・8 小節かその倍数）",
+  }, {
+    label: "メロディのリズムDB",
+    value: melody.length === 0 ? "問題なし" : `書式が違うもの ${melody.length} 件`,
+    ok: melody.length === 0,
+    hint: melody.length > 0 ? melody.join("、") : "リズムが16ステップ（x = 発音、- = 伸ばす、. = 休符）で、フレーズ形式が英字だけか",
   }];
 }
 

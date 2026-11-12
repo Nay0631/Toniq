@@ -144,7 +144,7 @@ export interface AppState {
   sidechain:        number | null;  // キックに合わせてベース・コードなどを沈める量（ポンピング）
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
-  // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
+  // ドラムの音源（grow = grow（初期値）、synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
   // 設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
   drumSource:       DrumSource;
   // grow の音作り（曲に保存する）。プリセットの ID（grow のコアの GrowPresets.cpp の id）と、
@@ -239,7 +239,7 @@ export const defaultState: AppState = {
   sidechain:        null,
   scaleLock:        true,
   drumCategory:     "EDM",
-  drumSource:       "synth",
+  drumSource:       "grow",
   growPreset:       "lead",      // シンセリード
   growParams:       null,
   growChordPreset:  null,  // ジャンルの標準

@@ -1,7 +1,7 @@
 import { defaultState, getState, setState } from "./AppState";
 import { resolveSimpleMode, pickChorus } from "./SimpleModeResolver";
 import { generateSongMelodies } from "./SongForm";
-import { songMetrics, chordDBIssues, QUALITY_RULES, SongMetrics } from "./QualityCheck";
+import { songMetrics, chordDBIssues, melodyParamIssues, QUALITY_RULES, SongMetrics } from "./QualityCheck";
 import { noteToMidi, timeToUnits, MelodyNote } from "./MelodyGenerator";
 import { NOTE_INDEX } from "../data/degree_resolver";
 import easyTable from "../data/easy_mode_table.json";
@@ -49,6 +49,7 @@ export interface BatchResult {
   options:  BatchOptions;
   combos:   ComboResult[];
   chordDB:  ReturnType<typeof chordDBIssues>;
+  melodyParams: string[];  // 書式が違うメロディのパラメータ
 }
 
 const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -186,5 +187,5 @@ export function runBatch(options: BatchOptions): BatchResult {
   } finally {
     Math.random = random;
   }
-  return { options, combos, chordDB: chordDBIssues() };
+  return { options, combos, chordDB: chordDBIssues(), melodyParams: melodyParamIssues() };
 }

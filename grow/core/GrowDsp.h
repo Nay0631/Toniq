@@ -36,6 +36,8 @@ public:
         ready = false;
     }
     void snapNext() noexcept { ready = false; }
+    // 今の値が target にいる（次の next (target) も target を返す）か
+    bool isAt (float target) const noexcept { return ! ready || value == target; }
 
     float next (float target) noexcept
     {
@@ -184,6 +186,13 @@ public:
                 value = decayBase + value * decayCoeff;
                 if (value <= params.sustain)
                 {
+                    // サスティンが 0 なら、0 に届いた所で終わる（押したままでも音のないボイスを空ける。
+                    // ドラムなど、消音の合図を送らずに鳴らし切る音に使う）
+                    if (params.sustain <= 0.0f)
+                    {
+                        reset();
+                        break;
+                    }
                     value = params.sustain;
                     state = State::sustain;
                 }

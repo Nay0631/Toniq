@@ -91,5 +91,12 @@ private:
     Smoother driveSmooth, chorusMixSmooth, chorusDepthSmooth;
     Smoother delayMixSmooth, delayFeedbackSmooth;
     Smoother reverbMixSmooth, reverbSizeSmooth;
+
+    // 量が 0 で落ち着いている間は計算しない（混ぜても聞こえないため）。止めていたものを再開するときは、
+    // 古い響きが出ないようにバッファを空にしてから始める
+    bool chorusIdle = true, delayIdle = true, reverbIdle = true;
+    void clearChorus();
+    void clearDelay();
+    void clearReverb();
 };
 } // namespace grow

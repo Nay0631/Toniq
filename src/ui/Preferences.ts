@@ -2,6 +2,7 @@ import * as Tone from "tone";
 import { getState, setState, AppState, NoteNames } from "../engine/AppState";
 import type { DrumSource } from "../engine/SynthFactory";
 import { prepareDrumSamples } from "../engine/DrumSamples";
+import { prepareGrowContext } from "../engine/Grow";
 import { reloadLayer } from "../engine/LayerManager";
 import { applyLoopPlayback } from "../engine/Playback";
 
@@ -52,6 +53,7 @@ export async function setDrumSource(drumSource: DrumSource): Promise<void> {
   write(KEYS.drumSource, drumSource);
   const s = getState();
   if (drumSource === "sample") await prepareDrumSamples(s.genre);
+  if (drumSource === "grow") await prepareGrowContext();
   if (Tone.getTransport().state === "started" && getState().parts.drum) reloadLayer("drum");
 }
 
@@ -68,7 +70,8 @@ export function initPreferences(): void {
   setState({
     noteNames:    noteNames === "doremi" ? "doremi" : "cde",
     loopPlayback: read(KEYS.loopPlayback) === "on",
-    drumSource:   drumSource === "sample" ? "sample" : "synth",
+    // 保存がなければ grow（以前の初期値のシンセを保存した端末はシンセのまま）
+    drumSource:   drumSource === "sample" || drumSource === "synth" ? drumSource : "grow",
   });
   // テスト中の機能は、保存がなければ初期値（ON）のまま
   for (const feature of TEST_FEATURES) {

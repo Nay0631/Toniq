@@ -597,6 +597,78 @@ const Value accelSe[] = {
     { master, -4.4f },
 };
 
+// ===== ドラム（Toniq のドラムの音源「grow」。src/engine/SynthFactory.ts の GROW_DRUMS が ID で探す） =====
+// 1台で1つの打楽器。どれもサスティン 0 で、押したままでもディケイで鳴り終わる（消音の合図は要らない）。
+// 同じ高さを続けて鳴らすと前の音は余韻（リリース）になる。強さで音量がそのまま変わる（ベロシティ 1）。
+// 空間系はかけない（Toniq ではマスターのリバーブ送りで響きを付ける）。音の高さ・長さはジャンルごとに Toniq が上書きする。
+// master は聞こえる大きさではなく、強さ 1 のピークが -6dB 前後（出力段のソフトクリップの手前）になるようにした値
+// （npm run grow:render -- --suggest のドラムの提案。Toniq は SynthFactory.ts の GROW_TRIM_DB でほかのドラムの音源とそろえる）
+
+// キック：サインがピッチ EG で上から沈む。ノイズはフィルター EG で頭だけ通してクリックにする
+// （C1 前後で鳴らす。フィルターは低く閉じているので、あとに残るのは本体のサインだけ）
+const Value drumKick[] = {
+    { osc1Wave, wave::sine }, { osc1Level, 0.9f }, { noiseLevel, 0.12f },
+    { filterType, filter::lp12 }, { filterCutoff, 180 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { filterEnvAmount, 42 }, { fenvAttack, 0.001f }, { fenvDecay, 0.015f }, { fenvSustain, 0 }, { fenvRelease, 0.02f },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.38f }, { aenvSustain, 0 }, { aenvRelease, 0.05f },
+    { pitchEnvAmount, 28 }, { pitchEnvTime, 0.08f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 5.5f },
+};
+
+// スネア：胴鳴り（三角波。少し上から下がる）はフィルターを通さず、響き線（ノイズ）はバンドパスで帯域を絞る
+const Value drumSnare[] = {
+    { osc1Level, 0 }, { osc2Wave, wave::triangle }, { osc2Level, 0.45f }, { osc2Direct, 1 }, { noiseLevel, 1 },
+    { filterType, filter::bp }, { filterCutoff, 1800 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { filterEnvAmount, 12 }, { fenvAttack, 0.001f }, { fenvDecay, 0.04f }, { fenvSustain, 0 }, { fenvRelease, 0.05f },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.16f }, { aenvSustain, 0 }, { aenvRelease, 0.05f },
+    { pitchEnvAmount, 7 }, { pitchEnvTime, 0.03f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 6 },
+};
+
+// ハイハット（クローズド）：高い矩形波どうしをリング・FM で掛け合わせた金属的な倍音に、ノイズを重ねてハイパスで削る
+const Value drumHatClosed[] = {
+    { osc1Wave, wave::square }, { osc1Level, 0.35f },
+    { osc2Wave, wave::square }, { osc2Semi, 5 }, { osc2Fine, 37 }, { osc2Level, 0 },
+    { ringAmount, 1 }, { fmAmount, 0.3f },
+    { noiseLevel, 0.7f },
+    { filterType, filter::hp }, { filterCutoff, 6400 }, { filterResonance, 0.2f }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.045f }, { aenvSustain, 0 }, { aenvRelease, 0.02f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 2.3f },
+};
+
+// ハイハット（オープン）：クローズドと同じ音で長く伸ばす（Toniq ではクローズドが鳴ると止める）
+const Value drumHatOpen[] = {
+    { osc1Wave, wave::square }, { osc1Level, 0.35f },
+    { osc2Wave, wave::square }, { osc2Semi, 5 }, { osc2Fine, 37 }, { osc2Level, 0 },
+    { ringAmount, 1 }, { fmAmount, 0.3f },
+    { noiseLevel, 0.7f },
+    { filterType, filter::hp }, { filterCutoff, 6400 }, { filterResonance, 0.2f }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.32f }, { aenvSustain, 0 }, { aenvRelease, 0.04f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 2.9f },
+};
+
+// クラップ：バンドパスのノイズ。Toniq は短い音を3回重ねてから余韻を鳴らす（手を叩く音のばらつき）
+const Value drumClap[] = {
+    { osc1Level, 0 }, { noiseLevel, 1 },
+    { filterType, filter::bp }, { filterCutoff, 1200 }, { filterResonance, 0.3f }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.2f }, { aenvSustain, 0 }, { aenvRelease, 0.006f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 5.9f },
+};
+
+// リム：短い三角波（1.7kHz 前後で鳴らす）にノイズのカチッを重ね、バンドパスで硬くする
+const Value drumRim[] = {
+    { osc1Wave, wave::triangle }, { osc1Level, 0.8f }, { noiseLevel, 0.3f },
+    { filterType, filter::bp }, { filterCutoff, 1700 }, { filterResonance, 0.4f }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.035f }, { aenvSustain, 0 }, { aenvRelease, 0.01f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 3.2f },
+};
+
 template <std::size_t N>
 constexpr Preset preset (const char* id, const char* name, const Value (&values)[N]) { return { id, name, values, (int) N }; }
 
@@ -650,6 +722,13 @@ const Preset presets[] = {
     preset ("wobble_bass", "ワブルベース", wobbleBass),
     preset ("trance_lead", "トランスリード", tranceLead),
     preset ("accel_se", "加速SE", accelSe),
+    // ドラム（Toniq のドラムの音源「grow」。src/engine/SynthFactory.ts の GROW_DRUMS が ID で探す）
+    preset ("drum_kick", "ドラム キック", drumKick),
+    preset ("drum_snare", "ドラム スネア", drumSnare),
+    preset ("drum_hat_closed", "ドラム ハイハット（クローズド）", drumHatClosed),
+    preset ("drum_hat_open", "ドラム ハイハット（オープン）", drumHatOpen),
+    preset ("drum_clap", "ドラム クラップ", drumClap),
+    preset ("drum_rim", "ドラム リム", drumRim),
 };
 
 constexpr int presetCount = (int) (sizeof (presets) / sizeof (presets[0]));

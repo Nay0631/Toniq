@@ -160,7 +160,7 @@ function printCompare(name) {
   console.log("（総合点は点、合格率・順次進行・メロ重複なしはポイント、リズムの種類は数の差）");
 }
 
-const saved = { options, rows: [...rows, total], detail: detailRows, chordDB: result.chordDB, combos: result.combos };
+const saved = { options, rows: [...rows, total], detail: detailRows, chordDB: result.chordDB, melodyParams: result.melodyParams, combos: result.combos };
 
 if (flag("--json")) {
   console.log(JSON.stringify(saved, null, 2));
@@ -172,7 +172,9 @@ if (flag("--json")) {
     printTable(detailRows);
   }
   const db = result.chordDB;
-  console.log(`\nコード進行DB：${db.total} 件・変換できない進行 ${db.broken.length} 件${db.broken.length ? `（${db.broken.join(", ")}）` : ""}・サビの相方がない進行 ${db.alone.length} 件${db.alone.length ? `（${db.alone.join(", ")}）` : ""}`);
+  const ids = list => list.length ? `（${list.join(", ")}）` : "";
+  console.log(`\nコード進行DB：${db.total} 件・変換できない進行 ${db.broken.length} 件${ids(db.broken)}・サビの相方がない進行 ${db.alone.length} 件${ids(db.alone)}・8小節のセクションに長さが合わない進行 ${db.misfit.length} 件${ids(db.misfit)}`);
+  console.log(`メロディのリズムDB：書式が違うもの ${result.melodyParams.length} 件${ids(result.melodyParams)}`);
   console.log("合格率の基準：強拍 = 1・3拍目の頭のコード構成音が 75% 以上／終わり = 各周の最後が主音か構成音（主音が1回以上）／跳躍 = 9 半音以内／サビ高 = サビの平均がAメロより高い／セクション = サビの進行がある／抜き差し = パートが抜ける所がある");
   console.log("多様さ：進行の種類 = 1 組で使われたコード進行の数（平均）／リズムの種類 = メロディの小節のリズムの数（ジャンル内）／メロ重複なし = 同じ Aメロが出なかった割合");
 }

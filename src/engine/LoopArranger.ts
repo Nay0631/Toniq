@@ -23,8 +23,9 @@ interface SectionPlan {
   build?:  LayerName[];
 }
 
-// 1セクションの長さの目安（小節）
-const SECTION_BARS = 8;
+// 1セクションの長さの目安（小節）。コード進行はこれを割り切れる長さ（1・2・4・8 小節）か、その倍数にする
+// （割り切れないと 1 セクションが 8 小節からずれる。自動チェックの「コード進行DB」で確かめられる）
+export const SECTION_BARS = 8;
 
 const LOOP_SCHEDULE: Record<string, SectionPlan[]> = {
   // EDM：イントロ → ブレイク（ドラム・ベースを抜いてメロディを聴かせる）→ ドロップ（サビ）→ A に戻って薄くしていく

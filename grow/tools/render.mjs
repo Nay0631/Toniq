@@ -5,6 +5,7 @@
 //   npm run grow:render -- --wav              WAV も書き出す（output/grow/<ID>.wav）
 //   npm run grow:render -- --preset lead,acid 指定したプリセットだけ（ID。カンマ区切り）
 //   npm run grow:render -- --suggest          聞こえる大きさを目標（TARGET。FX はそれぞれの目標 TARGETS）にそろえる master の値を出す
+//                                             （ドラムはピークを DRUM_PEAK にそろえる値）
 //   npm run grow:render -- --json             結果を JSON で出す
 //   npm run grow:render -- --analyze a.wav …  WAV（Toniq で書き出した曲など）のピーク・統合ラウドネス・聞こえる大きさの最大を測る
 //
@@ -39,7 +40,8 @@ const value = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1
 const only = value("--preset")?.split(",").map(s => s.trim()).filter(Boolean);
 
 // ===== プリセットの使われ方と鳴らすフレーズ =====
-// lead = 単音の旋律、chord = 和音、bass = 低い音の刻み、pluck = 速い刻み、fx = 長い1音、noise = ノイズ（ずっと押す）。
+// lead = 単音の旋律、chord = 和音、bass = 低い音の刻み、pluck = 速い刻み、fx = 長い1音、noise = ノイズ（ずっと押す）、
+// drum = 8分音符で8回打つ（高さは DRUM_NOTES）。
 // fixed = 音量をそろえない（わざと小さい・大きい音。--suggest の対象外）
 const ROLES = {
   init: "lead", lead: "lead", supersaw: "chord", pluck: "pluck", acid: "bass", wide_pad: "chord",
@@ -50,13 +52,21 @@ const ROLES = {
   fx_down_tone: "fx", fx_reverse: "fx", fx_chip: "pluck",
   saw_bass: "bass", square_bass: "bass", rolling_bass: "bass", chip_bass: "bass", soft_bass: "bass", brass: "lead", sync_lead: "lead",
   hard_pad: "chord", gate_pad: "chord", fat_bass: "bass", pulse_bass: "bass", wobble_bass: "bass", trance_lead: "lead", accel_se: "fx",
+  drum_kick: "drum", drum_snare: "drum", drum_hat_closed: "drum", drum_hat_open: "drum", drum_clap: "drum", drum_rim: "drum",
 };
+// ドラムを鳴らす高さ（Toniq の標準のキット（src/engine/SynthFactory.ts の DEFAULT_KIT）と同じくらい）
+const DRUM_NOTES = { drum_kick: 24, drum_snare: 54, drum_hat_closed: 80, drum_hat_open: 80, drum_clap: 60, drum_rim: 92 };
+// ドラムは聞こえる大きさではなく、強さ 1 のピークをそろえる（出力段のソフトクリップ（約 -4.4dB）の手前。
+// 一瞬で消える音は 400ms の窓のラウドネスでは比べにくく、ピークが上がりすぎるとソフトクリップで歪むため）
+const DRUM_PEAK = -6;
+// ピークの目標を変えるドラム（ノイズが主の音は、ノイズ・master を最大にしても -6dB に届かない）
+const DRUM_PEAKS = { drum_snare: -6.5, drum_clap: -9.5 };
 // わざと小さくしている音（ヒス・プチプチは背景の質感）
 const FIXED = new Set(["vinyl_hiss", "vinyl_crackle"]);
 
 // フレーズ：[開始（秒）, 長さ（秒）, ノート番号, 強さ] の並び
 const beat = 60 / BPM;
-function phrase(role) {
+function phrase(role, id) {
   const ev = [];
   const add = (t, len, notes, vel = 0.9) => notes.forEach(n => ev.push([t, len, n, vel]));
   switch (role) {
@@ -74,6 +84,9 @@ function phrase(role) {
       break;
     case "noise":
       add(0, beat * 8, [60], 0.8);
+      break;
+    case "drum":
+      for (let i = 0; i < 8; i++) add(i * beat / 2, beat / 2 * 0.9, [DRUM_NOTES[id] ?? 60], i % 2 ? 0.8 : 1);
       break;
     default:  // lead
       [60, 62, 64, 67, 69, 67, 64, 62].forEach((n, i) => add(i * beat, beat * 0.95, [n]));
@@ -126,7 +139,7 @@ function render(preset, role, overrides = {}) {
 
   // 発音・消音をサンプル位置の順に並べ、ブロックの途中で区切って当てる
   const events = [];
-  phrase(role).forEach(([t, len, note, vel]) => {
+  phrase(role, preset.id).forEach(([t, len, note, vel]) => {
     events.push({ at: Math.round(t * SR), on: true, note, vel });
     events.push({ at: Math.round((t + len) * SR), on: false, note });
   });
@@ -321,7 +334,8 @@ const results = targets.map(p => {
   const master = info.grow_preset_value(p.index, masterIndex);
   // 聞こえる大きさを TARGET にそろえる master（出力段のリミッター・ソフトクリップの手前なのでほぼ比例する）
   const target = TARGETS[p.id] ?? TARGET;
-  const suggest = FIXED.has(p.id) ? null : Math.round((master + (target - m.loud)) * 10) / 10;
+  const gap = role === "drum" ? (DRUM_PEAKS[p.id] ?? DRUM_PEAK) - m.peak : target - m.loud;
+  const suggest = FIXED.has(p.id) ? null : Math.round((master + gap) * 10) / 10;
   const problems = [
     m.nan && "NaN",
     m.peak === -Infinity && "無音",
