@@ -2,11 +2,11 @@ import * as Tone from "tone";
 import { getState, setState, AppState, NoteNames } from "../engine/AppState";
 import type { DrumSource } from "../engine/SynthFactory";
 import { prepareDrumSamples } from "../engine/DrumSamples";
+import { prepareGrowContext } from "../engine/Grow";
 import { reloadLayer } from "../engine/LayerManager";
 import { applyLoopPlayback } from "../engine/Playback";
-import { refreshMelodySynth, stopToniqPreview } from "../engine/MelodyPlayer";
 
-// 端末ごとの設定（設定画面）：音名の表記・ループ再生・ドラムの音源・Toniq シンセ（テスト中）。
+// 端末ごとの設定（設定画面）：音名の表記・ループ再生・ドラムの音源。
 // テスト中の機能の ON/OFF（アレンジャータブ）：エンディング・ドラムのフィル・ドラムの揺らぎ。
 // 値は AppState に置き、ここで localStorage に保存・読み込みする（曲には保存しない。SONG_FIELDS に入れない）
 // 配色・スキンは Theme.ts、用語のツールチップは Glossary.ts が受け持つ
@@ -15,7 +15,6 @@ const KEYS = {
   noteNames:    "toniq.noteNames",
   loopPlayback: "toniq.loop",
   drumSource:   "toniq.drumSource",
-  toniqSynthEnabled: "toniq.test.toniqSynth",
   endingEnabled: "toniq.test.ending",
   drumFill:      "toniq.test.drumFill",
   drumHumanize:  "toniq.test.drumHumanize",
@@ -54,16 +53,8 @@ export async function setDrumSource(drumSource: DrumSource): Promise<void> {
   write(KEYS.drumSource, drumSource);
   const s = getState();
   if (drumSource === "sample") await prepareDrumSamples(s.genre);
+  if (drumSource === "grow") await prepareGrowContext();
   if (Tone.getTransport().state === "started" && getState().parts.drum) reloadLayer("drum");
-}
-
-// Toniq シンセ（テスト中）を使えるようにするか。OFF のときメロディの音色「Toniq シンセ」はジャンルの標準で鳴る。
-// メロディの Synth があれば（再生中など）今の設定で作り直す
-export function setToniqSynthEnabled(on: boolean): void {
-  setState({ toniqSynthEnabled: on });
-  write(KEYS.toniqSynthEnabled, on ? "on" : "off");
-  if (!on) stopToniqPreview();
-  if (getState().melodyInstrument === "toniq") refreshMelodySynth();
 }
 
 // テスト中の機能の ON/OFF。フィル・揺らぎはドラムが1音ごとに AppState を読むので再生中もすぐ反映される。
@@ -79,8 +70,8 @@ export function initPreferences(): void {
   setState({
     noteNames:    noteNames === "doremi" ? "doremi" : "cde",
     loopPlayback: read(KEYS.loopPlayback) === "on",
-    drumSource:   drumSource === "sample" ? "sample" : "synth",
-    toniqSynthEnabled: read(KEYS.toniqSynthEnabled) === "on",  // 仮段階なので初期値は OFF
+    // 保存がなければ grow（以前の初期値のシンセを保存した端末はシンセのまま）
+    drumSource:   drumSource === "sample" || drumSource === "synth" ? drumSource : "grow",
   });
   // テスト中の機能は、保存がなければ初期値（ON）のまま
   for (const feature of TEST_FEATURES) {

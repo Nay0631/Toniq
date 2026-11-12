@@ -4,27 +4,25 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState, MelodyInstrument } from "./AppState";
 import melodyParams from "../data/melody_params.json";
-import { ToniqVoice } from "./ToniqSynth";
+import { GrowInstrument, growValues, isGrowReady, prepareGrowContext } from "./Grow";
 
 
 let melodyPart:  Tone.Part | null = null;
-let melodySynth: MelodySynth | null = null;
+let melodySynth: MelodySynth | GrowInstrument | null = null;
 let melodyFx:    Tone.ToneAudioNode[] = [];  // Synth の後ろにつなぐエフェクト（Synth と一緒に破棄する）
 let melodyVol:   Tone.Volume | null = null;
-let previewVoice: ToniqVoice | null = null;  // Toniq シンセの「▷ 試聴」用（メロディの Synth とは別）
-let previewTimer: ReturnType<typeof setTimeout> | null = null;
+let melodySound: SoundName | "grow" | null = null;  // 今の melodySynth を作ったときの音色（試聴で作り直すかの判定用）
 
-// ジャンルごとの音色（Toniq シンセは INSTRUMENTS ではなく ToniqSynth.ts で作る）
-type SoundName = Exclude<MelodyInstrument, "auto" | "toniq">;
+// ジャンルごとの音色（grow は INSTRUMENTS ではなく Grow.ts で鳴らす）
+type SoundName = Exclude<MelodyInstrument, "auto" | "grow">;
 
-// メロディは単音なので、単音の Synth のどれか（Toniq シンセも同じ呼び方で鳴らせる）
-type ToneMelodySynth = Tone.Synth | Tone.MonoSynth | Tone.FMSynth;
-type MelodySynth = ToneMelodySynth | ToniqVoice;
+// メロディは単音なので、単音の Synth のどれか
+type MelodySynth = Tone.Synth | Tone.MonoSynth | Tone.FMSynth;
 
 // 音色ごとの設定。synth は単音の Synth、fx は Synth → 出力の間に順につなぐエフェクト
 // （音量は波形の聞こえ方の差をならす。reverb は 0〜1 のかかり具合）
 interface MelodySound {
-  synth:  () => ToneMelodySynth;
+  synth:  () => MelodySynth;
   fx:     () => Tone.ToneAudioNode[];
   reverb: { decay: number; wet: number };
 }
@@ -148,12 +146,12 @@ const INSTRUMENTS: Record<SoundName, MelodySound> = {
 };
 
 // 実際に鳴らす音色。"auto" はジャンルの標準（melody_params.json の instrument）。
-// "toniq" は Toniq シンセ（設定画面で OFF ならジャンルの標準で鳴らす）
-export function resolveMelodySound(): SoundName | "toniq" {
+// "grow" は今のオーディオコンテキストで grow の準備ができていれば grow、できていなければジャンルの標準
+export function resolveMelodySound(): SoundName | "grow" {
   const s = getState();
-  if (s.melodyInstrument === "toniq") {
-    if (s.toniqSynthEnabled) return "toniq";
-  } else if (s.melodyInstrument !== "auto") {
+  if (s.melodyInstrument === "grow") {
+    if (isGrowReady()) return "grow";
+  } else if (s.melodyInstrument !== "auto" && s.melodyInstrument in INSTRUMENTS) {
     return s.melodyInstrument;
   }
   const params = melodyParams as unknown as Record<string, { instrument?: SoundName }>;
@@ -166,9 +164,10 @@ export function initMelodySynth() {
   disposeMelodySynth();
   melodyVol = createVolumeNode("melody");  // 現在のオーディオコンテキスト用のノード
   const sound = resolveMelodySound();
-  if (sound === "toniq") {
-    // Toniq シンセは自前のリバーブを持たない（マスターのリバーブ送りで響きを付ける）
-    melodySynth = new ToniqVoice(getState().toniqSynth).connect(melodyVol);
+  melodySound = sound;
+  if (sound === "grow") {
+    // grow は自前のエフェクト（リバーブを含む）を持つので、そのままメロディの Volume へ
+    melodySynth = new GrowInstrument(growValues("melody"), getState().bpm).connect(melodyVol);
     return;
   }
   const inst   = INSTRUMENTS[sound];
@@ -210,15 +209,10 @@ export function loadMelody(notes: MelodyNote[], loopEnd: string) {
 // ピアノロールで置いた音を試聴する（Synth がなければ作る。再生中は鳴っているメロディの Synth で鳴らす）
 export async function previewMelodyNote(note: string) {
   await Tone.start();
-  if (!melodySynth) initMelodySynth();
+  if (getState().melodyInstrument === "grow") await prepareGrowContext();
+  // 起動時（grow の準備前）に作った Synth や、音色・ジャンルを変える前の Synth なら今の設定で作り直す
+  if (!melodySynth || melodySound !== resolveMelodySound()) initMelodySynth();
   melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);
-}
-
-// Toniq シンセの音作りを、鳴っているメロディと試聴の音にすぐ当てる（Synth は作り直さない）
-export function applyToniqSynthLive(): void {
-  const params = getState().toniqSynth;
-  if (melodySynth instanceof ToniqVoice) melodySynth.set(params);
-  previewVoice?.set(params);
 }
 
 // メロディの Synth を今の設定で作り直す（再生中なら鳴っている Part はそのまま新しい Synth で鳴る）
@@ -226,45 +220,11 @@ export function refreshMelodySynth(): void {
   if (melodySynth) initMelodySynth();
 }
 
-// Toniq シンセの試聴：notes を順に鳴らす（[音名, 拍の長さ] の並び）。曲の再生とは別の音源で鳴らし、余韻が消えたら破棄する。
-// 戻り値はフレーズの長さ（秒）
-export async function previewToniqPhrase(notes: [string, number][], bpm: number): Promise<number> {
-  await Tone.start();
-  stopToniqPreview();
-  const voice = new ToniqVoice(getState().toniqSynth).connect(createVolumeNode("melody"));
-  previewVoice = voice;
-  const beat  = 60 / bpm;
-  const start = Tone.now() + 0.05;
-  let t = start;
-  notes.forEach(([note, beats], i) => {
-    const last = i === notes.length - 1;
-    voice.triggerAttackRelease(note, beats * beat * (last ? 1 : 0.92), t, i === 0 ? 0.95 : 0.8);
-    t += beats * beat;
-  });
-  previewUntil = t;
-  // 余韻（リリース・ディレイ）が消えるまで待ってから破棄する
-  const wait = (t - Tone.now() + 3) * 1000;
-  previewTimer = setTimeout(stopToniqPreview, wait);
-  return t - start;
-}
-
-// 試聴のフレーズを鳴らしている途中か（余韻の間は含めない）
-let previewUntil = 0;
-export function isToniqPreviewOn(): boolean {
-  return previewVoice !== null && Tone.now() < previewUntil;
-}
-
-export function stopToniqPreview(): void {
-  if (previewTimer) clearTimeout(previewTimer);
-  previewTimer = null;
-  previewVoice?.dispose();
-  previewVoice = null;
-}
-
 function disposeMelodySynth() {
   melodySynth?.dispose();
   melodyFx.forEach(n => n.dispose());
   melodySynth = null;
+  melodySound = null;
   melodyFx    = [];
 }
 

@@ -1,5 +1,6 @@
 import * as Tone from "tone";
 import { getDrumSample } from "./DrumSamples";
+import { GrowInstrument, findGrowPreset, growPresetValuesWith, isGrowReady } from "./Grow";
 
 // ドラムの1音色。output をドラムのバスにつなぎ、trigger で鳴らす
 export interface DrumVoice {
@@ -253,9 +254,11 @@ function createSampleVoice(buffer: AudioBuffer): DrumVoice {
 
   return {
     output,
-    // 発音のたびに再生用のノードを作る（同じ音が重なっても前の音を切らない）
+    // 発音のたびに再生用のノードを作る（同じ音が重なっても前の音を切らない）。
+    // ノードは output と同じコンテキストに作る（WAV / MP3 書き出しの合成中は Tone.getContext() が再生用のコンテキストに
+    // 戻っているので、指定しないと別のコンテキストのノードになり、つなぐときに例外になる）
     trigger: (time, velocity) => {
-      const src = new Tone.ToneBufferSource({ url: buffer, fadeOut: CHOKE_FADE }).connect(output);
+      const src = new Tone.ToneBufferSource({ context: output.context, url: buffer, fadeOut: CHOKE_FADE }).connect(output);
       // 鳴り終わったノードは Tone.js が自動で破棄する（通常のコンテキストのみ）
       src.onended = () => active.delete(src);
       active.add(src);
@@ -270,8 +273,97 @@ function createSampleVoice(buffer: AudioBuffer): DrumVoice {
   };
 }
 
-// ドラムの音源：synth = Tone.js のシンセで合成、sample = ワンショット音源（ないトラックはシンセ）
-export type DrumSource = "synth" | "sample";
+// ===== grow で鳴らす音色（コアの「ドラム …」のプリセット。ID は drum_…） =====
+// トラックごとに grow を1台ずつ作る（同じタスクで作るので、ほかのパートの grow と1つのノードにまとまる）。
+// ジャンルのキット（DRUM_KITS）の値は、プリセットの値を上書きして当てる（高さは音符で渡す）。
+// どの音もサスティン 0 で鳴り終わるので、発音の合図だけ送る（オープンハイハットを止めるときだけ消音の合図）
+
+const GROW_DRUMS: Record<string, string> = {
+  kick:         "drum_kick",
+  snare:        "drum_snare",
+  hihat_closed: "drum_hat_closed",
+  hihat_open:   "drum_hat_open",
+  clap:         "drum_clap",
+  rim:          "drum_rim",
+};
+
+// grow のドラムの出力の大きさ（dB）。grow は強さ 1 のピークを -6dB 前後（出力段のソフトクリップの手前）で出すので、
+// 1打の聞こえる大きさ（400ms の窓のラウドネスの最大）がシンセ（Tone.js）のドラムと同じになるようここで合わせる。
+// 差は全ジャンルでほぼ同じ（±1dB）だったので、その平均（2026-11-12 に測定）。プリセットや DRUM_KITS を変えたら測り直す
+const GROW_TRIM_DB: Record<string, number> = {
+  kick: 5, snare: 4.3, hihat_closed: -1.5, hihat_open: -3.6, clap: -1.1, rim: -3.1,
+};
+
+const GROW_WAVES: Record<DrumKitParams["kick"]["wave"], number> = { sine: 0, triangle: 1, square: 3 };
+
+// ジャンルのキットの値 → grow で鳴らす高さと、プリセットに上書きする値（パラメーターの ID → 値）
+function growDrumSound(name: string, p: DrumKitParams): { note: Tone.Unit.Frequency; values: Record<string, number> } {
+  switch (name) {
+    case "kick":
+      return {
+        note: p.kick.note,
+        values: {
+          osc1_wave:   GROW_WAVES[p.kick.wave],
+          noise_level: 0.34 * p.kick.click,  // クリック（フィルター EG で頭だけ通るノイズ）
+          aenv_decay:  p.kick.decay,
+          // MembraneSynth は「高さ × octaves」から下がるので、半音にすると 12 × log2(octaves)
+          penv_amount: 12 * Math.log2(Math.max(1, p.kick.octaves)),
+          penv_time:   p.kick.pitchDecay * 2,  // 指数カーブ（はじめ速く戻る）なので少し長めに
+          // サイン以外（8bit の矩形波など）は倍音を残す
+          ...(p.kick.wave === "sine" ? {} : { filter_cutoff: 1500 }),
+        },
+      };
+    case "snare":
+      return { note: p.snare.tone, values: { aenv_decay: p.snare.decay, filter_cutoff: p.snare.noiseFreq } };
+    case "hihat_closed":
+      return { note: "G#5", values: { aenv_decay: p.hat.decay, filter_cutoff: p.hat.freq * 0.8 } };
+    case "hihat_open":
+      return { note: "G#5", values: { aenv_decay: p.hat.openDecay, filter_cutoff: p.hat.freq * 0.8 } };
+    case "rim":
+      return { note: 1700, values: {} };
+    default:  // clap
+      return { note: "C4", values: {} };
+  }
+}
+
+// クラップ：短い音を3回重ねてから余韻を鳴らす（シンセのクラップと同じ間隔）
+const CLAP_BURSTS = [0, 0.011, 0.022];
+const CLAP_BURST_LEN = 0.006;
+const CLAP_TAIL = 0.033;
+
+// grow のドラムの1音色。grow を鳴らせない（準備ができていない・プリセットがない古い wasm）なら null
+function createGrowVoice(name: string, p: DrumKitParams): DrumVoice | null {
+  const preset = findGrowPreset(GROW_DRUMS[name] ?? GROW_DRUMS.clap);
+  if (!isGrowReady() || preset < 0) return null;
+  const { note, values } = growDrumSound(name, p);
+  const output = new Tone.Gain(GROW_TRIM_DB[name] ?? 0, "decibels");
+  const inst   = new GrowInstrument(() => growPresetValuesWith(preset, values)).connect(output);
+
+  const trigger = name === "clap"
+    ? (time: number, velocity: number) => {
+        const v = velGain(velocity);
+        CLAP_BURSTS.forEach(offset => {
+          inst.triggerAttack(note, time + offset, v);
+          inst.triggerRelease(note, time + offset + CLAP_BURST_LEN);
+        });
+        inst.triggerAttack(note, time + CLAP_TAIL, v * 0.9);
+      }
+    : (time: number, velocity: number) => { inst.triggerAttack(note, time, velGain(velocity)); };
+
+  return {
+    output,
+    trigger,
+    choke:   time => { inst.triggerRelease(note, time); },
+    dispose: () => {
+      inst.dispose();
+      output.dispose();
+    },
+  };
+}
+
+// ドラムの音源：grow = grow（内部シンセ）、synth = Tone.js のシンセで合成、sample = ワンショット音源（ないトラックはシンセ）。
+// grow を鳴らせないとき（wasm がない・準備ができていない）はシンセで鳴る
+export type DrumSource = "grow" | "synth" | "sample";
 
 // ドラムキット：トラック名ごとの音色と、全体をまとめるバス（高域カット→歪み→コンプ→持ち上げ）
 export interface DrumKit {
@@ -302,7 +394,9 @@ export function createDrumKit(genre: string, trackNames: string[], source: DrumS
   const voices: Record<string, DrumVoice> = {};
   for (const name of trackNames) {
     const sample = source === "sample" ? getDrumSample(genre, name) : undefined;
-    const voice  = sample ? createSampleVoice(sample) : (factories[name] ?? createClap)();
+    const voice  = (sample ? createSampleVoice(sample) : null)
+      ?? (source === "grow" ? createGrowVoice(name, p) : null)
+      ?? (factories[name] ?? createClap)();
     voice.output.connect(lowpass);
     voices[name] = voice;
   }

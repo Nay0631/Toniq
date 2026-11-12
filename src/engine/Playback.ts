@@ -12,12 +12,15 @@ import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
 import { applySwing } from "./Groove";
 import { endingBar, songMelody, songProgression } from "./SongForm";
+import { prepareGrowContext, applyGrowLive } from "./Grow";
 
-// 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込みを待つ
+// 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込み、grow（wasm と AudioWorklet）の準備を待つ
+// （パッド・アルペジオ・シグネチャーはいつも grow で鳴らすので、grow の準備は毎回待つ。2回目からはすぐ終わる）
 async function audioReady(genre: string): Promise<void> {
   await Promise.all([
     mixerReady(),
     getState().drumSource === "sample" ? prepareDrumSamples(genre) : Promise.resolve(),
+    prepareGrowContext(),
   ]);
 }
 
@@ -209,6 +212,7 @@ export function isPlaying(): boolean {
 // 再生中の BPM 変更（タップテンポなど）を Transport に反映する
 export function applyBpm(): void {
   Tone.getTransport().bpm.value = getState().bpm;
+  applyGrowLive();  // grow のテンポ同期（LFO・ディレイ）も合わせる
 }
 
 // 曲全体の長さ（秒）
@@ -324,6 +328,8 @@ async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
   const schedule = async () => {
     applyMixPreset(s.genre);
     await mixerReady();
+    // grow の AudioWorklet は書き出し用のコンテキストにも登録する
+    await prepareGrowContext();
     Tone.getTransport().bpm.value = s.bpm;
     applySwing();  // 書き出し用の Transport にも同じスウィングをかける
 

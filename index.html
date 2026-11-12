@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Toniq</title>
+  <link rel="icon" type="image/png" href="./icon.png">
   <!-- 配色・スキンを描画前に決めてちらつきを防ぐ（キーと判定は src/ui/Theme.ts と同じ） -->
   <script>
     (function () {
@@ -106,6 +107,20 @@
           </span>
         </button>
 
+        <!-- 作業ファイルを開く（設定と同じ細い横長のカード） -->
+        <button class="menu-card menu-card-slim" data-project-open>
+          <span class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <path d="M12 11v5M9.5 13.5L12 11l2.5 2.5"/>
+            </svg>
+          </span>
+          <span>
+            <span class="menu-card-title">作業ファイルを開く</span>
+            <span class="menu-card-desc">保存した曲の構成（.toniq.json）を開いて、続きから編集する</span>
+          </span>
+        </button>
+
         <!-- 設定（ほかのカードより細い横長のカード） -->
         <button class="menu-card menu-card-slim" data-goto="settings">
           <span class="menu-icon">
@@ -138,6 +153,7 @@
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
           <button class="btn" data-new-song>＋ 新規作成</button>
           <button class="btn" data-save-song>♪ 保存</button>
+          <button class="btn" data-project-save>⇩ 作業ファイル</button>
           <button class="btn btn-square" id="s-stop" aria-label="停止"><span class="icon-stop"></span></button>
           <button class="btn btn-play" id="s-play">▷ 再生</button>
         </div>
@@ -164,7 +180,7 @@
           </div>
 
           <div class="field">
-            <div class="field-label">♫ <span data-term="genre">ジャンル</span></div>
+            <div class="field-label">♫ <span data-term="genre">ジャンル</span> <span class="field-hint" id="s-genre-hint"></span></div>
             <div class="chips chips-genre">
               <button class="chip" data-genre="EDM">EDM</button>
               <button class="chip" data-genre="8bit">8bit</button>
@@ -284,6 +300,7 @@
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
           <button class="btn" data-new-song>＋ 新規作成</button>
           <button class="btn" data-save-song>♪ 保存</button>
+          <button class="btn" data-project-save>⇩ 作業ファイル</button>
           <button class="btn btn-square" id="c-stop" aria-label="停止"><span class="icon-stop"></span></button>
           <button class="btn btn-play" id="c-play">▷ 再生</button>
         </div>
@@ -351,6 +368,8 @@
             <label class="form-row">
               <span class="form-label" data-term="instrument">インスト</span>
               <select class="select" id="c-instrument">
+                <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
+                <option value="grow">grow</option>
                 <option value="auto">ジャンルに合わせる</option>
                 <option value="supersaw">SuperSaw リード（EDM）</option>
                 <option value="epiano">エレピ（ローファイ）</option>
@@ -360,8 +379,6 @@
                 <option value="lead">シンセリード</option>
                 <option value="pluck">プラック（ハウス）</option>
                 <option value="soft">ソフトサイン（アンビエント）</option>
-                <!-- Toniq シンセ（テスト中）。設定画面で ON のときだけ出す（CustomScreen.ts） -->
-                <option value="toniq" id="c-instrument-toniq">Toniq シンセ（テスト中）</option>
               </select>
             </label>
 
@@ -471,14 +488,8 @@
 
             <label class="form-row">
               <span class="form-label" data-term="instrument">音色</span>
-              <select class="select" id="c-chord-instrument">
-                <option value="soft">ソフトパッド</option>
-                <option value="epiano">エレピ</option>
-                <option value="strings">ストリングス</option>
-                <option value="organ">オルガン</option>
-                <option value="square">スクエア（8bit）</option>
-                <option value="supersaw">SuperSaw</option>
-              </select>
+              <!-- grow のプリセット（AppState.growChordPreset。値は ID、空 = ジャンルに合わせる）。CustomScreen.ts が作る -->
+              <select class="select" id="c-chord-instrument"></select>
             </label>
           </div>
 
@@ -553,9 +564,8 @@
           </div>
         </div>
 
-        <!-- Toniq シンセ（テスト中）の音作り。設定画面で ON のときだけ出す。中身は ToniqSynthPanel.ts が作る -->
-        <div class="card panel toniq-panel" id="c-toniq" hidden></div>
-
+        <!-- grow（テスト中）の音作り。メロディのインストが grow のときだけ出す。中身は GrowPanel.ts が作る -->
+        <div class="card panel grow-panel" id="c-grow" hidden></div>
 
         <div class="export-row">
           <span class="export-label">書き出し</span>
@@ -655,6 +665,8 @@
           </button>
           <button class="btn ml-tool" id="ml-import" title="書き出した曲ファイル（.toniq.json）をミュージックリストに追加します">ファイルを読み込む</button>
           <button class="btn ml-tool" id="ml-export-all" title="ミュージックリストの曲をすべて1つのファイルに書き出します（バックアップ用）">すべて書き出す</button>
+          <button class="btn ml-tool" data-project-open title="作業ファイル（.toniq.json）を今の曲として開きます（ミュージックリストには追加しません）">作業ファイルを開く</button>
+          <button class="btn ml-tool" data-output-folder title="書き出した曲（WAV・MP3・MIDI）と作業ファイルを保存する output フォルダを開きます" hidden>出力フォルダ</button>
           <input type="file" id="ml-import-file" accept=".json,application/json" multiple hidden>
         </div>
 
@@ -777,20 +789,13 @@
           <div class="settings-row">
             <div class="settings-text">
               <div class="settings-label">ドラムの音源（テスト中）</div>
-              <div class="settings-desc">ドラムを、パソコンの中で音を作るシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がないジャンルの音はシンセで鳴ります。</div>
+              <div class="settings-desc">ドラムを、Toniq のシンセ grow で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がないジャンルの音はシンセで鳴ります。</div>
             </div>
             <div class="chips settings-options" role="radiogroup" aria-label="ドラムの音源">
+              <button class="chip" role="radio" data-settings-drum-source="grow">grow</button>
               <button class="chip" role="radio" data-settings-drum-source="synth">シンセ</button>
               <button class="chip" role="radio" data-settings-drum-source="sample">サンプル音源</button>
             </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-text">
-              <div class="settings-label"><span data-term="toniqSynth">Toniq シンセ</span>（テスト中）</div>
-              <div class="settings-desc">Toniq 専用のシンセサイザーを使えるようにします。ON にすると、カスタムモードのメロディの音色に「Toniq シンセ」が増え、設定タブの下で音作りができます。OFF のあいだは、Toniq シンセを選んだ曲もジャンルの標準の音色で鳴ります。</div>
-            </div>
-            <button class="toggle" id="settings-toniq-synth" role="switch" aria-label="Toniq シンセ"><span></span></button>
           </div>
         </div>
 
@@ -804,6 +809,90 @@
             </div>
             <button class="toggle" id="settings-tooltips" role="switch" aria-label="用語の説明（ツールチップ）"><span></span></button>
           </div>
+        </div>
+
+        <div class="card settings-group settings-help">
+          <h2 class="settings-group-title">ヘルプ（見ただけではわかりにくい操作）</h2>
+
+          <details class="help-item">
+            <summary>ピアノロール（メロディの入力）</summary>
+            <ul>
+              <li>空いている所をクリックで音を置き、そのまま横にドラッグすると長さを決められます。</li>
+              <li>音をドラッグで移動、音の右端をドラッグで長さを変えます。</li>
+              <li>音を<b>右クリック</b>、または選んで <kbd>Delete</kbd> で消します。</li>
+              <li>上の目盛りをクリックすると、キーボード入力の位置が決まります。</li>
+              <li>パソコンのキーボードで入力できます：<kbd>A</kbd>〜<kbd>K</kbd> が白鍵、<kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> が黒鍵、<kbd>Z</kbd> / <kbd>X</kbd> でオクターブを下げる／上げる。</li>
+              <li>左の鍵盤をクリックすると、その音を試聴できます。</li>
+              <li>ツールバーの「Aメロ／サビ」で、編集するメロディを切り替えます。「自動生成」は両方を作り直します。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>アレンジャー（曲の構成）</summary>
+            <ul>
+              <li>パートの行の空いている所をクリックすると、その小節にブロックを置きます。</li>
+              <li>ブロックはドラッグで移動、左右の端をドラッグで長さを変えます。</li>
+              <li>ブロックを<b>右クリック</b>・× ボタン・<kbd>Delete</kbd>（選んだ状態で）で消します。</li>
+              <li>ドラム・FX のブロックは、ラベルの文字をクリックするとブロックごとにパターン・種類を選べます。</li>
+              <li>いちばん上の「セクション」の行をクリックすると、その周回を Aメロ／サビ で切り替えます。</li>
+              <li>小節番号の目盛りをクリックすると、そこが再生の開始位置になります（アレンジャータブで再生したとき。「⏮ 先頭へ」で戻ります）。</li>
+              <li>スペースキーで再生／停止できます（再生は開始位置から）。</li>
+              <li>OFF のパートにブロックを置くと、そのパートは ON になります。「↺ 標準に戻す」でジャンルの標準の構成に戻ります。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>ノブ・フェーダー・◀▶ の操作</summary>
+            <ul>
+              <li>ノブは<b>上下にドラッグ</b>して回します。<kbd>Shift</kbd> を押しながらだと細かく動かせます。</li>
+              <li>ノブ・フェーダーはマウスホイールでも少しずつ動きます。</li>
+              <li>クリックして選んだあと、矢印キーで1目盛り、<kbd>PageUp</kbd> / <kbd>PageDown</kbd> で大きく、<kbd>Home</kbd> / <kbd>End</kbd> で最小・最大にできます。</li>
+              <li>グルーヴ（スウィング・サイドチェイン）の「標準」は、ジャンルに合った量に戻します。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>テンポ（BPM）の決め方</summary>
+            <ul>
+              <li>「タップ」ボタンを曲の拍に合わせて何回か押すと、その速さが BPM になります。</li>
+              <li>「♪ 試聴」でクリック音を鳴らしたまま BPM を変えると、すぐ速さが変わります。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>元に戻す・やり直す</summary>
+            <ul>
+              <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> で元に戻す、<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> または <kbd>Ctrl</kbd>+<kbd>Y</kbd> でやり直します（シンプルモード・カスタムモードの画面）。</li>
+              <li>ノブのドラッグなど、続けて行った操作は1回分にまとめて戻ります。</li>
+              <li>曲を開いたとき・新規作成したときは、それまでの履歴は消えます。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>保存の種類（ミュージックリスト・作業ファイル・書き出し）</summary>
+            <ul>
+              <li><b>♪ 保存</b>：アプリの中のミュージックリストに保存します。リストから開いた曲は上書き保存になります。</li>
+              <li><b>⇩ 作業ファイル</b>：今の曲をファイル（.toniq.json）として保存します。ほかのパソコンへ移すときや、リストに保存できなかったときに使います。</li>
+              <li><b>WAV / MP3 / MIDI</b>：できた曲を音声・MIDI のファイルにします。保存先は「出力フォルダ」ボタンで開けます。</li>
+              <li>ミュージックリストの「すべて書き出す」「ファイルを読み込む」で、曲をまとめて移せます。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>試聴できるもの</summary>
+            <ul>
+              <li>シンプルモード：ジャンルの下の「▷ ○○ のサンプルを聴く」で、そのジャンルの雰囲気を確かめられます（今の曲は変わりません）。</li>
+              <li>カスタムモード：「スケール・キー」の「▷ 試聴」でスケールの響き、「FX / SE」の「▷ 試聴」で効果音を確かめられます。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>テスト中の機能</summary>
+            <ul>
+              <li>アレンジャータブの「テスト中の機能」で、エンディング・ドラムのフィル・ドラムの揺らぎをまとめて ON/OFF できます。自動チェックの結果もここに出ます。</li>
+              <li>カスタムモードの設定タブの下にある grow のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
+            </ul>
+          </details>
         </div>
 
         <p class="hint">設定はこのパソコンに保存され、曲には含まれません。</p>

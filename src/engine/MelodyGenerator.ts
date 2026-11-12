@@ -14,7 +14,8 @@ export interface MelodyNote {
 
 interface MelodyParam {
   rhythmPatterns:    string[];  // 1小節16ステップのリズム（x = 発音, - = 伸ばす, . = 休符）
-  phraseForms:       string[];  // フレーズ形式（1文字 = 1小節。同じ文字の小節は同じモチーフ）
+  chorusRhythmPatterns?: string[];  // サビ（section B）のリズム。拍の頭から始まる・長く伸ばす音で Aメロと差を付ける（なし = rhythmPatterns）
+  phraseForms:       string[];  // フレーズ形式（1文字 = 1小節。同じ文字の小節は同じモチーフ。小文字は大文字のモチーフの終わりを必ず変える A'）
   maxLeap:           number;
   preferStepwise:    boolean;
   octaveRange:       number[];  // [number, number] → number[] に変更
@@ -269,12 +270,16 @@ export function generateMelody(
   const totalUnits = totalBars * 16; // 1小節 = 16ステップ（16分音符基準）
 
   // フレーズ形式（例: "AAAB"）。同じ記号の小節は同じモチーフ（リズム＋音の動き）を使う。
+  // 小文字（例: "AABa" の a）は大文字と同じモチーフで、終わりの音を必ず変える（A'）。
   // 形式より長い進行は形式を繰り返す
-  const form     = pickRandom(param.phraseForms);
-  const letterOf = (bar: number) => form[bar % form.length];
+  const form       = pickRandom(param.phraseForms);
+  const letterOf   = (bar: number) => form[bar % form.length].toUpperCase();
+  const isVariant  = (bar: number) => form[bar % form.length] !== letterOf(bar);
+  // サビは専用のリズムがあればそちらから選ぶ（Aメロとリズムの感じを変える）
+  const rhythmPool = section === "B" && param.chorusRhythmPatterns?.length ? param.chorusRhythmPatterns : param.rhythmPatterns;
   const rhythmOf: Record<string, string> = {};
   for (let bar = 0; bar < totalBars; bar++) {
-    rhythmOf[letterOf(bar)] ??= pickRandom(param.rhythmPatterns);
+    rhythmOf[letterOf(bar)] ??= pickRandom(rhythmPool);
   }
 
   // 小節ごとの発音イベントを先に決める
@@ -387,8 +392,9 @@ export function generateMelody(
       const sourceIndex = barEvents.slice(0, sourceBar).reduce((s, e) => s + e.length, 0);
       barMidis = transposeBar(midis.slice(sourceIndex, sourceIndex + evs.length), firstIndex, prevMidi);
 
-      // モチーフを少し変える：くり返しの最後の1〜2音だけ選び直す（A → A'。機械的なくり返しにしない）
-      if (barMidis && barMidis.length >= 2 && Math.random() < variation) {
+      // モチーフを少し変える：くり返しの最後の1〜2音だけ選び直す（A → A'。機械的なくり返しにしない）。
+      // 形式で小文字の小節は必ず変える
+      if (barMidis && barMidis.length >= 2 && (isVariant(bar) || Math.random() < variation)) {
         const k = barMidis.length >= 4 ? 2 : 1;
         for (let j = barMidis.length - k; j < barMidis.length; j++) {
           const ctx = makeContext(firstIndex + j);

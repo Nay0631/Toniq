@@ -1,6 +1,9 @@
 import * as Playback from "../engine/Playback";
 import type { AudioFormat, RenderStage } from "../engine/Playback";
 import { formatTime } from "./format";
+import { saveOutput } from "../engine/OutputFiles";
+import { exportMidi } from "../engine/MidiExporter";
+import { askFileName } from "./FileNameDialog";
 
 // 音声の書き出し（WAV / MP3）の進み具合のダイアログ（シンプルモード・カスタムモード共通）。
 // 書き出しは曲の長さに応じて数秒〜数十秒かかるので、始めに目安を伝え、段階と進み具合・経過時間を出す
@@ -51,10 +54,18 @@ function noteText(format: AudioFormat): string {
          "終わると自動で保存されるので、このままお待ちください（途中で再生はできません）。";
 }
 
-// 曲を WAV / MP3 で書き出してダウンロードする。button は書き出し中に押せなくする
+// 曲を MIDI で書き出す。始めにファイル名を聞く
+export async function exportMidiWithName(): Promise<void> {
+  const filename = await askFileName("MIDI のファイル名", "mid");
+  if (filename) await exportMidi(filename);
+}
+
+// 曲を WAV / MP3 で書き出してダウンロードする。始めにファイル名を聞く。button は書き出し中に押せなくする
 export async function exportAudioWithProgress(
-  format: AudioFormat, filename: string, button?: HTMLButtonElement | null,
+  format: AudioFormat, button?: HTMLButtonElement | null,
 ): Promise<void> {
+  const filename = await askFileName(`${FORMAT_NAMES[format]} のファイル名`, format);
+  if (!filename) return;  // キャンセル
   const el = ensureDialog();
   q("[data-export-title]").textContent = `${FORMAT_NAMES[format]} を書き出しています`;
   q("[data-export-note]").textContent = noteText(format);
@@ -82,7 +93,9 @@ export async function exportAudioWithProgress(
   try {
     // ダイアログを描いてから重い処理を始める
     await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
-    Playback.downloadBlob(await Playback.renderAudio(format, update), filename);
+    const blob = await Playback.renderAudio(format, update);
+    el.hidden = true;  // 保存先の確認を出す前にダイアログを閉じる
+    await saveOutput("audio", blob, filename);
   } catch (e) {
     console.error(`${FORMAT_NAMES[format]}エクスポートエラー:`, e);
     alert(`${FORMAT_NAMES[format]} の書き出しに失敗しました。\n${e instanceof Error ? e.message : String(e)}`);

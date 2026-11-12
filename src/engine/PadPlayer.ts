@@ -3,19 +3,25 @@ import { ChordProgression } from "../data/types";
 import { voiceProgression, VOICING_RANGES } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
+import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 
 // ストラム：音を下から少しずつずらして鳴らす間隔（秒）。立ち上がりの遅いパッドなのでゆったりめ
 const STRUM_SEC = 0.025;
 
 let padPart:    Tone.Part | null = null;
-let padSynth:   Tone.PolySynth | null = null;
+let padSynth:   Tone.PolySynth | GrowInstrument | null = null;
 let padVol:     Tone.Volume | null = null;
 let padEffects: Tone.ToneAudioNode[] = [];
 
-// 音の流れ：Synth → コーラス → Volume。リバーブはミキサーの送りでかける
+// grow（AppState.growSounds.pad。標準はソフトパッド）で鳴らす。grow は自前のエフェクトを持つのでそのまま Volume へ。
+// grow の準備ができていない（wasm がない）ときは Tone.js の Synth → コーラス → Volume。リバーブはミキサーの送りでかける
 export function initPadSynth() {
   disposeSynth();
   padVol = createVolumeNode("pad");  // 現在のオーディオコンテキスト用のノード
+  if (isGrowReady()) {
+    padSynth = new GrowInstrument(growValues("pad")).connect(padVol);
+    return;
+  }
   const chorus = new Tone.Chorus(3, 2.5, 0.5).connect(padVol).start();
   padEffects = [chorus];
   padSynth = new Tone.PolySynth(Tone.Synth, {

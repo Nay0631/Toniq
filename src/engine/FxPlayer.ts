@@ -4,17 +4,20 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementBlockAt, getArrangement, positionAt } from "./LoopArranger";
 import { endingBar } from "./SongForm";
 import { getState, FxType, ArrangeBlock } from "./AppState";
+import { GrowInstrument, isGrowReady, findGrowPreset, growPresetValuesWith } from "./Grow";
 
 // FX / SE：ループの継ぎ目を演出する効果音
 // 種類は AppState.fxType（"auto" ならジャンルの標準 GENRE_FX）。音色は Synth を作り直したとき（再生開始時）に反映される
 // - rise：ループの終わりに向けて盛り上げる音（ライザー・リバースシンバルなど）。ループの頭ちょうどで終わる
 // - hit ：ループの頭で鳴らす音（インパクト・ダウンリフターなど）
+// 音は grow（GROW_FX。コアの「FX …」のプリセット）で出す。grow の準備ができていない・プリセットがない（wasm が古い）ときは
+// FX_DEFS（Tone.js）で鳴らす
 
 interface FxVoice {
   rise?:    (time: number, dur: number) => void;
   riseLen?: "bars" | "2n";  // bars = 1小節（8小節以上の進行は2小節）、2n = 最後の2拍
   hit?:     (time: number) => void;
-  nodes:    Tone.ToneAudioNode[];  // 破棄するノード
+  nodes:    { dispose(): unknown }[];  // 破棄するノード（Tone.js のノード・grow）
 }
 
 interface FxDef {
@@ -291,6 +294,125 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
   },
 };
 
+// ===== grow で鳴らす定義 =====
+// 各音はコアの「FX …」のプリセット（ID は fx_…）。長さで変わる値（EG の時間）は、鳴らすたびに
+// GrowInstrument.setParamAtTime で当てる（AudioParam の合図なので、書き出しでもサンプル単位で合う）
+
+// 長さで変わる値を当てる時刻を、発音より少し前にする（同じ時刻に複数当てると2サンプルずつずれるため）
+const PARAM_LEAD = 0.002;
+
+// プリセット（ID）の grow を1台作る。fixed はいつも上書きする値。プリセットがなければ null
+function growFx(out: Tone.ToneAudioNode, id: string, fixed: Record<string, number> = {}) {
+  const preset = findGrowPreset(id);
+  if (preset < 0) return null;
+  return new GrowInstrument(() => growPresetValuesWith(preset, fixed)).connect(out);
+}
+
+// 長さで変わる値（パラメーターの ID → 値）を当ててから鳴らす
+function play(inst: GrowInstrument, note: string, dur: number, time: number, values: Record<string, number> = {}, velocity = 0.8) {
+  Object.entries(values).forEach(([id, value]) => inst.setParamAtTime(id, value, Math.max(0, time - PARAM_LEAD)));
+  inst.triggerAttackRelease(note, dur, time, velocity);
+}
+
+// 1小節の長さ（秒）
+const barSeconds = () => 240 / getState().bpm;
+
+// 作った grow をまとめて破棄する（どれかのプリセットがなくて grow で鳴らせないとき）
+function disposeAll(list: ({ dispose(): unknown } | null | undefined)[]): null {
+  list.forEach(n => n?.dispose());
+  return null;
+}
+
+// ライザー（ノイズ＋音程）。音量・フィルター・音程が rise の長さをかけて上がる
+function growRiser(out: Tone.ToneAudioNode) {
+  const noise = growFx(out, "fx_riser_noise");
+  const pitch = growFx(out, "fx_riser_pitch");
+  if (!noise || !pitch) return disposeAll([noise, pitch]);
+  return {
+    rise: (time: number, dur: number) => {
+      play(noise, "C4", dur - 0.03, time, { fenv_attack: dur, aenv_attack: dur });
+      // ピッチ EG（直線）で2オクターブ下（A2）から長さいっぱいかけて上がる
+      play(pitch, "A4", dur - 0.03, time, { fenv_attack: dur, aenv_attack: dur, penv_time: dur });
+    },
+    nodes: [noise, pitch],
+  };
+}
+
+// インパクト（沈むブーム＋閉じていくノイズ）
+function growImpact(out: Tone.ToneAudioNode) {
+  const boom  = growFx(out, "fx_boom");
+  const burst = growFx(out, "fx_burst");
+  if (!boom || !burst) return disposeAll([boom, burst]);
+  return {
+    hit: (time: number) => {
+      play(boom, "E1", 1.2, time, {}, 1);   // ピッチ EG で3オクターブ上から沈む
+      play(burst, "C4", 1.2, time, {}, 1);
+    },
+    nodes: [boom, burst],
+  };
+}
+
+const GROW_FX: Record<FxKind, (out: Tone.ToneAudioNode) => FxVoice | null> = {
+  riser: out => {
+    const r = growRiser(out);
+    return r && { rise: r.rise, riseLen: "bars", nodes: r.nodes };
+  },
+  build: out => {
+    const r = growRiser(out);
+    const i = growImpact(out);
+    if (!r || !i) return disposeAll([...(r?.nodes ?? []), ...(i?.nodes ?? [])]);
+    return { rise: r.rise, riseLen: "bars", hit: i.hit, nodes: [...r.nodes, ...i.nodes] };
+  },
+  impact: out => {
+    const i = growImpact(out);
+    return i && { hit: i.hit, nodes: i.nodes };
+  },
+  // ダウンリフター：ループの頭から1小節かけてノイズと音程が下がる
+  downlifter: out => {
+    const noise = growFx(out, "fx_down_noise");
+    const tone  = growFx(out, "fx_down_tone");
+    if (!noise || !tone) return disposeAll([noise, tone]);
+    return {
+      hit: time => {
+        const bar = barSeconds();
+        play(noise, "C4", bar, time, { fenv_decay: bar, aenv_decay: bar });
+        // ピッチ EG（直線）で3オクターブ上（B4）から下がる
+        play(tone, "B1", bar * 0.6, time, { aenv_decay: bar * 0.6, penv_time: bar * 0.6 });
+      },
+      nodes: [noise, tone],
+    };
+  },
+  // リバースシンバル：最後の2拍でふくらみ、ループの頭で切れる
+  reverse: out => {
+    const cymbal = growFx(out, "fx_reverse");
+    if (!cymbal) return null;
+    return {
+      rise:    (time, dur) => play(cymbal, "C4", dur - 0.02, time, { aenv_attack: dur }),
+      riseLen: "2n",
+      nodes:   [cymbal],
+    };
+  },
+  // チップSE：最後の2拍で32分音符の駆け上がり（3半音ずつ4オクターブ）、ループの頭で「ピュン」
+  chip: out => {
+    const run = growFx(out, "fx_chip");
+    const zap = growFx(out, "fx_chip", { penv_amount: 36, penv_time: 0.35, aenv_decay: 0.35, aenv_sustain: 0 });
+    if (!run || !zap) return disposeAll([run, zap]);
+    return {
+      rise: (time, dur) => {
+        const steps = 16;
+        const step  = dur / steps;
+        for (let i = 0; i < steps; i++) {
+          const midi = 57 + i * 3;  // A3 から
+          run.triggerAttackRelease(Tone.Frequency(midi, "midi").toNote(), step * 0.95, time + i * step);
+        }
+      },
+      riseLen: "2n",
+      hit:   time => zap.triggerAttackRelease("G3", 0.35, time),  // ピッチ EG で3オクターブ上から落ちる
+      nodes: [run, zap],
+    };
+  },
+};
+
 // ジャンルの標準（"auto" のとき）。ないジャンルはライザー
 const GENRE_FX: Record<string, Exclude<FxType, "auto">> = {
   "EDM":        "build",
@@ -347,7 +469,7 @@ function voiceFor(kind: FxKind): FxVoice | null {
   if (!fxOut) return null;
   let voice = fxVoices.get(kind);
   if (!voice) {
-    voice = FX_DEFS[kind].create(fxOut);
+    voice = (isGrowReady() ? GROW_FX[kind](fxOut) : null) ?? FX_DEFS[kind].create(fxOut);
     fxVoices.set(kind, voice);
   }
   return voice;

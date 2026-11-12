@@ -2,6 +2,10 @@ node_modules
 dist
 dist-electron
 release
+output/**
+!output/**/
+!output/**/.gitkeep
+grow/build
 
 # Word・Excel などが開いている間に作る一時ファイル
 ~$*

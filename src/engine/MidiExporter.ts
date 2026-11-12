@@ -10,6 +10,7 @@ import { songMelody, songProgression } from "./SongForm";
 import { getArrangement, findBlock } from "./LoopArranger";
 import { swingAmount, SWING_MAX } from "./Groove";
 import type { LayerName } from "./LayerManager";
+import { saveOutput } from "./OutputFiles";
 
 // MIDI書き出し。今の曲（AppState）を再生と同じ内容で書き出す：
 // - 長さは曲全体（AppState.bars 小節）。コード進行・メロディは曲全体の並び（セクションごとの進行・エンディング）で書き出す
@@ -69,7 +70,7 @@ const TRACKS: Record<Exclude<LayerName, "signature" | "fx">, { name: string; cha
 };
 
 // ===== MIDIエクスポート本体 =====
-export function exportMidi(filename?: string): void {
+export async function exportMidi(filename?: string): Promise<void> {
   const s = getState();
   const progression = songProgression();  // 曲全体の並び（再生と同じ）
   if (!progression) return;
@@ -194,16 +195,11 @@ export function exportMidi(filename?: string): void {
     }
   }
 
-  // ===== ダウンロード =====
+  // ===== 保存（Electron は output/midi フォルダ、ブラウザはダウンロード） =====
   const name   = filename ?? `toniq_${s.genre}_${s.key}.mid`;
   const bytes  = midi.toArray();
   const blob   = new Blob([new Uint8Array(bytes)], { type: "audio/midi" });
-  const url    = URL.createObjectURL(blob);
-  const a      = document.createElement("a");
-  a.href       = url;
-  a.download   = name;
-  a.click();
-  URL.revokeObjectURL(url);
+  await saveOutput("midi", blob, name);
 
   console.log("MIDIエクスポート完了:", name);
 }

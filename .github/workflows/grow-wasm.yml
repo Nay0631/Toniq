@@ -1,0 +1,59 @@
+# grow（内部シンセ）の wasm をビルドし、全プリセットを鳴らして確かめる。
+# grow のコア・wasm のビルド・測定ツールを変えたとき（と手動）に動く。
+# ビルドした grow.wasm は成果物（Artifacts）に置く。Git に入れた public/grow/grow.wasm と違えば警告を出す
+# （コアを変えたのに手元でビルドし直していない・入れ忘れの目安。Emscripten の版が違うと中身が変わることもある）
+name: grow wasm
+
+on:
+  push:
+    paths:
+      - "grow/core/**"
+      - "grow/wasm/**"
+      - "grow/tools/**"
+      - "public/grow/grow.wasm"
+      - ".github/workflows/grow-wasm.yml"
+  pull_request:
+    paths:
+      - "grow/core/**"
+      - "grow/wasm/**"
+      - "grow/tools/**"
+      - "public/grow/grow.wasm"
+      - ".github/workflows/grow-wasm.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # 手元（C:\emsd）と同じ版の Emscripten
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 7.0.0
+
+      - name: grow の wasm をビルドする
+        run: |
+          cp public/grow/grow.wasm "$RUNNER_TEMP/committed.wasm"
+          node grow/wasm/build.mjs
+
+      # 無音・NaN・直流・余韻が消えない音があれば失敗する（終了コード 1）
+      - name: 全プリセットを鳴らして確かめる
+        run: node grow/tools/render.mjs --suggest
+
+      - name: Git に入れた grow.wasm と比べる
+        run: |
+          if cmp -s "$RUNNER_TEMP/committed.wasm" public/grow/grow.wasm; then
+            echo "Git に入れた grow.wasm と同じです"
+          else
+            echo "::warning file=public/grow/grow.wasm::ビルドした grow.wasm が Git に入れたものと違います。コアを変えたら npm run grow:wasm でビルドし直して入れてください（Emscripten の版の違いでも変わることがあります）"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grow-wasm
+          path: public/grow/grow.wasm

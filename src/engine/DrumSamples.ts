@@ -33,8 +33,8 @@ function sampleUrl(dir: string, track: string, ext: string): string {
   return `samples/drums/${dir}/${track}.${ext}`;
 }
 
-// file:// では fetch が使えないので XMLHttpRequest で読む
-function fetchArrayBuffer(url: string): Promise<ArrayBuffer | null> {
+// file:// では fetch が使えないので XMLHttpRequest で読む（grow の wasm の読み込みにも使う）
+export function fetchArrayBuffer(url: string): Promise<ArrayBuffer | null> {
   return new Promise(resolve => {
     const xhr = new XMLHttpRequest();
     xhr.open("GET", url);

@@ -18,6 +18,22 @@ export default defineConfig({
           },
         },
       },
+      {
+        // preload はサンドボックスで動くので CommonJS（preload.cjs）にする
+        entry: "electron/preload.ts",
+        onstart(options) {
+          options.reload();
+        },
+        vite: {
+          build: {
+            outDir: "dist-electron",
+            lib: { entry: "electron/preload.ts", formats: ["cjs"], fileName: () => "preload.cjs" },
+            rollupOptions: {
+              external: ["electron"],
+            },
+          },
+        },
+      },
     ]),
   ],
   build: {

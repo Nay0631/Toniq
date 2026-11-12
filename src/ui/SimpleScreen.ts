@@ -2,15 +2,14 @@ import { getState, setState } from "../engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset, rerollChord, rerollDrum, pickChorus } from "../engine/SimpleModeResolver";
 import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import { generateMelody } from "../engine/MelodyGenerator";
-import { getFullArrangementLoops, isArrangedAt, LAYERS } from "../engine/LoopArranger";
+import { isArrangedAt, LAYERS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
-import { exportMidi } from "../engine/MidiExporter";
 import * as Playback from "../engine/Playback";
 import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, formatTime } from "./format";
 import { startPianoRollPlayhead } from "./PianoRollTab";
-import { exportAudioWithProgress } from "./ExportProgress";
+import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -18,24 +17,64 @@ const $ = (id: string) => document.getElementById(id);
 const $$ = (selector: string) =>
   document.querySelectorAll<HTMLElement>(`[data-screen="simple"] ${selector}`);
 
-// ジャンル選択の下に出す、初心者向けの一言の説明
+// ジャンル選択の下に出す、初心者向けの一言の説明。
+// {キー:文字} と書いた所は用語のツールチップ（Glossary.ts の TERMS のキー）を付けて表示する
 const GENRE_DESCRIPTIONS: Record<string, string> = {
-  "EDM":         "クラブやフェスで流れる、ノリのよい電子音楽。サビで盛り上がる",
-  "8bit":        "昔のゲーム機のような、ピコピコした懐かしい音",
-  "ローファイ":   "レコードのノイズが混ざった、ゆったりした作業用 BGM の定番",
-  "ゲームBGM":   "ゲームのフィールドや街で流れるような、メロディが主役の曲",
-  "テクノ":       "同じフレーズをくり返す、機械的でクールなダンス音楽",
-  "ハウス":       "4つ打ちのキックとピアノが気持ちよい、明るいダンス音楽",
-  "トランス":     "うねるシンセが盛り上がっていく、高揚感のある疾走系ダンス音楽",
-  "アンビエント": "リズムが控えめで、空間に広がるような癒やしの音",
+  "EDM":         "クラブやフェスで流れる、ノリのよい電子音楽。{chorus:サビ}で盛り上がる",
+  "8bit":        "昔のゲーム機のような、ピコピコした懐かしい音（{chiptune:チップチューン}）",
+  "ローファイ":   "{vinyl:レコードのノイズ}が混ざった、ゆったりした作業用 {bgm:BGM} の定番",
+  "ゲームBGM":   "ゲームのフィールドや街で流れるような、{melody:メロディ}が主役の曲",
+  "テクノ":       "同じ{phrase:フレーズ}をくり返す、機械的でクールなダンス音楽",
+  "ハウス":       "{fourOnFloor:4つ打ち}の{kick:キック}とピアノが気持ちよい、明るいダンス音楽",
+  "トランス":     "うねる{synth:シンセ}が盛り上がっていく、高揚感のある疾走系ダンス音楽",
+  "アンビエント": "{rhythm:リズム}が控えめで、空間に広がるような癒やしの音",
 };
+
+// 雰囲気ごとに選べるジャンル（シンプルモードのジャンルのチップをこの順で絞り込む）。
+// ジャンルを足すときは、どれか1つ以上の雰囲気に入れる
+const MOOD_GENRES: Record<string, string[]> = {
+  "明るい":     ["EDM", "8bit", "ゲームBGM", "ハウス", "トランス"],
+  "暗い":       ["EDM", "8bit", "テクノ", "トランス", "アンビエント"],
+  "切ない":     ["EDM", "ローファイ", "ゲームBGM", "トランス", "アンビエント"],
+  "激しい":     ["EDM", "8bit", "テクノ", "トランス"],
+  "落ち着いた": ["ローファイ", "ゲームBGM", "ハウス", "アンビエント"],
+};
+
+function genresForMood(mood: string): string[] {
+  return MOOD_GENRES[mood] ?? MOOD_GENRES["落ち着いた"];
+}
+
+// 説明文の {キー:文字} を用語のツールチップ付きの span にして並べる
+function renderGenreDesc(el: HTMLElement, text: string): void {
+  el.replaceChildren();
+  const re = /\{(\w+):([^}]+)\}/g;
+  let last = 0;
+  for (const m of text.matchAll(re)) {
+    el.append(text.slice(last, m.index));
+    const term = document.createElement("span");
+    term.dataset.term = m[1];
+    term.tabIndex = 0;  // キーボードでもフォーカスして説明を出せるように
+    term.textContent = m[2];
+    el.append(term);
+    last = m.index! + m[0].length;
+  }
+  el.append(text.slice(last));
+}
+
+// ジャンルを選ぶ（テンポのプリセットはジャンルに合わせた BPM にする）
+function selectGenre(genre: string): void {
+  const s = getState();
+  const bpm = s.tempoPreset === "custom" ? s.bpm : resolveTempoPreset(genre, s.tempoPreset);
+  setState({ genre, bpm });
+}
 
 // ===== 状態の更新 =====
 
-// 曲の長さ：アレンジが全パートそろうまでの周回分
+// シンプルモードの曲の長さ（小節）
+const SIMPLE_SONG_BARS = 32;
+
 function songBars(): number {
-  const s = getState();
-  return (s.chordPattern?.length_bars ?? 4) * getFullArrangementLoops(s.genre);
+  return SIMPLE_SONG_BARS;
 }
 
 // Aメロとサビのメロディを作る（サビは高めの音域）
@@ -176,8 +215,20 @@ function render(): void {
   // 設定
   $$("[data-mood]").forEach(el =>
     el.classList.toggle("is-active", el.dataset.mood === s.mood));
-  $$("[data-genre]").forEach(el =>
-    el.classList.toggle("is-active", el.dataset.genre === s.genre));
+  // 雰囲気に合うジャンルだけを出す（開いた曲のジャンルが外れていても、選んでいるジャンルは出しておく）
+  const moodGenres = genresForMood(s.mood);
+  const genreChips = $$("[data-genre]");
+  const container  = genreChips[0]?.parentElement;
+  moodGenres.forEach(g => {
+    const chip = Array.from(genreChips).find(el => el.dataset.genre === g);
+    if (chip && container) container.appendChild(chip);  // 雰囲気ごとの並び順にする
+  });
+  genreChips.forEach(el => {
+    const genre = el.dataset.genre!;
+    el.hidden = !moodGenres.includes(genre) && genre !== s.genre;
+    el.classList.toggle("is-active", genre === s.genre);
+  });
+  $("s-genre-hint")!.textContent = `「${s.mood}」に合うジャンル`;
   $$("[data-tempo]").forEach(el =>
     el.classList.toggle("is-active", el.dataset.tempo === s.tempoPreset));
   $("s-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
@@ -188,7 +239,12 @@ function render(): void {
   const sampleOn = Playback.isSamplePlaying();
   $("s-sample")!.textContent = sampleOn ? "■ サンプルを止める" : `▷ ${s.genre} のサンプルを聴く`;
   $("s-sample")!.classList.toggle("is-active", sampleOn);
-  $("s-genre-desc")!.textContent = GENRE_DESCRIPTIONS[s.genre] ?? "";
+  const genreDesc = $("s-genre-desc")!;
+  const descText  = GENRE_DESCRIPTIONS[s.genre] ?? "";
+  if (genreDesc.dataset.text !== descText) {  // 説明が変わったときだけ作り直す（ツールチップを消さない）
+    genreDesc.dataset.text = descText;
+    renderGenreDesc(genreDesc, descText);
+  }
   $$("[data-melody-method]").forEach(el =>
     el.classList.toggle("is-active", el.dataset.melodyMethod === s.melodyMethod));
 
@@ -223,16 +279,19 @@ export function initSimpleScreen(): void {
 
   $$("[data-mood]").forEach(el =>
     el.addEventListener("click", () => {
-      setState({ mood: el.dataset.mood! });
+      const mood   = el.dataset.mood!;
+      const genres = genresForMood(mood);
+      const prevGenre = getState().genre;
+      setState({ mood });
+      // 選んでいたジャンルがこの雰囲気に合わなければ、合うジャンルの先頭に切り替える
+      if (!genres.includes(prevGenre)) selectGenre(genres[0]);
       render();
+      if (getState().genre !== prevGenre && Playback.isSamplePlaying()) void playGenreSample();
     }));
 
   $$("[data-genre]").forEach(el =>
     el.addEventListener("click", () => {
-      const genre = el.dataset.genre!;
-      const s = getState();
-      const bpm = s.tempoPreset === "custom" ? s.bpm : resolveTempoPreset(genre, s.tempoPreset);
-      setState({ genre, bpm });
+      selectGenre(el.dataset.genre!);
       render();
       // サンプルを鳴らしていれば、選び直したジャンルのサンプルに切り替える
       if (Playback.isSamplePlaying()) void playGenreSample();
@@ -334,16 +393,12 @@ export function initSimpleScreen(): void {
   });
 
   // 書き出し
-  $("s-export-midi")?.addEventListener("click", () => {
-    const s = getState();
-    exportMidi(`toniq_${s.genre}_${s.mood}.mid`);
-  });
+  $("s-export-midi")?.addEventListener("click", () => exportMidiWithName());
 
   (["wav", "mp3"] as const).forEach(format => {
     const btn = $(`s-export-${format}`) as HTMLButtonElement | null;
     btn?.addEventListener("click", async () => {
-      const s = getState();
-      await exportAudioWithProgress(format, `toniq_${s.genre}_${s.mood}.${format}`, btn);
+      await exportAudioWithProgress(format, btn);
       render();
     });
   });

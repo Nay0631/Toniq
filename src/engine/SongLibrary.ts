@@ -3,7 +3,7 @@ import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./SimpleModeResolver";
 import { emptyArrangement } from "./LoopArranger";
 import { resetHistory } from "./History";
-import { normalizeToniqSynth } from "./ToniqSynth";
+import { presetIdFromSaved } from "./Grow";
 
 export { SONG_FIELDS };
 export type { SongFields };
@@ -31,8 +31,35 @@ export function listSongs(): SavedSong[] {
   }
 }
 
+// ミュージックリストに書き込めなかった（localStorage の容量オーバーなど）。画面側で知らせる
+export class SongStorageError extends Error {
+  readonly quota:    boolean;  // 容量オーバーか
+  readonly original: unknown;  // localStorage が投げた元の例外
+  constructor(quota: boolean, cause: unknown) {
+    super(quota
+      ? "ミュージックリストの保存容量がいっぱいです"
+      : "ミュージックリストに書き込めませんでした");
+    this.name     = "SongStorageError";
+    this.quota    = quota;
+    this.original = cause;
+  }
+}
+
+// 容量オーバーの例外か（ブラウザによって名前・番号が違う）
+function isQuotaError(e: unknown): boolean {
+  if (!(e instanceof Error) && !(typeof DOMException !== "undefined" && e instanceof DOMException)) return false;
+  const err = e as DOMException;
+  return err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED" || err.code === 22 || err.code === 1014;
+}
+
+// 書き込めなければ SongStorageError を投げる（書き込み前の一覧はそのまま残る）
 function writeSongs(songs: SavedSong[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
+  } catch (e) {
+    console.error("ミュージックリストの保存に失敗:", e);
+    throw new SongStorageError(isQuotaError(e), e);
+  }
 }
 
 export function findSong(id: string | null): SavedSong | undefined {
@@ -55,7 +82,8 @@ function defaultName(songs: SavedSong[]): string {
   return `${base} #${n}`;
 }
 
-// 今の曲を保存する。リストから開いた曲（AppState.songId）なら上書き、そうでなければ新しく追加する
+// 今の曲を保存する。リストから開いた曲（AppState.songId）なら上書き、そうでなければ新しく追加する。
+// 書き込めなければ SongStorageError を投げる（songId は変えない）
 export function saveCurrentSong(): SavedSong {
   const songs = listSongs();
   const now   = Date.now();
@@ -96,6 +124,23 @@ export function deleteSong(id: string): void {
   if (getState().songId === id) setState({ songId: null });
 }
 
+// 以前の Tone.js のコードの音色 → 同じ音の grow のプリセットの ID
+const LEGACY_CHORD_PRESETS: Record<string, string> = {
+  soft: "soft_pad", epiano: "epiano", strings: "strings", organ: "organ", square: "square", supersaw: "supersaw",
+};
+
+// 保存した grow の音作り（ベースなど）。足りないパートは初期値で補い、番号のプリセットは ID に読み替える
+function growSoundsFromSaved(saved: unknown): SongFields["growSounds"] {
+  const sounds = structuredClone(defaultState.growSounds);
+  if (typeof saved !== "object" || saved === null) return sounds;
+  (Object.keys(sounds) as (keyof typeof sounds)[]).forEach(part => {
+    const s = (saved as Record<string, { preset?: unknown; params?: Record<string, number> | null }>)[part];
+    if (!s) return;
+    sounds[part] = { preset: presetIdFromSaved(s.preset, null), params: s.params ?? null };
+  });
+  return sounds;
+}
+
 // 保存した曲の内容を取り出す。あとから増えた項目（FX の種類・シグネチャーなど）は、古い曲では初期値で補う
 function songFields(song: Partial<SongFields>): SongFields {
   const fields = {} as Record<string, unknown>;
@@ -105,7 +150,16 @@ function songFields(song: Partial<SongFields>): SongFields {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
     volumes:     { ...defaultState.volumes, ...loaded.volumes },
-    toniqSynth:  normalizeToniqSynth(loaded.toniqSynth),
+    // grow のプリセットは以前は番号で保存していた（今は ID）。番号なら ID に読み替える
+    growPreset:      presetIdFromSaved(loaded.growPreset, defaultState.growPreset),
+    // コードの音色は grow だけ。以前の Tone.js の音色を選んでいた曲は、同じ音の grow のプリセットで鳴らす
+    chordInstrument: "grow",
+    growChordPreset: LEGACY_CHORD_PRESETS[loaded.chordInstrument as string]
+                     ?? presetIdFromSaved(loaded.growChordPreset, defaultState.growChordPreset),
+    growSounds:      growSoundsFromSaved(loaded.growSounds),
+    // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）。
+    // 今の grow は "grow"（growPreset / growParams）
+    melodyInstrument: (loaded.melodyInstrument as string) === "toniq" ? "auto" : loaded.melodyInstrument,
     arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
   };
 }
@@ -118,6 +172,7 @@ export function loadSong(id: string): boolean {
   setState({
     ...songFields(song),
     songId:    song.id,
+    projectPath: null,
     generated: true,  // シンプルモードで開いたときは生成結果の画面を出す
     startBar:  0,
   });
@@ -130,7 +185,8 @@ export function loadSong(id: string): boolean {
 // ミュージックリストの曲を JSON ファイルにして、バックアップや別の PC への持ち運びに使う
 
 const FILE_FORMAT  = "toniq-song";
-const FILE_VERSION = 1;
+// 2：grow のプリセットを番号ではなく ID で保存する（1 の番号は読み込み時に ID へ読み替える）
+const FILE_VERSION = 2;
 export const SONG_FILE_EXT = ".toniq.json";
 
 interface SongFile {
@@ -208,6 +264,64 @@ export function importSongFile(text: string): ImportResult {
   return { added, skipped: items.length - added };
 }
 
+// ===== 作業ファイル（今の曲の構成を1曲分の .toniq.json に保存し、あとで開いて続きを編集する） =====
+// 形式はミュージックリストの曲ファイルと同じ（曲1つ）なので、ミュージックリストの「ファイルを読み込む」でも追加できる
+
+// 作業ファイルの曲名：リストの曲ならその名前、なければジャンル・雰囲気
+export function currentSongName(): string {
+  const s = getState();
+  return findSong(s.songId)?.name ?? `${s.genre}・${s.mood}`;
+}
+
+// 今の曲を作業ファイルの中身（JSON の文字列）にする
+export function projectFileText(): string {
+  const s = getState();
+  const now = Date.now();
+  const listed = findSong(s.songId);
+  const song: SavedSong = {
+    ...snapshot(),
+    id:        listed?.id ?? `song_${now.toString(36)}`,
+    name:      currentSongName(),
+    favorite:  listed?.favorite,
+    createdAt: listed?.createdAt ?? now,
+    updatedAt: now,
+  };
+  const file: SongFile = { format: FILE_FORMAT, version: FILE_VERSION, exportedAt: now, songs: [song] };
+  return JSON.stringify(file, null, 2);
+}
+
+// 作業ファイルの中身から曲を取り出して今の曲として読み込む（再生中なら呼び出し側で止めておく）。
+// ミュージックリストには追加しない（未保存の曲として開く）。読み込んだ曲の名前を返す
+export function loadProjectFile(text: string, path: string | null): string {
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error("ファイルの形式が正しくありません（JSON として読めません）");
+  }
+  // 曲が複数入ったファイル（すべて書き出す）なら最初の曲を開く
+  const items: unknown[] = isObject(data) && data.format === FILE_FORMAT && Array.isArray(data.songs)
+    ? data.songs
+    : [data];
+  const item = items.find(isSongLike);
+  if (!item) throw new Error("Toniq の作業ファイルではありません");
+
+  const fields = songFields(item);
+  setState({
+    ...fields,
+    mode:        fields.mode === "simple" ? "simple" : "custom",
+    bpm:         Math.max(20, Math.min(240, Math.round(fields.bpm))),
+    bars:        Math.max(1, Math.min(256, Math.round(fields.bars))),
+    songId:      null,
+    projectPath: path,
+    generated:   true,  // シンプルモードで開いたときは生成結果の画面を出す
+    startBar:    0,
+  });
+  applyAllVolumes();
+  resetHistory();  // 別の曲の編集は元に戻せないようにする
+  return typeof item.name === "string" && item.name.trim() ? item.name.trim() : "作業ファイル";
+}
+
 // 曲の内容を初期状態に戻して、未保存の新しい曲にする（モードはそのまま。再生中なら呼び出し側で止めておく）
 export function newSong(): void {
   const fields = {} as Record<string, unknown>;
@@ -216,6 +330,7 @@ export function newSong(): void {
     ...structuredClone(fields) as SongFields,
     mode:      getState().mode,
     songId:    null,
+    projectPath: null,
     generated: false,  // シンプルモードは設定画面に戻る
     startBar:  0,
   });

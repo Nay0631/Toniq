@@ -2,7 +2,6 @@ import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import type { LayerName } from "./LayerManager";
 import type { DrumSource } from "./SynthFactory";
-import { DEFAULT_TONIQ_SYNTH, type ToniqSynthParams } from "./ToniqSynth";
 
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings";
@@ -14,15 +13,24 @@ export type Tab = "settings" | "arranger" | "pianoroll";
 export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
 // メロディの音色（auto = ジャンルの標準。melody_params.json の instrument。
-// toniq = Toniq シンセ（テスト中。設定画面で OFF のときはジャンルの標準で鳴る））
+// grow = 内部シンセ grow（初期値。Grow.ts。wasm がないときはジャンルの標準で鳴る））
 export type MelodyInstrument =
-  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid" | "toniq";
+  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid" | "grow";
 
-// コードの音色
-export type ChordInstrument = "soft" | "epiano" | "strings" | "organ" | "square" | "supersaw";
+// コードの音色。いつも grow（growChordPreset / growChordParams で鳴らす。wasm がないときは Tone.js のソフトパッド）。
+// 以前の Tone.js の音色（soft / epiano / strings / organ / square / supersaw）は、同じ音の grow のプリセットに読み替える（SongLibrary.ts）
+export type ChordInstrument = "grow";
 
 // FX / SE の種類（auto = ジャンルの標準。定義は FxPlayer.ts の FX_DEFS / GENRE_FX）
 export type FxType = "auto" | "riser" | "build" | "impact" | "downlifter" | "reverse" | "chip";
+
+// grow で鳴らすベース・パッド・アルペジオ・シグネチャーの音作り。preset はコアのプリセットの ID（null = ジャンルの標準。Grow.ts）、
+// params はそこから変えた値（パラメーターの ID → 値。null = プリセットのまま）
+export type GrowPartName = "bass" | "pad" | "arp" | "signature";
+export interface GrowSound {
+  preset: string | null;
+  params: Record<string, number> | null;
+}
 
 // ピアノロールで入力する音符の長さ
 export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
@@ -76,6 +84,9 @@ export interface AppState {
 
   // ミュージックリストのどの曲を編集中か（null = 未保存の曲。保存すると新しく追加される）
   songId: string | null;
+
+  // 開いている・最後に保存した作業ファイル（.toniq.json）の場所（null = なし。Electron のときだけ使う。SONG_FIELDS には入れない）
+  projectPath: string | null;
 
   // ミュージックリストの絞り込み（曲名の検索・ジャンル（"" = すべて）・お気に入りだけ）と並び順
   musicListQuery:     string;
@@ -133,13 +144,18 @@ export interface AppState {
   sidechain:        number | null;  // キックに合わせてベース・コードなどを沈める量（ポンピング）
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
-  // ドラムの音源（synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
+  // ドラムの音源（grow = grow（初期値）、synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
   // 設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
   drumSource:       DrumSource;
-  // Toniq シンセ（テスト中）を使えるようにするか。設定画面で切り替え、Preferences.ts が端末ごとに保存する（曲には保存しない）
-  toniqSynthEnabled: boolean;
-  // Toniq シンセの音作り（ToniqSynth.ts。曲に保存する）
-  toniqSynth:       ToniqSynthParams;
+  // grow の音作り（曲に保存する）。プリセットの ID（grow のコアの GrowPresets.cpp の id）と、
+  // そこから変えた値（パラメーターの ID → 実際の値。null = プリセットのまま）
+  growPreset:       string;
+  growParams:       Record<string, number> | null;
+  // コードを grow で鳴らすときの音作り（メロディとは別に持つ。形は growPreset / growParams と同じ）
+  growChordPreset:  string | null;  // null = ジャンルの標準（Grow.ts の CHORD_STANDARD）
+  growChordParams:  Record<string, number> | null;
+  // ベース・パッド・アルペジオ・シグネチャーの grow の音作り（どれも grow で鳴らす。wasm がないときは Tone.js の音色）
+  growSounds:       Record<GrowPartName, GrowSound>;
 
   // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
   arrangement: Arrangement | null;
@@ -184,6 +200,7 @@ export const defaultState: AppState = {
   tooltips:    true,
   generated:   false,
   songId:      null,
+  projectPath: null,
 
   musicListQuery:     "",
   musicListGenre:     "",
@@ -200,7 +217,7 @@ export const defaultState: AppState = {
   key:         "A",
   bpm:         128,
   tempoPreset: "普通",
-  bars:        16,
+  bars:        32,
 
   chordPattern: null,
   drumPattern:  null,
@@ -214,17 +231,25 @@ export const defaultState: AppState = {
   melodyMethod:  "auto",
   melodyVersion: 0,
 
-  melodyInstrument: "auto",
+  melodyInstrument: "grow",
   chordRhythm:      "whole",
-  chordInstrument:  "soft",
+  chordInstrument:  "grow",
   fxType:           "auto",
   swing:            null,
   sidechain:        null,
   scaleLock:        true,
   drumCategory:     "EDM",
-  drumSource:       "synth",
-  toniqSynthEnabled: false,
-  toniqSynth:       { ...DEFAULT_TONIQ_SYNTH },
+  drumSource:       "grow",
+  growPreset:       "lead",      // シンセリード
+  growParams:       null,
+  growChordPreset:  null,  // ジャンルの標準
+  growChordParams:  null,
+  growSounds: {
+    bass:      { preset: null, params: null },
+    pad:       { preset: null, params: null },
+    arp:       { preset: null, params: null },
+    signature: { preset: null, params: null },
+  },
 
   arrangement: null,
   startBar:    0,
@@ -237,10 +262,9 @@ export const defaultState: AppState = {
     drum:   true,
     chord:  true,
     bass:   true,
-    // パッド・アルペジオ・シグネチャーは初期状態で OFF（必要なときに足すパート）
-    arp:    false,
-    pad:    false,
-    signature: false,
+    arp:    true,
+    pad:    true,
+    signature: true,
     melody: true,
     fx:     true,
   },
@@ -264,7 +288,7 @@ export const SONG_FIELDS = [
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
   "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
-  "toniqSynth",
+  "growPreset", "growParams", "growChordPreset", "growChordParams", "growSounds",
   "arrangement", "parts", "volumes",
 ] as const;
 
