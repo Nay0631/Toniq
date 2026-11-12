@@ -40,11 +40,13 @@ def git(*a):
 missing = []
 if not shutil.which('java'):
     missing.append('Java（winget install EclipseAdoptium.Temurin.21.JRE）')
+if not shutil.which('node'):
+    missing.append('Node.js（ロバストネス図の線の文を置き直す robustness_labels.mjs に使う。winget install OpenJS.NodeJS.LTS）')
 if not os.path.isdir(r'C:\Program Files\Microsoft Office'):
     missing.append('Word（Microsoft 365）')
 if not os.path.exists(TEMPLATE):
     missing.append('手本の docx（git restore で戻す。消さない）')
-report(not missing, '必要なもの（Java・Python・Word・手本の docx）', '、'.join(missing) + ' がない' if missing else '')
+report(not missing, '必要なもの（Java・Python・Node.js・Word・手本の docx）', '、'.join(missing) + ' がない' if missing else '')
 
 # ---------- 出力先が開かれていないか ----------
 locked = False

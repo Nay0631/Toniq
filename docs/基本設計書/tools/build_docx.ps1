@@ -1,6 +1,7 @@
 ﻿# 仕様書.md と図から基本設計書 docx を作る（手順は ../基本設計書の作成手順.md の「5. docx を作る」）
 #
-#   1. 図（.puml）を PNG にする（Word で SVG が表示できないときの代わりの画像として docx に一緒に入れる）
+#   1. 図（.puml）を PNG にする（Word で SVG が表示できないときの代わりの画像として docx に一緒に入れる）。
+#      ロバストネス図は robustness_labels.mjs で線の文を置き直した SVG から PNG を作る
 #   2. build_docx.py で手本の docx の書式を使った下書きを作る
 #   3. Word で開いて目次・ページ番号を更新し、docx として保存する
 #   4. check_docx.py で、できた docx の表紙・改訂履歴・目次・表と図の数を確かめる（NG があれば失敗で終わる）
@@ -11,7 +12,8 @@
 # 使い方（リポジトリのルートで）:
 #   powershell -ExecutionPolicy Bypass -File "docs/基本設計書/tools/build_docx.ps1" -Rev 03 -RevNote "改訂の概要"
 #
-# 必要なもの: Java（tools/plantuml.jar）、Python（py ランチャー）、Microsoft Word（365 版。SVG の表示に対応しているもの）
+# 必要なもの: Java（tools/plantuml.jar）、Python（py ランチャー）、Node.js、Microsoft Word（365 版。SVG の表示に対応しているもの）、
+#             Edge か Chrome（ロバストネス図の PNG。なければ PlantUML の PNG のまま）
 param(
   [Parameter(Mandatory = $true)][string]$Rev,       # 改訂履歴に足す版数（例 03。tools/改訂履歴.tsv に足す。表紙の文書番号の「(01)」にも使う）
   [Parameter(Mandatory = $true)][string]$RevNote,   # 改訂履歴に足す改訂の概要
@@ -39,7 +41,8 @@ New-Item -ItemType Directory -Force $png | Out-Null
 # 1. PNG（大きな図が切れないよう上限を広げ、144dpi で出す）
 #    PNG がない・いちばん新しい .puml（スタイルの共通ファイルを含む）が いちばん古い PNG より新しいときだけ作り直す
 $pngs = @(Get-ChildItem $png -Filter *.png -ErrorAction SilentlyContinue)
-$newestPuml = (Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml | Measure-Object LastWriteTime -Maximum).Maximum
+#    （ロバストネス図の SVG・robustness_labels.mjs が新しいときも作り直す。PNG はその SVG から作るため）
+$newestPuml = (@(Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml) + @(Get-ChildItem (Join-Path $doc "図\ロバストネス図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "robustness_labels.mjs")) | Measure-Object LastWriteTime -Maximum).Maximum
 $oldestPng = if ($pngs.Count) { ($pngs | Measure-Object LastWriteTime -Minimum).Minimum } else { $null }
 $needPng = $ForcePng -or -not $pngs.Count -or (-not $SkipPng -and $newestPuml -gt $oldestPng)
 if ($needPng) {
@@ -52,6 +55,12 @@ if ($needPng) {
 } else {
   "PNG は図が変わっていないので作り直さない"
 }
+# ロバストネス図：線の文を矢印のすぐ上・平行に置き直す（robustness_labels.mjs。処理済みの SVG は変えない）。
+# PNG を作り直したときは、ロバストネス図の PNG を置き直した SVG から作り直す（PlantUML の PNG は文の位置が古いため）
+$labelArgs = @((Join-Path $PSScriptRoot "robustness_labels.mjs"))
+if ($needPng) { $labelArgs += @("--png", $png, "--scale", "1.5") }
+& node @labelArgs
+if ($LASTEXITCODE -ne 0) { "（注意）ロバストネス図に文の重なりが残っています。上の「重なり」の図を確かめてください" }
 "PNG: " + (Get-ChildItem $png -Filter *.png).Count + " 枚"
 
 # 2. 下書き

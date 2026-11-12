@@ -11,7 +11,7 @@ argument-hint: "[機能ID をスペース区切り（例 B01-1 C01-7）／all（
 
 ## 0. 前提の確認（ここで止まることがある）
 
-1. `java -version` が動くか確かめる（PowerShell で `Get-Command java`）。なければ**作業を始めずに止め**、ユーザーに Java のインストール（例 `winget install EclipseAdoptium.Temurin.21.JRE`）を頼む。
+1. `java -version` が動くか確かめる（PowerShell で `Get-Command java`）。なければ**作業を始めずに止め**、ユーザーに Java のインストール（例 `winget install EclipseAdoptium.Temurin.21.JRE`）を頼む。ロバストネス図を作る・直すときは `node` も要る（`Get-Command node`。なければ `winget install OpenJS.NodeJS.LTS` を頼む）。
 2. `tools/plantuml.jar` があるか確かめる。
 3. 仕様書.md の基準のコードが `origin/main` より古くないか確かめる（`git fetch origin` のあと、基準のコミットと `git rev-parse --short origin/main` を比べる）。古ければ「先に `/update-spec` で仕様書を更新したほうがよい」とユーザーに伝え、続けるかどうかを聞く。
 4. コミット・push はしない。
@@ -50,7 +50,12 @@ java -jar tools/plantuml.jar -tsvg -charset UTF-8 "<変えた .puml のパス>" 
 ```
 
 - 変換した .svg に「Syntax Error」が含まれていないか、`grep -l "Syntax Error"` で確かめる。あれば直して変換し直す。
-- ロバストネス図は、文字（線のラベル・名前）どうしが重なっていないか確かめる（PNG にして画像で見るか、SVG の `<text>` の位置と幅を比べる）。重なっていたら `図/CLAUDE.md` の自己ループの決まり（1つの処理に1本まで、13文字くらいで `\n` で改行、処理の手順は別の処理に分ける）に合わせて直す。
+- ロバストネス図を変換したら、**必ず**続けて線の文を置き直す（矢印のすぐ上に、矢印と平行に置く。処理済みの SVG は変えないので、いつも引数なしで全部に当ててよい）：
+  ```
+  node docs/基本設計書/tools/robustness_labels.mjs
+  ```
+  「重なり N 件」と出た図は、`図/CLAUDE.md` の決まり（ラベルを短くする・13文字くらいで `\n` で改行、自己ループは1つの処理に1本まで、処理の手順は別の処理に分ける）に合わせて .puml を直し、変換からやり直す。置き直した SVG は手で直さない。
+- ロバストネス図は、文字（線のラベル・名前）どうし・文字と線が重なっていないか画像で確かめる。PNG は `node docs/基本設計書/tools/robustness_labels.mjs <変えた SVG …> --png <スクラッチパッドのフォルダ>` で作る（Edge か Chrome で描く。PlantUML の `-tpng` は置き直す前の配置になるので使わない）。
 - 共通設定ファイル（`astah-*.puml`）の「no image」の警告は問題ない。
 - .puml があって .svg がない（または逆の）ファイルが残っていないか、フォルダごとに確かめる。
 
