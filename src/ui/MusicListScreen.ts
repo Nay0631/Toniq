@@ -1,8 +1,9 @@
 import { getState, setState, MusicListSort } from "../engine/AppState";
 import {
   listSongs, findSong, saveCurrentSong, renameSong, deleteSong, loadSong, newSong, toggleFavorite, SavedSong,
-  songsToFile, songFileName, importSongFile,
+  songsToFile, songFileName, importSongFile, SongStorageError,
 } from "../engine/SongLibrary";
+import { saveProjectFile } from "./ProjectFileControls";
 import * as Playback from "../engine/Playback";
 import { onRender, render as renderAll, showScreen } from "./Router";
 import { formatTime } from "./format";
@@ -64,11 +65,40 @@ function openSong(id: string): void {
   showScreen(song.mode);
 }
 
+// ミュージックリストに書き込めなかったときの案内
+const STORAGE_HINT = "不要な曲を削除するか、ミュージックリストの「すべて書き出す」でファイルに残してから整理してください。";
+
+// ミュージックリストを書き換える操作を行う。書き込めなかったら知らせて false を返す
+function withStorage(action: () => void): boolean {
+  try {
+    action();
+    return true;
+  } catch (e) {
+    if (!(e instanceof SongStorageError)) throw e;
+    alert(`${e.message}。変更は保存されていません。\n${STORAGE_HINT}`);
+    return false;
+  }
+}
+
+// 今の曲をミュージックリストに保存する。書き込めなければ、作業ファイルへの保存を勧める
+function saveToList(): boolean {
+  try {
+    saveCurrentSong();
+    return true;
+  } catch (e) {
+    if (!(e instanceof SongStorageError)) throw e;
+    const message = `${e.message}。この曲はミュージックリストに保存されていません。\n${STORAGE_HINT}\n\n`
+                  + "代わりに今の曲を作業ファイル（.toniq.json）に保存しますか？";
+    if (confirm(message)) void saveProjectFile();
+    return false;
+  }
+}
+
 function removeSong(id: string): void {
   const song = findSong(id);
   if (!song || !confirm(`「${song.name}」をミュージックリストから削除しますか？`)) return;
   if (isPlayingSong(id)) Playback.stop();
-  deleteSong(id);
+  withStorage(() => deleteSong(id));
   render();
 }
 
@@ -119,7 +149,7 @@ function startRename(id: string): void {
 
 function finishRename(input: HTMLInputElement, commit: boolean): void {
   if (renameSongId === null) return;
-  if (commit) renameSong(renameSongId, input.value);
+  if (commit) { const id = renameSongId; withStorage(() => renameSong(id, input.value)); }
   renameSongId = null;
   render();
 }
@@ -241,7 +271,7 @@ export function initMusicListScreen(): void {
 
   document.querySelectorAll<HTMLButtonElement>("[data-save-song]").forEach(btn =>
     btn.addEventListener("click", () => {
-      saveCurrentSong();
+      if (!saveToList()) return;
       btn.dataset.saved = "1";
       btn.textContent = "✓ 保存しました";
       setTimeout(() => {
@@ -307,7 +337,7 @@ export function initMusicListScreen(): void {
     menuSongId = action === "menu" && menuSongId !== id ? id : null;
 
     if (action === "play")         togglePlay(id);
-    if (action === "favorite")     { toggleFavorite(id); render(); }
+    if (action === "favorite")     { withStorage(() => toggleFavorite(id)); render(); }
     if (action === "menu")         render();
     if (action === "open")         openSong(id);
     if (action === "start-rename") startRename(id);

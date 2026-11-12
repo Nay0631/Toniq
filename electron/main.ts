@@ -4,7 +4,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const isDev = process.env.NODE_ENV === "development";
+// 開発時は vite-plugin-electron（npm run dev / electron:dev）が dev server の URL を VITE_DEV_SERVER_URL で渡して起動する
+const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+const isDev = !!devServerUrl || process.env.NODE_ENV === "development";
 
 // ===== 出力フォルダ =====
 // 開発時は toniq フォルダ（package.json の場所）、インストール版は Toniq.exe と同じ場所に output フォルダを作る。
@@ -128,7 +130,7 @@ function createWindow() {
 
   if (isDev) {
     // 開発時はViteのdev serverを表示
-    win.loadURL("http://localhost:5173");
+    win.loadURL(devServerUrl ?? "http://localhost:5173");
     win.webContents.openDevTools();
   } else {
     // ビルド時はdist/index.htmlを表示

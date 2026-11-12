@@ -6,13 +6,18 @@ Toniq — ルールベース自動作曲アプリ（Electron + Vite + TypeScript
 ## コマンド
 
 ```bash
-npm run dev             # ブラウザで開発（Vite, http://localhost:5173）
-npm run electron:dev    # Electron で開発起動
+npm run dev             # 開発起動（Vite, http://localhost:5173。vite-plugin-electron が Electron も起動する）
+npm run electron:dev    # npm run dev と同じ（以前の名前）
 npm run build           # tsc + vite build
+npm test                # テスト（Vitest。tests/*.test.ts）
 npm run electron:build  # インストーラ作成（release/）
 ```
 
-テスト・Lint は未導入。変更後は `npx tsc --noEmit` で型チェックする。
+Lint は未導入。変更後は `npx tsc --noEmit`（アプリ）と `npx tsc --noEmit -p tests`（テスト）で型チェックし、`npm test` を通す。
+
+- テストは `tests/` に置く（`vitest.config.ts`。vite.config.ts（Electron の起動）は使わない）。Node で動かすので、Tone.js は `tests/stubs/tone.ts`（BPM 120・PPQ 192 の Transport の時刻変換だけ）に差し替え、Web Audio・DOM を使うモジュール（`VolumeManager` / `History` など）は `vi.mock` で外す。乱数を使う生成は `tests/helpers.ts` の `seededRandom` で `Math.random` を差し替えて固定し、localStorage は `MemoryStorage`（容量オーバーも再現できる）を `vi.stubGlobal` で入れる。
+- 古い形式の読み替え（`songFields` の `LEGACY_*`・`presetIdFromSaved`）を変えたり、AppState に曲の項目を足したりしたら `tests/SongLibrary.test.ts` に古い曲の例を足す。
+- `npm test` は `tools/test.mjs` から vitest を起動する。Windows で作業フォルダのドライブ文字が小文字（`c:\…`。VS Code のターミナルなど）だと vitest が自分を2回読み込んで「Cannot read properties of undefined (reading 'config')」で失敗するので、大文字にそろえてから起動している（`npx vitest` を直接使うときは `C:\…` で開いたターミナルから）。
 
 メロディ・コード進行・アレンジの生成ルールを変えたら、`npm run quality` で前後を比べる（`tools/quality-report.mjs`）。シンプルモードの「生成する」と同じ手順で全ジャンル×雰囲気を100曲ずつ作り、自動チェックの合格率・総合点と多様さ（進行・メロディのリズムの種類、同じメロディが出ないか）を出す。乱数はシードで決まるので、変更前に `--save before`、変更後に `--compare before` で差が出る（`--detail` でジャンル×雰囲気ごと、`--genre` で絞り込み、`--seed` / `--runs` / `--key`。結果は `output/quality/`）。
 
@@ -30,11 +35,13 @@ grow のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルド
 ## ディレクトリ構成
 
 ```
-electron/main.ts        Electron メインプロセス（ウィンドウ生成と、出力フォルダ output/ への保存・作業ファイルのダイアログの IPC）
+electron/main.ts        Electron メインプロセス（ウィンドウ生成と、出力フォルダ output/ への保存・作業ファイルのダイアログの IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ grow（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   grow の wasm（npm run grow:wasm で作る。Grow.ts が読む）
 output/                 曲の出力フォルダ（projects = 作業ファイル、audio = WAV / MP3、midi = MIDI、quality = 一括計測の結果。中身は Git 管理外）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
@@ -210,6 +217,7 @@ src/engine/
 - ピアノロールの入力設定（音符長 `pianoRollLength`・スケールロック `pianoRollScaleLock`・オクターブ `pianoRollOctave`）は AppState に置く。スケールロックはコード進行の `scaleLock` とは別。スケールの7音は `SCALE_TONES`（core＋accent）から作る。選択中の音と鍵盤入力の位置は表示上の一時的な状態としてモジュール内に持つ。
 - ピアノロールの操作：クリックで配置（そのままドラッグで長さ）、音をドラッグで移動、右端で長さ変更、右クリック／Delete で削除、目盛りクリックで鍵盤入力の位置、A〜K（W E T Y U が黒鍵）で鍵盤入力、Z / X でオクターブ切替。
 - ミュージックリスト（`SongLibrary.ts`）は曲の内容（`SONG_FIELDS`：モード・ジャンル・キー・BPM・小節数・パターン・メロディ・音色・アレンジ・パートON/OFF・音量）を localStorage に保存する。画面・タブ・ピアノロールの入力設定は保存しない。曲の内容に関わる項目を AppState に足したら `SONG_FIELDS`（`AppState.ts` に定義）にも足す。`SONG_FIELDS` は曲ファイルと元に戻す／やり直すの対象にもなる。
+  - localStorage に書き込めない（容量オーバーなど）と `writeSongs` が `SongStorageError`（`quota` = 容量オーバーか）を投げ、一覧は書き込む前のまま残る（`saveCurrentSong` は `songId` も変えない）。画面側（`MusicListScreen.ts`）は `saveToList`（「♪ 保存」。失敗したら作業ファイルへの保存 `saveProjectFile()` を勧める）と `withStorage`（名前の変更・お気に入り・削除）で受けて知らせる。曲ファイルの読み込みは今までどおりファイルごとのエラーとして出す。ミュージックリストを書き換える操作を足すときも、どちらかで囲む。
 - 曲ファイル：ミュージックリストのツールバーの「ファイルを読み込む」「すべて書き出す」と、曲の ⋮ メニューの「ファイルに書き出す」。形式は `{ format: "toniq-song", version, exportedAt, songs: SavedSong[] }` の JSON（拡張子 `.toniq.json`）。読み込んだ曲は新しい ID で一覧に追加する（上書きしない）。コード進行・ドラムなど鳴らすのに必要な項目がない曲は飛ばし、足りない項目は `loadSong()` と同じく初期値で補う。形式を変えるときは `FILE_VERSION` を上げ、古い形式も読めるようにする。
 - 元に戻す／やり直す（`History.ts`）：`setState` の直前（`onBeforeSetState`）に、`SONG_FIELDS`（モードを除く）が変わるなら変更前のスナップショットを積む（最大100）。押してから離すまで（ドラッグ・ノブ）と、操作が途切れるまで（600ms）の変更は1つにまとめる。シンプルモード・カスタムモードの画面でだけ使え、文字の入力欄ではブラウザ標準の元に戻すになる。
   - 表示用の一時的な差し替え（ジャンルのサンプル試聴など）は `withoutHistory()` で囲んで履歴に残さない。描画関数の中で曲の内容を `setState` しない（やり直しの履歴が消える）。
@@ -262,8 +270,6 @@ src/engine/
 
 ## 既知の問題（修正時に注意）
 
-- `npm run electron:dev` は、vite-plugin-electron が起動する Electron に加えて `concurrently` でもう1つ起動する。後者には `NODE_ENV` が渡らないので `electron/main.ts` の `isDev` が false になり、`dist/index.html` を開こうとする（未修正。開発は `npm run dev` を使う）。
-- 曲の保存（`SongLibrary.ts` の `writeSongs`）は localStorage の容量を超えると例外になり、保存に失敗したことを画面に出さない。
 - ドラムのワンショット音源は `public/samples/drums/default/` にしかなく（`rim` もない）、ジャンルのフォルダは空、`trance/` フォルダはない。
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
 - MIDI書き出し（`exportMidi()`。AppState を読む）は再生と同じ音の並びを使う：曲全体の並び（`songProgression()` / `songMelody()`。セクション・エンディング込み）から、メロディ・コード（`chordEvents()`。コードのリズム込み）・パッド（`padEvents()`）・アルペジオ（`arpNotes()`）・ベース（`bassNotes()`。ジャンル別パターン、強さは `bassVelocity()`）・ドラム（チャンネル10、GM の音の番号。ブロックごとのパターン・フィル・エンディングも反映。`drumStepHits()`）。曲全体（`AppState.bars` 小節）をループで埋め、アレンジのブロックの外・OFF のパートは書き出さない。シグネチャー・FX / SE は音色が特徴のパートなので書き出さない。音色（GM の番号）は目安。強さの揺らし・ストラムは入れない。

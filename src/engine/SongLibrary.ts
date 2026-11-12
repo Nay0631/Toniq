@@ -31,8 +31,35 @@ export function listSongs(): SavedSong[] {
   }
 }
 
+// ミュージックリストに書き込めなかった（localStorage の容量オーバーなど）。画面側で知らせる
+export class SongStorageError extends Error {
+  readonly quota:    boolean;  // 容量オーバーか
+  readonly original: unknown;  // localStorage が投げた元の例外
+  constructor(quota: boolean, cause: unknown) {
+    super(quota
+      ? "ミュージックリストの保存容量がいっぱいです"
+      : "ミュージックリストに書き込めませんでした");
+    this.name     = "SongStorageError";
+    this.quota    = quota;
+    this.original = cause;
+  }
+}
+
+// 容量オーバーの例外か（ブラウザによって名前・番号が違う）
+function isQuotaError(e: unknown): boolean {
+  if (!(e instanceof Error) && !(typeof DOMException !== "undefined" && e instanceof DOMException)) return false;
+  const err = e as DOMException;
+  return err.name === "QuotaExceededError" || err.name === "NS_ERROR_DOM_QUOTA_REACHED" || err.code === 22 || err.code === 1014;
+}
+
+// 書き込めなければ SongStorageError を投げる（書き込み前の一覧はそのまま残る）
 function writeSongs(songs: SavedSong[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
+  } catch (e) {
+    console.error("ミュージックリストの保存に失敗:", e);
+    throw new SongStorageError(isQuotaError(e), e);
+  }
 }
 
 export function findSong(id: string | null): SavedSong | undefined {
@@ -55,7 +82,8 @@ function defaultName(songs: SavedSong[]): string {
   return `${base} #${n}`;
 }
 
-// 今の曲を保存する。リストから開いた曲（AppState.songId）なら上書き、そうでなければ新しく追加する
+// 今の曲を保存する。リストから開いた曲（AppState.songId）なら上書き、そうでなければ新しく追加する。
+// 書き込めなければ SongStorageError を投げる（songId は変えない）
 export function saveCurrentSong(): SavedSong {
   const songs = listSongs();
   const now   = Date.now();

@@ -17,17 +17,33 @@ function confirmDiscard(): boolean {
   return confirm("編集中の曲は保存されていません。作業ファイルを開くと失われますが、よろしいですか？");
 }
 
-async function saveProject(btn: HTMLButtonElement): Promise<void> {
+// 作業ファイルに保存する。保存したら true（キャンセルなら false）
+async function writeProject(): Promise<boolean> {
   const text = projectFileText();
   const api  = window.toniqFiles;
   if (api) {
     const file = await api.saveProject(songFileName(currentSongName()), text, getState().projectPath);
-    if (!file) return;  // キャンセル
+    if (!file) return false;  // キャンセル
     setState({ projectPath: file });
     console.log("作業ファイルを保存:", file);
   } else {
     Playback.downloadBlob(new Blob([text], { type: "application/json" }), songFileName(currentSongName()));
   }
+  return true;
+}
+
+// ほかの画面から作業ファイルの保存を呼ぶ（ミュージックリストに保存できなかったときの代わり）
+export async function saveProjectFile(): Promise<void> {
+  try {
+    if (await writeProject()) renderButtons();
+  } catch (e) {
+    console.error("作業ファイルの保存エラー:", e);
+    alert(`作業ファイルの保存に失敗しました。\n${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
+async function saveProject(btn: HTMLButtonElement): Promise<void> {
+  if (!(await writeProject())) return;
   btn.dataset.saved = "1";
   btn.textContent = "✓ 保存しました";
   setTimeout(() => {

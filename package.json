@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "test": "node tools/test.mjs",
+    "electron:dev": "vite",
     "electron:build": "vite build && electron-builder",
     "grow:wasm": "node grow/wasm/build.mjs",
     "grow:render": "node grow/tools/render.mjs",
@@ -23,14 +24,13 @@
   },
   "devDependencies": {
     "@types/node": "^26.5.0",
-    "concurrently": "^9.2.5",
     "cross-env": "^7.0.3",
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vite-plugin-electron": "^1.1.2",
-    "wait-on": "^8.0.5"
+    "vitest": "^5.0.5"
   },
   "build": {
     "appId": "com.toniq.app",
