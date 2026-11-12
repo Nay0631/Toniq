@@ -12,7 +12,6 @@ import { initSimpleScreen } from "./ui/SimpleScreen";
 import { initCustomScreen } from "./ui/CustomScreen";
 import { initPianoRoll } from "./ui/PianoRollTab";
 import { initMusicListScreen } from "./ui/MusicListScreen";
-import { initProjectFileControls } from "./ui/ProjectFileControls";
 import { initQuizScreen } from "./ui/QuizScreen";
 import { initTheme } from "./ui/Theme";
 import { initHistoryControls } from "./ui/HistoryControls";
@@ -52,7 +51,6 @@ window.addEventListener("load", () => {
   initCustomScreen();
   initPianoRoll();
   initMusicListScreen();
-  initProjectFileControls();
   initQuizScreen();
   initHistoryControls();
   initGlossary();

@@ -35,11 +35,11 @@ grow のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルド
 ## ディレクトリ構成
 
 ```
-electron/main.ts        Electron メインプロセス（ウィンドウ生成と、出力フォルダ output/ への保存・作業ファイルのダイアログの IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
+electron/main.ts        Electron メインプロセス（ウィンドウ生成と、出力フォルダ output/ への保存・フォルダを開く IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ grow（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   grow の wasm（npm run grow:wasm で作る。Grow.ts が読む）
-output/                 曲の出力フォルダ（projects = 作業ファイル、audio = WAV / MP3、midi = MIDI、quality = 一括計測の結果。中身は Git 管理外）
+output/                 曲の出力フォルダ（audio = WAV / MP3、midi = MIDI、quality = 一括計測の結果。中身は Git 管理外）
 tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
@@ -52,10 +52,9 @@ src/ui/
   ArrangerTab.ts          アレンジャーのタイムライン（セクションの行、パートごとのブロックの配置・移動・長さ変更・削除、再生位置）と、テスト中の機能の ON/OFF・自動チェックの欄
   MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・音量のフェーダー・レベルメーター、マスターのメーター）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通）
-  MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・⋮メニュー）と両モードの「♪ 保存」ボタン
+  MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
   QuizScreen.ts           音楽クイズ画面（カテゴリ・出題モードの切り替え、出題・採点、鍵盤／選択肢での回答、出題設定）
   Controls.ts             シンセサイザー風のノブ（attachKnob）・縦フェーダー（attachFader。ミキサー）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
-  ProjectFileControls.ts  作業ファイルの保存（両モードの情報バー「⇩ 作業ファイル」）・開く（メニューのカード・ミュージックリスト）と「出力フォルダ」ボタン
   ExportProgress.ts       音声の書き出し（WAV / MP3）の進み具合のダイアログ（目安の説明・段階・進み具合・経過時間。両モード共通の exportAudioWithProgress）
   FileNameDialog.ts       書き出すファイル名を決めるダイアログ（WAV / MP3 / MIDI。初期値はリストの曲名、未保存なら toniq_ジャンル_雰囲気（カスタムモードはキー））
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
@@ -82,7 +81,7 @@ src/data/               楽曲データとデータ型
   mix_presets.json        ジャンル別マスターエフェクト設定（リバーブ送り量・EQ・コンプ・リミッター・持ち上げ gain）
 src/engine/
   AppState.ts             アプリ状態の唯一の保持場所
-  SongLibrary.ts          ミュージックリストの保存・読み込み（localStorage の toniq.songs）と曲ファイル（.toniq.json）の書き出し・読み込み、作業ファイル（projectFileText / loadProjectFile）
+  SongLibrary.ts          ミュージックリストの保存・読み込み（localStorage の toniq.songs）と曲ファイル（.toniq.json）の書き出し・読み込み
   OutputFiles.ts          書き出したファイルの保存先（Electron は output/<種類>/ に直接保存、ブラウザはダウンロード。saveOutput）
   History.ts              元に戻す／やり直すの履歴（setState の直前に曲の内容のスナップショットを積む）
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
@@ -225,7 +224,7 @@ src/engine/
 - ピアノロールの入力設定（音符長 `pianoRollLength`・スケールロック `pianoRollScaleLock`・オクターブ `pianoRollOctave`）は AppState に置く。スケールロックはコード進行の `scaleLock` とは別。スケールの7音は `SCALE_TONES`（core＋accent）から作る。選択中の音と鍵盤入力の位置は表示上の一時的な状態としてモジュール内に持つ。
 - ピアノロールの操作：クリックで配置（そのままドラッグで長さ）、音をドラッグで移動、右端で長さ変更、右クリック／Delete で削除、目盛りクリックで鍵盤入力の位置、A〜K（W E T Y U が黒鍵）で鍵盤入力、Z / X でオクターブ切替。
 - ミュージックリスト（`SongLibrary.ts`）は曲の内容（`SONG_FIELDS`：モード・ジャンル・キー・BPM・小節数・パターン・メロディ・音色・アレンジ・パートON/OFF・音量）を localStorage に保存する。画面・タブ・ピアノロールの入力設定は保存しない。曲の内容に関わる項目を AppState に足したら `SONG_FIELDS`（`AppState.ts` に定義）にも足す。`SONG_FIELDS` は曲ファイルと元に戻す／やり直すの対象にもなる。
-  - localStorage に書き込めない（容量オーバーなど）と `writeSongs` が `SongStorageError`（`quota` = 容量オーバーか）を投げ、一覧は書き込む前のまま残る（`saveCurrentSong` は `songId` も変えない）。画面側（`MusicListScreen.ts`）は `saveToList`（「♪ 保存」。失敗したら作業ファイルへの保存 `saveProjectFile()` を勧める）と `withStorage`（名前の変更・お気に入り・削除）で受けて知らせる。曲ファイルの読み込みは今までどおりファイルごとのエラーとして出す。ミュージックリストを書き換える操作を足すときも、どちらかで囲む。
+  - localStorage に書き込めない（容量オーバーなど）と `writeSongs` が `SongStorageError`（`quota` = 容量オーバーか）を投げ、一覧は書き込む前のまま残る（`saveCurrentSong` は `songId` も変えない）。画面側（`MusicListScreen.ts`）は `saveToList`（「♪ 保存」。編集中の曲は消えないので、整理してから保存し直すよう知らせる）と `withStorage`（名前の変更・お気に入り・削除）で受けて知らせる。曲ファイルの読み込みは今までどおりファイルごとのエラーとして出す。ミュージックリストを書き換える操作を足すときも、どちらかで囲む。
 - 曲ファイル：ミュージックリストのツールバーの「ファイルを読み込む」「すべて書き出す」と、曲の ⋮ メニューの「ファイルに書き出す」。形式は `{ format: "toniq-song", version, exportedAt, songs: SavedSong[] }` の JSON（拡張子 `.toniq.json`）。読み込んだ曲は新しい ID で一覧に追加する（上書きしない）。コード進行・ドラムなど鳴らすのに必要な項目がない曲は飛ばし、足りない項目は `loadSong()` と同じく初期値で補う。形式を変えるときは `FILE_VERSION` を上げ、古い形式も読めるようにする。
 - 元に戻す／やり直す（`History.ts`）：`setState` の直前（`onBeforeSetState`）に、`SONG_FIELDS`（モードを除く）が変わるなら変更前のスナップショットを積む（最大100）。押してから離すまで（ドラッグ・ノブ）と、操作が途切れるまで（600ms）の変更は1つにまとめる。シンプルモード・カスタムモードの画面でだけ使え、文字の入力欄ではブラウザ標準の元に戻すになる。
   - 表示用の一時的な差し替え（ジャンルのサンプル試聴など）は `withoutHistory()` で囲んで履歴に残さない。描画関数の中で曲の内容を `setState` しない（やり直しの履歴が消える）。
@@ -236,12 +235,12 @@ src/engine/
   - ON/OFF は設定画面で切り替える（`AppState.tooltips`、localStorage の `toniq.tooltips` = `on` / `off`、`<html data-tooltips>`。OFF では下線も出さない）。`<head>` でも描画前に `data-tooltips` を付ける。曲の内容ではないので `SONG_FIELDS` には入れない。
 - 設定画面（`SettingsScreen.ts`、`data-screen="settings"`）はメニューの横長の「設定」カードから開く。端末ごとの設定（配色・スキン・音名の表記・ループ再生・ドラムの音源・ツールチップ）を集める。曲に保存する項目は置かない。設定を足すときは AppState に項目を足し、保存は担当のモジュールが localStorage（`toniq.*`）に行い、表示の切り替えは `<html data-*>` で行う。
   - 最後の「ヘルプ」欄（`index.html` の `.settings-help`。`<details>` の開閉式で、JS はなし）に、見ただけではわかりにくい操作（ピアノロール・アレンジャーのマウス・キー操作、ノブの Shift・ホイール、タップテンポ、元に戻すのショートカット、保存の種類、試聴、テスト中の機能）を書いている。操作を足す・変えたらここも直す。
-- 作業ファイル・出力フォルダ：
-  - 作業ファイルは今の曲1曲分の曲ファイル（`.toniq.json`、ミュージックリストの曲ファイルと同じ形式）。保存は `projectFileText()`、開くのは `loadProjectFile()`（今の曲として読み込み、ミュージックリストには追加しない。`songId` は `null`、開いた・保存した場所は `AppState.projectPath`。曲の内容ではないので `SONG_FIELDS` には入れない。`loadSong` / `newSong` で `null` に戻す）。
-  - Electron では保存・開くのダイアログを `output/projects` から始め、前回の保存先があればそこを出す。WAV / MP3 / MIDI は書き出す前に `askFileName()`（`FileNameDialog.ts`。Electron では `prompt()` が使えないので自前のダイアログ）でファイル名を決め、`saveOutput()`（`OutputFiles.ts`）で `output/audio` / `output/midi` に直接保存し（同名なら「 (2)」を付けて上書きしない）、保存後にフォルダを開くか聞く。
-  - 出力フォルダの場所は開発時が toniq フォルダの `output/`、インストール版は Toniq.exe と同じ場所の `output/`（書き込めなければ「ドキュメント/Toniq/output」）。起動時に作る。
-  - ブラウザで開いたとき（`window.toniqFiles` がない）は、保存はダウンロード、開くのはファイル選択になり、「出力フォルダ」ボタンは隠す。
-- `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（未保存の曲があれば確認する）。
+- 作業ファイル（今の曲1曲分を .toniq.json に保存・開く機能。情報バーの「⇩ 作業ファイル」・メニューの「作業ファイルを開く」・`AppState.projectPath`・`output/projects`）は、ミュージックリストへの保存とほぼ同じなので廃止した。曲をファイルで移すときはミュージックリストの曲ファイル（「ファイルに書き出す」「すべて書き出す」「ファイルを読み込む」）を使う。
+- 出力フォルダ：
+  - Electron では WAV / MP3 / MIDI を、書き出す前に `askFileName()`（`FileNameDialog.ts`。Electron では `prompt()` が使えないので自前のダイアログ）でファイル名を決め、`saveOutput()`（`OutputFiles.ts`）で `output/audio` / `output/midi` に直接保存し（同名なら「 (2)」を付けて上書きしない）、保存後にフォルダを開くか聞く。
+  - 出力フォルダの場所は開発時が toniq フォルダの `output/`、インストール版は Toniq.exe と同じ場所の `output/`（書き込めなければ「ドキュメント/Toniq/output」）。起動時に作る。 ミュージックリストのツールバーの「出力フォルダ」ボタン（`MusicListScreen.ts`）で開く。
+  - ブラウザで開いたとき（`window.toniqFiles` がない）は、書き出しはダウンロードになり、「出力フォルダ」ボタンは隠す。
+- `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（未保存の曲があれば確認する）。 ミュージックリストの曲の行には「編集」ボタン（`data-action="open"`。曲のモードで開く）を出す（以前は ⋮ メニューの中にあって気づきにくかったため。曲名のダブルクリックでも開く）。⋮ メニューは名前の変更・ファイルに書き出す・削除。
 - 両モードの情報バーの「＋ 新規作成」は、確認のうえ再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
 - 配色は選び方を `AppState.themeMode`（`light` / `dark` / `system` = OS に合わせる）、実際の配色を `AppState.theme` に置き、`Theme.ts` が `<html data-theme>` に反映して localStorage の `toniq.theme` に保存する（未保存か `system` なら OS の設定に合わせ、OS の配色が変わったら追従する。ヘッダーのボタンはライト／ダークを明示的に選ぶ。曲の内容ではないので `SONG_FIELDS` には入れない）。`index.html` の `<head>` でも同じキーを読んで描画前に `data-theme` を付ける。
 - カスタムモードのスキン（`AppState.skin`。UI 表示名は デフォルト／フラット／スタジオ／ポップ）：

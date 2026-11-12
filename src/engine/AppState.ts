@@ -85,9 +85,6 @@ export interface AppState {
   // ミュージックリストのどの曲を編集中か（null = 未保存の曲。保存すると新しく追加される）
   songId: string | null;
 
-  // 開いている・最後に保存した作業ファイル（.toniq.json）の場所（null = なし。Electron のときだけ使う。SONG_FIELDS には入れない）
-  projectPath: string | null;
-
   // ミュージックリストの絞り込み（曲名の検索・ジャンル（"" = すべて）・お気に入りだけ）と並び順
   musicListQuery:     string;
   musicListGenre:     string;
@@ -206,7 +203,6 @@ export const defaultState: AppState = {
   tooltips:    true,
   generated:   false,
   songId:      null,
-  projectPath: null,
 
   musicListQuery:     "",
   musicListGenre:     "",
