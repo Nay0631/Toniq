@@ -77,7 +77,7 @@ src/engine/
   History.ts              元に戻す／やり直すの履歴（setState の直前に曲の内容のスナップショットを積む）
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
-  LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝周回ごとのセクション・パート・gap / build、各パートが鳴る小節の判定 arrangementGate、周回表示）
+  LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、各パートが鳴る小節の判定 arrangementGate、周回表示）
   SongForm.ts             曲の構成（セクション Aメロ／サビ、曲全体のコード進行 songProgression・メロディ songMelody、エンディング、ドラムのフィルの小節、Aメロ・サビのメロディ生成）
   QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。アレンジャーのテスト中の機能の欄）
   Groove.ts               グルーヴ（スウィング applySwing・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain）
@@ -129,7 +129,7 @@ src/engine/
 - パート名は `"drum" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "fx"`（`LayerName`）で統一。UI 表示名はドラム／コード／ベース／アルペジオ／パッド／シグネチャー／メロディ／FX/SE。
 - 各パートモジュールは `init*Synth()` / `load*()` / `dispose*()` の形にそろえる。`load*` は既存の Part を破棄してから作り直す。
 - ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ` / `ハウス` / `トランス` / `アンビエント`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `bass_params` / `arp_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
-- ジャンルは今後も追加・削除がありうる。追加するときは上の6つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE`（周回ごとの `section` も）にそろえて追加する。ドラムのフィルは `DrumEngine.ts` の `FILLS`（なければローファイの定義）、ゴーストノートは `GHOST_RATE`（なければ入れない）、メロディの掛留の確率は `MelodyGenerator.ts` の `DEFAULT_SUSPENSION`（`melody_params.json` の `suspension` があればそちら）。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。シグネチャーの鳴り方は `SignaturePlayer.ts` の `SIGNATURES`（なければローファイの定義で鳴る）。FX の標準の種類は `FxPlayer.ts` の `GENRE_FX`（なければライザー）。
+- ジャンルは今後も追加・削除がありうる。追加するときは上の6つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE`（A A サビ A の4セクション。`section` も）にそろえて追加する。ドラムのフィルは `DrumEngine.ts` の `FILLS`（なければローファイの定義）、ゴーストノートは `GHOST_RATE`（なければ入れない）、メロディの掛留の確率は `MelodyGenerator.ts` の `DEFAULT_SUSPENSION`（`melody_params.json` の `suspension` があればそちら）。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。シグネチャーの鳴り方は `SignaturePlayer.ts` の `SIGNATURES`（なければローファイの定義で鳴る）。FX の標準の種類は `FxPlayer.ts` の `GENRE_FX`（なければライザー）。
   - UI のジャンル一覧は `index.html` の3か所（シンプルモードのチップ `data-genre`、カスタムモードの `#c-genre`、曲一覧の `data-ml-genre`）と `CustomScreen.ts` の `APP_GENRES`（ドラムのカテゴリの並び順）、`SimpleScreen.ts` の `GENRE_DESCRIPTIONS`（ジャンルの一言の説明）と `MOOD_GENRES`（雰囲気ごとに選べるジャンル。どれか1つ以上の雰囲気に入れる）にも足す。
   - `chord_progressions.json` / `drum_patterns.json` の `genre` タグにも新ジャンルを付ける。シンプルモードの最初の候補は `easy_mode_table.json` の ID から、差し替え候補はそれに加えてジャンル・雰囲気のタグが一致するものから選ばれる。コード進行のディグリー・`type` が `degree_resolver.ts` に未定義だと鳴らすときに例外になるので、足したら確かめる。
   - 4/4・16ステップの前提で表せないジャンル（スウィング・3連符、32分のハイハットロール、3拍子など）は今の仕組みでは作れない。
@@ -168,8 +168,8 @@ src/engine/
 - 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
 - 拍子の変更（3/4 など）は保留中。現状は 4/4・16ステップ前提。
 - 「小節数」は曲全体の最大の長さを表す（コード進行1周の長さではない）。コード進行・ドラムはその長さに達するまでループし、アレンジャーのタイムラインと書き出しの長さもこの値に合わせる。
-- アレンジ（`AppState.arrangement`）はパートごとのブロック（`start` / `length`、小節・0始まり）の並び。`null` はジャンルの標準アレンジで、`LOOP_SCHEDULE` をコード進行の長さで並べて自動で組む（ジャンル・コード進行・小節数・セクションの変更に追従）。アレンジャーで編集すると初めて AppState に書き込まれ、「標準に戻す」で `null` に戻る（セクションも `null` に戻す）。シンプルモードの生成時も `null` に戻す。
-  - `LOOP_SCHEDULE` は周回ごとの `{ section, parts, gap?, build? }`。パートは足すだけでなく、ブレイクで抜く周回もある（標準でも抜き差しがあるようにする。初期状態で OFF のパッド・アルペジオ・シグネチャーだけを抜いても聞こえないので、ドラム・ベースなどで作る）。`gap` は次がサビに変わる周回の最後の1小節だけ抜くパート（サビ前の空白）、`build` は周回の最後の1小節だけ足すパート（ブレイクの終わりにドラムを戻してフィルでつなぐ）。どちらもコード進行が2小節以上で、曲の最後の周回でないときだけ。定義（4周）より長い曲は2周目以降の定義をくり返す。
+- アレンジ（`AppState.arrangement`）はパートごとのブロック（`start` / `length`、小節・0始まり）の並び。`null` はジャンルの標準アレンジで、`LOOP_SCHEDULE` を小節ごとに展開して自動で組む（ジャンル・コード進行・小節数・セクションの変更に追従）。アレンジャーで編集すると初めて AppState に書き込まれ、「標準に戻す」で `null` に戻る（セクションも `null` に戻す）。シンプルモードの生成時も `null` に戻す。
+  - `LOOP_SCHEDULE` は8小節（`SECTION_BARS`）のセクションごとの `{ section, parts, add?, drop?, gap?, build? }` で、どのジャンルも A → A → サビ → A の順（32小節で AABA）。1セクションはコード進行が4小節なら2周、2小節なら4周、8小節なら1周（`loopsPerSection`）。同じ A が続いても単調にならないよう、1つ目と2つ目の A は編成を変え、`add` / `drop` でセクションの後半からパートを足す・抜く（サビの後半でドロップさせる、最後の A で薄くしていく など）。パートは足すだけでなく、ブレイクで抜くセクションもある（標準でも抜き差しがあるようにする。初期状態で OFF のパッド・アルペジオ・シグネチャーだけを抜いても聞こえないので、ドラム・ベースなどで作る）。`gap` は次がサビに変わる周回の最後の1小節だけ抜くパート（サビ前の空白）、`build` はセクションの最後の1小節だけ足すパート（ブレイクの終わりにドラムを戻してフィルでつなぐ）。どちらもコード進行が2小節以上で、曲の最後の小節でないときだけ。定義（4セクション）より長い曲は2つ目以降の定義（A → サビ → A）をくり返す。
 - 読み取りは `getArrangement()`（`LoopArranger.ts`）を通す。`AppState.arrangement` を直接見ない。
 - セクション（`SongForm.ts`）：周回（コード進行1周）ごとに Aメロ（A）／サビ（B）を持つ（`AppState.sections`。`null` = `LOOP_SCHEDULE` の `section`。`SONG_FIELDS` に含む）。サビは `AppState.chorusPattern`（サビの進行）と `chorusMelodyNotes`（サビのメロディ）で鳴らす。
   - サビの進行は Aメロの進行と同じ長さ・`base_scale` のものだけ使う（`chorusFits`。合わない・`null` なら Aメロの進行で鳴らす）。候補は `chorusCandidates()`、自動の選び方は `pickChorus()`（`SimpleModeResolver.ts`。ジャンル・雰囲気が合うものから）。シンプルモードの生成・コード進行の差し替え・起動時・新規作成で選び、カスタムモードは「コード進行」欄の「サビ」で選ぶ（「なし」= `null`）。Aメロの進行を変えて合わなくなったら選び直す（「なし」ならそのまま）。DB に進行を足すときは、同じ長さ・スケールの相方があるようにする（自動チェックの「コード進行DB」で確かめられる）。

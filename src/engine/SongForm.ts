@@ -39,7 +39,7 @@ export function chorusProgression(): ChordProgression | null {
 export function getSections(): Section[] {
   const s = getState();
   const loops = songLoops();
-  const base  = defaultSections(s.genre, loops);
+  const base  = defaultSections(s.genre, loops, loopBars());
   return base.map((section, i) => s.sections?.[i] ?? section);
 }
 
