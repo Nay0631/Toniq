@@ -17,6 +17,7 @@ const char* const toggleNames[]    = { "オフ", "オン" };
 const char* const modSourceNames[] = { "なし", "ベロシティ", "EG 2", "LFO 1", "LFO 2", "フィルター EG", "キー", "ランダム" };
 const char* const modDestNames[]   = { "高さ", "OSC 2 の高さ", "カットオフ", "パルス幅", "音量", "FM", "リング", "LFO 1 の速さ" };
 const char* const curveNames[]     = { "指数", "直線" };
+const char* const distTypeNames[]  = { "チューブ", "ハード", "フォールド", "ビット" };
 
 // LFO のテンポ同期（1周の長さを拍で表す。0 = 同期しない＝「速さ」の Hz で揺らす）
 const char* const lfoSyncNames[] = { "オフ（Hz）", "1/1", "1/2", "1/4", "1/8", "1/16",
@@ -123,6 +124,19 @@ const ParamInfo table[] = {
     { "drift",      "ボイス", "ドリフト",   K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
 
     { "fx_drive",     "ドライブ", "ドライブ", K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+
+    { "dist_type",  "ディストーション", "タイプ", K::choice,     0, 3, 0, 0, U::none, GROW_CHOICES (distTypeNames) },
+    { "dist_drive", "ディストーション", "歪み",   K::continuous, 0, 1, 0.5f, 0, U::percent, GROW_NO_CHOICES },
+    { "dist_tone",  "ディストーション", "トーン", K::continuous, 500, 20000, 20000, 4000, U::hertz, GROW_NO_CHOICES },
+    { "dist_mix",   "ディストーション", "量",     K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+
+    { "comp_mix",       "コンプレッサー", "量",             K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "comp_threshold", "コンプレッサー", "スレッショルド", K::continuous, -48, 0, -18, 0, U::decibels, GROW_NO_CHOICES },
+    { "comp_ratio",     "コンプレッサー", "レシオ",         K::continuous, 1, 20, 4, 4, U::ratio, GROW_NO_CHOICES },
+    { "comp_attack",    "コンプレッサー", "アタック",       K::continuous, 0.0005f, 0.2f, 0.01f, 0.02f, U::seconds, GROW_NO_CHOICES },
+    { "comp_release",   "コンプレッサー", "リリース",       K::continuous, 0.01f, 2, 0.15f, 0.2f, U::seconds, GROW_NO_CHOICES },
+    { "comp_makeup",    "コンプレッサー", "メイクアップ",   K::continuous, 0, 24, 0, 0, U::decibels, GROW_NO_CHOICES },
+
     { "chorus_mix",   "コーラス", "量",       K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "chorus_rate",  "コーラス", "速さ",     K::continuous, 0.05f, 5, 0.8f, 1, U::hertz, GROW_NO_CHOICES },
     { "chorus_depth", "コーラス", "深さ",     K::continuous, 0, 1, 0.3f, 0, U::percent, GROW_NO_CHOICES },
@@ -219,6 +233,7 @@ int formatParam (int index, float v, char* out, int size)
         case ParamUnit::percent:   return std::snprintf (out, (size_t) size, "%d%%", (int) std::lround (v * 100.0f));
         case ParamUnit::cents:     return std::snprintf (out, (size_t) size, "%d ct", (int) std::lround (v));
         case ParamUnit::decibels:  return std::snprintf (out, (size_t) size, "%.1f dB", v);
+        case ParamUnit::ratio:     return std::snprintf (out, (size_t) size, "%.1f : 1", v);
         case ParamUnit::semitones: return std::snprintf (out, (size_t) size, "%s%.1f 半音", v > 0.0f ? "+" : "", v);
         case ParamUnit::signedInteger:
             return std::snprintf (out, (size_t) size, "%s%d", v > 0.0f ? "+" : "", (int) std::lround (v));
@@ -226,6 +241,7 @@ int formatParam (int index, float v, char* out, int size)
             if (v >= 1000.0f) return std::snprintf (out, (size_t) size, "%.2f kHz", v / 1000.0f);
             return std::snprintf (out, (size_t) size, v < 10.0f ? "%.2f Hz" : "%.0f Hz", v);
         case ParamUnit::seconds:
+            if (v < 0.01f) return std::snprintf (out, (size_t) size, "%.1f ms", v * 1000.0f);
             if (v < 1.0f) return std::snprintf (out, (size_t) size, "%d ms", (int) std::lround (v * 1000.0f));
             return std::snprintf (out, (size_t) size, "%.2f s", v);
         case ParamUnit::none:
@@ -310,6 +326,16 @@ GrowParams makeParams (const float* values, double bpm)
     p.drift        = value (values, drift);
 
     p.drive         = value (values, drive);
+    p.distType      = (DistType) std::clamp (intValue (values, distType), 0, 3);
+    p.distDrive     = value (values, distDrive);
+    p.distToneHz    = value (values, distTone);
+    p.distMix       = value (values, distMix);
+    p.compMix         = value (values, compMix);
+    p.compThresholdDb = value (values, compThreshold);
+    p.compRatio       = value (values, compRatio);
+    p.compAttack      = value (values, compAttack);
+    p.compRelease     = value (values, compRelease);
+    p.compMakeupDb    = value (values, compMakeup);
     p.chorusMix     = value (values, chorusMix);
     p.chorusRate    = value (values, chorusRate);
     p.chorusDepth   = value (values, chorusDepth);

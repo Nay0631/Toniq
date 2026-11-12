@@ -17,6 +17,7 @@ namespace sync   { constexpr float n4 = 3, n8 = 4, n16 = 5; }
 namespace src    { constexpr float eg2 = 2, lfo1 = 3, lfo2 = 4, fenv = 5; }
 namespace dest   { constexpr float cutoff = 2, amp = 4, lfo1Rate = 7; }
 namespace lfoW   { constexpr float saw = 2, square = 3; }
+namespace dist   { constexpr float tube = 0, hard = 1, fold = 2, bit = 3; }
 
 // 各プリセットの master（出力の大きさ）は、聞こえる大きさ（モーメンタリーラウドネスの最大）が -18 LUFS になるようにそろえた値
 // （npm run grow:render -- --suggest で測る。FX は組み合わせる音どうしの差を残した目標。ヒス・プチプチはわざと小さい）。
@@ -47,7 +48,10 @@ const Value lead[] = {
     { delayMix, 0.2f }, { reverbMix, 0.2f },
     { drift, 0.3f },
     { filterDrive, 0.2f },
-    { master, -3.5f },
+    // 薄く歪ませて芯を出し、コンプで音量の段差をならす
+    { distType, dist::tube }, { distDrive, 0.2f }, { distTone, 9000 }, { distMix, 0.25f },
+    { compMix, 0.7f }, { compThreshold, -16 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.15f },
+    { master, -2.3f },
 };
 
 // 7枚重ねたノコギリ波を左右いっぱいに広げ、1オクターブ上も重ねる（EDM・トランス）
@@ -59,7 +63,9 @@ const Value supersaw[] = {
     { chorusMix, 0.25f }, { delayMix, 0.2f }, { reverbMix, 0.3f },
     { drift, 0.25f },
     { filterVelocity, 0.3f },
-    { master, -7.6f },
+    // ゆっくりしたアタックのコンプで和音をまとめる（グルー）
+    { compMix, 0.6f }, { compThreshold, -12 }, { compRatio, 2.5f }, { compAttack, 0.02f }, { compRelease, 0.2f },
+    { master, -6.1f },
 };
 
 // フィルターが素早く閉じる、弦をはじいたような音（ハウス）
@@ -72,7 +78,9 @@ const Value pluck[] = {
     { filterVelocity, 0.3f },
     { pitchEnvAmount, 12 },
     { pitchEnvTime, 0.025f },
-    { master, 1.6f },
+    // アタックの遅いコンプで頭を残し、はじいた感じを強める
+    { compMix, 1 }, { compThreshold, -22 }, { compRatio, 4 }, { compAttack, 0.015f }, { compRelease, 0.12f },
+    { master, 3.2f },
 };
 
 // レゾナンスの強いフィルターを短く開閉させ、レガートで滑らせる（テクノ）
@@ -84,7 +92,10 @@ const Value acid[] = {
     { voiceMode, mode::legato }, { glide, 0.05f },
     { drive, 0.35f }, { delayMix, 0.15f }, { delayTime, delay::d8dot }, { reverbMix, 0.05f },
     { filterDrive, 0.5f },
-    { master, -7.3f },
+    // チューブで歪ませてトーンで角を取り、コンプで潰す（アシッドらしいうなり）
+    { distType, dist::tube }, { distDrive, 0.55f }, { distTone, 6000 }, { distMix, 0.6f },
+    { compMix, 1 }, { compThreshold, -12 }, { compRatio, 4 }, { compAttack, 0.005f }, { compRelease, 0.08f },
+    { master, -3.7f },
 };
 
 // こもった厚い本体に、1オクターブ上の三角波を広げて重ねる。フィルターをゆっくり揺らす（アンビエント）
@@ -108,7 +119,9 @@ const Value subBass[] = {
     { subLevel, 0.5f }, { filterCutoff, 600 }, { filterResonance, 0 },
     { aenvAttack, 0.003f }, { aenvSustain, 0.9f }, { aenvRelease, 0.15f },
     { voiceMode, mode::mono }, { glide, 0.03f }, { reverbMix, 0 },
-    { master, -4.5f },
+    // 低音の大きさをそろえる
+    { compMix, 1 }, { compThreshold, -16 }, { compRatio, 3 }, { compAttack, 0.02f }, { compRelease, 0.15f },
+    { master, -0.8f },
 };
 
 // 矩形波の8bit 風。発音の瞬間に少し上から下ろし、ビブラートをかける
@@ -121,7 +134,9 @@ const Value chipLead[] = {
     { voiceMode, mode::mono },
     { delayMix, 0.15f }, { delayTime, delay::d8 }, { reverbMix, 0.05f },
     { osc1PulseWidth, 0.25f },
-    { master, -1.4f },
+    // ビットクラッシャーで粗くする（古いゲーム機の音源風）
+    { distType, dist::bit }, { distDrive, 0.55f }, { distTone, 12000 }, { distMix, 0.5f },
+    { master, -1.1f },
 };
 
 // ノイズをバンドパスで細くし、フィルター EG でゆっくり掃き上げる効果音向けの音
@@ -162,7 +177,9 @@ const Value keys[] = {
     { lfoRate, 4 }, { lfoAmp, 0.1f },
     { chorusMix, 0.3f }, { reverbMix, 0.2f },
     { drift, 0.2f },
-    { master, -2.9f },
+    // 弾く強さによる段差をならす
+    { compMix, 0.6f }, { compThreshold, -18 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.2f },
+    { master, -1.1f },
 };
 
 // サインに1オクターブ＋5度上（約3倍）のサインを重ね、長く減衰させる鐘のような音
@@ -204,7 +221,10 @@ const Value stab[] = {
     { pitchEnvAmount, 12 },
     { pitchEnvTime, 0.02f },
     { filterVelocity, 0.3f },
-    { master, 3 },
+    // チューブで太くし、速いアタックのコンプで粒をそろえる
+    { distType, dist::tube }, { distDrive, 0.35f }, { distTone, 9000 }, { distMix, 0.4f },
+    { compMix, 1 }, { compThreshold, -14 }, { compRatio, 4 }, { compAttack, 0.002f }, { compRelease, 0.08f },
+    { master, 5.4f },
 };
 
 // 細かく刻んでも濁らないよう、余韻を短くしたスーパーソウ（トランスゲート）
@@ -260,7 +280,10 @@ const Value ePiano[] = {
     { lfoRate, 4 }, { lfoAmp, 0.35f },
     { chorusMix, 0.15f }, { reverbMix, 0.2f },
     { drift, 0.2f },
-    { master, -5.3f },
+    // 強く弾いたときのうなり（チューブ）と、軽いコンプ
+    { distType, dist::tube }, { distDrive, 0.25f }, { distTone, 7000 }, { distMix, 0.3f },
+    { compMix, 0.7f }, { compThreshold, -16 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.2f },
+    { master, -3.3f },
 };
 
 // オルガン：サインを1オクターブ上と下（サブ）に重ねたドローバー風。押している間は減らない。ビブラート＋トレモロ
@@ -272,6 +295,8 @@ const Value organ[] = {
     { aenvAttack, 0.005f }, { aenvDecay, 0.05f }, { aenvSustain, 1 }, { aenvRelease, 0.08f },
     { lfoRate, 6 }, { lfoPitch, 0.1f }, { lfoAmp, 0.2f },
     { chorusMix, 0.2f }, { reverbMix, 0.15f },
+    // アンプで歪ませたオルガン（チューブ・こもらせる）
+    { distType, dist::tube }, { distDrive, 0.3f }, { distTone, 6000 }, { distMix, 0.35f },
     { master, -7.7f },
 };
 
@@ -294,6 +319,8 @@ const Value squareChord[] = {
     { aenvAttack, 0.003f }, { aenvDecay, 0.15f }, { aenvSustain, 0.4f }, { aenvRelease, 0.08f },
     { reverbMix, 0.05f },
     { osc1PulseWidth, 0.25f },
+    // ビットクラッシャーを薄く混ぜる（8bit）
+    { distType, dist::bit }, { distDrive, 0.5f }, { distTone, 12000 }, { distMix, 0.4f },
     { master, -0.5f },
 };
 
@@ -338,7 +365,9 @@ const Value fxBoom[] = {
     { aenvAttack, 0.002f }, { aenvDecay, 1.4f }, { aenvSustain, 0 }, { aenvRelease, 0.6f },
     { pitchEnvAmount, 36 }, { pitchEnvTime, 0.25f },
     { drive, 0.25f }, { reverbMix, 0.1f },
-    { master, -10.8f },
+    // チューブで倍音を足し、小さいスピーカーでも低音が聞こえるようにする
+    { distType, dist::tube }, { distDrive, 0.5f }, { distTone, 4000 }, { distMix, 0.5f },
+    { master, -10.9f },
 };
 
 // インパクトのノイズ：明るさが閉じていくノイズの一撃
@@ -391,7 +420,9 @@ const Value fxChip[] = {
     { aenvAttack, 0.001f }, { aenvDecay, 0.1f }, { aenvSustain, 0.8f }, { aenvRelease, 0.01f },
     { delayMix, 0.3f }, { delayTime, delay::d8dot }, { delayFeedback, 0.4f }, { reverbMix, 0.05f },
     { osc1PulseWidth, 0.25f },
-    { master, 0.4f },
+    // ビットクラッシャーで粗くする
+    { distType, dist::bit }, { distDrive, 0.6f }, { distTone, 12000 }, { distMix, 0.6f },
+    { master, 1 },
 };
 
 // ===== Toniq のベース（bass_params.json のジャンルごとの音色に合わせたもの） =====
@@ -409,7 +440,10 @@ const Value sawBass[] = {
     { filterDrive, 0.3f },
     { pitchEnvAmount, 12 },
     { pitchEnvTime, 0.02f },
-    { master, 1.9f },
+    // 薄く歪ませて輪郭を出し、コンプで粒をそろえる
+    { distType, dist::tube }, { distDrive, 0.3f }, { distTone, 8000 }, { distMix, 0.35f },
+    { compMix, 1 }, { compThreshold, -18 }, { compRatio, 4 }, { compAttack, 0.01f }, { compRelease, 0.12f },
+    { master, 3.3f },
 };
 
 // スクエアベース：矩形波にクセのあるフィルター。短く切る（テクノ・ハウス）
@@ -424,7 +458,9 @@ const Value squareBass[] = {
     { filterDrive, 0.4f },
     { pitchEnvAmount, 12 },
     { pitchEnvTime, 0.02f },
-    { master, 4.6f },
+    // コンプで粒をそろえる
+    { compMix, 1 }, { compThreshold, -20 }, { compRatio, 4 }, { compAttack, 0.01f }, { compRelease, 0.1f }, { compMakeup, 3 },
+    { master, 3.4f },
 };
 
 // ローリングベース：ノコギリ波を短くはじく、16分で転がすベース（トランス）
@@ -440,7 +476,9 @@ const Value rollingBass[] = {
     { subLevel, 0.3f },
     { pitchEnvAmount, 12 },
     { pitchEnvTime, 0.015f },
-    { master, 5.6f },
+    // 16分の刻みをそろえる速いコンプ
+    { compMix, 1 }, { compThreshold, -20 }, { compRatio, 3 }, { compAttack, 0.003f }, { compRelease, 0.06f }, { compMakeup, 4 },
+    { master, 3.8f },
 };
 
 // チップベース：三角波のまま（ファミコンの三角波チャンネル風。8bit）
@@ -449,6 +487,8 @@ const Value chipBass[] = {
     { filterType, filter::lp12 }, { filterCutoff, 12000 }, { filterResonance, 0 },
     { aenvAttack, 0.001f }, { aenvDecay, 0.05f }, { aenvSustain, 0.9f }, { aenvRelease, 0.02f },
     { voiceMode, mode::mono }, { reverbMix, 0 },
+    // ビットクラッシャーで段々の三角波にする（ファミコンの三角波チャンネル風）
+    { distType, dist::bit }, { distDrive, 0.65f }, { distTone, 8000 }, { distMix, 0.6f },
     { master, -0.3f },
 };
 
@@ -473,7 +513,10 @@ const Value brass[] = {
     { filterVelocity, 0.4f }, { drift, 0.2f },
     { reverbMix, 0.25f },
     { lfoFade, 0.5f },
-    { master, -2.8f },
+    // 吹き込んだときのうなり（チューブ）と、軽いコンプ
+    { distType, dist::tube }, { distDrive, 0.25f }, { distTone, 7000 }, { distMix, 0.3f },
+    { compMix, 0.8f }, { compThreshold, -16 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.15f },
+    { master, -2 },
 };
 
 // シンクリード：OSC 2 を OSC 1 の周期で頭に戻す（ハードシンク）。OSC 2 を5度上げて、倍音の強い鋭い音にする
@@ -492,7 +535,10 @@ const Value syncLead[] = {
     { mod1Source, 2 },
     { mod1Dest, 1 },
     { mod1Amount, 0.5f },
-    { master, -1.9f },
+    // チューブでさらに鋭くし、コンプで前に出す
+    { distType, dist::tube }, { distDrive, 0.35f }, { distTone, 9000 }, { distMix, 0.4f },
+    { compMix, 0.8f }, { compThreshold, -18 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.15f },
+    { master, -0.9f },
 };
 
 // ===== sleepfreaks のシンセレシピを参考にした音色 =====
@@ -508,7 +554,10 @@ const Value hardPad[] = {
     { aenvAttack, 0.01f }, { aenvDecay, 0.4f }, { aenvSustain, 0.75f }, { aenvRelease, 0.6f },
     { chorusMix, 0.2f }, { delayMix, 0.15f }, { delayTime, delay::d8dot }, { reverbMix, 0.35f }, { reverbSize, 0.6f },
     { drift, 0.25f },
-    { master, -5.1f },
+    // ジャキジャキさを足すチューブと、和音をまとめるコンプ
+    { distType, dist::tube }, { distDrive, 0.3f }, { distTone, 9000 }, { distMix, 0.3f },
+    { compMix, 0.6f }, { compThreshold, -12 }, { compRatio, 3 }, { compAttack, 0.02f }, { compRelease, 0.2f },
+    { master, -4.5f },
 };
 
 // ゲートパッド（途切れながら変化するPAD）：音量を 1/16 の矩形の LFO で刻み、LFO 2 でフィルターをゆっくり動かす
@@ -536,7 +585,10 @@ const Value fatBass[] = {
     { aenvAttack, 0.003f }, { aenvSustain, 1 }, { aenvRelease, 0.08f },
     { voiceMode, mode::legato }, { glide, 0.06f }, { reverbMix, 0 },
     { filterDrive, 0.3f }, { drive, 0.15f },
-    { master, -10.9f },
+    // チューブで太くし、コンプで潰してブリブリさせる
+    { distType, dist::tube }, { distDrive, 0.4f }, { distTone, 5000 }, { distMix, 0.5f },
+    { compMix, 1 }, { compThreshold, -10 }, { compRatio, 4 }, { compAttack, 0.01f }, { compRelease, 0.1f },
+    { master, -7.2f },
 };
 
 // パルスベース（パルス波によるバキバキベース）：細いパルス波を重ね、同じ高さのサインの FM（位相）で倍音を足し、歪ませる。
@@ -554,7 +606,10 @@ const Value pulseBass[] = {
     { voiceMode, mode::mono }, { reverbMix, 0 },
     { drive, 0.35f },
     { pitchEnvAmount, 12 }, { pitchEnvTime, 0.015f },
-    { master, -13.6f },
+    // ハードクリップでバキバキにし、コンプで粒をそろえる
+    { distType, dist::hard }, { distDrive, 0.45f }, { distTone, 7000 }, { distMix, 0.5f },
+    { compMix, 1 }, { compThreshold, -8 }, { compRatio, 4 }, { compAttack, 0.005f }, { compRelease, 0.1f },
+    { master, -9.8f },
 };
 
 // ワブルベース：カットオフを 1/8 のテンポ同期の LFO で開閉する（発音ごとに頭から）。レゾナンスを強めにして歪ませる
@@ -567,7 +622,10 @@ const Value wobbleBass[] = {
     { aenvAttack, 0.003f }, { aenvSustain, 1 }, { aenvRelease, 0.08f },
     { voiceMode, mode::legato }, { glide, 0.05f }, { reverbMix, 0 },
     { drive, 0.3f },
-    { master, -10.1f },
+    // ウェーブフォルダーで倍音を折り返し、うなりを複雑にする
+    { distType, dist::fold }, { distDrive, 0.35f }, { distTone, 5000 }, { distMix, 0.4f },
+    { compMix, 1 }, { compThreshold, -10 }, { compRatio, 4 }, { compAttack, 0.01f }, { compRelease, 0.1f },
+    { master, -6.5f },
 };
 
 // トランスリード：7枚重ねたノコギリ波に1オクターブ上を重ね、レガートで滑らせる。
@@ -582,7 +640,9 @@ const Value tranceLead[] = {
     { lfoRate, 5.5f }, { lfoPitch, 0.25f }, { lfoFade, 0.5f },
     { delayMix, 0.3f }, { delayTime, delay::d8dot }, { delayFeedback, 0.35f }, { reverbMix, 0.3f },
     { drift, 0.2f }, { filterVelocity, 0.3f },
-    { master, -3.9f },
+    // コンプで音量の段差をならす
+    { compMix, 0.7f }, { compThreshold, -16 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.15f },
+    { master, -2.7f },
 };
 
 // 加速SE（加速する効果音）：矩形波の高さを LFO で上下させ、EG 2 でその LFO を加速させる
@@ -613,7 +673,10 @@ const Value drumKick[] = {
     { aenvAttack, 0.001f }, { aenvDecay, 0.38f }, { aenvSustain, 0 }, { aenvRelease, 0.05f },
     { pitchEnvAmount, 28 }, { pitchEnvTime, 0.08f },
     { velocity, 1 }, { reverbMix, 0 },
-    { master, 5.5f },
+    // チューブで温かく太くし、アタックの遅いコンプで頭（パンチ）を立てる
+    { distType, dist::tube }, { distDrive, 0.35f }, { distTone, 8000 }, { distMix, 0.5f },
+    { compMix, 1 }, { compThreshold, -20 }, { compRatio, 4 }, { compAttack, 0.015f }, { compRelease, 0.12f }, { compMakeup, 3 },
+    { master, 3.9f },
 };
 
 // スネア：胴鳴り（三角波。少し上から下がる）はフィルターを通さず、響き線（ノイズ）はバンドパスで帯域を絞る
@@ -624,7 +687,10 @@ const Value drumSnare[] = {
     { aenvAttack, 0.001f }, { aenvDecay, 0.16f }, { aenvSustain, 0 }, { aenvRelease, 0.05f },
     { pitchEnvAmount, 7 }, { pitchEnvTime, 0.03f },
     { velocity, 1 }, { reverbMix, 0 },
-    { master, 6 },
+    // 薄く歪ませ、コンプで頭を立てる
+    { distType, dist::tube }, { distDrive, 0.3f }, { distTone, 9000 }, { distMix, 0.3f },
+    { compMix, 1 }, { compThreshold, -22 }, { compRatio, 4 }, { compAttack, 0.008f }, { compRelease, 0.1f }, { compMakeup, 2 },
+    { master, 4.3f },
 };
 
 // ハイハット（クローズド）：高い矩形波どうしをリング・FM で掛け合わせた金属的な倍音に、ノイズを重ねてハイパスで削る
@@ -657,7 +723,9 @@ const Value drumClap[] = {
     { filterType, filter::bp }, { filterCutoff, 1200 }, { filterResonance, 0.3f }, { filterKeyTrack, 0 },
     { aenvAttack, 0.001f }, { aenvDecay, 0.2f }, { aenvSustain, 0 }, { aenvRelease, 0.006f },
     { velocity, 1 }, { reverbMix, 0 },
-    { master, 5.9f },
+    // パラレルコンプで余韻を持ち上げる
+    { compMix, 0.7f }, { compThreshold, -26 }, { compRatio, 3 }, { compAttack, 0.005f }, { compRelease, 0.15f }, { compMakeup, 2 },
+    { master, 4.8f },
 };
 
 // リム：短い三角波（1.7kHz 前後で鳴らす）にノイズのカチッを重ね、バンドパスで硬くする
@@ -732,7 +800,10 @@ const Value lofiKeys[] = {
     { lfoWave, lfo::triangle }, { lfoRate, 0.7f }, { lfoPitch, 0.08f },
     { chorusMix, 0.45f }, { delayMix, 0.12f }, { delayTime, delay::d8dot }, { reverbMix, 0.25f },
     { drift, 0.5f },
-    { master, 0.4f },
+    // ビットクラッシャーで粗くし、こもらせ、パラレルコンプで潰す（サンプラー風）
+    { distType, dist::bit }, { distDrive, 0.55f }, { distTone, 5000 }, { distMix, 0.35f },
+    { compMix, 0.6f }, { compThreshold, -18 }, { compRatio, 3 }, { compAttack, 0.015f }, { compRelease, 0.2f },
+    { master, 2.2f },
 };
 
 // ハウスプラック：ずらしたノコギリ波2枚を丸いフィルターで短くはじく。ピッチ EG なしで、付点8分のディレイを返す
@@ -746,7 +817,9 @@ const Value housePluck[] = {
     { delayMix, 0.3f }, { delayTime, delay::d8dot }, { delayPingPong, 1 }, { reverbMix, 0.25f },
     { filterVelocity, 0.3f },
     { drift, 0.2f },
-    { master, 2.3f },
+    // アタックの遅いコンプで頭を残す
+    { compMix, 1 }, { compThreshold, -22 }, { compRatio, 4 }, { compAttack, 0.015f }, { compRelease, 0.12f },
+    { master, 4.3f },
 };
 
 template <std::size_t N>
