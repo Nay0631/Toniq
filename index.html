@@ -369,16 +369,16 @@
               <span class="form-label" data-term="instrument">インスト</span>
               <select class="select" id="c-instrument">
                 <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow">grow（Toniq専用シンセ）</option>
-                <option value="auto">ジャンルに合わせる</option>
-                <option value="supersaw">SuperSaw リード（EDM）</option>
-                <option value="epiano">エレピ（ローファイ）</option>
-                <option value="bell">ベル（ゲームBGM）</option>
-                <option value="square">スクエア（8bit）</option>
-                <option value="acid">アシッド（テクノ）</option>
-                <option value="lead">シンセリード</option>
-                <option value="pluck">プラック（ハウス）</option>
-                <option value="soft">ソフトサイン（アンビエント）</option>
+                <option value="grow" data-term="melodySound.grow">grow（Toniq専用シンセ）</option>
+                <option value="auto" data-term="melodySound.auto">ジャンルに合わせる</option>
+                <option value="supersaw" data-term="melodySound.supersaw">SuperSaw リード（EDM）</option>
+                <option value="epiano" data-term="melodySound.epiano">エレピ（ローファイ）</option>
+                <option value="bell" data-term="melodySound.bell">ベル（ゲームBGM）</option>
+                <option value="square" data-term="melodySound.square">スクエア（8bit）</option>
+                <option value="acid" data-term="melodySound.acid">アシッド（テクノ）</option>
+                <option value="lead" data-term="melodySound.lead">シンセリード</option>
+                <option value="pluck" data-term="melodySound.pluck">プラック（ハウス）</option>
+                <option value="soft" data-term="melodySound.soft">ソフトサイン（アンビエント）</option>
               </select>
             </label>
 
@@ -479,10 +479,10 @@
             <label class="form-row">
               <span class="form-label" data-term="chordRhythm">リズム</span>
               <select class="select" id="c-rhythm">
-                <option value="whole">全音符</option>
-                <option value="half">2分音符</option>
-                <option value="quarter">4分音符</option>
-                <option value="eighth">8分音符</option>
+                <option value="whole" data-term="chordRhythm.whole">全音符</option>
+                <option value="half" data-term="chordRhythm.half">2分音符</option>
+                <option value="quarter" data-term="chordRhythm.quarter">4分音符</option>
+                <option value="eighth" data-term="chordRhythm.eighth">8分音符</option>
               </select>
             </label>
 
@@ -525,7 +525,7 @@
             </div>
 
             <div class="pill-row">
-              <span><span data-term="pad">パッド</span> / Str</span>
+              <span><span data-term="pad">パッド</span> / <span data-term="strings">Str</span></span>
               <button class="pill" data-part-toggle="pad"></button>
             </div>
             <div class="pill-row">
@@ -566,13 +566,13 @@
               <span class="form-label">種類</span>
               <div class="select-with-btn">
                 <select class="select" id="c-fx-type" aria-label="FX の種類">
-                  <option value="auto">ジャンルの標準</option>
-                  <option value="riser">ライザー</option>
-                  <option value="build">ライザー＋インパクト</option>
-                  <option value="impact">インパクト</option>
-                  <option value="downlifter">ダウンリフター</option>
-                  <option value="reverse">リバースシンバル</option>
-                  <option value="chip">チップSE（8bit）</option>
+                  <option value="auto" data-term="fx.auto">ジャンルの標準</option>
+                  <option value="riser" data-term="fx.riser">ライザー</option>
+                  <option value="build" data-term="fx.build">ライザー＋インパクト</option>
+                  <option value="impact" data-term="fx.impact">インパクト</option>
+                  <option value="downlifter" data-term="fx.downlifter">ダウンリフター</option>
+                  <option value="reverse" data-term="fx.reverse">リバースシンバル</option>
+                  <option value="chip" data-term="fx.chip">チップSE（8bit）</option>
                 </select>
                 <button class="btn btn-small" id="c-fx-preview">▷ 試聴</button>
               </div>

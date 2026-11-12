@@ -81,7 +81,7 @@ function build(): void {
     groups.get(p.group)!.push(p);
   });
   const ids = growPresetIds();
-  const presets = growPresetNames().map((n, i) => `<option value="${escapeHtml(ids[i])}">${escapeHtml(n)}</option>`).join("");
+  const presets = growPresetNames().map((n, i) => `<option value="${escapeHtml(ids[i])}" data-term="sound.${escapeHtml(ids[i])}">${escapeHtml(n)}</option>`).join("");
   const modules = [...groups].map(([group, list]) => `
     <section class="grow-module">
       <h4 class="grow-module-title">${escapeHtml(group)}</h4>

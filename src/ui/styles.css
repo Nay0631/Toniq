@@ -3144,6 +3144,14 @@ span[data-term],
   pointer-events: none;
 }
 
+/* ドロップダウンのリストの上にも出すため popover（トップレイヤー）で出す。ブラウザ標準の popover の見た目は打ち消す */
+.term-tip[popover] {
+  inset: auto;
+  margin: 0;
+  border: 0;
+  overflow: visible;
+}
+
 .term-tip[hidden] { display: none; }
 
 .term-tip-title {

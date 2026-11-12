@@ -45,8 +45,8 @@ function renderChordInstrument(): void {
   const standard = isGrowLoaded() ? label(ids[standardGrowPreset("chord")]) : "";
   const choices = [...CHORD_PRESET_CHOICES];
   if (s.growChordPreset && !choices.includes(s.growChordPreset)) choices.push(s.growChordPreset);
-  const html = `<option value="">ジャンルに合わせる${standard ? `（${standard}）` : ""}</option>`
-    + choices.map(id => `<option value="${id}">${label(id)}</option>`).join("");
+  const html = `<option value="" data-term="sound.auto">ジャンルに合わせる${standard ? `（${standard}）` : ""}</option>`
+    + choices.map(id => `<option value="${id}" data-term="sound.${id}">${label(id)}</option>`).join("");
   if (select.innerHTML !== html) select.innerHTML = html;
   select.value = s.growChordPreset ?? "";
 }
@@ -340,7 +340,7 @@ export function initCustomScreen(): void {
   // 選択肢（固定のもの）
   $select("c-key").innerHTML   = KEYS.map(k => `<option value="${k}">${k}</option>`).join("");
   $select("c-scale").innerHTML = SCALES
-    .map(sc => `<option value="${sc}">${SCALE_LABELS[sc] ?? sc}</option>`).join("");
+    .map(sc => `<option value="${sc}" data-term="scale.${sc}">${SCALE_LABELS[sc] ?? sc}</option>`).join("");
   $select("c-drum-category").innerHTML = DRUM_CATEGORIES
     .map(g => `<option value="${g}">${g}</option>`).join("");
 
