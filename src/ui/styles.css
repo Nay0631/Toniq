@@ -3304,6 +3304,81 @@ span[data-term],
 .groove-value { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
 .groove-auto.is-active { border-color: var(--custom); color: var(--custom); }
 
+/* ===== もっと調整（カスタムモードの設定タブ。標準のままでも鳴る項目を畳む。CustomMore.ts） =====
+   色は --hw-* のトークンだけを使い、どのスキン・ライト／ダークにも合わせる */
+.panel-more { margin-top: 16px; }
+
+.panel-more-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hw-line);
+  font-size: 12px;
+  color: var(--hw-label);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.panel-more-summary::-webkit-details-marker { display: none; }
+.panel-more-summary::before {
+  content: "▸";
+  flex: none;
+  width: 10px;
+  color: var(--hw-faint);
+  transition: transform 0.15s;
+}
+.panel-more[open] > .panel-more-summary::before { transform: rotate(90deg); }
+.panel-more-summary:hover .panel-more-label { color: var(--hw-text); }
+.panel-more-summary:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 2px; border-radius: 2px; }
+
+.panel-more-label { flex: none; font-weight: 600; }
+/* 中に何があるか（閉じているときだけ出す） */
+.panel-more-items {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--hw-faint);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.panel-more[open] .panel-more-items { visibility: hidden; }
+
+/* 変更の数（標準のままなら控えめに「標準」） */
+.panel-more-badge {
+  flex: none;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--hw-faint);
+  border: 1px solid var(--hw-line);
+  border-radius: 999px;
+}
+.panel-more-badge.is-changed { color: var(--hw-orange); border-color: var(--hw-orange); }
+
+.panel-more-body { padding-top: 14px; }
+.panel-more-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+/* 標準から変えている項目の名前に付ける印。名前の左の余白に置く（狭いラベルの列でも折り返さず、用語の点線の下線も伸ばさない） */
+[data-std] { position: relative; }
+[data-std].is-changed::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--hw-orange);
+}
+
+/* スタジオスキンの見出しの帯は、畳んだ中では上に詰めない */
+[data-skin="studio"] .hw .panel-more-body > .panel-title:first-child { margin-top: 0; }
+
+/* grow の欄は見出しそのものが開閉のつまみ（上の線は付けない） */
+.grow-more { margin-top: 0; }
+.grow-more > .panel-more-summary { padding-top: 0; border-top: none; font-size: 13px; }
+
 /* ===== grow（テスト中。カスタムモードの設定タブの下。GrowPanel.ts） ===== */
 .grow-panel { margin-top: 20px; }
 .hw .grow-panel { margin-top: 0; border: 1px solid var(--hw-line); border-top: none; }

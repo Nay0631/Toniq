@@ -323,14 +323,6 @@
             </div>
 
             <label class="form-row">
-              <span class="form-label" data-term="meter">拍子</span>
-              <select class="select" id="c-meter">
-                <option value="4/4">4/4</option>
-                <option value="3/4" disabled>3/4（準備中）</option>
-              </select>
-            </label>
-
-            <label class="form-row">
               <span class="form-label" data-term="bars">小節数</span>
               <select class="select" id="c-bars"></select>
             </label>
@@ -349,8 +341,21 @@
               </select>
             </label>
 
+            <!-- もっと調整：標準（ジャンルに合わせる）のままでも鳴る項目は畳んでおく（CustomMore.ts） -->
+            <details class="panel-more" data-more="basic">
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">拍子・インスト・グルーヴ</span><span class="panel-more-badge"></span></summary>
+            <div class="panel-more-body">
+
             <label class="form-row">
-              <span class="form-label" data-term="instrument">インスト</span>
+              <span class="form-label" data-term="meter">拍子</span>
+              <select class="select" id="c-meter">
+                <option value="4/4">4/4</option>
+                <option value="3/4" disabled>3/4（準備中）</option>
+              </select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label" data-term="instrument" data-std="melodySound">インスト</span>
               <select class="select" id="c-instrument">
                 <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
                 <option value="grow" data-term="melodySound.grow">grow（Toniq専用シンセ）</option>
@@ -377,19 +382,23 @@
             </div>
             <div class="groove-grid">
               <div class="groove-item">
-                <span class="groove-label" data-term="swing">スウィング</span>
+                <span class="groove-label" data-term="swing" data-std="swing">スウィング</span>
                 <!-- range はノブ（Controls.ts）に置き換わる -->
                 <input type="range" class="range" id="c-swing" min="0" max="100" step="1" aria-label="スウィング">
                 <span class="lcd groove-value" id="c-swing-value"></span>
                 <button class="btn btn-small groove-auto" id="c-swing-auto" title="ジャンルの標準の量にする">標準</button>
               </div>
               <div class="groove-item">
-                <span class="groove-label" data-term="sidechain">サイドチェイン</span>
+                <span class="groove-label" data-term="sidechain" data-std="sidechain">サイドチェイン</span>
                 <input type="range" class="range" id="c-sidechain" min="0" max="100" step="1" aria-label="サイドチェイン">
                 <span class="lcd groove-value" id="c-sidechain-value"></span>
                 <button class="btn btn-small groove-auto" id="c-sidechain-auto" title="ジャンルの標準の量にする">標準</button>
               </div>
             </div>
+
+            <div class="panel-more-foot"><button class="btn btn-small" data-more-reset>この欄を標準に戻す</button></div>
+            </div>
+            </details>
           </div>
 
           <!-- スケール・キー／コード進行 -->
@@ -417,11 +426,6 @@
                 <div class="scale-preview-notes" id="c-scale-notes" aria-label="スケールの音"></div>
                 <button class="btn btn-small" id="c-scale-preview" title="今のキー・スケールの音を低い順に鳴らし、最後に主音の和音を鳴らします">▷ 試聴</button>
               </div>
-            </div>
-
-            <div class="switch-row">
-              <button class="toggle toggle-green" id="c-scale-lock" role="switch" aria-label="スケールロック"><span></span></button>
-              <span><span data-term="scaleLock">スケールロック</span><span id="c-scale-lock-label"></span></span>
             </div>
 
             <hr class="panel-divider">
@@ -460,8 +464,17 @@
               </div>
             </div>
 
+            <details class="panel-more" data-more="chord">
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">スケールロック・リズム・音色</span><span class="panel-more-badge"></span></summary>
+            <div class="panel-more-body">
+
+            <div class="switch-row">
+              <button class="toggle toggle-green" id="c-scale-lock" role="switch" aria-label="スケールロック"><span></span></button>
+              <span data-std="scaleLock"><span data-term="scaleLock">スケールロック</span><span id="c-scale-lock-label"></span></span>
+            </div>
+
             <label class="form-row">
-              <span class="form-label" data-term="chordRhythm">リズム</span>
+              <span class="form-label" data-term="chordRhythm" data-std="chordRhythm">リズム</span>
               <select class="select" id="c-rhythm">
                 <option value="whole" data-term="chordRhythm.whole">全音符</option>
                 <option value="half" data-term="chordRhythm.half">2分音符</option>
@@ -471,10 +484,14 @@
             </label>
 
             <label class="form-row">
-              <span class="form-label" data-term="instrument">音色</span>
+              <span class="form-label" data-term="instrument" data-std="chordSound">音色</span>
               <!-- grow のプリセット（AppState.growChordPreset。値は ID、空 = ジャンルに合わせる）。CustomScreen.ts が作る -->
               <select class="select" id="c-chord-instrument"></select>
             </label>
+
+            <div class="panel-more-foot"><button class="btn btn-small" data-more-reset>この欄を標準に戻す</button></div>
+            </div>
+            </details>
           </div>
 
           <!-- ドラム／パッド・アルペジオ／パート別音量 -->
@@ -499,7 +516,9 @@
               </div>
             </div>
 
-            <hr class="panel-divider">
+            <details class="panel-more" data-more="parts">
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">追加パート・サブベース・FX / SE</span><span class="panel-more-badge"></span></summary>
+            <div class="panel-more-body">
 
             <div class="panel-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -509,27 +528,27 @@
             </div>
 
             <div class="pill-row">
-              <span><span data-term="pad">パッド</span> / <span data-term="strings">Str</span></span>
+              <span data-std="part.pad"><span data-term="pad">パッド</span> / <span data-term="strings">Str</span></span>
               <button class="pill" data-part-toggle="pad"></button>
             </div>
             <div class="pill-row">
-              <span><span data-term="arp">アルペジオ</span></span>
+              <span data-std="part.arp"><span data-term="arp">アルペジオ</span></span>
               <button class="pill" data-part-toggle="arp"></button>
             </div>
             <div class="pill-row">
-              <span><span data-term="signature">シグネチャー</span><span class="pill-note" id="c-signature-label"></span></span>
+              <span data-std="part.signature"><span data-term="signature">シグネチャー</span><span class="pill-note" id="c-signature-label"></span></span>
               <button class="pill" data-part-toggle="signature"></button>
             </div>
             <div class="pill-row">
-              <span><span data-term="counter">カウンターメロディ</span></span>
+              <span data-std="part.counter"><span data-term="counter">カウンターメロディ</span></span>
               <button class="pill" data-part-toggle="counter"></button>
             </div>
             <div class="pill-row">
-              <span><span data-term="perc">パーカッション</span><span class="pill-note" id="c-perc-label"></span></span>
+              <span data-std="part.perc"><span data-term="perc">パーカッション</span><span class="pill-note" id="c-perc-label"></span></span>
               <button class="pill" data-part-toggle="perc"></button>
             </div>
             <label class="form-row">
-              <span class="form-label" data-term="subBass">サブベース</span>
+              <span class="form-label" data-term="subBass" data-std="bassSub">サブベース</span>
               <select class="select" id="c-bass-sub" aria-label="サブベース">
                 <option value="auto">ジャンルに合わせる</option>
                 <option value="on">ON</option>
@@ -547,7 +566,7 @@
             </div>
 
             <div class="form-row">
-              <span class="form-label">種類</span>
+              <span class="form-label" data-std="fxType">種類</span>
               <div class="select-with-btn">
                 <select class="select" id="c-fx-type" aria-label="FX の種類">
                   <option value="auto" data-term="fx.auto">ジャンルの標準</option>
@@ -561,10 +580,14 @@
                 <button class="btn btn-small" id="c-fx-preview">▷ 試聴</button>
               </div>
             </div>
+
+            <div class="panel-more-foot"><button class="btn btn-small" data-more-reset>この欄を標準に戻す</button></div>
+            </div>
+            </details>
           </div>
         </div>
 
-        <!-- grow（テスト中）の音作り。メロディのインストが grow のときだけ出す。中身は GrowPanel.ts が作る -->
+        <!-- grow（テスト中）の音作り。いつも出す（閉じた状態から開く）。中身は GrowPanel.ts が作る -->
         <div class="card panel grow-panel" id="c-grow" hidden></div>
 
         <div class="export-row">
@@ -818,6 +841,15 @@
               <li>小節番号の目盛りをクリックすると、そこが再生の開始位置になります（アレンジャータブで再生したとき。「⏮ 先頭へ」で戻ります）。</li>
               <li>スペースキーで再生／停止できます（再生は開始位置から）。</li>
               <li>OFF のパートにブロックを置くと、そのパートは ON になります。「↺ 標準に戻す」でジャンルの標準の構成に戻ります。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>カスタムモードの「もっと調整」</summary>
+            <ul>
+              <li>各欄の下の「もっと調整」には、触らなくてもジャンルに合った音で鳴る項目（インスト・グルーヴ・コードのリズムと音色・追加パート・FX など）が入っています。クリックで開閉します。</li>
+              <li>見出しの「○件変更」は、その中で標準から変えている項目の数です。変えた項目の名前の左には印（●）が付きます。</li>
+              <li>「この欄を標準に戻す」で、その欄の項目をまとめてジャンルの標準・初期値に戻します（<kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻せます）。</li>
             </ul>
           </details>
 

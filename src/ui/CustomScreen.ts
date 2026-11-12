@@ -16,7 +16,7 @@ import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
-import { onRender } from "./Router";
+import { onRender, render as renderAll } from "./Router";
 import { SCALE_LABELS, chordNames, displayNote, toDoremi } from "./format";
 import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
 import { initMixer, renderMixer } from "./MixerPanel";
@@ -25,6 +25,7 @@ import { attachKnob, attachStepper, syncControls } from "./Controls";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import type { AudioFormat } from "../engine/Playback";
 import { initGrowPanel } from "./GrowPanel";
+import { initCustomMore, renderCustomMore } from "./CustomMore";
 import {
   CHORD_PRESET_CHOICES, growPresetIds, growPresetNames, isGrowLoaded, setGrowSound, standardGrowPreset,
 } from "../engine/Grow";
@@ -309,6 +310,7 @@ function render(): void {
   });
 
   renderMixer();
+  renderCustomMore();
 
   // アレンジャー
   renderArranger();
@@ -431,6 +433,12 @@ export function initCustomScreen(): void {
 
   // grow（テスト中）の音作りのパネル。値はその場で鳴っているメロディに当たるので再生し直さない
   initGrowPanel();
+
+  // 「もっと調整」の欄（grow の欄は initGrowPanel が作るのでそのあと）。標準に戻したら描画し、要るなら再生し直す
+  initCustomMore(async restart => {
+    renderAll();
+    if (restart) await restartIfPlaying();
+  });
 
   // インスト：メロディの Synth は再生開始時に作り直されるので、再生中なら再生し直す
   $select("c-instrument").addEventListener("change", async e => {

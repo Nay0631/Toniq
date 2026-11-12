@@ -5,6 +5,7 @@ import {
   formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta, type GrowPart,
 } from "../engine/Grow";
 import { onRender, render as renderAll } from "./Router";
+import { renderCustomMore } from "./CustomMore";
 
 // grow（テスト中）の音作りのパネル（カスタムモードの設定タブの下 #c-grow）。
 // 暫定のパネルで、最終的にはプリセットを選ぶだけにする予定。
@@ -161,6 +162,7 @@ function renderPanel(): void {
     const index = Number(el.dataset.growValue);
     el.textContent = formatGrowParam(index, values[index]);
   });
+  renderCustomMore();  // 「grow の音作り」の欄の変更の数
 }
 
 function render(): void {
@@ -191,9 +193,15 @@ function render(): void {
 }
 
 export function initGrowPanel(): void {
+  // 「もっと調整」と同じ畳める欄にする（開閉・変更の数・標準に戻すは CustomMore.ts）
   $("c-grow").innerHTML = `
-    <div class="panel-title"><span data-term="grow">grow</span>（テスト中）</div>
-    <p class="grow-status" id="c-grow-status"></p>
-    <div class="grow-body"></div>`;
+    <details class="panel-more grow-more" data-more="grow">
+      <summary class="panel-more-summary"><span class="panel-more-label"><span data-term="grow">grow</span> の音作り（テスト中）</span><span class="panel-more-items">パートごとのプリセット・つまみ</span><span class="panel-more-badge"></span></summary>
+      <div class="panel-more-body">
+        <p class="grow-status" id="c-grow-status"></p>
+        <div class="grow-body"></div>
+        <div class="panel-more-foot"><button class="btn btn-small" data-more-reset>すべてのパートをジャンルの標準に戻す</button></div>
+      </div>
+    </details>`;
   onRender(render);
 }
