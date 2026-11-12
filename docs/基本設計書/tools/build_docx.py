@@ -378,7 +378,8 @@ def flush_fig():
                     if group:
                         out.append(heading(2, group))
                         group = None
-                    out.append(heading(3, h.replace('_', ' ', 1)))
+                    # 機能の見出しは「機能ID　機能名」（間は全角スペース1つ。B01-1_BPM選択機能 → B01-1　BPM選択機能）
+                    out.append(heading(3, h.replace('_', '　', 1)))
                     out.append(image(p, os.path.basename(p)[:-4]))
     fig_items = []
 
@@ -419,7 +420,7 @@ for b in blocks:
         m = re.match(r'([A-Z]\d\d-\d+)\s+(.*)', text)
         if lvl == 5 and m and chapter and chapter.startswith('5.'):
             func = m.group(1)
-            # 5.2 はシステム（#### B01 曲の基本設定システム → 見出し3）の下に機能（##### → 見出し4）を置く。
+            # 5.2 はシステム（#### B01_曲の基本設定システム → 見出し3）の下に機能（##### → 見出し4）を置く。
             # 見出しは機能名だけにする（機能IDは機能定義の表の「機能ID」の行に書く。「（追加）」などの注記も外す）
             out.append(heading(4, re.sub(r'（[^）]*）$', '', m.group(2)).strip()))
             continue
