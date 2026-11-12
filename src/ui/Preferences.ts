@@ -7,7 +7,7 @@ import { reloadLayer } from "../engine/LayerManager";
 import { applyLoopPlayback } from "../engine/Playback";
 
 // 端末ごとの設定（設定画面）：音名の表記・ループ再生・ドラムの音源。
-// テスト中の機能の ON/OFF（アレンジャータブ）：エンディング・ドラムのフィル・ドラムの揺らぎ。
+// テスト中の機能の ON/OFF（設定タブのドラムの「もっと調整」）：エンディング・ドラムのフィル・ドラムの揺らぎ。
 // 値は AppState に置き、ここで localStorage に保存・読み込みする（曲には保存しない。SONG_FIELDS に入れない）
 // 配色・スキンは Theme.ts、用語のツールチップは Glossary.ts が受け持つ
 

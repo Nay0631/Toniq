@@ -49,7 +49,7 @@ src/ui/
   Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab
   SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、書き出し、ジャンルのサンプル試聴）
   CustomScreen.ts         カスタムモード画面の設定タブ（基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオの3列＋書き出し）とアレンジャータブ下部（書き出し）
-  ArrangerTab.ts          アレンジャーのタイムライン（セクションの行、パートごとのブロックの配置・移動・長さ変更・削除、再生位置）と、テスト中の機能の ON/OFF・自動チェックの欄
+  ArrangerTab.ts          アレンジャーのタイムライン（セクションの行、パートごとのブロックの配置・移動・長さ変更・削除、再生位置）と、自動チェックの欄
   MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・音量のフェーダー・レベルメーター、マスターのメーター）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通）
   MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
@@ -89,7 +89,7 @@ src/engine/
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
   LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、各パートが鳴る小節の判定 arrangementGate、周回表示）
   SongForm.ts             曲の構成（セクション Aメロ／サビ、曲全体のコード進行 songProgression・メロディ songMelody、エンディング、ドラムのフィルの小節、Aメロ・サビのメロディ生成）
-  QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。アレンジャーのテスト中の機能の欄。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
+  QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。アレンジャーの自動チェックの欄。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
   QualityBatch.ts         自動チェックの一括計測（npm run quality が Node から呼ぶ。アプリからは使わない。シードを決めて全ジャンル×雰囲気の曲を生成し、合格率と多様さを集める）
   Groove.ts               グルーヴ（スウィング applySwing・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
@@ -192,12 +192,12 @@ src/engine/
   - アレンジャーのいちばん上の「セクション」の行で、周回ごとにクリックして切り替える。ピアノロールはツールバーの「Aメロ／サビ」で編集するメロディを切り替える（サビはサビの進行のコードを表示し、`chorusMelodyNotes` を書き換える）。
   - 各パートには曲全体の並びを渡す：コード・ベース・アルペジオ・パッド・シグネチャーは `songProgression()`（周回ごとにセクションの進行を並べた、曲全体の長さの ChordProgression。`section_bars` = 元の1周の長さ、各コードに `section`・エンディングの主和音に `ending` が付く）、メロディは `songMelody()`。Part の `loopEnd` もこの長さ。読み込みは `LayerManager.reloadLayer`・WAV書き出し・MIDI書き出しで共通。FX はループの継ぎ目の効果音なので、コード進行1周（`chordPattern`）で読み込む。試聴・サンプル中（`isArrangementBypassed()`）はセクション・エンディング・フィルを使わず、コード進行1周をそのまま使う。
   - セクションの変更は読み込み直しが要るので、再生中なら再生し直す（`initArranger` の `onSongChange`）。
-- テスト中の機能（アレンジャータブの「テスト中の機能」欄でまとめて ON/OFF。`AppState.endingEnabled` / `drumFill` / `drumHumanize`、初期値は ON。`Preferences.ts` の `setTestFeature` が localStorage の `toniq.test.*` に端末ごとに保存する。曲の内容ではないので `SONG_FIELDS` には入れない）：
+- テスト中の機能（カスタムモードの設定タブのドラムの「もっと調整」の「ドラムの演奏」（フィル・揺らぎ・エンディング。`data-test-toggle`、`CustomScreen.ts`）で ON/OFF。以前はアレンジャータブの欄にあった。OFF にしたものは「もっと調整」の変更の数に入り、「この欄を標準に戻す」で ON に戻る。`AppState.endingEnabled` / `drumFill` / `drumHumanize`、初期値は ON。`Preferences.ts` の `setTestFeature` が localStorage の `toniq.test.*` に端末ごとに保存する。曲の内容ではないので `SONG_FIELDS` には入れない）：
   - エンディング：曲の最後の小節（`endingBar()`）を主和音（メジャーは I、それ以外は Im）の全音符にする。コード・パッドは1回だけ伸ばし、ベースはルートの全音符、メロディは直前の音にいちばん近い主音の全音符、ドラムは頭の1打（キック・スネア・オープンハイハット）だけ。アルペジオ・シグネチャー・FX は鳴らさない。ループ再生でなければ余韻のため1小節あとに止める。切り替えは再生中なら再生し直す。
   - ドラムのフィル：`fillKind(bar)`（`SongForm.ts`。ドラムが鳴っている周回の最後の小節で、次がサビ `chorus`・サビの終わり `section`・編成が変わる所 `change`・同じセクションの8小節ごと `regular`、またはエンディングの直前 `ending`。`isFillBar` は入れるかどうか）の小節で、`FILLS` の `from` ステップから元のパターン（`keep` 以外）を止めてフィルを鳴らす（小節の終わりへ強くなる）。`FILLS` はジャンルごとに小・中・大（`small` / `normal` / `big`）の3つで、大きさは `fillSize(kind, mood)` が理由（`KIND_SIZE`：ending・chorus = 大、section・change = 中、regular = 小）と雰囲気（`MOOD_SIZE`：激しい = 1段大きく、落ち着いた = 1段小さく）で決める（`fillAt(bar)`）。大きいフィルほど早く始まり音が多い（EDM・トランスの大は小節の頭からのロール）。乱数は使わないので再生と MIDI書き出しで同じ。
   - ドラムの揺らぎ：強さとタイミングを少し揺らす（ハイハットは裏の16分を弱く・最大 6ms、スネアなどは 4ms 遅らせる。キックはずらさない）。`GHOST_RATE` のジャンルではスネアのゴーストノートを確率で入れる。
   - フィル・エンディングの音は `drumStepHits()`（`DrumEngine.ts`）で決め、再生と MIDI書き出しで共通。揺らぎは再生だけ。フィル・揺らぎはドラムが1音ごとに AppState を読むので再生中もすぐ反映される。
-- 自動チェック（`QualityCheck.ts` の `analyzeSong()`）はアレンジャーのテスト中の機能の欄に出す。数値は `songMetrics()`、合否は `QUALITY_RULES` で、`npm run quality`（`QualityBatch.ts`）も同じものを使う。項目を足すときは両方に出るよう `songMetrics` と `QUALITY_RULES`（合否があるなら `QualityBatch.ts` の `RULE_NAMES` と `quality-report.mjs` の `RULE_LABELS` も）に足す。項目：強拍（1・3拍目）のコード構成音の割合（75% 以上）、周回の最後の音が主音・構成音か、最大の跳躍（休符をはさまない音どうしで 9 半音以内）、サビの平均の高さが Aメロより高いか、セクション、アレンジの抜き差し（ON のパートが前の小節より減る所）、エンディング・フィルの回数、コード進行DB（全進行が実音にできるか・サビの相方があるか・長さが8小節のセクション（`LoopArranger.ts` の `SECTION_BARS`）を割り切れる 1・2・4・8 小節かその倍数で、コードが長さちょうどを埋めているか）、メロディのリズムDB（`melody_params.json` のリズム・フレーズ形式の書式）。
+- 自動チェック（`QualityCheck.ts` の `analyzeSong()`）はアレンジャータブの「自動チェック」の欄に出す。数値は `songMetrics()`、合否は `QUALITY_RULES` で、`npm run quality`（`QualityBatch.ts`）も同じものを使う。項目を足すときは両方に出るよう `songMetrics` と `QUALITY_RULES`（合否があるなら `QualityBatch.ts` の `RULE_NAMES` と `quality-report.mjs` の `RULE_LABELS` も）に足す。項目：強拍（1・3拍目）のコード構成音の割合（75% 以上）、周回の最後の音が主音・構成音か、最大の跳躍（休符をはさまない音どうしで 9 半音以内）、サビの平均の高さが Aメロより高いか、セクション、アレンジの抜き差し（ON のパートが前の小節より減る所）、エンディング・フィルの回数、コード進行DB（全進行が実音にできるか・サビの相方があるか・長さが8小節のセクション（`LoopArranger.ts` の `SECTION_BARS`）を割り切れる 1・2・4・8 小節かその倍数で、コードが長さちょうどを埋めているか）、メロディのリズムDB（`melody_params.json` のリズム・フレーズ形式の書式）。
 - ベースとキック：ベースの強さは `bassVelocity(bar, step)`（`BassPlayer.ts`）で、キック（`kickAt()`。アレンジ・ブロックのパターン・フィルも反映）と同時の音を強く、それ以外は拍の頭 > 裏の順に弱くする。MIDI書き出しも同じ。
 - 再生時は ON のパートを先頭ですべて読み込み、各パートの Part / Sequence のコールバック先頭で `arrangementGate(part)` を呼んで、ブロックの外の小節では鳴らさない。新しいパートを足すときも同じ形にする。判定は再生中も AppState を見るので、アレンジの編集は再生し直さなくてもすぐ反映される。試聴（`Playback.preview`）は判定を外す。
 - アレンジャーでは小節番号の目盛りをクリックして再生開始位置（`AppState.startBar`）を決める。アレンジャータブの再生はそこから始まり（`Playback.play({ fromBar })`）、他のタブでは先頭から。再生中に開始位置を変えると、その位置から再生し直す。アレンジャータブではスペースキーで再生／停止する（`CustomScreen.ts`。文字の入力欄・セレクト・ダイアログの表示中は除く）。

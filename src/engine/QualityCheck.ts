@@ -198,7 +198,7 @@ function formItems(x: SongMetrics): QualityItem[] {
     label: "エンディング・フィル",
     value: `エンディング ${x.ending ? "あり" : "なし"}・フィル ${x.fills} 回`,
     ok: null,
-    hint: "テスト中の機能の ON/OFF で変わります",
+    hint: "設定タブのドラムの「もっと調整」（ドラムの演奏）で ON/OFF できます",
   }];
 }
 

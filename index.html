@@ -519,8 +519,34 @@
             </div>
 
             <details class="panel-more" data-more="parts">
-            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">追加パート・サブベース・FX / SE</span><span class="panel-more-badge"></span></summary>
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">フィル・揺らぎ・エンディング・追加パート・サブベース・FX / SE</span><span class="panel-more-badge"></span></summary>
             <div class="panel-more-body">
+
+            <!-- ドラムの演奏（テスト中の機能。AppState.drumFill / drumHumanize / endingEnabled。端末ごとに保存（Preferences.ts の setTestFeature）。曲には保存しない） -->
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <path d="M4 20l7-7M13 11l7-7"/><circle cx="12" cy="12" r="1.5"/>
+              </svg>
+              <span>ドラムの演奏</span><span class="panel-title-note">テスト中・端末ごとに保存</span>
+            </div>
+
+            <div class="pill-row">
+              <span data-std="test.drumFill"><span data-term="drumFill">フィル</span></span>
+              <button class="pill" data-test-toggle="drumFill"></button>
+            </div>
+            <p class="pill-desc">サビの前・ドラムが抜ける前・8小節ごとにフィルを入れる</p>
+            <div class="pill-row">
+              <span data-std="test.drumHumanize"><span data-term="humanize">揺らぎ</span></span>
+              <button class="pill" data-test-toggle="drumHumanize"></button>
+            </div>
+            <p class="pill-desc">強さ・タイミングを少し揺らし、ゴーストノートを入れる</p>
+            <div class="pill-row">
+              <span data-std="test.endingEnabled"><span data-term="ending">エンディング</span></span>
+              <button class="pill" data-test-toggle="endingEnabled"></button>
+            </div>
+            <p class="pill-desc">曲の最後の小節を主和音（全音符）で終わらせる</p>
+
+            <hr class="panel-divider">
 
             <div class="panel-title">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
@@ -600,11 +626,9 @@
           <div class="arranger" id="c-arranger"></div>
         </div>
 
-        <!-- テスト中の機能（聴き比べ用の ON/OFF）と自動チェック。中身は ArrangerTab.ts で作る -->
+        <!-- 自動チェック。中身は ArrangerTab.ts で作る（テスト中の機能の ON/OFF は設定タブのドラムの「もっと調整」へ移した） -->
         <div class="card panel test-panel">
-          <div class="panel-title panel-title-plain">テスト中の機能<span class="test-panel-note">聴き比べ用。端末ごとに保存されます</span></div>
-          <div class="test-toggles" id="c-test-toggles"></div>
-          <div class="panel-title panel-title-plain test-panel-sub"><span data-term="qualityCheck">自動チェック</span><span class="test-panel-note">今の曲を規則で調べた結果です</span></div>
+          <div class="panel-title panel-title-plain"><span data-term="qualityCheck">自動チェック</span><span class="test-panel-note">今の曲を規則で調べた結果です</span></div>
           <ul class="quality-list" id="c-quality"></ul>
         </div>
 
@@ -893,7 +917,8 @@
           <details class="help-item">
             <summary>テスト中の機能</summary>
             <ul>
-              <li>アレンジャータブの「テスト中の機能」で、エンディング・ドラムのフィル・ドラムの揺らぎをまとめて ON/OFF できます。自動チェックの結果もここに出ます。</li>
+              <li>カスタムモードの設定タブで、ドラムの「もっと調整」の「ドラムの演奏」から、フィル・揺らぎ・エンディングを ON/OFF できます（端末ごとに保存）。</li>
+              <li>自動チェックの結果は、アレンジャータブのタイムラインの下に出ます。</li>
               <li>カスタムモードの設定タブの下にある grow のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
             </ul>
           </details>

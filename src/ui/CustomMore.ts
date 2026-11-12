@@ -2,6 +2,7 @@ import { getState, setState, defaultState } from "../engine/AppState";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { applySwing } from "../engine/Groove";
 import { applyGrowLive, setGrowSound, storedGrowSound, type GrowPart } from "../engine/Grow";
+import { setTestFeature, TEST_FEATURES } from "./Preferences";
 
 // カスタムモードの設定タブの「もっと調整」（<details class="panel-more" data-more="…">）。
 // 標準（ジャンルに合わせる・初期値）のままでも曲として鳴る項目を畳んでおき、ふだんは目に入らないようにする。
@@ -34,6 +35,8 @@ const CHANGED: Record<string, () => boolean> = {
   bassSub:     () => getState().bassSub !== null,
   fxType:      () => getState().fxType !== "auto",
   extraParts:  () => EXTRA_PARTS.some(p => getState().parts[p] !== defaultState.parts[p]),
+  // ドラムの演奏（テスト中の機能。端末ごとの設定で、初期値は ON）
+  ...Object.fromEntries(TEST_FEATURES.map(f => [`test.${f}`, () => getState()[f] !== defaultState[f]])),
 };
 
 // 欄ごとの変更の数（grow の欄は音作りを変えているパートの数）
@@ -61,7 +64,8 @@ function resetGroup(group: MoreGroup): boolean {
         if (s.parts[p] !== defaultState.parts[p]) setLayerEnabled(p, defaultState.parts[p]);
       }
       setState({ bassSub: null, fxType: "auto" });
-      return true;
+      for (const f of TEST_FEATURES) if (s[f] !== defaultState[f]) setTestFeature(f, defaultState[f]);
+      return true;  // エンディング・サブベース・FX の音源は読み込み時に作るので再生し直す
     case "grow":
       for (const p of GROW_PARTS) if (growChanged(p)) setGrowSound(p, null, null);
       applyGrowLive();  // 鳴っている grow にすぐ当てる（作り直さない）

@@ -12,7 +12,6 @@ import { render } from "./Router";
 import { formatTimePrecise } from "./format";
 import { chorusProgression, getSections, loopBars } from "../engine/SongForm";
 import { analyzeSong } from "../engine/QualityCheck";
-import { setTestFeature, TEST_FEATURES, TestFeature } from "./Preferences";
 
 // アレンジャーのレーン（上から表示する順）
 const LANES: { name: LayerName; label: string }[] = [
@@ -141,30 +140,10 @@ function sectionLane(bars: number): string {
     </div>`;
 }
 
-// ===== テスト中の機能・自動チェック =====
-
-const TEST_LABELS: Record<TestFeature, { label: string; term: string; desc: string }> = {
-  endingEnabled: { label: "エンディング", term: "ending",   desc: "曲の最後の小節を主和音（全音符）で終わらせる" },
-  drumFill:      { label: "ドラムのフィル", term: "drumFill", desc: "サビの前・ドラムが抜ける前・8小節ごとにフィルを入れる" },
-  drumHumanize:  { label: "ドラムの揺らぎ", term: "humanize", desc: "強さ・タイミングを少し揺らし、ゴーストノートを入れる" },
-};
+// ===== 自動チェック =====
+// （テスト中の機能（エンディング・フィル・揺らぎ）の ON/OFF は設定タブのドラムの「もっと調整」。CustomScreen.ts）
 
 function renderTestPanel(): void {
-  const s = getState();
-  const toggles = $("c-test-toggles");
-  if (toggles) {
-    toggles.innerHTML = TEST_FEATURES.map(f => {
-      const on = s[f];
-      const { label, term, desc } = TEST_LABELS[f];
-      return `
-        <div class="test-row">
-          <span class="test-name" data-term="${term}">${label}</span>
-          <span class="test-desc">${desc}</span>
-          <button class="pill${on ? " is-on" : ""}" data-test-toggle="${f}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
-        </div>`;
-    }).join("");
-  }
-
   const list = $("c-quality");
   if (list) {
     list.innerHTML = analyzeSong().map(item => {
@@ -517,16 +496,6 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
     const sectionsEdited = getState().sections !== null;
     setState({ arrangement: null, sections: null });
     if (sectionsEdited) onSongChange();
-    else renderArranger();
-  });
-
-  // テスト中の機能の ON/OFF。フィル・揺らぎは再生中もすぐ反映され、エンディングは再生し直す
-  $("c-test-toggles")?.addEventListener("click", e => {
-    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-test-toggle]");
-    if (!btn) return;
-    const feature = btn.dataset.testToggle as TestFeature;
-    setTestFeature(feature, !getState()[feature]);
-    if (feature === "endingEnabled") onSongChange();
     else renderArranger();
   });
 }

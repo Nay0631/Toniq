@@ -26,6 +26,7 @@ import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import type { AudioFormat } from "../engine/Playback";
 import { initGrowPanel } from "./GrowPanel";
 import { initCustomMore, renderCustomMore, EXTRA_PARTS } from "./CustomMore";
+import { setTestFeature, type TestFeature } from "./Preferences";
 import {
   CHORD_PRESET_CHOICES, growPresetIds, growPresetNames, isGrowLoaded, setGrowSound, standardGrowPreset,
 } from "../engine/Grow";
@@ -298,6 +299,14 @@ function render(): void {
   fxSelect.options[0].textContent = s.fxType === "auto" ? `ジャンルの標準（${fxLabel()}）` : "ジャンルの標準";
   fxSelect.value = s.fxType;
   fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
+
+  // ドラムの演奏（テスト中の機能：フィル・揺らぎ・エンディング）
+  document.querySelectorAll<HTMLElement>("[data-test-toggle]").forEach(el => {
+    const on = s[el.dataset.testToggle as TestFeature];
+    el.classList.toggle("is-on", on);
+    el.textContent = on ? "ON" : "OFF";
+    el.setAttribute("aria-pressed", String(on));
+  });
 
   // 追加パート：まとめて ON/OFF する入り口と、今 ON のパートの一覧（表示だけ。1つずつの切り替えはアレンジャー・ミキサー）
   const onCount = EXTRA_PARTS.filter(p => s.parts[p]).length;
@@ -617,6 +626,17 @@ export function initCustomScreen(): void {
     render();
     await restartIfPlaying();
   });
+
+  // ===== ドラムの演奏（テスト中の機能。端末ごとに保存） =====
+  // フィル・揺らぎはドラムが1音ごとに AppState を読むので再生中もすぐ反映される。
+  // エンディングは読み込み時に曲の並びを作るので、再生中なら再生し直す
+  document.querySelectorAll<HTMLElement>("[data-test-toggle]").forEach(el =>
+    el.addEventListener("click", async () => {
+      const feature = el.dataset.testToggle as TestFeature;
+      setTestFeature(feature, !getState()[feature]);
+      render();
+      if (feature === "endingEnabled") await restartIfPlaying();
+    }));
 
   // ===== 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション） =====
   // すべて ON ならすべて止め、それ以外（一部・すべて OFF）ならすべて鳴らす

@@ -1475,7 +1475,7 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .hw .arr-sections { background-color: var(--track-bg); }
 .hw .arr-section-lane { border-bottom-color: var(--hw-line); }
 
-/* ── テスト中の機能と自動チェック（ArrangerTab.ts）── */
+/* ── 自動チェック（ArrangerTab.ts）── */
 .test-panel { margin-top: 20px; }
 .hw .test-panel { margin-top: 0; border-top: none; }
 [data-skin="default"] .hw .test-panel { margin-top: 20px; border-top: 1px solid var(--border); }
@@ -1487,26 +1487,6 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   font-weight: 400;
   color: var(--text-muted);
 }
-
-.test-panel-sub { margin-top: 18px; }
-
-.test-toggles {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 20px;
-}
-
-.test-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "name toggle" "desc toggle";
-  align-items: center;
-  column-gap: 10px;
-}
-
-.test-name { grid-area: name; font-weight: 700; }
-.test-desc { grid-area: desc; font-size: 12px; color: var(--text-muted); }
-.test-row .pill { grid-area: toggle; min-width: 52px; }
 
 .quality-list {
   display: grid;
@@ -1545,10 +1525,6 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .quality-item.is-ok   .quality-mark { color: var(--custom-ink); background: var(--custom-soft); }
 .quality-item.is-warn .quality-mark { color: var(--danger-ink); background: var(--danger-soft); }
 .quality-item.is-info .quality-mark { color: var(--text-muted); background: var(--btn-soft); }
-
-@media (max-width: 1000px) {
-  .test-toggles { grid-template-columns: 1fr; }
-}
 
 @media (max-width: 720px) {
   .quality-list { grid-template-columns: 1fr; }
@@ -3386,6 +3362,10 @@ span[data-term],
 .extra-part.is-off::before { content: "—"; color: var(--hw-faint); }
 .extra-parts-open { margin-bottom: 12px; font-size: 12px; color: var(--hw-label); }
 .extra-parts-open:hover { color: var(--hw-orange); }
+
+/* ドラムの演奏（テスト中の機能）：スイッチの下の短い説明と、見出しに添える注記 */
+.pill-desc { margin: -4px 0 10px; font-size: 11px; color: var(--hw-faint); }
+.panel-title-note { margin-left: auto; font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--hw-faint); }
 
 /* 一時的なお知らせ（スケールに合わせてコード進行を変えた など） */
 .panel-notice {

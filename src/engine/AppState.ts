@@ -122,7 +122,7 @@ export interface AppState {
   // 周回ごとのセクション（null = ジャンルの標準。LoopArranger の LOOP_SCHEDULE）
   sections:          Section[] | null;
 
-  // テスト中の機能の ON/OFF（アレンジャータブでまとめて切り替える。Preferences.ts が端末ごとに保存する。曲には保存しない）
+  // テスト中の機能の ON/OFF（カスタムモードの設定タブのドラムの「もっと調整」で切り替える。Preferences.ts が端末ごとに保存する。曲には保存しない）
   endingEnabled: boolean;  // 曲の最後の小節を主和音で終わらせる（エンディング）
   drumFill:      boolean;  // セクションの継ぎ目でドラムのフィルを入れる
   drumHumanize:  boolean;  // ドラムの強さ・タイミングを少し揺らし、ゴーストノートを入れる
