@@ -42,6 +42,16 @@ inline float softClip (float x) noexcept
     return std::copysign (clipKnee + room * std::tanh ((a - clipKnee) / room), x);
 }
 
+// ディストーション
+constexpr float distDcHz     = 15.0f;  // 歪ませた音の直流カット（チューブの片寄りで出る直流を取る）
+constexpr float distPowerSec = 0.05f;  // 大きさをそろえるときの平均の時間
+constexpr float distMaxGain  = 4.0f;   // 大きさをそろえるゲインの上限（ほぼ無音のときに持ち上げすぎない）
+constexpr float distDriveDb  = 30.0f;  // 歪み 1 で入口を持ち上げる量（チューブ・ハード）
+constexpr float distFoldDb   = 24.0f;  // 歪み 1 で入口を持ち上げる量（フォールド）
+
+// コンプレッサー
+constexpr float compKneeDb = 6.0f;  // ソフトニーの幅
+
 // ドライブ：この値までは元の音と混ぜて、0 から上げ始めたときに音量・音色が急に変わらないようにする
 constexpr float driveFadeIn = 0.1f;
 } // namespace
@@ -90,9 +100,13 @@ void Fx::prepare (double newSampleRate)
     sampleRate = newSampleRate;
     const auto scale = sampleRate / 44100.0;  // （以前の Freeverb の長さの基準。今は使わない）
     dcCoeff = 1.0f - twoPi * dcCutoffHz / (float) sampleRate;
-    for (auto* s : { &driveSmooth, &chorusMixSmooth, &chorusDepthSmooth, &delayMixSmooth, &delayFeedbackSmooth,
+    for (auto* s : { &driveSmooth, &distDriveSmooth, &distMixSmooth, &compMixSmooth, &compThresholdSmooth, &compMakeupSmooth,
+                     &chorusMixSmooth, &chorusDepthSmooth, &delayMixSmooth, &delayFeedbackSmooth,
                      &reverbMixSmooth, &reverbSizeSmooth })
         s->prepare (sampleRate, smoothSeconds);
+    // ディストーションの中は2倍の速さで動く
+    distDcCoeff    = 1.0f - twoPi * distDcHz / (float) (2.0 * sampleRate);
+    distPowerCoeff = 1.0f - std::exp (-1.0f / (distPowerSec * (float) (2.0 * sampleRate)));
 
     for (int ch = 0; ch < 2; ++ch)
     {
@@ -132,6 +146,18 @@ void Fx::prepare (double newSampleRate)
     reset();
 }
 
+void Fx::clearDistortion()
+{
+    for (int ch = 0; ch < 2; ++ch)
+    {
+        distUp[ch].clear();
+        distDown[ch].clear();
+        distLow1[ch] = distLow2[ch] = distDcIn[ch] = distDcOut[ch] = distHeld[ch] = 0.0f;
+    }
+    distDryPower = distWetPower = 0.0f;
+    distHoldCount = 0;
+}
+
 void Fx::clearChorus()
 {
     for (auto& line : chorusLine) line.clear();
@@ -163,14 +189,18 @@ void Fx::reset()
         driveUp[ch].clear();
         driveDown[ch].clear();
     }
+    clearDistortion();
     clearChorus();
     clearDelay();
     clearReverb();
-    chorusIdle = delayIdle = reverbIdle = true;
+    compGainDb = 0.0f;
+    distToneCoeff = 1.0f;
+    distIdle = compIdle = chorusIdle = delayIdle = reverbIdle = true;
     masterGain   = 0.0f;
     limiterGain  = 1.0f;
     for (int ch = 0; ch < 2; ++ch) dcIn[ch] = dcOut[ch] = 0.0f;
-    for (auto* s : { &driveSmooth, &chorusMixSmooth, &chorusDepthSmooth, &delayMixSmooth, &delayFeedbackSmooth,
+    for (auto* s : { &driveSmooth, &distDriveSmooth, &distMixSmooth, &compMixSmooth, &compThresholdSmooth, &compMakeupSmooth,
+                     &chorusMixSmooth, &chorusDepthSmooth, &delayMixSmooth, &delayFeedbackSmooth,
                      &reverbMixSmooth, &reverbSizeSmooth })
         s->snapNext();
 }
@@ -201,6 +231,145 @@ void Fx::processDrive (float* left, float* right, int numSamples, const GrowPara
             }
             *io[ch] = flushDenormal (y);
         }
+    }
+}
+
+void Fx::processDistortion (float* left, float* right, int numSamples, const GrowParams& p)
+{
+    // 2倍の速さにしてから歪ませ（倍音の折り返しを抑える）、トーンのローパス・直流カットを通す。
+    // 歪ませた音は元の音と平均の大きさ（左右まとめたパワー）をそろえてから「量」で混ぜるので、
+    // 歪みを強くしても音量はほぼ変わらず、音色だけが変わる。混ぜるのも2倍の速さの中で行う（FIR の遅れで元の音とずれない）
+    const auto mixTarget = std::clamp (p.distMix, 0.0f, 1.0f);
+    if (mixTarget <= 0.0f && distMixSmooth.isAt (0.0f))
+    {
+        distIdle = true;  // 量が 0：元の音のまま（FIR も通さない）
+        return;
+    }
+    if (distIdle)
+    {
+        clearDistortion();  // 止めていた間の古い音を出さない（量は 0 から滑らかに上がる）
+        distIdle = false;
+    }
+
+    const auto rate2       = (float) (2.0 * sampleRate);
+    const auto toneHz      = std::clamp (p.distToneHz, 20.0f, 0.45f * rate2);
+    const auto toneTarget  = 1.0f - std::exp (-twoPi * toneHz / rate2);
+    const auto toneSmooth  = 1.0f - std::exp (-1.0f / (smoothSeconds * rate2));
+    const auto driveTarget = std::clamp (p.distDrive, 0.0f, 1.0f);
+    const auto type        = p.distType;
+
+    for (int n = 0; n < numSamples; ++n)
+    {
+        const auto mix   = distMixSmooth.next (mixTarget);
+        const auto drive = distDriveSmooth.next (driveTarget);
+        const auto gain  = dbToGain (drive * (type == DistType::fold ? distFoldDb : distDriveDb));
+        // ビット：歪み 0 で 16 ビット・間引きなし、1 で 4 ビット・31 サンプルごと（2倍の速さで数える）
+        const auto levels = std::exp2 (15.0f - 12.0f * drive);
+        const auto hold   = 1 + (int) (drive * drive * 30.0f);
+
+        const float in[2] = { left[n], right[n] };
+        float out[2] = { 0.0f, 0.0f };
+        for (int phase = 0; phase < 2; ++phase)
+        {
+            distToneCoeff += (toneTarget - distToneCoeff) * toneSmooth;
+            if (type == DistType::bit && --distHoldCount < 0) distHoldCount = hold - 1;
+            float up[2], wet[2];
+            for (int ch = 0; ch < 2; ++ch)
+            {
+                // 0 を挟んで2倍にし（振幅を 2 倍して戻す）、ローパスで間を埋める
+                up[ch] = distUp[ch].process (phase == 0 ? 2.0f * in[ch] : 0.0f, halfbandCoeffs);
+                const auto u = up[ch] * gain;
+                float y;
+                switch (type)
+                {
+                    case DistType::tube:  // 正の側を早く、負の側をゆるく丸める（偶数倍音の出る片寄った歪み）
+                        y = u >= 0.0f ? std::tanh (u) : std::tanh (0.6f * u) / 0.6f;
+                        break;
+                    case DistType::hard:  // ±1 で切る
+                        y = std::clamp (u, -1.0f, 1.0f);
+                        break;
+                    case DistType::fold:  // ±1 を超えた所で折り返す（サインのウェーブフォルダー）
+                        y = std::sin (u * (pi * 0.5f));
+                        break;
+                    case DistType::bit:
+                    default:              // 間引いて保ち、段数を減らす（ビットクラッシャー）
+                        if (distHoldCount == hold - 1) distHeld[ch] = std::round (up[ch] * levels) / levels;
+                        y = distHeld[ch];
+                        break;
+                }
+                // トーン（1次のローパス2段）→ 直流カット
+                distLow1[ch] = flushDenormal (distLow1[ch] + (y - distLow1[ch]) * distToneCoeff);
+                distLow2[ch] = flushDenormal (distLow2[ch] + (distLow1[ch] - distLow2[ch]) * distToneCoeff);
+                const auto dc = distLow2[ch] - distDcIn[ch] + distDcCoeff * distDcOut[ch];
+                distDcIn[ch]  = distLow2[ch];
+                distDcOut[ch] = flushDenormal (dc);
+                wet[ch] = dc;
+            }
+
+            // 元の音と平均の大きさをそろえる
+            distDryPower = flushDenormal (distDryPower + (up[0] * up[0] + up[1] * up[1] - distDryPower) * distPowerCoeff);
+            distWetPower = flushDenormal (distWetPower + (wet[0] * wet[0] + wet[1] * wet[1] - distWetPower) * distPowerCoeff);
+            const auto match = std::min (distMaxGain, std::sqrt ((distDryPower + 1.0e-10f) / (distWetPower + 1.0e-10f)));
+
+            for (int ch = 0; ch < 2; ++ch)
+            {
+                const auto mixed = up[ch] + (wet[ch] * match - up[ch]) * mix;
+                out[ch] = distDown[ch].process (mixed, halfbandCoeffs);  // 2つ目（間引いて残す方）を使う
+            }
+        }
+        left[n]  = flushDenormal (out[0]);
+        right[n] = flushDenormal (out[1]);
+    }
+}
+
+void Fx::processCompressor (float* left, float* right, int numSamples, const GrowParams& p)
+{
+    // 左右の大きい方のピーク（dB）がスレッショルドを超えた分を、レシオで縮める（ソフトニー）。
+    // 下げ幅はアタック（下げるとき）・リリース（戻すとき）の時間で追い、左右に同じだけかける。
+    // 「量」で元の音と混ぜる（1 未満ならパラレルコンプ。アタックの頭を残したまま余韻を持ち上げる）
+    const auto mixTarget = std::clamp (p.compMix, 0.0f, 1.0f);
+    if (mixTarget <= 0.0f && compMixSmooth.isAt (0.0f))
+    {
+        compIdle = true;  // 量が 0：元の音のまま
+        return;
+    }
+    if (compIdle)
+    {
+        compGainDb = 0.0f;  // 前の下げ幅を持ち越さない
+        compIdle = false;
+    }
+
+    const auto sr      = (float) sampleRate;
+    const auto attack  = std::exp (-1.0f / (std::max (0.0001f, p.compAttack) * sr));
+    const auto release = std::exp (-1.0f / (std::max (0.001f, p.compRelease) * sr));
+    const auto slope   = 1.0f / std::max (1.0f, p.compRatio) - 1.0f;  // 超えた分 1dB あたりの下げ幅（負）
+
+    for (int n = 0; n < numSamples; ++n)
+    {
+        const auto mix       = compMixSmooth.next (mixTarget);
+        const auto threshold = compThresholdSmooth.next (p.compThresholdDb);
+        const auto makeup    = compMakeupSmooth.next (p.compMakeupDb);
+
+        const auto peak    = std::max (std::fabs (left[n]), std::fabs (right[n]));
+        const auto levelDb = peak > 1.0e-6f ? 20.0f * std::log10 (peak) : -120.0f;
+        const auto over    = levelDb - threshold;
+        float target;
+        if (2.0f * over <= -compKneeDb)
+            target = 0.0f;
+        else if (2.0f * over < compKneeDb)
+        {
+            const auto k = over + 0.5f * compKneeDb;
+            target = slope * k * k / (2.0f * compKneeDb);
+        }
+        else
+            target = slope * over;
+
+        const auto coeff = target < compGainDb ? attack : release;
+        compGainDb = flushDenormal (target + (compGainDb - target) * coeff);
+
+        const auto gain = (1.0f - mix) + mix * dbToGain (compGainDb + makeup);
+        left[n]  *= gain;
+        right[n] *= gain;
     }
 }
 
@@ -402,6 +571,8 @@ void Fx::processOutput (float* left, float* right, int numSamples, const GrowPar
 void Fx::process (float* left, float* right, int numSamples, const GrowParams& p)
 {
     processDrive (left, right, numSamples, p);
+    processDistortion (left, right, numSamples, p);
+    processCompressor (left, right, numSamples, p);
     processChorus (left, right, numSamples, p);
     processDelay (left, right, numSamples, p);
     processReverb (left, right, numSamples, p);

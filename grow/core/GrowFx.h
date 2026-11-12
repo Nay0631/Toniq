@@ -8,7 +8,7 @@
 namespace grow
 {
 // 全ボイスを足した後ろのエフェクト（左右）：
-// ドライブ（2倍オーバーサンプリング）→ コーラス（左右3本ずつ）→ ディレイ（テンポ同期・左右に跳ねる・くり返しはテープ風）
+// ドライブ（2倍オーバーサンプリング）→ ディストーション（2倍オーバーサンプリング）→ コンプレッサー → コーラス（左右3本ずつ）→ ディレイ（テンポ同期・左右に跳ねる・くり返しはテープ風）
 //   → リバーブ（8本の FDN）→ マスター → DC カット → ソフトクリップ → リミッター
 // 量・深さなどのつまみの値は数 ms かけて滑らかに変える
 class Fx
@@ -53,6 +53,8 @@ private:
     };
 
     void processDrive (float* left, float* right, int numSamples, const GrowParams& p);
+    void processDistortion (float* left, float* right, int numSamples, const GrowParams& p);
+    void processCompressor (float* left, float* right, int numSamples, const GrowParams& p);
     void processChorus (float* left, float* right, int numSamples, const GrowParams& p);
     void processDelay (float* left, float* right, int numSamples, const GrowParams& p);
     void processReverb (float* left, float* right, int numSamples, const GrowParams& p);
@@ -62,6 +64,20 @@ private:
 
     float halfbandCoeffs[halfbandTaps] {};
     Halfband driveUp[2], driveDown[2];
+
+    // ディストーション：2倍の速さで歪ませ、トーン（ローパス2段）・直流カットを通し、元の音と聞こえる大きさをそろえて混ぜる
+    Halfband distUp[2], distDown[2];
+    float distLow1[2] {}, distLow2[2] {};       // トーンのローパスの状態
+    float distDcIn[2] {}, distDcOut[2] {};      // 歪ませた音の直流カット
+    float distToneCoeff = 1.0f;                  // 今のトーンの係数（目標へ滑らかに近づける）
+    float distDcCoeff = 0.999f;
+    float distDryPower = 0.0f, distWetPower = 0.0f;  // 大きさをそろえるための平均パワー（左右まとめて）
+    float distPowerCoeff = 0.001f;
+    float distHeld[2] {};                        // ビット：間引いて保っている値
+    int   distHoldCount = 0;
+
+    // コンプレッサー：左右の大きい方のピークで、ゲインの下げ幅（dB）をアタック・リリースで追う（左右同じだけ下げる）
+    float compGainDb = 0.0f;
 
     DelayLine chorusLine[2];
     float chorusPhase = 0.0f;
@@ -88,13 +104,16 @@ private:
     float dcIn[2] {}, dcOut[2] {};
     float dcCoeff = 0.9995f;
 
+    Smoother distDriveSmooth, distMixSmooth;
+    Smoother compMixSmooth, compThresholdSmooth, compMakeupSmooth;
     Smoother driveSmooth, chorusMixSmooth, chorusDepthSmooth;
     Smoother delayMixSmooth, delayFeedbackSmooth;
     Smoother reverbMixSmooth, reverbSizeSmooth;
 
     // 量が 0 で落ち着いている間は計算しない（混ぜても聞こえないため）。止めていたものを再開するときは、
     // 古い響きが出ないようにバッファを空にしてから始める
-    bool chorusIdle = true, delayIdle = true, reverbIdle = true;
+    bool distIdle = true, compIdle = true, chorusIdle = true, delayIdle = true, reverbIdle = true;
+    void clearDistortion();
     void clearChorus();
     void clearDelay();
     void clearReverb();

@@ -107,20 +107,6 @@
           </span>
         </button>
 
-        <!-- 作業ファイルを開く（設定と同じ細い横長のカード） -->
-        <button class="menu-card menu-card-slim" data-project-open>
-          <span class="menu-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-              <path d="M12 11v5M9.5 13.5L12 11l2.5 2.5"/>
-            </svg>
-          </span>
-          <span>
-            <span class="menu-card-title">作業ファイルを開く</span>
-            <span class="menu-card-desc">保存した曲の構成（.toniq.json）を開いて、続きから編集する</span>
-          </span>
-        </button>
-
         <!-- 設定（ほかのカードより細い横長のカード） -->
         <button class="menu-card menu-card-slim" data-goto="settings">
           <span class="menu-icon">
@@ -153,7 +139,6 @@
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
           <button class="btn" data-new-song>＋ 新規作成</button>
           <button class="btn" data-save-song>♪ 保存</button>
-          <button class="btn" data-project-save>⇩ 作業ファイル</button>
           <button class="btn btn-square" id="s-stop" aria-label="停止"><span class="icon-stop"></span></button>
           <button class="btn btn-play" id="s-play">▷ 再生</button>
         </div>
@@ -300,7 +285,6 @@
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
           <button class="btn" data-new-song>＋ 新規作成</button>
           <button class="btn" data-save-song>♪ 保存</button>
-          <button class="btn" data-project-save>⇩ 作業ファイル</button>
           <button class="btn btn-square" id="c-stop" aria-label="停止"><span class="icon-stop"></span></button>
           <button class="btn btn-play" id="c-play">▷ 再生</button>
         </div>
@@ -369,16 +353,16 @@
               <span class="form-label" data-term="instrument">インスト</span>
               <select class="select" id="c-instrument">
                 <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow">grow（Toniq専用シンセ）</option>
-                <option value="auto">ジャンルに合わせる</option>
-                <option value="supersaw">SuperSaw リード（EDM）</option>
-                <option value="epiano">エレピ（ローファイ）</option>
-                <option value="bell">ベル（ゲームBGM）</option>
-                <option value="square">スクエア（8bit）</option>
-                <option value="acid">アシッド（テクノ）</option>
-                <option value="lead">シンセリード</option>
-                <option value="pluck">プラック（ハウス）</option>
-                <option value="soft">ソフトサイン（アンビエント）</option>
+                <option value="grow" data-term="melodySound.grow">grow（Toniq専用シンセ）</option>
+                <option value="auto" data-term="melodySound.auto">ジャンルに合わせる</option>
+                <option value="supersaw" data-term="melodySound.supersaw">SuperSaw リード（EDM）</option>
+                <option value="epiano" data-term="melodySound.epiano">エレピ（ローファイ）</option>
+                <option value="bell" data-term="melodySound.bell">ベル（ゲームBGM）</option>
+                <option value="square" data-term="melodySound.square">スクエア（8bit）</option>
+                <option value="acid" data-term="melodySound.acid">アシッド（テクノ）</option>
+                <option value="lead" data-term="melodySound.lead">シンセリード</option>
+                <option value="pluck" data-term="melodySound.pluck">プラック（ハウス）</option>
+                <option value="soft" data-term="melodySound.soft">ソフトサイン（アンビエント）</option>
               </select>
             </label>
 
@@ -479,10 +463,10 @@
             <label class="form-row">
               <span class="form-label" data-term="chordRhythm">リズム</span>
               <select class="select" id="c-rhythm">
-                <option value="whole">全音符</option>
-                <option value="half">2分音符</option>
-                <option value="quarter">4分音符</option>
-                <option value="eighth">8分音符</option>
+                <option value="whole" data-term="chordRhythm.whole">全音符</option>
+                <option value="half" data-term="chordRhythm.half">2分音符</option>
+                <option value="quarter" data-term="chordRhythm.quarter">4分音符</option>
+                <option value="eighth" data-term="chordRhythm.eighth">8分音符</option>
               </select>
             </label>
 
@@ -525,7 +509,7 @@
             </div>
 
             <div class="pill-row">
-              <span><span data-term="pad">パッド</span> / Str</span>
+              <span><span data-term="pad">パッド</span> / <span data-term="strings">Str</span></span>
               <button class="pill" data-part-toggle="pad"></button>
             </div>
             <div class="pill-row">
@@ -566,13 +550,13 @@
               <span class="form-label">種類</span>
               <div class="select-with-btn">
                 <select class="select" id="c-fx-type" aria-label="FX の種類">
-                  <option value="auto">ジャンルの標準</option>
-                  <option value="riser">ライザー</option>
-                  <option value="build">ライザー＋インパクト</option>
-                  <option value="impact">インパクト</option>
-                  <option value="downlifter">ダウンリフター</option>
-                  <option value="reverse">リバースシンバル</option>
-                  <option value="chip">チップSE（8bit）</option>
+                  <option value="auto" data-term="fx.auto">ジャンルの標準</option>
+                  <option value="riser" data-term="fx.riser">ライザー</option>
+                  <option value="build" data-term="fx.build">ライザー＋インパクト</option>
+                  <option value="impact" data-term="fx.impact">インパクト</option>
+                  <option value="downlifter" data-term="fx.downlifter">ダウンリフター</option>
+                  <option value="reverse" data-term="fx.reverse">リバースシンバル</option>
+                  <option value="chip" data-term="fx.chip">チップSE（8bit）</option>
                 </select>
                 <button class="btn btn-small" id="c-fx-preview">▷ 試聴</button>
               </div>
@@ -662,8 +646,7 @@
           </button>
           <button class="btn ml-tool" id="ml-import" title="書き出した曲ファイル（.toniq.json）をミュージックリストに追加します">ファイルを読み込む</button>
           <button class="btn ml-tool" id="ml-export-all" title="ミュージックリストの曲をすべて1つのファイルに書き出します（バックアップ用）">すべて書き出す</button>
-          <button class="btn ml-tool" data-project-open title="作業ファイル（.toniq.json）を今の曲として開きます（ミュージックリストには追加しません）">作業ファイルを開く</button>
-          <button class="btn ml-tool" data-output-folder title="書き出した曲（WAV・MP3・MIDI）と作業ファイルを保存する output フォルダを開きます" hidden>出力フォルダ</button>
+          <button class="btn ml-tool" id="ml-output-folder" title="書き出した曲（WAV・MP3・MIDI）を保存する output フォルダを開きます" hidden>出力フォルダ</button>
           <input type="file" id="ml-import-file" accept=".json,application/json" multiple hidden>
         </div>
 
@@ -866,10 +849,10 @@
           </details>
 
           <details class="help-item">
-            <summary>保存の種類（ミュージックリスト・作業ファイル・書き出し）</summary>
+            <summary>保存の種類（ミュージックリスト・書き出し）</summary>
             <ul>
               <li><b>♪ 保存</b>：アプリの中のミュージックリストに保存します。リストから開いた曲は上書き保存になります。</li>
-              <li><b>⇩ 作業ファイル</b>：今の曲をファイル（.toniq.json）として保存します。ほかのパソコンへ移すときや、リストに保存できなかったときに使います。</li>
+              <li>保存した曲の続きを編集するには、ミュージックリストで曲の「編集」ボタンを押します（曲名のダブルクリックでも開けます）。</li>
               <li><b>WAV / MP3 / MIDI</b>：できた曲を音声・MIDI のファイルにします。保存先は「出力フォルダ」ボタンで開けます。</li>
               <li>ミュージックリストの「すべて書き出す」「ファイルを読み込む」で、曲をまとめて移せます。</li>
             </ul>

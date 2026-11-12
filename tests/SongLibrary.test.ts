@@ -6,7 +6,7 @@ vi.mock("../src/engine/History", () => ({ resetHistory: vi.fn() }));
 
 import { getState, setState, defaultState, SONG_FIELDS } from "../src/engine/AppState";
 import {
-  listSongs, loadSong, saveCurrentSong, renameSong, importSongFile, loadProjectFile, projectFileText,
+  listSongs, loadSong, saveCurrentSong, renameSong, importSongFile,
   SongStorageError, SavedSong,
 } from "../src/engine/SongLibrary";
 import { LEGACY_PRESET_IDS } from "../src/engine/Grow";
@@ -164,7 +164,7 @@ describe("loadSong：そのほかの読み替え", () => {
   });
 });
 
-describe("曲ファイル・作業ファイル", () => {
+describe("曲ファイル", () => {
   it("FILE_VERSION 1 の曲ファイルを読み込み、古い値を読み替えて一覧に足す", () => {
     const file = { format: "toniq-song", version: 1, exportedAt: 0, songs: [legacySong(), { name: "壊れた曲" }] };
     const result = importSongFile(JSON.stringify(file));
@@ -190,25 +190,13 @@ describe("曲ファイル・作業ファイル", () => {
     expect(() => importSongFile(JSON.stringify({ hello: 1 }))).toThrow(/Toniq の曲ファイルではありません/);
   });
 
-  it("作業ファイルを開くと古い値を読み替え、ミュージックリストには追加しない", () => {
-    const name = loadProjectFile(JSON.stringify({ format: "toniq-song", version: 1, exportedAt: 0, songs: [legacySong()] }), "C:/x.toniq.json");
-    expect(name).toBe("古い曲");
-    expect(getState().growPreset).toBe("acid");
-    expect(getState().songId).toBeNull();
-    expect(getState().projectPath).toBe("C:/x.toniq.json");
-    expect(listSongs()).toEqual([]);
-  });
-
-  it("作業ファイルに保存した内容を開き直すと同じ曲になる", () => {
+  it("ミュージックリストに保存した曲を開き直すと同じ曲になる", () => {
     setState({ genre: "8bit", key: "G", chordPattern: chordById("chord_012"), drumPattern: drums[1], bars: 8 });
     const before = Object.fromEntries(SONG_FIELDS.map(f => [f, structuredClone(getState()[f])]));
-    const text = projectFileText();
+    const { id } = saveCurrentSong();
     resetState();
-    loadProjectFile(text, null);
-    for (const f of SONG_FIELDS) {
-      if (f === "mode") continue;  // 作業ファイルを開くとモードは simple / custom にそろえる（同じ値）
-      expect(getState()[f], f).toEqual(before[f]);
-    }
+    expect(loadSong(id)).toBe(true);
+    for (const f of SONG_FIELDS) expect(getState()[f], f).toEqual(before[f]);
   });
 });
 

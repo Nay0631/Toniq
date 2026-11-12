@@ -7,6 +7,7 @@
 //   npm run grow:render -- --suggest          聞こえる大きさを目標（TARGET。FX はそれぞれの目標 TARGETS）にそろえる master の値を出す
 //                                             （ドラムはピークを DRUM_PEAK にそろえる値）
 //   npm run grow:render -- --json             結果を JSON で出す
+//   npm run grow:render -- --set dist_mix=0.5,comp_mix=1  パラメーター（ID）の値を上書きして鳴らす（試聴・調整用）
 //   npm run grow:render -- --analyze a.wav …  WAV（Toniq で書き出した曲など）のピーク・統合ラウドネス・聞こえる大きさの最大を測る
 //
 // 鳴らすフレーズはプリセットの使われ方（ROLES）で変える。音量は「聞こえる大きさ」＝ モーメンタリーラウドネスの最大
@@ -329,12 +330,21 @@ if (only && targets.length < only.length) {
 }
 if (flag("--wav")) mkdirSync(OUT, { recursive: true });
 
+// --set ID=値,…：プリセットの値を上書きする（master を上書きしたら提案もその値から求める）
+const overrides = {};
+for (const pair of value("--set")?.split(",").filter(Boolean) ?? []) {
+  const [id, v] = pair.split("=").map(s => s.trim());
+  const index = paramIds.indexOf(id);
+  if (index < 0 || v === undefined || Number.isNaN(Number(v))) console.error(`--set の指定が読めない：${pair}`);
+  else overrides[index] = Number(v);
+}
+
 const results = targets.map(p => {
   const role = ROLES[p.id] ?? "lead";
-  const audio = render(p, role);
+  const audio = render(p, role, overrides);
   const m = measure(audio);
   if (flag("--wav")) writeWav(join(OUT, `${p.id}.wav`), audio.L, audio.R);
-  const master = info.grow_preset_value(p.index, masterIndex);
+  const master = overrides[masterIndex] ?? info.grow_preset_value(p.index, masterIndex);
   // 聞こえる大きさを TARGET にそろえる master（出力段のリミッター・ソフトクリップの手前なのでほぼ比例する）
   const target = TARGETS[p.id] ?? TARGET;
   const gap = role === "drum" ? (DRUM_PEAKS[p.id] ?? DRUM_PEAK) - m.peak : target - m.loud;

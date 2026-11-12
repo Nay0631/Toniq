@@ -3,7 +3,7 @@ import {
   listSongs, findSong, saveCurrentSong, renameSong, deleteSong, loadSong, newSong, toggleFavorite, SavedSong,
   songsToFile, songFileName, importSongFile, SongStorageError,
 } from "../engine/SongLibrary";
-import { saveProjectFile } from "./ProjectFileControls";
+import { hasOutputFolder, openOutputFolder } from "../engine/OutputFiles";
 import * as Playback from "../engine/Playback";
 import { onRender, render as renderAll, showScreen } from "./Router";
 import { formatTime } from "./format";
@@ -17,6 +17,7 @@ const MODE_LABELS = { simple: "シンプルモード", custom: "カスタムモ�
 const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>`;
 const ICON_STOP = `<svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></svg>`;
 const ICON_STAR = `<svg class="icon-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>`;
+const ICON_EDIT = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>`;
 const ICON_MORE = `<svg viewBox="0 0 24 24"><circle cx="12" cy="5.5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="18.5" r="1.7"/></svg>`;
 
 // 表示上の一時的な状態：⋮ メニューを開いている曲と、名前を変更中の曲
@@ -80,16 +81,15 @@ function withStorage(action: () => void): boolean {
   }
 }
 
-// 今の曲をミュージックリストに保存する。書き込めなければ、作業ファイルへの保存を勧める
+// 今の曲をミュージックリストに保存する。書き込めなければ知らせる（編集中の曲は消えないので、整理してから保存し直せる）
 function saveToList(): boolean {
   try {
     saveCurrentSong();
     return true;
   } catch (e) {
     if (!(e instanceof SongStorageError)) throw e;
-    const message = `${e.message}。この曲はミュージックリストに保存されていません。\n${STORAGE_HINT}\n\n`
-                  + "代わりに今の曲を作業ファイル（.toniq.json）に保存しますか？";
-    if (confirm(message)) void saveProjectFile();
+    alert(`${e.message}。この曲はミュージックリストに保存されていません。\n${STORAGE_HINT}\n`
+        + "編集中の曲は消えていないので、整理したあとにもう一度「♪ 保存」してください。");
     return false;
   }
 }
@@ -185,7 +185,7 @@ function songRow(song: SavedSong): string {
   const detail  = `${song.genre}・${song.mood}・${song.key}・${song.bpm} BPM・${song.bars}小節（${MODE_LABELS[song.mode]}）`;
   const name = renameSongId === song.id
     ? `<input class="song-name-input" data-action="rename" value="${escapeHtml(song.name)}" aria-label="曲名" spellcheck="false">`
-    : `<span class="song-name" title="${escapeHtml(detail)}">${escapeHtml(song.name)}</span>`;
+    : `<span class="song-name" title="${escapeHtml(detail)}（ダブルクリックで編集）">${escapeHtml(song.name)}</span>`;
 
   return `
     <li class="song-row${playing ? " is-playing" : ""}${menuSongId === song.id ? " is-menu-open" : ""}" data-id="${song.id}">
@@ -198,12 +198,14 @@ function songRow(song: SavedSong): string {
       </div>
       <span class="song-time">${formatTime(seconds)}</span>
       <span class="song-date">${formatDate(song.updatedAt)}</span>
+      <button class="btn song-edit" data-action="open" title="${MODE_LABELS[song.mode]}で開いて続きを編集します">
+        ${ICON_EDIT}<span>編集</span>
+      </button>
       <button class="song-icon-btn song-fav${song.favorite ? " is-on" : ""}" data-action="favorite"
         aria-label="お気に入り" aria-pressed="${!!song.favorite}">${ICON_STAR}</button>
       <div class="song-more">
         <button class="song-icon-btn" data-action="menu" aria-label="メニュー">${ICON_MORE}</button>
         <div class="song-menu" ${menuSongId === song.id ? "" : "hidden"}>
-          <button data-action="open">${MODE_LABELS[song.mode]}で開く</button>
           <button data-action="start-rename">名前を変更</button>
           <button data-action="export">ファイルに書き出す</button>
           <button class="is-danger" data-action="delete">削除</button>
@@ -324,8 +326,21 @@ export function initMusicListScreen(): void {
   });
   $("ml-export-all")?.addEventListener("click", exportAllSongs);
 
+  // 出力フォルダ（Electron のときだけ）
+  const outputFolder = $("ml-output-folder");
+  if (outputFolder) {
+    outputFolder.hidden = !hasOutputFolder();
+    outputFolder.addEventListener("click", () => { void openOutputFolder(); });
+  }
+
   // 曲の操作
   const list = $("ml-list")!;
+  // 曲名のダブルクリックでも開いて編集する
+  list.addEventListener("dblclick", e => {
+    const name = (e.target as HTMLElement).closest(".song-name");
+    const id = name?.closest<HTMLElement>("[data-id]")?.dataset.id;
+    if (id) openSong(id);
+  });
   list.addEventListener("click", e => {
     const target = (e.target as HTMLElement).closest<HTMLElement>("[data-action]");
     const id = target?.closest<HTMLElement>("[data-id]")?.dataset.id;

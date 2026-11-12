@@ -12,6 +12,7 @@ enum class Wave       { sine, triangle, saw, square };
 enum class FilterType { lowpass12, lowpass24, highpass, bandpass };
 enum class LfoWave    { sine, triangle, saw, square, random };
 enum class VoiceMode  { poly, mono, legato };
+enum class DistType   { tube, hard, fold, bit };  // ディストーションの種類（GrowParams.cpp の distTypeNames の並び）
 // モジュレーションの元と行き先（GrowParams.cpp の modSourceNames / modDestNames の並び）
 enum class ModSource  { none, velocity, eg2, lfo1, lfo2, filterEnv, key, random };
 enum class ModDest    { pitch, osc2Pitch, cutoff, pulseWidth, amp, fm, ring, lfo1Rate };
@@ -19,7 +20,7 @@ inline constexpr int numModDests = 8;
 inline constexpr int numModSlots = 4;  // モジュレーションの割り当ての数
 
 enum class ParamKind { continuous, integer, choice, toggle };
-enum class ParamUnit { none, percent, hertz, seconds, semitones, cents, decibels, signedInteger };
+enum class ParamUnit { none, percent, hertz, seconds, semitones, cents, decibels, signedInteger, ratio };
 
 struct ParamInfo
 {
@@ -51,7 +52,10 @@ enum Param : int
     mod3Source, mod3Dest, mod3Amount, mod4Source, mod4Dest, mod4Amount,
     pitchEnvAmount, pitchEnvTime, pitchEnvCurve,
     voiceMode, glide, velocity, drift,
-    drive, chorusMix, chorusRate, chorusDepth,
+    drive,
+    distType, distDrive, distTone, distMix,
+    compMix, compThreshold, compRatio, compAttack, compRelease, compMakeup,
+    chorusMix, chorusRate, chorusDepth,
     delayMix, delayTime, delayFeedback, delayPingPong,
     reverbMix, reverbSize, master,
     numParams
@@ -146,6 +150,21 @@ struct GrowParams
     float     drift        = 0.0f;  // アナログらしいずれ（0〜1）。音ごとに高さ・カットオフを少しずらし、高さをゆっくり揺らす
 
     float drive         = 0.0f;
+
+    // ディストーション（ドライブのあと。量 0 なら何もしない）
+    DistType distType   = DistType::tube;
+    float distDrive     = 0.5f;      // 歪ませる強さ（0〜1）
+    float distToneHz    = 20000.0f;  // 歪ませた音にかけるローパス
+    float distMix       = 0.0f;      // 元の音と混ぜる量（0〜1）
+
+    // コンプレッサー（ディストーションのあと。量 0 なら何もしない）
+    float compMix         = 0.0f;    // 元の音と混ぜる量（0〜1。1 未満ならパラレルコンプ）
+    float compThresholdDb = -18.0f;
+    float compRatio       = 4.0f;
+    float compAttack      = 0.01f;   // 秒
+    float compRelease     = 0.15f;   // 秒
+    float compMakeupDb    = 0.0f;
+
     float chorusMix     = 0.0f;
     float chorusRate    = 0.8f;
     float chorusDepth   = 0.3f;

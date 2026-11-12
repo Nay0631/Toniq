@@ -1,7 +1,7 @@
 import type { OutputKind } from "../toniq-files";
 import { downloadBlob } from "./Playback";
 
-// 曲の出力先：Electron では toniq の output フォルダ（projects / audio / midi）に直接保存する。
+// 曲の出力先：Electron では toniq の output フォルダ（audio / midi）に直接保存する。
 // ブラウザで開いたとき（preload がない）はこれまでどおりダウンロードにする
 
 export type { OutputKind };
@@ -11,7 +11,6 @@ export function hasOutputFolder(): boolean {
 }
 
 const KIND_LABELS: Record<OutputKind, string> = {
-  projects: "output/projects",
   audio:    "output/audio",
   midi:     "output/midi",
 };

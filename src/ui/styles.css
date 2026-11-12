@@ -2785,6 +2785,21 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .song-icon-btn:hover { background: var(--hover-overlay); color: var(--text); }
 .song-icon-btn svg { width: 18px; height: 18px; fill: currentColor; }
 
+/* 編集ボタン：⋮ メニューに隠さず行に出す（押すと曲のモードで開く） */
+.song-edit {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--list-soft);
+  border-color: var(--list-soft);
+  color: var(--list-ink);
+}
+
+.song-edit:hover { border-color: var(--list); }
+.song-edit svg { width: 15px; height: 15px; }
+.song-name { cursor: default; }
+
 .song-fav .icon-star { fill: none; stroke: var(--text-muted); }
 .song-fav.is-on .icon-star { fill: var(--star); stroke: var(--star-stroke); }
 
@@ -3144,6 +3159,14 @@ span[data-term],
   pointer-events: none;
 }
 
+/* ドロップダウンのリストの上にも出すため popover（トップレイヤー）で出す。ブラウザ標準の popover の見た目は打ち消す */
+.term-tip[popover] {
+  inset: auto;
+  margin: 0;
+  border: 0;
+  overflow: visible;
+}
+
 .term-tip[hidden] { display: none; }
 
 .term-tip-title {
@@ -3158,8 +3181,9 @@ span[data-term],
   cursor: inherit;
 }
 
-/* ===== メニューの細いカード（作業ファイルを開く・設定）：ほかのカードより背が低く、2枚で1行に並べる ===== */
+/* ===== メニューの細いカード（設定）：ほかのカードより背が低く、横幅いっぱいに置く ===== */
 .menu-card-slim {
+  grid-column: 1 / -1;
   padding-top: clamp(16px, calc(var(--menu-scale) * 2), 32px);
   padding-bottom: clamp(16px, calc(var(--menu-scale) * 2), 32px);
 }

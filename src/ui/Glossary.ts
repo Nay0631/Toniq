@@ -65,6 +65,52 @@ export const TERMS: Record<string, Term> = {
   synth:       { title: "シンセ（シンセサイザー）", desc: "電子的に音を作る楽器です。つまみで音色を変えて、ほかの楽器にはない音を作れます。" },
   rhythm:      { title: "リズム", desc: "音を鳴らすタイミングと長さの並びです。ドラムなどが刻むリズムで、曲のノリが決まります。" },
   loop:        { title: "周回", desc: "コード進行1回分を1周として、今が何周目かを表します。曲は周回を重ねながらパートが増えたり減ったりします。" },
+  strings:     { title: "Str（ストリングス）", desc: "Strings の略で、バイオリンやチェロなど弦楽器の合奏の音です。パッドと同じく後ろで長く伸ばして曲に厚みを出す役目なので、ここではまとめて扱っています。" },
+
+  // ===== 選択肢（<option data-term>）の説明。ドロップダウンのリストで項目にカーソルを乗せると出す =====
+  // スケール（カスタムモードの「スケール・キー」）
+  "scale.major":    { title: "メジャー", desc: "明るく元気な響きのスケールです。「ドレミファソラシド」がこれで、楽しい曲や前向きな曲によく使います。" },
+  "scale.minor":    { title: "マイナー", desc: "暗く切ない響きのスケールです。「ラシドレミファソラ」がこれで、悲しい曲やかっこいい曲によく使います。" },
+  "scale.dorian":   { title: "ドリアン", desc: "マイナーに似ていますが、1音だけ明るい音が混ざったスケールです。暗すぎず、おしゃれでクールな響きになります。" },
+  "scale.phrygian": { title: "フリジアン", desc: "マイナーよりさらに暗く、2つ目の音がすぐ隣にある緊張感の強いスケールです。妖しい・エキゾチックな響きになります。" },
+
+  // コードのリズム（「コード進行」の「リズム」）
+  "chordRhythm.whole":   { title: "全音符", desc: "コードが変わるまで1回だけ鳴らして伸ばします。いちばんゆったりして、落ち着いた感じになります。" },
+  "chordRhythm.half":    { title: "2分音符", desc: "1小節に2回（2拍ごとに）コードを鳴らします。ゆったりしつつ、少し動きが出ます。" },
+  "chordRhythm.quarter": { title: "4分音符", desc: "1拍ごと、1小節に4回コードを鳴らします。リズムがはっきりして、歩くようなノリになります。" },
+  "chordRhythm.eighth":  { title: "8分音符", desc: "半拍ごと、1小節に8回コードを刻みます。細かく刻むので勢いが出て、にぎやかになります。" },
+
+  // FX / SE の種類
+  "fx.auto":       { title: "ジャンルの標準", desc: "ジャンルに合った効果音を自動で選びます。迷ったらこれで大丈夫です。" },
+  "fx.riser":      { title: "ライザー", desc: "「シュワーッ」と音がだんだん高く・大きくなっていく効果音です。区切りの直前に鳴らして、次の盛り上がりへの期待感を高めます。" },
+  "fx.build":      { title: "ライザー＋インパクト", desc: "ライザーで盛り上げて、次の頭で「ドーン」とインパクトを鳴らします。サビに入る瞬間を派手に演出できます。" },
+  "fx.impact":     { title: "インパクト", desc: "区切りの頭で「ドーン」と鳴る、低く重い一撃の効果音です。新しい部分が始まったことをはっきり伝えます。" },
+  "fx.downlifter": { title: "ダウンリフター", desc: "ライザーの逆で、高い音から「ヒューン」と下がっていく効果音です。盛り上がりを落ち着かせる場面に合います。" },
+  "fx.reverse":    { title: "リバースシンバル", desc: "シンバルの音を逆再生した「フワァッ」と吸い込まれるような効果音です。次の頭に向かって音が膨らみます。" },
+  "fx.chip":       { title: "チップSE（8bit）", desc: "昔のゲーム機のような「ピロピロ」「ピュン」という電子音の効果音です。8bit の曲によく合います。" },
+
+  // 音色（コードの「音色」・grow のプリセット）。キーは grow のプリセットの ID
+  "sound.auto":     { title: "ジャンルに合わせる", desc: "ジャンルに合った音色を自動で選びます。カッコ内が今のジャンルで使う音色です。" },
+  "sound.soft_pad": { title: "ソフトパッド", desc: "角のない、ふんわりやわらかい音色です。後ろで静かに支えたいときに合います。" },
+  "sound.wide_pad": { title: "ワイドパッド", desc: "左右に大きく広がる、厚みのあるパッドの音色です。曲全体を包み込むような広がりが出ます。" },
+  "sound.hard_pad": { title: "ハードパッド", desc: "芯がはっきりした、少し硬めのパッドの音色です。ほかの音に埋もれにくく、力強い響きになります。" },
+  "sound.epiano":   { title: "エレピ", desc: "エレクトリックピアノの、丸くて温かい音色です。ローファイやおしゃれな曲によく合います。" },
+  "sound.strings":  { title: "ストリングス", desc: "バイオリンなど弦楽器の合奏のような音色です。なめらかで、映画やゲームの曲のような雰囲気になります。" },
+  "sound.organ":    { title: "オルガン", desc: "息の長い、少しざらっとしたオルガンの音色です。ハウスやテクノのコードの刻みでよく使われます。" },
+  "sound.square":   { title: "スクエア", desc: "四角い形の波（矩形波）の、ピコピコした音色です。昔のゲーム機のような 8bit の音になります。" },
+  "sound.supersaw": { title: "スーパーソウ", desc: "ギザギザの波を何本も少しずつずらして重ねた、分厚くきらびやかな音色です。EDM やトランスの定番です。" },
+
+  // メロディの音色（「インスト」）
+  "melodySound.grow":     { title: "grow（Toniq専用シンセ）", desc: "Toniq の内部シンセサイザーで鳴らします。下の音作りのパネルでプリセットを選んだり、音を細かく変えたりできます。" },
+  "melodySound.auto":     { title: "ジャンルに合わせる", desc: "ジャンルに合った音色を自動で選びます。" },
+  "melodySound.supersaw": { title: "SuperSaw リード", desc: "ギザギザの波を重ねた、分厚く派手なリードの音色です。EDM のメロディの定番です。" },
+  "melodySound.epiano":   { title: "エレピ", desc: "エレクトリックピアノの、丸くて温かい音色です。ローファイによく合います。" },
+  "melodySound.bell":     { title: "ベル", desc: "「キラーン」と澄んだ、鐘のような音色です。ゲームBGM やかわいい曲に合います。" },
+  "melodySound.square":   { title: "スクエア", desc: "四角い形の波（矩形波）の、ピコピコした音色です。昔のゲーム機のような 8bit の音になります。" },
+  "melodySound.acid":     { title: "アシッド", desc: "「ビュンビュン」とクセのある、うねるような電子音です。テクノでよく使われます。" },
+  "melodySound.lead":     { title: "シンセリード", desc: "メロディを目立たせるための、くっきりしたシンセの音色です。どのジャンルでも使いやすい音です。" },
+  "melodySound.pluck":    { title: "プラック", desc: "弦をはじいたように、鳴ってすぐ消える短い音色です。ハウスなどで軽やかなメロディになります。" },
+  "melodySound.soft":     { title: "ソフトサイン", desc: "丸くやさしい、笛のような音色です。アンビエントなど静かな曲に合います。" },
 };
 
 const SHOW_DELAY_MS = 350;  // すぐ出すと操作のじゃまになるので少し待つ
@@ -107,6 +153,15 @@ function position(el: HTMLElement): void {
   tip.style.left = "0px";
   tip.style.top  = "0px";
   const { width, height } = tip.getBoundingClientRect();
+  // ドロップダウンの選択肢はリストを隠さないよう横に出す（右に入りきらなければ左）
+  if (el instanceof HTMLOptionElement) {
+    const right = rect.right + margin * 1.5;
+    const x = right + width <= window.innerWidth - margin ? right : rect.left - width - margin * 1.5;
+    const y = Math.min(rect.top + rect.height / 2 - height / 2, window.innerHeight - height - margin);
+    tip.style.left = `${Math.max(margin, x)}px`;
+    tip.style.top  = `${Math.max(margin, y)}px`;
+    return;
+  }
   const left = Math.max(margin, Math.min(rect.left + rect.width / 2 - width / 2, window.innerWidth - width - margin));
   // 下に出す。入りきらなければ上に出す
   const below = rect.bottom + margin;
@@ -122,6 +177,13 @@ function show(el: HTMLElement): void {
   tip.querySelector(".term-tip-title")!.textContent = term.title;
   tip.querySelector(".term-tip-desc")!.textContent  = term.desc;
   tip.hidden = false;
+  // ドロップダウンのリスト（最前面のトップレイヤー）より上に出すため、popover として出し直す
+  if (tip.popover) {
+    try {
+      if (tip.matches(":popover-open")) tip.hidePopover();
+      tip.showPopover();
+    } catch { /* popover が使えなければ普通に出す */ }
+  }
   position(el);
   el.setAttribute("aria-describedby", tip.id);
 }
@@ -129,7 +191,10 @@ function show(el: HTMLElement): void {
 function hide(): void {
   if (showTimer !== null) clearTimeout(showTimer);
   showTimer = null;
-  if (tip) tip.hidden = true;
+  if (tip) {
+    tip.hidden = true;
+    try { if (tip.popover && tip.matches(":popover-open")) tip.hidePopover(); } catch { /* 何もしない */ }
+  }
   current?.removeAttribute("aria-describedby");
   current = null;
 }
@@ -152,6 +217,7 @@ export function initGlossary(): void {
   tip.className = "term-tip";
   tip.setAttribute("role", "tooltip");
   tip.hidden = true;
+  if ("popover" in tip) tip.popover = "manual";
   tip.innerHTML = `<div class="term-tip-title"></div><div class="term-tip-desc"></div>`;
   document.body.appendChild(tip);
 

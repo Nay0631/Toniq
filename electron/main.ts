@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, shell } from "electron";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -11,8 +11,8 @@ const isDev = !!devServerUrl || process.env.NODE_ENV === "development";
 // ===== 出力フォルダ =====
 // 開発時は toniq フォルダ（package.json の場所）、インストール版は Toniq.exe と同じ場所に output フォルダを作る。
 // 書き込めない場所なら「ドキュメント/Toniq/output」を使う
-type OutputKind = "projects" | "audio" | "midi";
-const OUTPUT_KINDS: OutputKind[] = ["projects", "audio", "midi"];
+type OutputKind = "audio" | "midi";
+const OUTPUT_KINDS: OutputKind[] = ["audio", "midi"];
 const SONG_FILE_EXT = ".toniq.json";
 
 let outputRoot = "";
@@ -54,8 +54,6 @@ function uniquePath(dir: string, name: string): string {
   return file;
 }
 
-const SONG_FILTERS = [{ name: "Toniq 作業ファイル", extensions: ["json"] }];
-
 function registerFileHandlers(): void {
   ipcMain.handle("toniq:output-root", () => outputRoot);
 
@@ -64,37 +62,6 @@ function registerFileHandlers(): void {
     const file = uniquePath(outputDir(kind), safeName(name));
     fs.writeFileSync(file, Buffer.from(data));
     return file;
-  });
-
-  // 作業ファイルの保存：保存先を選ぶ（前回の保存先か output/projects を最初に出す）。キャンセルなら null
-  ipcMain.handle("toniq:save-project", async (e, name: string, text: string, lastPath: string | null) => {
-    const win = BrowserWindow.fromWebContents(e.sender);
-    const defaultPath = lastPath && fs.existsSync(path.dirname(lastPath))
-      ? lastPath
-      : path.join(outputDir("projects"), safeName(name));
-    const options = { title: "作業ファイルを保存", defaultPath, filters: SONG_FILTERS };
-    const result = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options);
-    if (result.canceled || !result.filePath) return null;
-    const file = result.filePath.endsWith(SONG_FILE_EXT)
-      ? result.filePath
-      : result.filePath.replace(/\.json$/i, "") + SONG_FILE_EXT;
-    fs.writeFileSync(file, text, "utf8");
-    return file;
-  });
-
-  // 作業ファイルを開く：output/projects を最初に出す。キャンセルなら null
-  ipcMain.handle("toniq:open-project", async e => {
-    const win = BrowserWindow.fromWebContents(e.sender);
-    const options = {
-      title: "作業ファイルを開く",
-      defaultPath: outputDir("projects"),
-      filters: SONG_FILTERS,
-      properties: ["openFile" as const],
-    };
-    const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options);
-    if (result.canceled || result.filePaths.length === 0) return null;
-    const file = result.filePaths[0];
-    return { path: file, text: fs.readFileSync(file, "utf8") };
   });
 
   // 保存したファイルをエクスプローラーで表示する
