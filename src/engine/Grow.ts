@@ -54,7 +54,7 @@ const CHORD_STANDARD: Record<string, string[]> = {
   "アンビエント": ["strings", "wide_pad"],
 };
 // コードの音色の選択肢（カスタムモードの「コード進行」欄の「音色」。Tone.js の音色だったものと同じ音の grow のプリセット）
-export const CHORD_PRESET_CHOICES: readonly string[] = ["soft_pad", "wide_pad", "epiano", "strings", "organ", "square", "supersaw"];
+export const CHORD_PRESET_CHOICES: readonly string[] = ["soft_pad", "wide_pad", "epiano", "strings", "organ", "square", "supersaw", "hard_pad"];
 
 // ベースは bass_params.json の音色（ジャンル）に合わせる。どれもなければサブベース
 const BASS_STANDARD: Record<string, string[]> = {

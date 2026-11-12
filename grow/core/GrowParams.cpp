@@ -15,7 +15,7 @@ const char* const lfoWaveNames[]   = { "サイン", "三角", "ノコギリ", "�
 const char* const voiceModeNames[] = { "ポリ", "モノ", "レガート" };
 const char* const toggleNames[]    = { "オフ", "オン" };
 const char* const modSourceNames[] = { "なし", "ベロシティ", "EG 2", "LFO 1", "LFO 2", "フィルター EG", "キー", "ランダム" };
-const char* const modDestNames[]   = { "高さ", "OSC 2 の高さ", "カットオフ", "パルス幅", "音量", "FM", "リング" };
+const char* const modDestNames[]   = { "高さ", "OSC 2 の高さ", "カットオフ", "パルス幅", "音量", "FM", "リング", "LFO 1 の速さ" };
 const char* const curveNames[]     = { "指数", "直線" };
 
 // LFO のテンポ同期（1周の長さを拍で表す。0 = 同期しない＝「速さ」の Hz で揺らす）
@@ -67,6 +67,7 @@ const ParamInfo table[] = {
     { "filter_keytrack", "フィルター", "キー追従",   K::continuous, 0, 1, 0.5f, 0, U::percent, GROW_NO_CHOICES },
     { "filter_drive",    "フィルター", "ドライブ",   K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "filter_velocity", "フィルター", "ベロシティ", K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
+    { "osc2_direct",     "フィルター", "OSC 2 を通さない", K::toggle, 0, 1, 0, 0, U::none, GROW_CHOICES (toggleNames) },
 
     { "fenv_attack",  "フィルター EG", "A", K::continuous, 0.001f, 10, 0.005f, 0.5f, U::seconds, GROW_NO_CHOICES },
     { "fenv_decay",   "フィルター EG", "D", K::continuous, 0.001f, 10, 0.3f, 0.5f, U::seconds, GROW_NO_CHOICES },
@@ -100,16 +101,16 @@ const ParamInfo table[] = {
     { "eg2_release", "EG 2", "R", K::continuous, 0.001f, 15, 0.3f, 0.5f, U::seconds, GROW_NO_CHOICES },
 
     { "mod1_source", "モジュレーション", "1：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
-    { "mod1_dest",   "モジュレーション", "1：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod1_dest",   "モジュレーション", "1：行き先", K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modDestNames) },
     { "mod1_amount", "モジュレーション", "1：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "mod2_source", "モジュレーション", "2：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
-    { "mod2_dest",   "モジュレーション", "2：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod2_dest",   "モジュレーション", "2：行き先", K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modDestNames) },
     { "mod2_amount", "モジュレーション", "2：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "mod3_source", "モジュレーション", "3：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
-    { "mod3_dest",   "モジュレーション", "3：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod3_dest",   "モジュレーション", "3：行き先", K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modDestNames) },
     { "mod3_amount", "モジュレーション", "3：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "mod4_source", "モジュレーション", "4：元",     K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modSourceNames) },
-    { "mod4_dest",   "モジュレーション", "4：行き先", K::choice,     0, 6, 0, 0, U::none, GROW_CHOICES (modDestNames) },
+    { "mod4_dest",   "モジュレーション", "4：行き先", K::choice,     0, 7, 0, 0, U::none, GROW_CHOICES (modDestNames) },
     { "mod4_amount", "モジュレーション", "4：量",     K::continuous, -1, 1, 0, 0, U::percent, GROW_NO_CHOICES },
 
     { "penv_amount", "ピッチ EG", "量",   K::continuous, -36, 36, 0, 0, U::semitones, GROW_NO_CHOICES },
@@ -266,6 +267,7 @@ GrowParams makeParams (const float* values, double bpm)
     p.keyTrack       = value (values, filterKeyTrack);
     p.filterDrive    = value (values, filterDrive);
     p.velocitySemis  = value (values, filterVelocity) * 24.0f;  // 最大 2 オクターブ
+    p.osc2Direct     = value (values, osc2Direct) > 0.5f;
     p.filterEnv      = envelope (values, fenvAttack);
     p.ampEnv         = envelope (values, aenvAttack);
 

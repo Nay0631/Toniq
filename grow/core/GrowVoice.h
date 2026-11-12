@@ -97,6 +97,7 @@ private:
     float lfo2Phase = 0.0f, lfo2Hold = 0.0f;
     float lfoFadeLevel = 1.0f, lfo2FadeLevel = 1.0f;
     float noteRandom = 0.0f;
+    float lfoRateOctaves = 0.0f;  // モジュレーションの行き先「LFO 1 の速さ」（オクターブ。前のサンプルの値で速さを変える）
     Smoother modAmountSmooth[numModSlots];
 
     // ドリフト（アナログらしいずれ。量は GrowParams::drift）。

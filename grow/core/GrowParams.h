@@ -14,8 +14,8 @@ enum class LfoWave    { sine, triangle, saw, square, random };
 enum class VoiceMode  { poly, mono, legato };
 // モジュレーションの元と行き先（GrowParams.cpp の modSourceNames / modDestNames の並び）
 enum class ModSource  { none, velocity, eg2, lfo1, lfo2, filterEnv, key, random };
-enum class ModDest    { pitch, osc2Pitch, cutoff, pulseWidth, amp, fm, ring };
-inline constexpr int numModDests = 7;
+enum class ModDest    { pitch, osc2Pitch, cutoff, pulseWidth, amp, fm, ring, lfo1Rate };
+inline constexpr int numModDests = 8;
 inline constexpr int numModSlots = 4;  // モジュレーションの割り当ての数
 
 enum class ParamKind { continuous, integer, choice, toggle };
@@ -41,7 +41,7 @@ enum Param : int
     osc2Wave, osc2Octave, osc2Semi, osc2Fine, osc2Level, osc2Unison, osc2Detune, osc2Width,
     subLevel, noiseLevel,
     osc1PulseWidth, osc2PulseWidth, fmAmount, ringAmount, hardSync,
-    filterType, filterCutoff, filterResonance, filterEnvAmount, filterKeyTrack, filterDrive, filterVelocity,
+    filterType, filterCutoff, filterResonance, filterEnvAmount, filterKeyTrack, filterDrive, filterVelocity, osc2Direct,
     fenvAttack, fenvDecay, fenvSustain, fenvRelease,
     aenvAttack, aenvDecay, aenvSustain, aenvRelease,
     lfoWave, lfoSync, lfoRate, lfoRetrigger, lfoPitch, lfoFilter, lfoAmp, lfoPulseWidth, lfoFade,
@@ -104,6 +104,7 @@ struct GrowParams
     float keyTrack        = 0.0f;  // 弾く音の高さにカットオフを追従させる量（1 で音の高さと同じだけ動く）
     float filterDrive     = 0.0f;  // フィルターの中で飽和させる量（0〜1。0 なら歪まない）。レゾナンスが丸く太くなる
     float velocitySemis   = 0.0f;  // 弱く弾いたときにカットオフを下げる量（半音。強さ 1 で 0、強さ 0 でこの分だけ下がる）
+    bool  osc2Direct      = false; // OSC 2 をフィルターに通さず、フィルターのあとに足す（削った帯域にも素の音を残す）
 
     EnvParams filterEnv;
     EnvParams ampEnv;

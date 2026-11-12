@@ -99,6 +99,7 @@ void Voice::startNote (int midiNote, float velocity)
     if (! p.lfoRetrigger) lfoPhase = random.next();  // 同時に弾いた音どうしの揺れがそろいすぎないように
     if (! p.lfo2Retrigger) lfo2Phase = random.next();
     noteRandom = random.bipolar();  // モジュレーションの元「ランダム」（音ごとに決める）
+    lfoRateOctaves = 0.0f;
     snapSmoothing();
 
     active    = true;
@@ -391,6 +392,7 @@ void Voice::render (float* left, float* right, int numSamples)
     const auto pitchEnvCoeff = std::exp (-3.0f / (std::max (0.001f, p.pitchEnvTime) * sr));
     const auto lfoStep       = p.lfoHz / sr;
     const auto lfo2Step      = p.lfo2Hz / sr;
+    const auto lfoRateMax    = std::max (0.0f, std::log2 (0.25f / std::max (1.0e-6f, lfoStep)));  // LFO 1 を速める上限（1周 4 サンプル）
     const auto lfoFadeStep   = p.lfoFade  > 0.0f ? 1.0f / (p.lfoFade  * sr) : 1.0f;
     const auto lfo2FadeStep  = p.lfo2Fade > 0.0f ? 1.0f / (p.lfo2Fade * sr) : 1.0f;
     // ピッチ EG：指数は時間の約 5% まで戻る係数、直線は1サンプルで減らす量
@@ -404,6 +406,7 @@ void Voice::render (float* left, float* right, int numSamples)
         1.0f,    // 音量（1 + 量 × 元 を掛ける）
         1.0f,    // FM の量
         1.0f,    // リングの量
+        4.0f,    // LFO 1 の速さ（オクターブ。量 1 で 16 倍）
     };
     const auto cutoffTarget  = hzToNote (p.cutoffHz);
     const auto maxCutoff     = std::min (20000.0f, sr * 0.45f);
@@ -435,7 +438,7 @@ void Voice::render (float* left, float* right, int numSamples)
         if (std::fabs (glideDiff) < 1.0e-5f) glideDiff = 0.0f;
         currentNote = (float) targetNote + glideDiff;
 
-        lfoPhase += lfoStep;
+        lfoPhase += lfoRateOctaves != 0.0f ? lfoStep * std::exp2 (lfoRateOctaves) : lfoStep;
         if (lfoPhase >= 1.0f)
         {
             lfoPhase -= std::floor (lfoPhase);
@@ -480,6 +483,8 @@ void Voice::render (float* left, float* right, int numSamples)
             }
             modTo[(int) slot.dest] += source * amount * modScale[(int) slot.dest];
         }
+        // LFO 1 の速さは次のサンプルから当てる（LFO 1 自身を元にもできるように）。速すぎて折り返さないよう上限をつける
+        lfoRateOctaves = std::clamp (modTo[(int) ModDest::lfo1Rate], -8.0f, lfoRateMax);
 
         // ドリフトの高さのゆっくりした揺れ：ときどき目指す値を選び直し、そこへ1次でなめらかに近づく
         if (drift > 0.0f)
@@ -525,6 +530,7 @@ void Voice::render (float* left, float* right, int numSamples)
 
         const auto lfoPw = lfo * lfoPwSmooth.next (p.lfoPulseWidth) + modTo[(int) ModDest::pulseWidth];
         auto l = 0.0f, r = 0.0f;
+        auto directL = 0.0f, directR = 0.0f;  // フィルターを通さない OSC 2
         for (int o = 0; o < 2; ++o)
         {
             const auto count = renderCount[o];
@@ -553,6 +559,12 @@ void Voice::render (float* left, float* right, int numSamples)
                 }
                 if (o == 0 && ring > 0.0f) s += (s * mod - s) * ring;  // リング：掛けた音へ量の分だけ寄せる
                 advancePhase (phases[o][i], dt);
+                if (o == 1 && p.osc2Direct)
+                {
+                    directL += s * curLeft[o][i];
+                    directR += s * curRight[o][i];
+                    continue;
+                }
                 l += s * curLeft[o][i];
                 r += s * curRight[o][i];
             }
@@ -611,6 +623,8 @@ void Voice::render (float* left, float* right, int numSamples)
             l = filter2.process (0, l);
             r = filter2.process (1, r);
         }
+        l += directL;
+        r += directR;
 
         const auto tremolo = 1.0f - lfoAmpSmooth.next (p.lfoAmp) * (0.5f - 0.5f * lfo);
         const auto modGain = std::max (0.0f, 1.0f + modTo[(int) ModDest::amp]);
