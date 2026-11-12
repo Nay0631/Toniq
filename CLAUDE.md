@@ -226,6 +226,7 @@ src/engine/
 - 用語のツールチップ（`Glossary.ts`）：要素に `data-term="キー"` を付けると、カーソルを乗せる（キーボードならフォーカスする）と少し待って `TERMS` の説明を出す。`span` とアレンジャーのレーン名には点線の下線が付く。パート名（`LayerName`）はそのまま `TERMS` のキーとして使う（アレンジャー）。説明は初心者向けに1〜2文で、専門用語を重ねない。新しい用語を画面に出したら `TERMS` に足して `data-term` を付ける。
   - ON/OFF は設定画面で切り替える（`AppState.tooltips`、localStorage の `toniq.tooltips` = `on` / `off`、`<html data-tooltips>`。OFF では下線も出さない）。`<head>` でも描画前に `data-tooltips` を付ける。曲の内容ではないので `SONG_FIELDS` には入れない。
 - 設定画面（`SettingsScreen.ts`、`data-screen="settings"`）はメニューの横長の「設定」カードから開く。端末ごとの設定（配色・スキン・音名の表記・ループ再生・ドラムの音源・ツールチップ）を集める。曲に保存する項目は置かない。設定を足すときは AppState に項目を足し、保存は担当のモジュールが localStorage（`toniq.*`）に行い、表示の切り替えは `<html data-*>` で行う。
+  - 最後の「ヘルプ」欄（`index.html` の `.settings-help`。`<details>` の開閉式で、JS はなし）に、見ただけではわかりにくい操作（ピアノロール・アレンジャーのマウス・キー操作、ノブの Shift・ホイール、タップテンポ、元に戻すのショートカット、保存の種類、試聴、テスト中の機能）を書いている。操作を足す・変えたらここも直す。
 - 作業ファイル・出力フォルダ：
   - 作業ファイルは今の曲1曲分の曲ファイル（`.toniq.json`、ミュージックリストの曲ファイルと同じ形式）。保存は `projectFileText()`、開くのは `loadProjectFile()`（今の曲として読み込み、ミュージックリストには追加しない。`songId` は `null`、開いた・保存した場所は `AppState.projectPath`。曲の内容ではないので `SONG_FIELDS` には入れない。`loadSong` / `newSong` で `null` に戻す）。
   - Electron では保存・開くのダイアログを `output/projects` から始め、前回の保存先があればそこを出す。WAV / MP3 / MIDI は書き出す前に `askFileName()`（`FileNameDialog.ts`。Electron では `prompt()` が使えないので自前のダイアログ）でファイル名を決め、`saveOutput()`（`OutputFiles.ts`）で `output/audio` / `output/midi` に直接保存し（同名なら「 (2)」を付けて上書きしない）、保存後にフォルダを開くか聞く。

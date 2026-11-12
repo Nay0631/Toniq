@@ -3218,6 +3218,48 @@ span[data-term],
   font-weight: 600;
 }
 
+/* ヘルプ（開閉式の項目） */
+.settings-help { padding-bottom: 12px; }
+.help-item { border-top: 1px solid var(--line-soft); }
+.help-item:first-of-type { border-top: none; }
+.help-item summary {
+  cursor: pointer;
+  padding: 14px 0;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.help-item summary::-webkit-details-marker { display: none; }
+.help-item summary::before {
+  content: "▸";
+  color: var(--text-muted);
+  transition: transform .15s;
+}
+.help-item[open] summary::before { transform: rotate(90deg); }
+.help-item summary:hover { color: var(--text); background: var(--hover); }
+.help-item ul {
+  margin: 0 0 14px;
+  padding-left: 22px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+.help-item li + li { margin-top: 4px; }
+.help-item kbd {
+  display: inline-block;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--surface);
+}
+
 @media (max-width: 640px) {
   .settings-group { padding: 4px 16px; }
   .settings-row { flex-direction: column; align-items: flex-start; gap: 12px; }
