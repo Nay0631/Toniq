@@ -1,0 +1,23 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-10_grow音作り機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "growパネル" as B1
+control "音作り設定" as C1
+control "grow" as C2
+entity "アプリの状態" as E1
+entity "growプリセット" as E2
+
+A1 --> B1 : 対象・プリセットを選ぶ
+A1 --> B1 : つまみ・セレクト・チェックを動かす
+A1 --> B1 : プリセットに戻すボタンを押下する
+B1 --> C1 : 対象のパートを切り替える
+B1 --> C1 : 音作りの値を設定する
+C1 --> E2 : プリセットの値を取得する
+C1 --> E1 : 対象のパートの音作りの値を更新する
+C1 --> C2 : 鳴っている grow にすぐ反映する
+C1 --> B1 : プリセット・つまみの値と\nプリセットからの変更を表示する
+C1 --> C1 : 値を変えていない\n（プリセットに戻すを\n押せない）
+
+@enduml

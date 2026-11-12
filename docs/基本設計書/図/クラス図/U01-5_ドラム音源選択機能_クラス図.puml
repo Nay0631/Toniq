@@ -12,8 +12,16 @@ class "ドラム音源読み込み" as C2 <<control>> {
   {field} <U+002D> 読み込んだ音源
   {method} <U+002B> 音源を読み込む() : void
 }
+class "grow" as C4 <<control>> {
+  {method} <U+002B> grow の準備を待つ() : void
+  {method} <U+002B> grow のドラムの音をジャンルのキットに合わせて作る() : void
+}
 class "パート管理" as C3 <<control>> {
   {method} <U+002B> ドラムを読み込み直す() : void
+}
+class "ドラムキット作成" as C5 <<control>> {
+  {method} <U+002B> 選んだ音源でキットを作る() : void
+  {method} <U+002D> シンセで鳴らす() : void
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> ドラムの音源
@@ -28,12 +36,22 @@ class "ドラム音源ファイル" as E3 <<entity>> {
   {field} <U+002B> トラックごとの音
   {method} <U+002B> ジャンルの音源を取得する() : void
 }
+class "growプリセット" as E4 <<entity>> {
+  {field} <U+002B> ID
+  {field} <U+002B> プリセット名
+  {field} <U+002B> 音作りの値
+  {method} <U+002B> ドラムのプリセットを取得する() : void
+}
 
 B1 --> C1
 C1 --> E1
 C1 --> E2
 C1 --> C2
 C2 --> E3
+C1 --> C4
 C1 --> C3
+C3 --> C5
+C5 --> C4
+C4 --> E4
 
 @enduml

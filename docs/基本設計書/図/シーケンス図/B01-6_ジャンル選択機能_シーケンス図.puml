@@ -13,8 +13,11 @@ control ":ジャンル試聴" as L8
 control ":再生" as L9
 control ":ミックス" as L10
 entity ":ミックス設定マスタ" as L11
+control ":grow" as L12
+entity ":growプリセット" as L13
 
 alt シンプルモード画面
+  note over L2 : 選んでいる雰囲気に合うジャンルの\nチップだけを雰囲気ごとの順に出す
   L1 -> L2 : ジャンルのチップを押下する() : void
   activate L2
   L2 -> L4 : ジャンルを設定する() : void
@@ -30,6 +33,9 @@ alt シンプルモード画面
   L4 -> L7 : ジャンルとBPMを更新する() : void
   activate L7
   deactivate L7
+  L4 -> L2 : ジャンルの一言の説明を表示する() : void
+  activate L2
+  deactivate L2
   opt ジャンルのサンプルを再生中
     L4 -> L8 : 新しいジャンルのサンプルを鳴らす() : void
     activate L8
@@ -62,6 +68,12 @@ else カスタムモード画面
     activate L11
     deactivate L11
     deactivate L10
+    L9 -> L12 : ジャンルの標準の音で音源を作る() : void
+    activate L12
+    L12 -> L13 : ジャンルの標準のプリセットを取得する() : void
+    activate L13
+    deactivate L13
+    deactivate L12
     deactivate L9
   end
   deactivate L4

@@ -4,6 +4,7 @@ mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
   {method} <U+002B> ジャンルのチップを押下する() : void
+  {method} <U+002B> ジャンルの一言の説明を表示する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> ジャンルを選ぶ() : void
@@ -23,6 +24,9 @@ class "再生" as C4 <<control>> {
 class "ミックス" as C5 <<control>> {
   {method} <U+002B> ミックスをジャンルに合わせる() : void
 }
+class "grow" as C6 <<control>> {
+  {method} <U+002B> ジャンルの標準の音で音源を作る() : void
+}
 class "テンポマスタ" as E1 <<entity>> {
   {field} <U+002B> ジャンル
   {field} <U+002B> ゆっくり・普通・速いのBPM
@@ -33,11 +37,18 @@ class "アプリの状態" as E2 <<entity>> {
   {field} <U+002B> BPM
   {field} <U+002B> ドラムのカテゴリ
   {method} <U+002B> ジャンルとBPMを更新する() : void
+  {method} <U+002B> ジャンル・BPM・ドラムのカテゴリを更新する() : void
 }
 class "ミックス設定マスタ" as E3 <<entity>> {
   {field} <U+002B> ジャンル
   {field} <U+002B> リバーブ・EQ・コンプ・リミッター・音量
   {method} <U+002B> ミックス設定を取得する() : void
+}
+class "growプリセット" as E4 <<entity>> {
+  {field} <U+002B> ID
+  {field} <U+002B> プリセット名
+  {field} <U+002B> 音作りの値
+  {method} <U+002B> ジャンルの標準のプリセットを取得する() : void
 }
 
 B1 --> C1
@@ -45,9 +56,12 @@ B2 --> C1
 C1 --> C2
 C2 --> E1
 C1 --> E2
+C1 --> B1
 C1 --> C3
 C1 --> C4
 C4 --> C5
 C5 --> E3
+C4 --> C6
+C6 --> E4
 
 @enduml

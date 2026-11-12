@@ -5,15 +5,18 @@ mainframe **pkg**
 class "ミュージックリスト画面" as B1 <<boundary>> {
   {method} <U+002B> 「削除」を押下する() : void
   {method} <U+002B> 曲の一覧を表示し直す() : void
+  {method} <U+002B> 保存容量の案内を知らせる() : void
 }
 class "楽曲削除" as C1 <<control>> {
   {method} <U+002B> 曲を削除する() : void
+  {method} <U+002D> 削除しない() : void
 }
 class "再生" as C2 <<control>> {
   {method} <U+002B> 再生を止める() : void
 }
 class "曲の管理" as C3 <<control>> {
   {method} <U+002B> 曲を削除する() : void
+  {method} <U+002D> 削除しない() : void
 }
 class "楽曲データ" as E1 <<entity>> {
   {field} <U+002B> 保存した曲

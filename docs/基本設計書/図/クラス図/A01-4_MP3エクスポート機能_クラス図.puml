@@ -4,15 +4,29 @@ mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
   {method} <U+002B> MP3で書き出すボタンを押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> MP3 ボタンを押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
+}
+class "ファイル名ダイアログ" as B4 <<boundary>> {
+  {method} <U+002B> 初期値のファイル名でダイアログを表示する() : void
+  {method} <U+002B> ファイル名を入力して書き出すボタンを押下する() : void
+  {method} <U+002B> キャンセルボタンを押下する() : void
 }
 class "書き出しダイアログ" as B3 <<boundary>> {
   {method} <U+002B> 書き出しダイアログを開く() : void
   {method} <U+002B> 段階と進み具合を表示する() : void
   {method} <U+002B> 書き出しダイアログを閉じる() : void
   {method} <U+002B> 失敗のメッセージを表示する() : void
+}
+class "ファイル名入力" as C7 <<control>> {
+  {method} <U+002B> ファイル名を聞く() : void
+  {method} <U+002B> ファイル名を確定する() : void
+  {method} <U+002B> 取り消す() : void
 }
 class "再生" as C1 <<control>> {
   {method} <U+002B> MP3 で書き出す() : void
@@ -24,6 +38,9 @@ class "ドラム音源読み込み" as C2 <<control>> {
 class "ミックス" as C3 <<control>> {
   {method} <U+002B> ミックスをジャンルに合わせる() : void
 }
+class "grow" as C9 <<control>> {
+  {method} <U+002B> grow の準備を待つ() : void
+}
 class "各パートの演奏" as C4 <<control>> {
   {method} <U+002B> 演奏の予定を組み立てる() : void
 }
@@ -33,6 +50,10 @@ class "音声合成" as C5 <<control>> {
 }
 class "音声変換" as C6 <<control>> {
   {method} <U+002B> MP3（192kbps）に変換する() : void
+}
+class "出力ファイル保存" as C8 <<control>> {
+  {method} <U+002B> 出力フォルダに保存する() : void
+  {method} <U+002B> ファイルをフォルダで表示する() : void
 }
 class "ドラム音源ファイル" as E1 <<entity>> {
   {field} <U+002B> ジャンルのフォルダ
@@ -48,11 +69,22 @@ class "ミックス設定マスタ" as E3 <<entity>> {
   {field} <U+002B> リバーブ・EQ・コンプ・リミッター・音量
   {method} <U+002B> ミックス設定を取得する() : void
 }
+class "growプリセット" as E5 <<entity>> {
+  {field} <U+002B> ID
+  {field} <U+002B> プリセット名
+  {field} <U+002B> 音作りの値
+  {method} <U+002B> プリセットを取得する() : void
+}
 class "MP3ファイル" as E4 <<entity>> {
   {field} <U+002B> MP3（192kbps）
+  {field} <U+002B> 保存先（output/audio）
   {method} <U+002B> 保存する() : void
 }
 
+B1 --> C7
+B2 --> C7
+C7 --> B4
+B4 --> C7
 B1 --> C1
 B2 --> C1
 C1 --> B3
@@ -60,10 +92,17 @@ C1 --> C2
 C2 --> E1
 C1 --> C3
 C3 --> E3
+C1 --> C9
+C9 --> E5
 C1 --> E2
 C1 --> C5
 C5 --> C4
 C1 --> C6
-C1 --> E4
+C1 --> C8
+C8 --> E4
+C8 --> B1
+C8 --> B2
+B1 --> C8
+B2 --> C8
 
 @enduml

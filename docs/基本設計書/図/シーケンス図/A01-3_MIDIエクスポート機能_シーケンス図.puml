@@ -4,6 +4,8 @@ mainframe sd A01-3_MIDIエクスポート機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
+control ":ファイル名入力" as L15
+boundary ":ファイル名ダイアログ" as L16
 control ":MIDI書き出し" as L3
 entity ":アプリの状態" as L4
 control ":曲の構成" as L5
@@ -15,63 +17,102 @@ control ":各パートの演奏" as L10
 entity ":ドラムパターンマスタ" as L11
 entity ":ベース設定マスタ" as L12
 entity ":アルペジオ設定マスタ" as L13
+control ":出力ファイル保存" as L17
 entity ":MIDIファイル" as L14
 
-note over L2 : シンプルモード画面の「MIDIで書き出す」も同じ流れ
+note over L2 : シンプルモード画面の「MIDIで書き出す」も同じ流れ。\nブラウザで開いたときは出力フォルダを使わずダウンロードにする（確認は出さない）
 
 L1 -> L2 : MIDI ボタンを押下する() : void
 activate L2
-L2 -> L3 : MIDI で書き出す() : void
-activate L3
-L3 -> L4 : キー・BPM・小節数・パートの ON/OFF・スウィングを取得する() : void
-activate L4
-deactivate L4
-L3 -> L5 : 曲全体のコード進行とメロディを求める() : void
-activate L5
-opt セクションを編集していない
-  L5 -> L7 : 標準のセクションを取得する() : void
-  activate L7
-  deactivate L7
+L2 -> L15 : ファイル名を聞く() : void
+activate L15
+L15 -> L16 : 初期値のファイル名でダイアログを表示する() : void
+activate L16
+deactivate L16
+alt 書き出す
+  note over L16 : 名前が空なら「ファイル名を入力してください」と出して待つ。\n使えない文字は「_」に置き換える
+  L1 -> L16 : ファイル名を入力して書き出すボタンを押下する() : void
+  activate L16
+  L16 -> L15 : ファイル名を確定する() : void
+  activate L15
+  deactivate L15
+  deactivate L16
+else キャンセル・Esc・ダイアログの外のクリック
+  L1 -> L16 : キャンセルボタンを押下する() : void
+  activate L16
+  L16 -> L15 : 取り消す() : void
+  activate L15
+  deactivate L15
+  deactivate L16
 end
-deactivate L5
-L3 -> L8 : コード・パッドのボイシングを求める() : void
-activate L8
-L8 -> L9 : スケールの音程を取得する() : void
-activate L9
-deactivate L9
-deactivate L8
-L3 -> L10 : コード・パッド・アルペジオ・ベース・ドラムの音を並べる() : void
-activate L10
-L10 -> L11 : ブロックのドラムパターンを取得する() : void
-activate L11
-deactivate L11
-L10 -> L12 : ジャンルのベースのパターンを取得する() : void
-activate L12
-deactivate L12
-L10 -> L13 : ジャンルのアルペジオの設定を取得する() : void
-activate L13
-deactivate L13
-deactivate L10
-loop 曲全体（小節数分）の各パートの音
-  L3 -> L6 : 鳴らす小節か確かめる() : void
-  activate L6
-  opt アレンジを編集していない
-    L6 -> L7 : 標準アレンジを取得する() : void
+deactivate L15
+opt ファイル名を決めた
+  L2 -> L3 : MIDI で書き出す() : void
+  activate L3
+  L3 -> L4 : キー・BPM・小節数・パートの ON/OFF・スウィングを取得する() : void
+  activate L4
+  deactivate L4
+  L3 -> L5 : 曲全体のコード進行とメロディを求める() : void
+  activate L5
+  opt セクションを編集していない
+    L5 -> L7 : 標準のセクションを取得する() : void
     activate L7
     deactivate L7
   end
-  deactivate L6
-  L3 -> L3 : スウィングに合わせて発音位置をずらす() : void
+  deactivate L5
+  L3 -> L8 : コード・パッドのボイシングを求める() : void
+  activate L8
+  L8 -> L9 : スケールの音程を取得する() : void
+  activate L9
+  deactivate L9
+  deactivate L8
+  L3 -> L10 : コード・パッド・アルペジオ・ベース・ドラムの音を並べる() : void
+  activate L10
+  L10 -> L11 : ブロックのドラムパターンを取得する() : void
+  activate L11
+  deactivate L11
+  L10 -> L12 : ジャンルのベースのパターンを取得する() : void
+  activate L12
+  deactivate L12
+  L10 -> L13 : ジャンルのアルペジオの設定を取得する() : void
+  activate L13
+  deactivate L13
+  deactivate L10
+  loop 曲全体（小節数分）の各パートの音
+    L3 -> L6 : 鳴らす小節か確かめる() : void
+    activate L6
+    opt アレンジを編集していない
+      L6 -> L7 : 標準アレンジを取得する() : void
+      activate L7
+      deactivate L7
+    end
+    deactivate L6
+    L3 -> L3 : スウィングに合わせて発音位置をずらす() : void
+    activate L3
+    deactivate L3
+  end
+  L3 -> L3 : テンポ・拍子と6トラックを書く() : void
   activate L3
   deactivate L3
+  L3 -> L17 : 出力フォルダに保存する() : void
+  activate L17
+  L17 -> L14 : 保存する() : void
+  activate L14
+  deactivate L14
+  L17 -> L2 : フォルダを開くか確認する() : void
+  activate L2
+  deactivate L2
+  opt OK
+    L1 -> L2 : OK を押下する() : void
+    activate L2
+    L2 -> L17 : ファイルをフォルダで表示する() : void
+    activate L17
+    deactivate L17
+    deactivate L2
+  end
+  deactivate L17
+  deactivate L3
 end
-L3 -> L3 : テンポ・拍子と6トラックを書く() : void
-activate L3
-deactivate L3
-L3 -> L14 : 保存する() : void
-activate L14
-deactivate L14
-deactivate L3
 deactivate L2
 
 @enduml
