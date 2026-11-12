@@ -19,6 +19,8 @@ const WASM_URL = "grow/grow.wasm";  // 開発サーバー（http）とビルド�
 // 音の終わりの合図を少し遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。
 // 同じ高さの音が続くときは、ワークレットが前の音の終わりを無視する
 const OFF_DELAY = 0.002;
+// 合図（AudioParam）の時刻を、狙うサンプルの位置よりこの分（サンプル）だけ前にする
+const SIGNAL_LEAD = 0.25;
 
 // grow を鳴らすパート（音作りの値はパートごとに AppState に持つ）
 export type GrowPart = "melody" | "chord" | GrowPartName;
@@ -545,10 +547,15 @@ export class GrowInstrument {
     const midi  = Math.round(new Tone.FrequencyClass(ctx, note).toMidi());
     if (midi < 0 || midi > 127) return this;
     const vel = Math.max(0, Math.min(1, velocity));
-    const end = start + new Tone.TimeClass(ctx, duration).toSeconds() + OFF_DELAY;
+    const noteEnd = start + new Tone.TimeClass(ctx, duration).toSeconds();
     this.whenAttached(() => {
-      this.signal(this.onParam,  this.onFrames,  midi + 1 + vel * 0.5, start);
-      this.signal(this.offParam, this.offFrames, midi + 1, end);
+      const rate = this.raw.sampleRate;
+      // 呼ばれるのが遅れて（画面の処理などでメインスレッドが詰まった）音の終わりがもう過ぎていれば鳴らさない
+      if (noteEnd * rate <= this.earliestFrame()) return;
+      const onFrame = this.signal(this.onParam, this.onFrames, midi + 1 + vel * 0.5, start);
+      // 消音は発音より必ず十分あとに置く。発音が今の時刻へ繰り下がって消音と近づくと、ワークレットが
+      // 「同じ高さの次の音の直後に来た前の音の消音」とみなして無視し、鳴りっぱなしになるため
+      this.signal(this.offParam, this.offFrames, midi + 1, noteEnd + OFF_DELAY, onFrame + Math.ceil(OFF_DELAY * rate) + 4);
     });
     return this;
   }
@@ -585,7 +592,7 @@ export class GrowInstrument {
     const seconds = new Tone.TimeClass(this.output.context, time).toSeconds();
     this.whenAttached(() => {
       const frame = this.signal(this.pidxParam, this.paramFrames, index + 1, seconds);
-      this.pvalParam.setValueAtTime(value, frame / this.raw.sampleRate);
+      this.pvalParam.setValueAtTime(value, (frame - SIGNAL_LEAD) / this.raw.sampleRate);
     });
     return this;
   }
@@ -595,15 +602,21 @@ export class GrowInstrument {
     else this.pending.push(run);
   }
 
+  // 合図を入れられるいちばん早いサンプルの位置（過ぎた時刻の合図は値と 0 が同じサンプルに重なって消えるので、今より後ろ）
+  private earliestFrame(): number {
+    return Math.ceil(this.raw.currentTime * this.raw.sampleRate) + 1;
+  }
+
   // 1サンプルだけの合図を入れる（値のあとは 0 に戻す）。和音のように同じ時刻に重なるときは2サンプルずつ後ろへずらす。
-  // 入れたサンプルの位置を返す
-  private signal(param: AudioParam, used: Set<number>, value: number, time: number): number {
+  // minFrame より前には入れない。入れたサンプルの位置を返す
+  private signal(param: AudioParam, used: Set<number>, value: number, time: number, minFrame = 0): number {
     const rate = this.raw.sampleRate;
-    let frame = Math.max(Math.round(time * rate), Math.ceil(this.raw.currentTime * rate));
+    let frame = Math.max(Math.round(time * rate), this.earliestFrame(), minFrame);
     while (used.has(frame) || used.has(frame - 1) || used.has(frame + 1)) frame += 2;
     used.add(frame);
-    param.setValueAtTime(value, frame / rate);
-    param.setValueAtTime(0, (frame + 1) / rate);
+    // 時刻はサンプルの位置ちょうどにせず少し前にする（時刻 → サンプルの丸めで値と 0 が同じサンプルになると合図が消える）
+    param.setValueAtTime(value, (frame - SIGNAL_LEAD) / rate);
+    param.setValueAtTime(0, (frame + 1 - SIGNAL_LEAD) / rate);
     // 過ぎた位置は忘れる
     if (used.size > 256) {
       const now = Math.floor(this.raw.currentTime * rate);
