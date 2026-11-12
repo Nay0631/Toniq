@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** M01-7_曲ファイル書き出し機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ミュージックリスト画面" as B1
+control "曲ファイル書き出し" as C1
+control "曲の管理" as C2
+entity "楽曲データ" as E1
+entity "曲ファイル" as E2
+
+A1 --> B1 : 曲のメニューの「ファイルに書き出す」を押下する
+A1 --> B1 : すべて書き出すボタンを押下する
+B1 --> C1 : 曲ファイルに書き出す
+C1 --> C1 : 曲が1つもない\n（「書き出す曲が\nありません」）
+C1 --> C2 : 曲を取り出してファイルの形にする
+C2 --> E1 : 保存した曲を取得する
+C1 --> E2 : 保存する
+
+@enduml

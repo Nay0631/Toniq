@@ -1,0 +1,52 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd U01-7_Toniqシンセ切替機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":設定画面" as L2
+control ":端末の設定" as L3
+entity ":アプリの状態" as L4
+entity ":端末の設定データ" as L5
+boundary ":カスタムモード画面" as L6
+boundary ":Toniqシンセパネル" as L7
+control ":メロディ演奏" as L8
+entity ":メロディ設定マスタ" as L9
+
+L1 -> L2 : Toniqシンセのスイッチを押下する() : void
+activate L2
+L2 -> L3 : Toniqシンセの使用を切り替える() : void
+activate L3
+L3 -> L4 : Toniqシンセの使用を更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : Toniqシンセの使用を保存する() : void
+activate L5
+deactivate L5
+L3 -> L6 : 音色の選択肢を出し入れする() : void
+activate L6
+deactivate L6
+L3 -> L7 : 音作りのパネルを出し入れする() : void
+activate L7
+deactivate L7
+opt OFF にした
+  L3 -> L8 : 試聴を止める() : void
+  activate L8
+  deactivate L8
+end
+opt メロディの音源がある
+  L3 -> L8 : メロディの音源を作り直す() : void
+  activate L8
+  L8 -> L4 : 音色・Toniqシンセの使用を取得する() : void
+  activate L4
+  deactivate L4
+  opt Toniqシンセが OFF で音色が Toniqシンセ
+    L8 -> L9 : ジャンルの標準の音色を取得する() : void
+    activate L9
+    deactivate L9
+  end
+  deactivate L8
+end
+deactivate L3
+deactivate L2
+
+@enduml

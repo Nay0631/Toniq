@@ -1,0 +1,44 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-5_楽曲情報変更機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+control ":曲の管理" as L3
+entity ":楽曲データ" as L4
+
+alt 名前を変更
+  L1 -> L2 : 曲名を入力して Enter を押す() : void
+  activate L2
+  L2 -> L3 : 曲名を変える() : void
+  activate L3
+  alt 曲名が空でない
+    L3 -> L4 : 曲名を更新する() : void
+    activate L4
+    deactivate L4
+  else 曲名が空
+    L3 -> L3 : 変えない() : void
+    activate L3
+    deactivate L3
+  end
+  L3 -> L2 : 曲の一覧を表示し直す() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+else お気に入り
+  L1 -> L2 : ☆ ボタンを押下する() : void
+  activate L2
+  L2 -> L3 : お気に入りを切り替える() : void
+  activate L3
+  L3 -> L4 : お気に入りを更新する() : void
+  activate L4
+  deactivate L4
+  L3 -> L2 : 曲の一覧を表示し直す() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+end
+
+@enduml

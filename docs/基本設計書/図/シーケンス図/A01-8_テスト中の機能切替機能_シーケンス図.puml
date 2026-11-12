@@ -1,0 +1,44 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-8_テスト中の機能切替機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":テスト機能設定" as L3
+control ":端末の設定" as L4
+entity ":アプリの状態" as L5
+entity ":端末の設定データ" as L6
+control ":再生" as L7
+control ":ドラム演奏" as L8
+
+L1 -> L2 : テスト中の機能のスイッチを押下する() : void
+activate L2
+L2 -> L3 : 機能を ON/OFF する() : void
+activate L3
+L3 -> L4 : テスト中の機能を切り替える() : void
+activate L4
+L4 -> L5 : テスト中の機能を更新する() : void
+activate L5
+deactivate L5
+L4 -> L6 : テスト中の機能を保存する() : void
+activate L6
+deactivate L6
+deactivate L4
+opt エンディングを切り替えた、かつ再生中
+  L3 -> L7 : 再生し直す() : void
+  activate L7
+  deactivate L7
+end
+L3 -> L2 : スイッチの ON/OFF を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+loop 再生中、ドラムの1音ごと
+  L8 -> L5 : フィル・揺らぎを取得する() : void
+  activate L5
+  deactivate L5
+end
+
+@enduml

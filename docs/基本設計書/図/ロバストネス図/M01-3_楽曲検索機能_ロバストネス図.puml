@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** M01-3_楽曲検索機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ミュージックリスト画面" as B1
+control "楽曲の絞り込み" as C1
+control "曲の管理" as C2
+entity "アプリの状態" as E1
+entity "楽曲データ" as E2
+
+A1 --> B1 : 曲名を入力する・ジャンル・お気に入り・並び替えを押下する
+B1 --> C1 : 絞り込みの条件を変える
+C1 --> E1 : 検索語・ジャンル・お気に入り・並び順を更新する
+C1 --> C2 : 曲の一覧を取得する
+C2 --> E2 : 保存した曲を取得する
+C1 --> C1 : 条件に合う曲がない\n（「条件に合う曲が\nありません」）
+C1 --> B1 : 絞り込んだ一覧を表示する
+
+@enduml

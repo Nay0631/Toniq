@@ -1,0 +1,69 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> MP3で書き出すボタンを押下する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> MP3 ボタンを押下する() : void
+}
+class "書き出しダイアログ" as B3 <<boundary>> {
+  {method} <U+002B> 書き出しダイアログを開く() : void
+  {method} <U+002B> 段階と進み具合を表示する() : void
+  {method} <U+002B> 書き出しダイアログを閉じる() : void
+  {method} <U+002B> 失敗のメッセージを表示する() : void
+}
+class "再生" as C1 <<control>> {
+  {method} <U+002B> MP3 で書き出す() : void
+  {method} <U+002D> 再生を止める() : void
+}
+class "ドラム音源読み込み" as C2 <<control>> {
+  {method} <U+002B> 音源を読み込む() : void
+}
+class "ミックス" as C3 <<control>> {
+  {method} <U+002B> ミックスをジャンルに合わせる() : void
+}
+class "各パートの演奏" as C4 <<control>> {
+  {method} <U+002B> 演奏の予定を組み立てる() : void
+}
+class "音声合成" as C5 <<control>> {
+  {method} <U+002B> 合成を準備する() : void
+  {method} <U+002B> 音声を合成する() : void
+}
+class "音声変換" as C6 <<control>> {
+  {method} <U+002B> MP3（192kbps）に変換する() : void
+}
+class "ドラム音源ファイル" as E1 <<entity>> {
+  {field} <U+002B> ジャンルのフォルダ
+  {method} <U+002B> ジャンルの音源を取得する() : void
+}
+class "アプリの状態" as E2 <<entity>> {
+  {field} <U+002B> パートの ON/OFF
+  {field} <U+002B> 曲の内容
+  {method} <U+002B> ON のパートと曲の内容を取得する() : void
+}
+class "ミックス設定マスタ" as E3 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> リバーブ・EQ・コンプ・リミッター・音量
+  {method} <U+002B> ミックス設定を取得する() : void
+}
+class "MP3ファイル" as E4 <<entity>> {
+  {field} <U+002B> MP3（192kbps）
+  {method} <U+002B> 保存する() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> B3
+C1 --> C2
+C2 --> E1
+C1 --> C3
+C3 --> E3
+C1 --> E2
+C1 --> C5
+C5 --> C4
+C1 --> C6
+C1 --> E4
+
+@enduml

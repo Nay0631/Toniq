@@ -1,0 +1,15 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** S01_特殊音設定システム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "特殊音設定システム" <<システム名>> {
+  rectangle " " {
+    usecase "特殊音選択機能" as UC1
+  }
+}
+
+A1 -- UC1
+
+@enduml

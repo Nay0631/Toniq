@@ -1,0 +1,25 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ミュージックリスト画面" as B1 <<boundary>> {
+  {method} <U+002B> 曲名を入力して Enter を押す() : void
+  {method} <U+002B> ☆ ボタンを押下する() : void
+  {method} <U+002B> 曲の一覧を表示し直す() : void
+}
+class "曲の管理" as C1 <<control>> {
+  {method} <U+002B> 曲名を変える() : void
+  {method} <U+002B> お気に入りを切り替える() : void
+}
+class "楽曲データ" as E1 <<entity>> {
+  {field} <U+002B> 曲名
+  {field} <U+002B> お気に入り
+  {method} <U+002B> 曲名を更新する() : void
+  {method} <U+002B> お気に入りを更新する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> B1
+
+@enduml

@@ -1,0 +1,41 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> メロディの音色を選ぶ() : void
+}
+class "音色設定" as C1 <<control>> {
+  {method} <U+002B> 音色を設定する() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "メロディ演奏" as C3 <<control>> {
+  {method} <U+002B> メロディの音源を作り直す() : void
+}
+class "Toniqシンセ" as C4 <<control>> {
+  {method} <U+002B> 音作りの値で音源を作る() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> メロディの音色
+  {field} <U+002B> Toniqシンセの使用
+  {field} <U+002B> 音作りの値
+  {method} <U+002B> メロディの音色を更新する() : void
+  {method} <U+002B> 音色・Toniqシンセの使用を取得する() : void
+}
+class "メロディ設定マスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 標準の音色
+  {method} <U+002B> ジャンルの標準の音色を取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> E1
+C3 --> E2
+C3 --> C4
+
+@enduml

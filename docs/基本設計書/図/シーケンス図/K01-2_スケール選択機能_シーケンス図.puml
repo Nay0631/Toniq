@@ -1,0 +1,42 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd K01-2_スケール選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":スケール設定" as L3
+entity ":コード進行マスタ" as L4
+entity ":アプリの状態" as L5
+control ":メロディ生成" as L6
+control ":再生" as L7
+
+L1 -> L2 : スケールを選ぶ() : void
+activate L2
+L2 -> L3 : スケールを設定する() : void
+activate L3
+L3 -> L4 : そのスケールのコード進行を取得する() : void
+activate L4
+deactivate L4
+L3 -> L3 : 同じ雰囲気の進行を優先して選ぶ() : void
+activate L3
+deactivate L3
+L3 -> L5 : コード進行を更新する() : void
+activate L5
+deactivate L5
+opt 自動生成のメロディがある
+  L3 -> L6 : メロディを生成する() : void
+  activate L6
+  deactivate L6
+  L3 -> L5 : メロディを更新する() : void
+  activate L5
+  deactivate L5
+end
+opt 再生中
+  L3 -> L7 : 再生し直す() : void
+  activate L7
+  deactivate L7
+end
+deactivate L3
+deactivate L2
+
+@enduml

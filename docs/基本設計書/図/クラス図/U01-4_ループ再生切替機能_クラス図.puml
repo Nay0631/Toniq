@@ -1,0 +1,30 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "設定画面" as B1 <<boundary>> {
+  {method} <U+002B> ループ再生のスイッチを押下する() : void
+}
+class "端末の設定" as C1 <<control>> {
+  {method} <U+002B> ループ再生を切り替える() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 曲の終わり方を切り替える() : void
+  {method} <U+002D> 先頭〜小節数でループさせる() : void
+  {method} <U+002D> 小節数で止める予約をする() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> ループ再生
+  {method} <U+002B> ループ再生を更新する() : void
+}
+class "端末の設定データ" as E2 <<entity>> {
+  {field} <U+002B> ループ再生
+  {method} <U+002B> ループ再生を保存する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> E2
+C1 --> C2
+
+@enduml

@@ -1,0 +1,68 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd P01-3_ノーツ選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ピアノロール画面" as L2
+control ":音符編集" as L3
+control ":メロディ演奏" as L4
+control ":スケール判定" as L5
+entity ":スケールマスタ" as L6
+entity ":アプリの状態" as L7
+control ":パート管理" as L8
+
+alt 音符をドラッグ（移動・長さ変更）
+  L1 -> L2 : 音符を押下してドラッグする() : void
+  activate L2
+  L2 -> L3 : 音を選択する() : void
+  activate L3
+  L3 -> L4 : 選んだ音を試聴する() : void
+  activate L4
+  deactivate L4
+  L3 -> L3 : 位置・高さ・長さを変える() : void
+  activate L3
+  deactivate L3
+  opt 音を動かした、かつスケールロック中
+    L3 -> L5 : スケール音に寄せる() : void
+    activate L5
+    L5 -> L6 : スケールの7音を取得する() : void
+    activate L6
+    deactivate L6
+    deactivate L5
+  end
+  opt 位置・高さ・長さが変わった
+    L3 -> L7 : メロディを更新し「自分で入力」にする() : void
+    activate L7
+    deactivate L7
+    opt 再生中
+      L3 -> L8 : メロディを読み込み直す() : void
+      activate L8
+      deactivate L8
+    end
+  end
+  L3 -> L2 : 音符を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+else 右クリック・Delete キー
+  L1 -> L2 : 右クリック・Delete キーで削除する() : void
+  activate L2
+  L2 -> L3 : 選んだ音を削除する() : void
+  activate L3
+  L3 -> L7 : メロディを更新し「自分で入力」にする() : void
+  activate L7
+  deactivate L7
+  opt 再生中
+    L3 -> L8 : メロディを読み込み直す() : void
+    activate L8
+    deactivate L8
+  end
+  L3 -> L2 : 音符を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+end
+
+@enduml
