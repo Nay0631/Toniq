@@ -12,6 +12,8 @@ control ":ミックス" as L7
 entity ":ミックス設定マスタ" as L8
 entity ":アプリの状態" as L9
 control ":各パートの演奏" as L10
+control ":音声合成" as L12
+control ":音声変換" as L13
 entity ":WAVファイル" as L11
 
 note over L2 : シンプルモード画面の「WAVで書き出すボタン」も同じ流れ
@@ -43,24 +45,27 @@ deactivate L7
 L3 -> L9 : ON のパートと曲の内容を取得する() : void
 activate L9
 deactivate L9
-L3 -> L10 : 演奏の予定を組み立てる() : void
+L3 -> L12 : 合成を準備する() : void
+activate L12
+L12 -> L10 : 演奏の予定を組み立てる() : void
 activate L10
 deactivate L10
+deactivate L12
 L3 -> L4 : 段階と進み具合を表示する() : void
 activate L4
 deactivate L4
 loop 合成の区切りごと
-  L3 -> L3 : 音声を合成する() : void
-  activate L3
-  deactivate L3
+  L3 -> L12 : 音声を合成する() : void
+  activate L12
+  deactivate L12
   L3 -> L4 : 段階と進み具合を表示する() : void
   activate L4
   deactivate L4
 end
 alt 合成できた
-  L3 -> L3 : 16bit PCM の WAV に変換する() : void
-  activate L3
-  deactivate L3
+  L3 -> L13 : 16bit PCM の WAV に変換する() : void
+  activate L13
+  deactivate L13
   L3 -> L11 : 保存する() : void
   activate L11
   deactivate L11

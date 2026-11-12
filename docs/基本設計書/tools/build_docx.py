@@ -115,7 +115,8 @@ TBL_W = 9283
 def width_of(s):
     return sum(2 if ord(c) > 0x2000 else 1 for c in s)
 
-def generic_table(rows):
+def generic_table(rows, title=None):
+    # title：表の1行目に、列を全部結合して出す表題（仕様書.md で表の直前に置いた「**…**」だけの行。5.1 のシステム名、10.3.2 の画面名）
     ncol = len(rows[0])
     need = []
     for c in range(ncol):
@@ -151,6 +152,12 @@ def generic_table(rows):
                '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>')
     grid = '<w:tblGrid>' + ''.join(f'<w:gridCol w:w="{w}"/>' for w in widths) + '</w:tblGrid>'
     xml = '<w:tbl>' + tblpr + grid
+    if title:
+        rpr = '<w:rPr><w:rFonts w:hAnsi="ＭＳ Ｐゴシック" w:hint="eastAsia"/><w:b/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr>'
+        xml += ('<w:tr><w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>'
+                f'<w:tc><w:tcPr><w:tcW w:w="{TBL_W}" w:type="dxa"/><w:gridSpan w:val="{ncol}"/>'
+                '<w:shd w:val="clear" w:color="auto" w:fill="B4C6E7" w:themeFill="accent5" w:themeFillTint="66"/><w:vAlign w:val="center"/></w:tcPr>'
+                f'<w:p><w:pPr><w:spacing w:line="280" w:lineRule="exact"/><w:jc w:val="left"/></w:pPr>{runs(title, rpr)}</w:p></w:tc></w:tr>')
     for i, r in enumerate(rows):
         hdr = i == 0
         trpr = '<w:trPr><w:cantSplit/><w:tblHeader/></w:trPr>' if hdr else '<w:trPr><w:cantSplit/></w:trPr>'
@@ -311,6 +318,15 @@ while i < len(md):
     else:
         blocks.append(('p', L.strip())); i += 1
 
+# 「**…**」だけの段落の直後に表があれば、表の1行目の表題にする（段落としては出さない）
+merged = []
+for b in blocks:
+    if b[0] == 't' and merged and merged[-1][0] == 'p' and re.fullmatch(r'\*\*[^*]+\*\*', merged[-1][1]):
+        merged[-1] = ('t', b[1], merged[-1][1].strip('*'))
+    else:
+        merged.append(b)
+blocks = merged
+
 # 機能名（5.1 機能一覧）
 FNAME = {}
 for b in blocks:
@@ -330,10 +346,11 @@ def strip_num(t):
     return re.sub(r'^\d+(\.\d+)*\.?\s+', '', t)
 
 FIG_INTRO = {
-    'ロバストネス図': '機能ごとのロバストネス図を示す。',
-    'シーケンス図': '機能ごとのシーケンス図を示す。',
-    'クラス図': 'システム全体のクラス図と、機能ごとのクラス図を示す。',
+    'ロバストネス図': '機能ごとのロバストネス図を、システム（グループ）ごとに示す。',
+    'シーケンス図': '機能ごとのシーケンス図を、システム（グループ）ごとに示す。',
+    'クラス図': 'システム全体のクラス図と、機能ごとのクラス図をシステム（グループ）ごとに示す。',
 }
+SYS_HEAD = re.compile(r'[A-Z]\d\d_')   # 7〜9章のシステムの見出し（### B01_曲の基本設定システム）
 
 def flush_fig():
     global fig_items
@@ -351,10 +368,17 @@ def flush_fig():
                     out.append(image(p, '全体_クラス図'))
                 for p in paras:
                     out.append(para(p))
+        group = None   # まだ出していないシステムの見出し（その種類の図がある機能が来たら出す）
         for h, imgs, paras in per:
+            if SYS_HEAD.match(h):
+                group = h
+                continue
             for alt, p in imgs:
                 if alt == kind:
-                    out.append(heading(2, h.replace('_', ' ', 1)))
+                    if group:
+                        out.append(heading(2, group))
+                        group = None
+                    out.append(heading(3, h.replace('_', ' ', 1)))
                     out.append(image(p, os.path.basename(p)[:-4]))
     fig_items = []
 
@@ -393,10 +417,11 @@ for b in blocks:
             out.append(heading(2, text, nonum=True))
             continue
         m = re.match(r'([A-Z]\d\d-\d+)\s+(.*)', text)
-        if lvl == 4 and m:
+        if lvl == 5 and m and chapter and chapter.startswith('5.'):
             func = m.group(1)
+            # 5.2 はシステム（#### B01 曲の基本設定システム → 見出し3）の下に機能（##### → 見出し4）を置く。
             # 見出しは機能名だけにする（機能IDは機能定義の表の「機能ID」の行に書く。「（追加）」などの注記も外す）
-            out.append(heading(3, re.sub(r'（[^）]*）$', '', m.group(2)).strip()))
+            out.append(heading(4, re.sub(r'（[^）]*）$', '', m.group(2)).strip()))
             continue
         if chapter and chapter.startswith('6.'):
             # 6.1 ユースケース図・6.2 ユースケース記述 → 見出し2、図名・機能グループ → 見出し3、
@@ -422,8 +447,8 @@ for b in blocks:
         continue
     if kind == 'p':
         t = b[1]
-        if chapter and chapter.startswith('6.') and t.startswith('ファイル名の決まり'):
-            t = '全体と機能グループごとのユースケース図を示す。'
+        if chapter and chapter.startswith('6.') and 'ファイル名の決まり' in t:
+            t = '全体と、グループ（システム）ごとのユースケース図を示す。'
         out.append(para(t))
     elif kind == 'b':
         out.append(bullet(b[1]))
@@ -444,7 +469,7 @@ for b in blocks:
                 out.append(heading(2, strip_num(r[0])))
                 out.append(para(r[1]))
         else:
-            out.append(generic_table(rows))
+            out.append(generic_table(rows, b[2] if len(b) > 2 else None))
 flush_fig()
 
 body = ''.join(out)
@@ -552,6 +577,18 @@ for item in zin.infolist():
         data = rels.encode('utf-8')
     elif item.filename == '[Content_Types].xml':
         data = ct.encode('utf-8')
+    elif item.filename == 'word/numbering.xml':
+        # 見出し1〜4の番号のあとのタブ位置（と字下げ）を広げる。手本のままだと「5.2.10」「7.32.」のように
+        # 番号が2桁になったときにタブ位置を越え、番号と名前の間が空かなくなる
+        nb = data.decode('utf-8')
+        NUM_POS = {'1': 567, '2': 851, '3': 1134, '4': 1418}
+        for sid, pos in NUM_POS.items():
+            m = re.search(r'<w:lvl w:ilvl="\d"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:pStyle w:val="' + sid + r'"/>.*?</w:lvl>', nb, re.S)
+            assert m, ('見出しの番号の定義がない', sid)
+            lv = re.sub(r'<w:tab w:val="num" w:pos="\d+"/>', f'<w:tab w:val="num" w:pos="{pos}"/>', m.group(0))
+            lv = re.sub(r'<w:ind w:left="\d+" w:hanging="\d+"/>', f'<w:ind w:left="{pos}" w:hanging="{pos}"/>', lv)
+            nb = nb.replace(m.group(0), lv, 1)
+        data = nb.encode('utf-8')
     elif item.filename == 'word/styles.xml':
         # 目次1の章番号のタブ位置を広げる（10章以降の番号が入りきらず崩れるため）
         st = data.decode('utf-8')
