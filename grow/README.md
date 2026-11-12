@@ -93,6 +93,7 @@ OSC 1・OSC 2（ユニゾンで最大7枚重ね、左右に広げる。FM・リ�
 - 曲に保存するのはパートごとのプリセットの ID（`GrowPresets.cpp` の `id`。wasm の `grow_preset_id`）と変えた値（ID → 値。null = プリセットのまま）：メロディ `AppState.growPreset` / `growParams`、コード `growChordPreset` / `growChordParams`、ベース・パッド・アルペジオ・シグネチャー `growSounds`（プリセットの null = ジャンルの標準）。
 - FX / SE（`src/engine/FxPlayer.ts` の `GROW_FX`）は「FX …」のプリセット（ID は `fx_…`）を探して鳴らし、テンポで変わる EG の時間などをその場で上書きする。プリセットがなければ Tone.js の音で鳴る。
 - ドラム（ドラムの音源が「grow」のとき。`src/engine/SynthFactory.ts` の `GROW_DRUMS`）は「ドラム …」のプリセット（ID は `drum_…`：キック・スネア・ハイハット（クローズド／オープン）・クラップ・リム）を1つの打楽器につき1台鳴らす。ジャンルのキットの値（高さ・長さ・帯域など）はプリセットの値を上書きして当てる。どれもサスティン 0 なので発音の合図だけ送り、オープンハイハットを止めるときだけ消音の合図を送る。キックはサインをピッチ EG で沈め、クリックはフィルター EG で頭だけ通すノイズ。スネアは胴鳴り（三角波・OSC 2 を通さない）＋バンドパスのノイズ。ハイハットは高い矩形波どうしのリング・FM にノイズを重ねたハイパス。
+- パーカッション（Toniq のパート「パーカッション」。ドラムの音源が「grow」のとき。`src/engine/SynthFactory.ts` の `GROW_PERC`）は「パーカッション …」のプリセット（ID は `drum_shaker` / `drum_tambourine` / `drum_conga` / `drum_ride`）。ドラムと同じく1台で1つの打楽器・サスティン 0 で、`--suggest` では役割 `drum`（ピークをそろえる。ノイズだけのシェイカーは `DRUM_PEAKS` で −7.5dB）。コンガは高い・低いを音の高さ（A3 / E3）で鳴らし分ける。
 - パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを ID で探す（候補を前から順に。今の wasm にない ID は飛ばす）。
 
 ## 確認・測定（`grow/tools/render.mjs`。`npm run grow:render`）

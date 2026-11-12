@@ -1055,6 +1055,8 @@ button {
 .arr-arp, .mix-arp    { background: #f0b7d4; }
 .arr-fx, .mix-fx     { background: #eba283; }
 .arr-signature, .mix-signature { background: #9fd8d6; }
+.arr-counter, .mix-counter { background: #f5b98a; }
+.arr-perc, .mix-perc   { background: #c9dc8f; }
 
 .arr-handle {
   position: absolute;
@@ -1949,6 +1951,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   --pop-teal:      #0f9fb5;
   --pop-indigo:    #5459d6;
   --pop-red:       #e5443a;
+  --pop-amber:     #e0a100;  /* カウンターメロディ */
+  --pop-lime:      #6aa31c;  /* パーカッション */
 }
 
 :root[data-theme="dark"][data-skin="pop"] {
@@ -1984,6 +1988,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   --pop-teal:      #1aaec4;
   --pop-indigo:    #6a6fe6;
   --pop-red:       #ee5248;
+  --pop-amber:     #e8b020;
+  --pop-lime:      #7fbf2a;
 }
 
 /* モジュールの色：設定タブは左からオレンジ・青・緑、ミキサーは紫、アレンジャーはオレンジ */
@@ -2000,6 +2006,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 [data-skin="pop"] [data-part="pad"],       [data-skin="pop"] .arr-pad       { --part: var(--pop-teal); }
 [data-skin="pop"] [data-part="arp"],       [data-skin="pop"] .arr-arp       { --part: var(--pop-orange); }
 [data-skin="pop"] [data-part="signature"], [data-skin="pop"] .arr-signature { --part: var(--pop-indigo); }
+[data-skin="pop"] [data-part="counter"],   [data-skin="pop"] .arr-counter   { --part: var(--pop-amber); }
+[data-skin="pop"] [data-part="perc"],      [data-skin="pop"] .arr-perc      { --part: var(--pop-lime); }
 [data-skin="pop"] [data-part="fx"],        [data-skin="pop"] .arr-fx        { --part: var(--pop-red); }
 
 /* 等幅のラベル */

@@ -11,8 +11,10 @@ import { attachFader, syncControls } from "./Controls";
 // パートの並び（UI 表示名）
 const MIXER_PARTS: { name: LayerName; label: string }[] = [
   { name: "melody",    label: "メロディ" },
+  { name: "counter",   label: "カウンター" },
   { name: "chord",     label: "コード" },
   { name: "drum",      label: "ドラム" },
+  { name: "perc",      label: "パーカス" },
   { name: "bass",      label: "ベース" },
   { name: "pad",       label: "パッド" },
   { name: "arp",       label: "アルペジオ" },

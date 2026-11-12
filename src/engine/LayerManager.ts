@@ -9,10 +9,15 @@ import { loadPadPattern, disposePad }         from "./PadPlayer";
 import { loadSignature, disposeSignature }     from "./SignaturePlayer";
 import { loadMelody, disposeMelody }          from "./MelodyPlayer";
 import { loadFx, disposeFx }                  from "./FxPlayer";
+import { loadCounter, disposeCounter }         from "./CounterPlayer";
+import { loadPerc, disposePerc }               from "./PercPlayer";
 import { getState, setState }                 from "./AppState";
 import { songProgression, songMelody }         from "./SongForm";
+import { LAYERS }                             from "./LoopArranger";
 
-export type LayerName = "drum" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "fx";
+// パートの一覧（並び）は LoopArranger.ts の LAYERS
+export type LayerName =
+  "drum" | "perc" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "counter" | "fx";
 
 // ===== レイヤーON/OFF =====
 export function setLayerEnabled(layer: LayerName, enabled: boolean) {
@@ -41,6 +46,8 @@ function disposeLayer(layer: LayerName) {
     case "pad":    disposePad();     break;
     case "signature": disposeSignature(); break;
     case "melody": disposeMelody();  break;
+    case "counter": disposeCounter(); break;
+    case "perc":   disposePerc();    break;
     case "fx":     disposeFx();      break;
   }
 }
@@ -74,6 +81,14 @@ export function reloadLayer(layer: LayerName) {
       break;
     case "melody":
       loadMelody(songMelody(), `${song.length_bars}m`);
+      // カウンターメロディはメロディから作るので、メロディを読み込み直したら一緒に作り直す（ピアノロールの編集など）
+      if (s.parts.counter) loadCounter(song, songMelody(), s.key);
+      break;
+    case "counter":
+      loadCounter(song, songMelody(), s.key);
+      break;
+    case "perc":
+      loadPerc();
       break;
     case "fx":
       loadFx(s.chordPattern);
@@ -116,11 +131,12 @@ export function replaceChordProgression(
   disposeArp();
   disposePad();
   disposeSignature();
+  disposeCounter();
   disposeFx();
 
   // Transport動作中でも正しく再開始できるよう少し遅延して再ロード（曲全体の並びで読み込む）
   setTimeout(() => {
-    (["chord", "bass", "arp", "pad", "signature", "fx"] as LayerName[]).forEach(layer => {
+    (["chord", "bass", "arp", "pad", "signature", "counter", "fx"] as LayerName[]).forEach(layer => {
       if (getState().parts[layer]) reloadLayer(layer);
     });
     console.log(`コード進行差し替え完了: ${newProgression.name}`);
@@ -139,14 +155,15 @@ export function replaceMelody(newNotes: MelodyNote[]) {
 
 // ===== 全レイヤーを一括破棄（停止時に前回の Part を残さない） =====
 export function disposeAllLayers() {
-  (["drum","chord","bass","arp","pad","signature","melody","fx"] as LayerName[]).forEach(disposeLayer);
+  LAYERS.forEach(disposeLayer);
 }
 
 // ===== 全レイヤーを一括再ロード =====
 export function reloadAllLayers() {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) return;
-  (["drum","chord","bass","arp","pad","signature","melody","fx"] as LayerName[]).forEach(layer => {
+  // メロディを読み込むとカウンターメロディも作るので、カウンターメロディだけを2度読み込まない
+  LAYERS.filter(layer => !(layer === "counter" && s.parts.melody)).forEach(layer => {
     if (s.parts[layer]) reloadLayer(layer);
   });
 }

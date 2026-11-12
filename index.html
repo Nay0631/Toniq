@@ -521,7 +521,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
                 <path d="M3 12h3l2-6 3 12 3-9 2 3h5"/>
               </svg>
-              <span data-term="pad">パッド</span> / <span data-term="arp">アルペジオ</span> / <span data-term="signature">シグネチャー</span>
+              <span>追加パート</span>
             </div>
 
             <div class="pill-row">
@@ -536,6 +536,22 @@
               <span><span data-term="signature">シグネチャー</span><span class="pill-note" id="c-signature-label"></span></span>
               <button class="pill" data-part-toggle="signature"></button>
             </div>
+            <div class="pill-row">
+              <span><span data-term="counter">カウンターメロディ</span></span>
+              <button class="pill" data-part-toggle="counter"></button>
+            </div>
+            <div class="pill-row">
+              <span><span data-term="perc">パーカッション</span><span class="pill-note" id="c-perc-label"></span></span>
+              <button class="pill" data-part-toggle="perc"></button>
+            </div>
+            <label class="form-row">
+              <span class="form-label" data-term="subBass">サブベース</span>
+              <select class="select" id="c-bass-sub" aria-label="サブベース">
+                <option value="auto">ジャンルに合わせる</option>
+                <option value="on">ON</option>
+                <option value="off">OFF</option>
+              </select>
+            </label>
 
             <hr class="panel-divider">
 

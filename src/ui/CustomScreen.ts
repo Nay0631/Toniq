@@ -4,6 +4,8 @@ import { resolveTempoPreset, chorusCandidates, pickChorus } from "../engine/Simp
 import { chorusFits, chorusProgression, generateChorusMelody, generateSongMelodies } from "../engine/SongForm";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { signatureLabel } from "../engine/SignaturePlayer";
+import { percLabel } from "../engine/PercPlayer";
+import { bassSubStandard } from "../engine/BassPlayer";
 import { tap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
 import {
@@ -297,9 +299,14 @@ function render(): void {
   fxSelect.value = s.fxType;
   fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
 
-  // パッド / アルペジオ / シグネチャー
+  // 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション / サブベース）
   const sigLabel = document.getElementById("c-signature-label");
   if (sigLabel) sigLabel.textContent = `（${signatureLabel(s.genre)}）`;
+  const percNote = document.getElementById("c-perc-label");
+  if (percNote) percNote.textContent = `（${percLabel(s.genre)}）`;
+  const subSelect = $select("c-bass-sub");
+  subSelect.options[0].textContent = `ジャンルに合わせる（${bassSubStandard(s.genre) ? "ON" : "OFF"}）`;
+  subSelect.value = s.bassSub === null ? "auto" : s.bassSub ? "on" : "off";
   document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el => {
     const on = s.parts[el.dataset.partToggle as LayerName];
     el.classList.toggle("is-on", on);
@@ -586,7 +593,15 @@ export function initCustomScreen(): void {
     render();
   });
 
-  // ===== パッド / アルペジオ / シグネチャー =====
+  // サブベース（音色は再生開始時に作るので、再生中なら再生し直す）
+  $select("c-bass-sub").addEventListener("change", async e => {
+    const value = (e.target as HTMLSelectElement).value;
+    setState({ bassSub: value === "auto" ? null : value === "on" });
+    render();
+    await restartIfPlaying();
+  });
+
+  // ===== 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション） =====
   document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el =>
     el.addEventListener("click", () => {
       const part = el.dataset.partToggle as LayerName;

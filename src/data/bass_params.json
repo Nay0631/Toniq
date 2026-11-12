@@ -6,6 +6,7 @@
     ],
     "fill": "..R...R...O.O.F.",
     "octaveShift": 1,
+    "sub": true,
     "synth": {
       "oscillator": "sawtooth",
       "envelope": { "attack": 0.005, "decay": 0.15, "sustain": 0.6, "release": 0.1 },
@@ -21,6 +22,7 @@
     ],
     "fill": ".RRR.RRR.OOO.FFF",
     "octaveShift": 1,
+    "sub": true,
     "synth": {
       "oscillator": "square",
       "envelope": { "attack": 0.002, "decay": 0.1, "sustain": 0.2, "release": 0.05 },
@@ -36,6 +38,7 @@
     ],
     "fill": "R.O.R.O.F.F.O.O.",
     "octaveShift": 1,
+    "sub": false,
     "synth": {
       "oscillator": "triangle",
       "envelope": { "attack": 0.001, "decay": 0.05, "sustain": 0.9, "release": 0.02 },
@@ -51,6 +54,7 @@
     ],
     "fill": "R-----F---O-F---",
     "octaveShift": 1,
+    "sub": false,
     "synth": {
       "oscillator": "sine",
       "envelope": { "attack": 0.02, "decay": 0.4, "sustain": 0.6, "release": 0.4 },
@@ -66,6 +70,7 @@
     ],
     "fill": "R-R-F-F-O-O-F-F-",
     "octaveShift": 1,
+    "sub": false,
     "synth": {
       "oscillator": "sawtooth",
       "envelope": { "attack": 0.01, "decay": 0.2, "sustain": 0.5, "release": 0.2 },
@@ -81,6 +86,7 @@
     ],
     "fill": "..R-..R-..O-O.F.",
     "octaveShift": 1,
+    "sub": false,
     "synth": {
       "oscillator": "square",
       "envelope": { "attack": 0.005, "decay": 0.2, "sustain": 0.5, "release": 0.08 },
@@ -96,6 +102,7 @@
     ],
     "fill": ".RRR.RRR.OOO.FFO",
     "octaveShift": 1,
+    "sub": true,
     "synth": {
       "oscillator": "sawtooth",
       "envelope": { "attack": 0.003, "decay": 0.09, "sustain": 0.25, "release": 0.04 },
@@ -111,6 +118,7 @@
     ],
     "fill": "R-------O-------",
     "octaveShift": 1,
+    "sub": false,
     "synth": {
       "oscillator": "sine",
       "envelope": { "attack": 0.3, "decay": 1.0, "sustain": 0.8, "release": 1.5 },

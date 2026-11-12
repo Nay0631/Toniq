@@ -669,6 +669,54 @@ const Value drumRim[] = {
     { master, 3.2f },
 };
 
+// ===== パーカッション（Toniq のパート「パーカッション」。src/engine/PercPlayer.ts の GROW_PERC が ID で探す） =====
+// ドラムと同じく1台で1つの打楽器。サスティン 0 で鳴り終わり、空間系はかけない。master は強さ 1 のピークをそろえた値
+
+// シェイカー：高い帯域のノイズ。アタックを少し遅らせて「シャッ」と砂が流れる立ち上がりにする
+const Value drumShaker[] = {
+    { osc1Level, 0 }, { noiseLevel, 1 },
+    { filterType, filter::bp }, { filterCutoff, 7000 }, { filterResonance, 0.15f }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.008f }, { aenvDecay, 0.06f }, { aenvSustain, 0 }, { aenvRelease, 0.02f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 5.8f },
+};
+
+// タンバリン：ハイハットより高い金属の倍音（ずらした矩形波のリング・FM）に、ジングルのノイズを重ねて少し長めに鳴らす
+const Value drumTambourine[] = {
+    { osc1Wave, wave::square }, { osc1Level, 0.4f },
+    { osc2Wave, wave::square }, { osc2Semi, 7 }, { osc2Fine, 13 }, { osc2Level, 0 },
+    { ringAmount, 1 }, { fmAmount, 0.45f },
+    { noiseLevel, 0.8f },
+    { filterType, filter::hp }, { filterCutoff, 7500 }, { filterResonance, 0.3f }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.002f }, { aenvDecay, 0.16f }, { aenvSustain, 0 }, { aenvRelease, 0.04f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 2 },
+};
+
+// コンガ：サインの胴鳴りが少しだけ上から沈む。手で叩く音はフィルター EG で頭だけ通すノイズ
+// （高い・低いコンガは Toniq が音の高さを変えて鳴らす。A3 / E3 前後）
+const Value drumConga[] = {
+    { osc1Wave, wave::sine }, { osc1Level, 0.9f }, { noiseLevel, 0.15f },
+    { filterType, filter::lp12 }, { filterCutoff, 900 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { filterEnvAmount, 36 }, { fenvAttack, 0.001f }, { fenvDecay, 0.012f }, { fenvSustain, 0 }, { fenvRelease, 0.02f },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.2f }, { aenvSustain, 0 }, { aenvRelease, 0.05f },
+    { pitchEnvAmount, 4 }, { pitchEnvTime, 0.03f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 5 },
+};
+
+// ライド：ハイハットより低く澄んだ金属の倍音を長く伸ばす（テクノ・トランスの裏拍）
+const Value drumRide[] = {
+    { osc1Wave, wave::square }, { osc1Level, 0.5f },
+    { osc2Wave, wave::square }, { osc2Semi, 4 }, { osc2Fine, 31 }, { osc2Level, 0 },
+    { ringAmount, 1 }, { fmAmount, 0.2f },
+    { noiseLevel, 0.35f },
+    { filterType, filter::hp }, { filterCutoff, 3800 }, { filterResonance, 0.35f }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.7f }, { aenvSustain, 0 }, { aenvRelease, 0.1f },
+    { velocity, 1 }, { reverbMix, 0 },
+    { master, 2.5f },
+};
+
 template <std::size_t N>
 constexpr Preset preset (const char* id, const char* name, const Value (&values)[N]) { return { id, name, values, (int) N }; }
 
@@ -729,6 +777,11 @@ const Preset presets[] = {
     preset ("drum_hat_open", "ドラム ハイハット（オープン）", drumHatOpen),
     preset ("drum_clap", "ドラム クラップ", drumClap),
     preset ("drum_rim", "ドラム リム", drumRim),
+    // パーカッション（Toniq のパート「パーカッション」。src/engine/PercPlayer.ts の GROW_PERC が ID で探す）
+    preset ("drum_shaker", "パーカッション シェイカー", drumShaker),
+    preset ("drum_tambourine", "パーカッション タンバリン", drumTambourine),
+    preset ("drum_conga", "パーカッション コンガ", drumConga),
+    preset ("drum_ride", "パーカッション ライド", drumRide),
 };
 
 constexpr int presetCount = (int) (sizeof (presets) / sizeof (presets[0]));

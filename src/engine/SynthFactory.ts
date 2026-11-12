@@ -410,3 +410,139 @@ export function createDrumKit(genre: string, trackNames: string[], source: DrumS
     },
   };
 }
+
+// ===== パーカッション（PercPlayer.ts。シェイカー・タンバリン・コンガ（高・低）・ライド） =====
+// ドラムのバス（歪み・コンプ）は通さず、低域を削ってジャンルの高域カットだけ通す（キックやベースの帯域を濁さない）。
+// 音源が grow ならコアの「パーカッション …」のプリセット（ID は drum_…）、それ以外（シンセ・ワンショット音源）はシンセで鳴らす
+
+const GROW_PERC: Record<string, { id: string; note: Tone.Unit.Frequency }> = {
+  shaker:     { id: "drum_shaker",     note: "C4" },
+  tambourine: { id: "drum_tambourine", note: "C6" },
+  conga_high: { id: "drum_conga",      note: "A3" },
+  conga_low:  { id: "drum_conga",      note: "E3" },
+  ride:       { id: "drum_ride",       note: "E5" },
+};
+
+// パーカッションの grow の1音色（鳴らせなければ null）
+function createGrowPercVoice(name: string): DrumVoice | null {
+  const def    = GROW_PERC[name];
+  const preset = def ? findGrowPreset(def.id) : -1;
+  if (!isGrowReady() || preset < 0) return null;
+  const output = new Tone.Gain(1);
+  const inst   = new GrowInstrument(() => growPresetValuesWith(preset, {})).connect(output);
+  return {
+    output,
+    trigger: (time, velocity) => { inst.triggerAttack(def.note, time, velGain(velocity)); },
+    dispose: () => {
+      inst.dispose();
+      output.dispose();
+    },
+  };
+}
+
+// シェイカー：高い帯域のノイズ。立ち上がりを少し遅らせる
+function createShaker(): DrumVoice {
+  const output = new Tone.Gain(0.5);
+  const filt   = new Tone.Filter({ type: "bandpass", frequency: 7000, Q: 0.8 }).connect(output);
+  const synth  = new Tone.NoiseSynth({
+    noise:    { type: "white" },
+    envelope: { attack: 0.008, decay: 0.06, sustain: 0, release: 0.02 },
+  }).connect(filt);
+  return {
+    output,
+    trigger: (time, velocity) => synth.triggerAttackRelease(0.06, time, velGain(velocity)),
+    dispose: () => [synth, filt, output].forEach(n => n.dispose()),
+  };
+}
+
+// タンバリン：高い金属の倍音＋ジングルのノイズ
+function createTambourine(): DrumVoice {
+  const output = new Tone.Gain(0.45);
+  const hp     = new Tone.Filter({ type: "highpass", frequency: 7000 }).connect(output);
+  const metal  = new Tone.MetalSynth({
+    harmonicity: 6.3, modulationIndex: 24, resonance: 9000, octaves: 1,
+    envelope: { attack: 0.002, decay: 0.16, release: 0.04 },
+    volume: -14,
+  }).connect(hp);
+  const jingle = createNoiseBurst("white", { type: "highpass", frequency: 8000 }, 0.14);
+  jingle.out.gain.value = 0.4;
+  jingle.out.connect(output);
+  return {
+    output,
+    trigger: (time, velocity) => {
+      const v = velGain(velocity);
+      metal.triggerAttackRelease(400, 0.16, time, v);
+      jingle.synth.triggerAttackRelease(0.14, time, v);
+    },
+    dispose: () => [metal, hp, ...jingle.nodes, output].forEach(n => n.dispose()),
+  };
+}
+
+// コンガ：少しだけ音程の下がる胴鳴り
+function createConga(note: Tone.Unit.Frequency): DrumVoice {
+  const output = new Tone.Gain(0.55);
+  const body   = new Tone.MembraneSynth({
+    pitchDecay: 0.02, octaves: 0.6,
+    oscillator: { type: "sine" },
+    envelope:   { attack: 0.001, decay: 0.2, sustain: 0, release: 0.05 },
+  }).connect(output);
+  return {
+    output,
+    trigger: (time, velocity) => body.triggerAttackRelease(note, 0.2, time, velGain(velocity)),
+    dispose: () => [body, output].forEach(n => n.dispose()),
+  };
+}
+
+// ライド：低めで澄んだ金属の倍音を長く伸ばす
+function createRide(): DrumVoice {
+  const output = new Tone.Gain(0.4);
+  const hp     = new Tone.Filter({ type: "highpass", frequency: 3000 }).connect(output);
+  const metal  = new Tone.MetalSynth({
+    harmonicity: 4.1, modulationIndex: 18, resonance: 5000, octaves: 1.2,
+    envelope: { attack: 0.001, decay: 0.7, release: 0.1 },
+    volume: -16,
+  }).connect(hp);
+  return {
+    output,
+    trigger: (time, velocity) => metal.triggerAttackRelease(250, 0.7, time, velGain(velocity)),
+    dispose: () => [metal, hp, output].forEach(n => n.dispose()),
+  };
+}
+
+// パーカッション全体の大きさ（dB）。ドラムに重ねる脇役なので、1打のピークがドラムより十分小さくなるよう下げる
+// （2026-11-12 に測定。下げる前はハウスで単独のピークがドラムと同じくらいになり、曲全体のピークも -0.6dB まで上がった）
+const PERC_TRIM_DB = -6;
+// パーカッションの高域カットの下限（Hz）。キットの値のままだと、ローファイ・アンビエントではほとんど聞こえなかった（2026-11-12 に測定）
+const PERC_LOWPASS_MIN = 11000;
+
+export function createPercKit(genre: string, source: DrumSource = "synth"): DrumKit {
+  const p = DRUM_KITS[genre] ?? DEFAULT_KIT;
+  const output  = new Tone.Gain(PERC_TRIM_DB, "decibels");
+  // シェイカー・タンバリンは 7kHz 前後が主なので、高域を強く削るジャンル（ローファイ 5.5kHz など）でも PERC_LOWPASS_MIN までは残す
+  const lowpass = new Tone.Filter({ type: "lowpass", frequency: Math.max(p.bus.lowpass, PERC_LOWPASS_MIN), rolloff: -12 }).connect(output);
+  const lowcut  = new Tone.Filter({ type: "highpass", frequency: 150, rolloff: -12 }).connect(lowpass);
+
+  const factories: Record<string, () => DrumVoice> = {
+    shaker:     createShaker,
+    tambourine: createTambourine,
+    conga_high: () => createConga(GROW_PERC.conga_high.note),
+    conga_low:  () => createConga(GROW_PERC.conga_low.note),
+    ride:       createRide,
+  };
+
+  const voices: Record<string, DrumVoice> = {};
+  for (const [name, make] of Object.entries(factories)) {
+    const voice = (source === "grow" ? createGrowPercVoice(name) : null) ?? make();
+    voice.output.connect(lowcut);
+    voices[name] = voice;
+  }
+
+  return {
+    voices,
+    output,
+    dispose: () => {
+      Object.values(voices).forEach(v => v.dispose());
+      [lowcut, lowpass, output].forEach(n => n.dispose());
+    },
+  };
+}

@@ -25,7 +25,7 @@ export type GrowPart = "melody" | "chord" | GrowPartName;
 
 // ジャンルの標準のプリセット（ID。前から順に探し、今の wasm にあるものを使う）。
 // アルペジオは arp_params.json の instrument、シグネチャーはジャンル（SignaturePlayer.ts の SIGNATURES）ごと。
-// 同じジャンルの中では、パート（メロディ・コード・ベース・パッド・アルペジオ・シグネチャー）どうしで同じプリセットを使わない
+// 同じジャンルの中では、パート（メロディ・コード・ベース・パッド・アルペジオ・シグネチャー・カウンターメロディ）どうしで同じプリセットを使わない
 // （8bit のコードとアルペジオのスクエアだけは、ほかに 8bit らしい音がないので同じ）
 const ARP_STANDARD: Record<string, string[]> = {
   pluck:  ["pluck"],
@@ -91,6 +91,18 @@ const BASS_STANDARD: Record<string, string[]> = {
   "トランス":   ["rolling_bass", "sub_bass"],
   "アンビエント": ["soft_bass", "sub_bass"],
 };
+// カウンターメロディ（ハモり・合いの手）はメロディと聞き分けられる、粒の立った音（ほかのパートの標準と重ならないもの）。
+// どれもなければシンセリード
+const COUNTER_STANDARD: Record<string, string[]> = {
+  "EDM":       ["bell", "keys"],
+  "8bit":      ["pluck", "bell"],          // チップリード・スクエア・ブリップはほかのパートで使っている
+  "ローファイ":  ["pluck", "lead"],
+  "ゲームBGM":  ["pluck", "lead"],
+  "テクノ":     ["pluck", "bell"],
+  "ハウス":     ["bell", "lead"],
+  "トランス":   ["bell", "keys"],
+  "アンビエント": ["keys", "lead"],
+};
 // どのパートもジャンルの標準を持つ（プリセットの null = ジャンルの標準）
 const GROW_STANDARD: Record<GrowPart, (genre: string) => string[]> = {
   melody:    genre => MELODY_STANDARD[genre] ?? MELODY_STANDARD["ローファイ"],
@@ -102,6 +114,7 @@ const GROW_STANDARD: Record<GrowPart, (genre: string) => string[]> = {
     return ARP_STANDARD[(params[genre] ?? params["ローファイ"]).instrument] ?? ARP_STANDARD.pluck;
   },
   signature: genre => SIGNATURE_STANDARD[genre] ?? SIGNATURE_STANDARD["ローファイ"],
+  counter:   genre => [...(COUNTER_STANDARD[genre] ?? COUNTER_STANDARD["ローファイ"]), "lead"],
 };
 
 export type GrowParamKind = "continuous" | "integer" | "choice" | "toggle";

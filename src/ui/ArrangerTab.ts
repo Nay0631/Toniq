@@ -2,7 +2,10 @@ import { getState, setState, ArrangeBlock, Arrangement, FxType } from "../engine
 import { getArrangement, cloneArrangement, findBlock } from "../engine/LoopArranger";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import * as Playback from "../engine/Playback";
-import { signatureLabel } from "../engine/SignaturePlayer";import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
+import { signatureLabel } from "../engine/SignaturePlayer";
+import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
+import { percLabel } from "../engine/PercPlayer";
+import { bassSubOn } from "../engine/BassPlayer";
 import drumDB from "../data/drum_patterns.json";
 import { DrumPattern } from "../data/types";
 import { render } from "./Router";
@@ -14,9 +17,11 @@ import { setTestFeature, TEST_FEATURES, TestFeature } from "./Preferences";
 // アレンジャーのレーン（上から表示する順）
 const LANES: { name: LayerName; label: string }[] = [
   { name: "drum",   label: "ドラム" },
+  { name: "perc",   label: "パーカッション" },
   { name: "bass",   label: "ベース" },
   { name: "chord",  label: "コード" },
   { name: "melody", label: "メロディ" },
+  { name: "counter", label: "カウンター" },
   { name: "pad",    label: "パッド" },
   { name: "arp",    label: "アルペジオ" },
   { name: "signature", label: "シグネチャー" },
@@ -54,7 +59,12 @@ function laneLabels(part: LayerName): { sub: string; block: string } {
       const phrase = `フレーズ${String.fromCharCode(65 + (s.melodyVersion % 26))}`;
       return { sub: phrase, block: phrase };
     }
-    case "bass": return { sub: "ルート追従", block: "ルート追従" };
+    case "bass": return { sub: bassSubOn() ? "ルート追従＋サブ" : "ルート追従", block: "ルート追従" };
+    case "counter": return { sub: "ハモり／合いの手", block: "カウンター" };
+    case "perc": {
+      const label = percLabel(s.genre);
+      return { sub: label, block: label };
+    }
     case "pad":  return { sub: "コード追従", block: "パッド" };
     case "arp":  return { sub: "8分音符",   block: "アルペジオ" };
     case "signature": {

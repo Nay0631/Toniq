@@ -10,7 +10,7 @@ import { onRender, render as renderAll } from "./Router";
 // 暫定のパネルで、最終的にはプリセットを選ぶだけにする予定。
 // パラメーターの並び・名前・範囲・表示は grow のコアの表（wasm）から作るので、ここでは持たない。
 // 値はメロディが AppState.growPreset（プリセット）と growParams（変えた値。null = プリセットのまま）、
-// コードが growChordPreset / growChordParams、ベース・パッド・アルペジオ・シグネチャーが growSounds（どのパートもプリセットの null = ジャンルの標準）。
+// コードが growChordPreset / growChordParams、ベース・パッド・アルペジオ・シグネチャー・カウンターメロディが growSounds（どのパートもプリセットの null = ジャンルの標準）。
 // どのパートを編集するかはパネル上部の「対象」で切り替える（メロディは音色が grow のときだけ選べる）
 
 const RANGE_STEPS = 1000;  // 連続値のつまみの細かさ（0〜1 の位置をこの数で刻む）
@@ -23,13 +23,14 @@ let target: GrowPart = "melody";
 
 const TARGET_LABELS: Record<GrowPart, string> = {
   melody: "メロディ", chord: "コード", bass: "ベース", pad: "パッド", arp: "アルペジオ", signature: "シグネチャー",
+  counter: "カウンターメロディ",
 };
 
 // grow で鳴らしているパート（メロディ以外はいつも grow）
 function growTargets(): GrowPart[] {
   const list: GrowPart[] = [];
   if (getState().melodyInstrument === "grow") list.push("melody");
-  list.push("chord", "bass", "pad", "arp", "signature");
+  list.push("counter", "chord", "bass", "pad", "arp", "signature");
   return list;
 }
 
