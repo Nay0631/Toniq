@@ -112,10 +112,26 @@ describe("loadSong：そのほかの読み替え", () => {
     expect(getState().melodyInstrument).toBe("grow");
   });
 
-  it("範囲外の番号のプリセットは初期値にする", () => {
+  it("範囲外の番号のプリセットは初期値（ジャンルの標準）にする", () => {
     storeRaw([legacySong({ growPreset: 9999 })]);
     loadSong("song_old");
     expect(getState().growPreset).toBe(defaultState.growPreset);
+    expect(getState().growPreset).toBeNull();
+  });
+
+  it("メロディのプリセットが無い・null の曲はジャンルの標準（null）、以前の初期値の lead はそのまま", () => {
+    storeRaw([legacySong({ growPreset: undefined })]);
+    loadSong("song_old");
+    expect(getState().growPreset).toBeNull();
+
+    storeRaw([legacySong({ growPreset: null })]);
+    loadSong("song_old");
+    expect(getState().growPreset).toBeNull();
+
+    // メロディの標準がまだ無かった頃の曲（初期値の "lead" を保存している）は、保存した音のまま鳴らす
+    storeRaw([legacySong({ growPreset: "lead" })]);
+    loadSong("song_old");
+    expect(getState().growPreset).toBe("lead");
   });
 
   it("無い曲は false を返し、今の曲は変えない", () => {

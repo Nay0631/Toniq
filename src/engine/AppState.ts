@@ -149,7 +149,7 @@ export interface AppState {
   drumSource:       DrumSource;
   // grow の音作り（曲に保存する）。プリセットの ID（grow のコアの GrowPresets.cpp の id）と、
   // そこから変えた値（パラメーターの ID → 実際の値。null = プリセットのまま）
-  growPreset:       string;
+  growPreset:       string | null;  // null = ジャンルの標準（Grow.ts の MELODY_STANDARD）
   growParams:       Record<string, number> | null;
   // コードを grow で鳴らすときの音作り（メロディとは別に持つ。形は growPreset / growParams と同じ）
   growChordPreset:  string | null;  // null = ジャンルの標準（Grow.ts の CHORD_STANDARD）
@@ -240,7 +240,7 @@ export const defaultState: AppState = {
   scaleLock:        true,
   drumCategory:     "EDM",
   drumSource:       "grow",
-  growPreset:       "lead",      // シンセリード
+  growPreset:       null,  // ジャンルの標準
   growParams:       null,
   growChordPreset:  null,  // ジャンルの標準
   growChordParams:  null,

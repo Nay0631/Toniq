@@ -1,7 +1,7 @@
 import { getState } from "../engine/AppState";
 import {
   loadGrow, isGrowLoaded, growParamList, growPresetNames, growPresetIds, currentGrowValues, growSettings, applyGrowLive,
-  storedGrowSound, setGrowSound, standardGrowPreset, hasGrowStandard,
+  storedGrowSound, setGrowSound, standardGrowPreset,
   formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta, type GrowPart,
 } from "../engine/Grow";
 import { onRender, render as renderAll } from "./Router";
@@ -10,7 +10,7 @@ import { onRender, render as renderAll } from "./Router";
 // 暫定のパネルで、最終的にはプリセットを選ぶだけにする予定。
 // パラメーターの並び・名前・範囲・表示は grow のコアの表（wasm）から作るので、ここでは持たない。
 // 値はメロディが AppState.growPreset（プリセット）と growParams（変えた値。null = プリセットのまま）、
-// コードが growChordPreset / growChordParams、パッド・アルペジオ・シグネチャーが growSounds（プリセットの null = ジャンルの標準）。
+// コードが growChordPreset / growChordParams、ベース・パッド・アルペジオ・シグネチャーが growSounds（どのパートもプリセットの null = ジャンルの標準）。
 // どのパートを編集するかはパネル上部の「対象」で切り替える（メロディは音色が grow のときだけ選べる）
 
 const RANGE_STEPS = 1000;  // 連続値のつまみの細かさ（0〜1 の位置をこの数で刻む）
@@ -32,9 +32,6 @@ function growTargets(): GrowPart[] {
   list.push("chord", "bass", "pad", "arp", "signature");
   return list;
 }
-
-// メロディ以外はプリセットに「ジャンルの標準」（null）を選べる
-const hasStandard = hasGrowStandard;
 
 // プリセットのセレクトの「ジャンルの標準」の値
 const STANDARD_VALUE = "";  // ID は空にならないので、空を「ジャンルの標準」に使う
@@ -147,11 +144,7 @@ function renderPanel(): void {
 
   // 「ジャンルの標準」は今のジャンルの標準のプリセット名を添える
   const standard = $("c-grow-standard") as HTMLOptionElement;
-  standard.hidden = !hasStandard(target);
-  if (hasStandard(target)) {
-    const name = growPresetNames()[standardGrowPreset(target)] ?? "";
-    standard.textContent = `ジャンルの標準（${name}）`;
-  }
+  standard.textContent = `ジャンルの標準（${growPresetNames()[standardGrowPreset(target)] ?? ""}）`;
   ($("c-grow-preset") as HTMLSelectElement).value = stored.preset === null ? STANDARD_VALUE : growPresetIds()[settings.preset] ?? "";
   ($("c-grow-reset") as HTMLButtonElement).disabled = settings.params === null;
   $("c-grow-edited").textContent = settings.params === null ? "" : "プリセットから変更しています";

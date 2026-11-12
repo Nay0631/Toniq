@@ -208,22 +208,20 @@ const vinylNoise: SignatureDef = {
 };
 
 // ゲームBGM：キラキラしたベル（コード構成音を上から下りる）
-const gameBell: SignatureDef = {
-  label: "ベル",
+// ゲームBGM：ブラス（メロディ・アルペジオのベル／キーズと重ならないよう、ふくらむノコギリ波の音）
+const gameBrass: SignatureDef = {
+  label: "ブラス",
   create: out => {
-    const reverb = new Tone.Reverb({ decay: 3, wet: 0.4 }).connect(out);
-    const synth  = new Tone.PolySynth(Tone.FMSynth, {
-      harmonicity:     3.01,
-      modulationIndex: 12,
-      oscillator:      { type: "sine" },
-      envelope:        { attack: 0.001, decay: 1.2, sustain: 0, release: 1.2 },
-      modulation:      { type: "sine" },
-      modulationEnvelope: { attack: 0.001, decay: 0.4, sustain: 0, release: 0.4 },
-      volume:          -20,
-    }).connect(reverb);
+    const reverb = new Tone.Reverb({ decay: 2.5, wet: 0.3 }).connect(out);
+    const filter = new Tone.Filter({ type: "lowpass", frequency: 2200, Q: 0.7 }).connect(reverb);
+    const synth  = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: "fatsawtooth", count: 3, spread: 18 } as any,
+      envelope:   { attack: 0.04, decay: 0.2, sustain: 0.8, release: 0.25 },
+      volume:     -26,
+    }).connect(filter);
     return {
       trigger: (e, time) => synth.triggerAttackRelease(e.notes!, e.dur!, time),
-      nodes:   [synth, reverb],
+      nodes:   [synth, filter, reverb],
     };
   },
   events: (notes, bar, bars) => {
@@ -324,7 +322,7 @@ const SIGNATURES: Record<string, SignatureDef> = {
   "EDM":      edmStab,
   "8bit":     chipArp,
   "ローファイ": vinylNoise,
-  "ゲームBGM": gameBell,
+  "ゲームBGM": gameBrass,
   "テクノ":    technoAcid,
   "ハウス":    housePiano,
   "トランス":  tranceGate,
