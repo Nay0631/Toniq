@@ -1,0 +1,22 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-11_出力フォルダを開く機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+control ":出力フォルダを開く" as L3
+control ":出力ファイル保存" as L4
+
+note over L2 : ブラウザで開いたときはボタンを出さない
+
+L1 -> L2 : 出力フォルダボタンを押下する() : void
+activate L2
+L2 -> L3 : 出力フォルダを開く() : void
+activate L3
+L3 -> L4 : 出力フォルダをエクスプローラーで開く() : void
+activate L4
+deactivate L4
+deactivate L3
+deactivate L2
+
+@enduml

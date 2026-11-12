@@ -6,6 +6,9 @@ actor ":利用者" as L1
 boundary ":シンプルモード画面" as L2
 control ":雰囲気選択" as L3
 entity ":アプリの状態" as L4
+control ":パターン選出" as L5
+entity ":テンポマスタ" as L6
+control ":ジャンル試聴" as L7
 
 L1 -> L2 : 雰囲気のチップを押下する() : void
 activate L2
@@ -14,7 +17,25 @@ activate L3
 L3 -> L4 : 雰囲気を更新する() : void
 activate L4
 deactivate L4
-L3 -> L2 : 選択中の雰囲気を表示する() : void
+opt 選んでいたジャンルが雰囲気に合わない
+  opt テンポがプリセット（ゆっくり・普通・速い）
+    L3 -> L5 : BPMを求める() : void
+    activate L5
+    L5 -> L6 : BPMを取得する() : void
+    activate L6
+    deactivate L6
+    deactivate L5
+  end
+  L3 -> L4 : 合うジャンルの先頭とBPMに更新する() : void
+  activate L4
+  deactivate L4
+  opt ジャンルのサンプルを再生中
+    L3 -> L7 : 新しいジャンルのサンプルを鳴らす() : void
+    activate L7
+    deactivate L7
+  end
+end
+L3 -> L2 : 選択中の雰囲気と雰囲気に合うジャンルのチップを表示する() : void
 activate L2
 deactivate L2
 deactivate L3

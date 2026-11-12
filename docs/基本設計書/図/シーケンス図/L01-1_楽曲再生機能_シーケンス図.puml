@@ -4,12 +4,15 @@ mainframe sd L01-1_楽曲再生機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
+boundary ":アレンジ画面" as L11
 boundary ":ミュージックリスト画面" as L3
 control ":楽曲切り替え" as L4
 control ":曲の管理" as L5
 entity ":楽曲データ" as L6
 entity ":アプリの状態" as L7
 control ":再生" as L8
+control ":grow" as L12
+entity ":growプリセット" as L13
 control ":各パートの演奏" as L9
 control ":アレンジ管理" as L10
 
@@ -23,6 +26,12 @@ alt モード画面で再生
   L8 -> L7 : 曲の内容を取得する() : void
   activate L7
   deactivate L7
+  L8 -> L12 : grow の準備を待つ() : void
+  activate L12
+  L12 -> L13 : プリセットを取得する() : void
+  activate L13
+  deactivate L13
+  deactivate L12
   L8 -> L9 : ON のパートを読み込む() : void
   activate L9
   deactivate L9
@@ -34,6 +43,29 @@ alt モード画面で再生
   deactivate L8
   deactivate L8
   deactivate L2
+else アレンジャーでスペースキー
+  note over L11 : 文字の入力欄・ドロップダウンの操作中、\nダイアログの表示中は効かない。押し続けても繰り返さない
+  L1 -> L11 : スペースキーを押下する() : void
+  activate L11
+  alt 停止中
+    L11 -> L8 : 再生開始位置から再生する() : void
+    activate L8
+    L8 -> L7 : 曲の内容を取得する() : void
+    activate L7
+    deactivate L7
+    L8 -> L12 : grow の準備を待つ() : void
+    activate L12
+    deactivate L12
+    L8 -> L9 : ON のパートを読み込む() : void
+    activate L9
+    deactivate L9
+    deactivate L8
+  else 再生中
+    L11 -> L8 : 停止する() : void
+    activate L8
+    deactivate L8
+  end
+  deactivate L11
 else ミュージックリストで再生
   L1 -> L3 : 曲の再生ボタンを押下する() : void
   activate L3
@@ -57,6 +89,9 @@ else ミュージックリストで再生
   end
   L4 -> L8 : 再生する() : void
   activate L8
+  L8 -> L12 : grow の準備を待つ() : void
+  activate L12
+  deactivate L12
   L8 -> L9 : ON のパートを読み込む() : void
   activate L9
   deactivate L9

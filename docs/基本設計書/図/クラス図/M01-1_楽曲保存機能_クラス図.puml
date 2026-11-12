@@ -5,14 +5,21 @@ mainframe **pkg**
 class "シンプルモード画面" as B1 <<boundary>> {
   {method} <U+002B> 保存ボタンを押下する() : void
   {method} <U+002B> 「保存しました」を表示する() : void
+  {method} <U+002B> 保存容量の案内と作業ファイルに保存するかの確認を表示する() : void
+  {method} <U+002B> 作業ファイルへの保存を OK する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> 保存ボタンを押下する() : void
   {method} <U+002B> 「保存しました」を表示する() : void
+  {method} <U+002B> 保存容量の案内と作業ファイルに保存するかの確認を表示する() : void
+  {method} <U+002B> 作業ファイルへの保存を OK する() : void
 }
 class "曲の管理" as C1 <<control>> {
   {method} <U+002B> 今の曲を保存する() : void
   {method} <U+002D> 名前を付ける() : void
+}
+class "作業ファイル保存" as C2 <<control>> {
+  {method} <U+002B> 作業ファイルに保存する() : void
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> 曲の内容
@@ -33,5 +40,7 @@ C1 --> E1
 C1 --> E2
 C1 --> B1
 C1 --> B2
+B1 --> C2
+B2 --> C2
 
 @enduml

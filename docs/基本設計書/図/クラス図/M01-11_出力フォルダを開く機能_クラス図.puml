@@ -1,0 +1,19 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ミュージックリスト画面" as B1 <<boundary>> {
+  {method} <U+002B> 出力フォルダボタンを押下する() : void
+}
+class "出力フォルダを開く" as C1 <<control>> {
+  {method} <U+002B> 出力フォルダを開く() : void
+}
+class "出力ファイル保存" as C2 <<control>> {
+  {field} <U+002D> 出力フォルダの場所（output/）
+  {method} <U+002B> 出力フォルダをエクスプローラーで開く() : void
+}
+
+B1 --> C1
+C1 --> C2
+
+@enduml

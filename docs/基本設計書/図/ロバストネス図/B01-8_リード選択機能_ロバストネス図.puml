@@ -7,17 +7,19 @@ boundary "カスタムモード画面" as B1
 control "音色設定" as C1
 control "再生" as C2
 control "メロディ演奏" as C3
-control "Toniqシンセ" as C4
+control "grow" as C4
 entity "アプリの状態" as E1
 entity "メロディ設定マスタ" as E2
+entity "growプリセット" as E3
 
 A1 --> B1 : メロディの音色を選ぶ
 B1 --> C1 : 音色を設定する
 C1 --> E1 : メロディの音色を更新する
 C1 --> C2 : 再生中なら再生し直す
 C2 --> C3 : メロディの音源を作り直す
-C3 --> E1 : 音色・Toniqシンセの使用を取得する
-C3 --> E2 : ジャンルに合わせる（Toniqシンセが OFF のときの Toniqシンセも）ならジャンルの標準の音色を取得する
-C3 --> C4 : Toniqシンセが ON で Toniqシンセを選んでいれば音作りの値で音源を作る
+C3 --> E1 : 音色・音作りの値を取得する
+C3 --> E2 : ジャンルに合わせる（grow を\n読み込めないときの grow も）なら\nジャンルの標準の音色を取得する
+C3 --> C4 : grow を選んでいれば\n音作りの値で音源を作る
+C4 --> E3 : プリセットの値を取得する
 
 @enduml

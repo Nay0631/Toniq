@@ -4,9 +4,23 @@ mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
   {method} <U+002B> MIDIで書き出すボタンを押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> MIDI ボタンを押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
+}
+class "ファイル名ダイアログ" as B3 <<boundary>> {
+  {method} <U+002B> 初期値のファイル名でダイアログを表示する() : void
+  {method} <U+002B> ファイル名を入力して書き出すボタンを押下する() : void
+  {method} <U+002B> キャンセルボタンを押下する() : void
+}
+class "ファイル名入力" as C6 <<control>> {
+  {method} <U+002B> ファイル名を聞く() : void
+  {method} <U+002B> ファイル名を確定する() : void
+  {method} <U+002B> 取り消す() : void
 }
 class "MIDI書き出し" as C1 <<control>> {
   {method} <U+002B> MIDI で書き出す() : void
@@ -24,6 +38,10 @@ class "コード変換" as C4 <<control>> {
 }
 class "各パートの演奏" as C5 <<control>> {
   {method} <U+002B> コード・パッド・アルペジオ・ベース・ドラムの音を並べる() : void
+}
+class "出力ファイル保存" as C7 <<control>> {
+  {method} <U+002B> 出力フォルダに保存する() : void
+  {method} <U+002B> ファイルをフォルダで表示する() : void
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> キー・BPM・小節数
@@ -58,9 +76,14 @@ class "アルペジオ設定マスタ" as E6 <<entity>> {
 }
 class "MIDIファイル" as E7 <<entity>> {
   {field} <U+002B> Melody・Chord・Pad・Arpeggio・Bass・Drums のトラック
+  {field} <U+002B> 保存先（output/midi）
   {method} <U+002B> 保存する() : void
 }
 
+B1 --> C6
+B2 --> C6
+C6 --> B3
+B3 --> C6
 B1 --> C1
 B2 --> C1
 C1 --> E1
@@ -74,6 +97,11 @@ C1 --> C5
 C5 --> E4
 C5 --> E5
 C5 --> E6
-C1 --> E7
+C1 --> C7
+C7 --> E7
+C7 --> B1
+C7 --> B2
+B1 --> C7
+B2 --> C7
 
 @enduml

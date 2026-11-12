@@ -1,0 +1,56 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-9_作業ファイル保存機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":作業ファイル保存" as L3
+entity ":アプリの状態" as L4
+control ":曲の管理" as L5
+control ":出力ファイル保存" as L6
+entity ":作業ファイル" as L7
+
+note over L2 : シンプルモード画面の作業ファイルボタン、\nミュージックリストに保存できなかったとき（M01-1）も同じ流れ。\nブラウザで開いたときはダウンロードにする（保存先のダイアログは出さない）
+
+L1 -> L2 : 作業ファイルボタンを押下する() : void
+activate L2
+L2 -> L3 : 今の曲を作業ファイルに保存する() : void
+activate L3
+L3 -> L4 : 曲の内容・曲名・前回の保存先を取得する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 曲ファイルの形式にする() : void
+activate L5
+deactivate L5
+L3 -> L6 : 保存先を選ばせて保存する() : void
+activate L6
+L6 -> L1 : 保存先を選ばせる（前回の保存先か output/projects）() : void
+activate L1
+deactivate L1
+alt 保存先を選んだ
+  L6 -> L7 : 保存する() : void
+  activate L7
+  deactivate L7
+  deactivate L6
+  alt 保存できた
+    L3 -> L4 : 保存した場所を更新する() : void
+    activate L4
+    deactivate L4
+    L3 -> L2 : 「保存しました」と保存した場所を表示する() : void
+    activate L2
+    deactivate L2
+  else 失敗した
+    L3 -> L2 : 保存に失敗した理由を知らせる() : void
+    activate L2
+    deactivate L2
+  end
+else 取り消した
+  deactivate L6
+  L3 -> L3 : 保存しない() : void
+  activate L3
+  deactivate L3
+end
+deactivate L3
+deactivate L2
+
+@enduml
