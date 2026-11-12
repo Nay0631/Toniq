@@ -66,7 +66,8 @@ for l in spec:
         sec = l[4:7]
     elif l.startswith('## '):
         sec = None
-    if sec == '5.2' and re.match(r'#### [A-Z]\d\d-\d+', l) and '未実装' not in l:
+    # 5.2 も 6.2 も、機能は ##### の見出し（その上の #### はシステム）
+    if sec == '5.2' and re.match(r'##### [A-Z]\d\d-\d+', l) and '未実装' not in l:
         n52 += 1
     if sec == '6.2' and re.match(r'##### [A-Z]\d\d-\d+', l):
         n62 += 1

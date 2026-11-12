@@ -46,3 +46,12 @@ skinparam DiagramBorderThickness 1
 ' ※ 文字の太さの設定はファイルの最後に置く（前のほうに書くと効かないことがある）。
 skinparam UsecaseFontStyle bold
 skinparam ActorFontStyle bold
+
+' システム名は境界（システムの範囲の四角）の外側の上に出す。
+' 枠線なしの外側の四角（ステレオタイプ <<システム名>>）に名前を置き、その中に名前なしの境界の四角 rectangle " " を入れる。
+skinparam rectangle<<システム名>> {
+  BorderColor transparent
+  BackgroundColor transparent
+  FontStyle bold
+}
+hide <<システム名>> stereotype

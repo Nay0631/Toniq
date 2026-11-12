@@ -88,10 +88,10 @@ for l in spec_lines:
         sec = l[4:7]
     elif l.startswith('## '):
         sec = None
-    m4 = re.match(r'#### ([A-Z]\d\d-\d+)', l)
+    # 5.2 も 6.2 も、機能は ##### の見出し（その上の #### はシステム）
     m5 = re.match(r'##### ([A-Z]\d\d-\d+)', l)
-    if sec == '5.2' and m4:
-        (todo_impl if '未実装' in l else s52).append(m4.group(1))
+    if sec == '5.2' and m5:
+        (todo_impl if '未実装' in l else s52).append(m5.group(1))
     if sec == '6.2' and m5:
         s62.append(m5.group(1))
 only52, only62 = sorted(set(s52) - set(s62)), sorted(set(s62) - set(s52))
