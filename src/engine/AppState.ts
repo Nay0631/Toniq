@@ -217,7 +217,7 @@ export const defaultState: AppState = {
   key:         "A",
   bpm:         128,
   tempoPreset: "普通",
-  bars:        16,
+  bars:        32,
 
   chordPattern: null,
   drumPattern:  null,
@@ -262,10 +262,9 @@ export const defaultState: AppState = {
     drum:   true,
     chord:  true,
     bass:   true,
-    // パッド・アルペジオ・シグネチャーは初期状態で OFF（必要なときに足すパート）
-    arp:    false,
-    pad:    false,
-    signature: false,
+    arp:    true,
+    pad:    true,
+    signature: true,
     melody: true,
     fx:     true,
   },

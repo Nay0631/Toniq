@@ -11,6 +11,7 @@ let melodyPart:  Tone.Part | null = null;
 let melodySynth: MelodySynth | GrowInstrument | null = null;
 let melodyFx:    Tone.ToneAudioNode[] = [];  // Synth の後ろにつなぐエフェクト（Synth と一緒に破棄する）
 let melodyVol:   Tone.Volume | null = null;
+let melodySound: SoundName | "grow" | null = null;  // 今の melodySynth を作ったときの音色（試聴で作り直すかの判定用）
 
 // ジャンルごとの音色（grow は INSTRUMENTS ではなく Grow.ts で鳴らす）
 type SoundName = Exclude<MelodyInstrument, "auto" | "grow">;
@@ -163,6 +164,7 @@ export function initMelodySynth() {
   disposeMelodySynth();
   melodyVol = createVolumeNode("melody");  // 現在のオーディオコンテキスト用のノード
   const sound = resolveMelodySound();
+  melodySound = sound;
   if (sound === "grow") {
     // grow は自前のエフェクト（リバーブを含む）を持つので、そのままメロディの Volume へ
     melodySynth = new GrowInstrument(growValues("melody"), getState().bpm).connect(melodyVol);
@@ -208,7 +210,8 @@ export function loadMelody(notes: MelodyNote[], loopEnd: string) {
 export async function previewMelodyNote(note: string) {
   await Tone.start();
   if (getState().melodyInstrument === "grow") await prepareGrowContext();
-  if (!melodySynth) initMelodySynth();
+  // 起動時（grow の準備前）に作った Synth や、音色・ジャンルを変える前の Synth なら今の設定で作り直す
+  if (!melodySynth || melodySound !== resolveMelodySound()) initMelodySynth();
   melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);
 }
 
@@ -221,6 +224,7 @@ function disposeMelodySynth() {
   melodySynth?.dispose();
   melodyFx.forEach(n => n.dispose());
   melodySynth = null;
+  melodySound = null;
   melodyFx    = [];
 }
 
