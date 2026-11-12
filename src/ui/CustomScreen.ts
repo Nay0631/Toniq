@@ -142,6 +142,18 @@ async function startPlayback(): Promise<void> {
   render();
 }
 
+// 文字の入力欄・セレクトの操作中か（キー操作を横取りしない。ノブ・フェーダーの range は除く）
+function isTyping(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && !!target.closest(
+    "input:not([type=range]):not([type=checkbox]), select, textarea, [contenteditable]");
+}
+
+// 書き出しの進み具合などのダイアログが出ているか
+function modalOpen(): boolean {
+  return Array.from(document.querySelectorAll('[aria-modal="true"]'))
+    .some(el => el.getClientRects().length > 0);
+}
+
 // 差し替え：今のものとは別の候補から選ぶ
 function pickOther<T extends { id: string }>(items: T[], currentId: string | undefined): T | undefined {
   const others = items.filter(i => i.id !== currentId);
@@ -356,6 +368,23 @@ export function initCustomScreen(): void {
     Playback.stop();
     render();
   });
+
+  // アレンジャータブではスペースキーで再生／停止する（再生は開始位置から）。
+  // ボタンにフォーカスがあってもクリックさせないよう、キャプチャで受けて既定の動作を止める
+  document.addEventListener("keydown", e => {
+    const s = getState();
+    if (s.screen !== "custom" || s.tab !== "arranger") return;
+    if (e.code !== "Space" || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (isTyping(e.target) || modalOpen()) return;
+    e.preventDefault();
+    if (e.repeat) return;
+    if (Playback.isPlaying()) {
+      Playback.stop();
+      render();
+    } else {
+      void startPlayback();
+    }
+  }, { capture: true });
 
   // ===== 基本設定 =====
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
