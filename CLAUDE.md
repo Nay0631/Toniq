@@ -14,6 +14,8 @@ npm run electron:build  # インストーラ作成（release/）
 
 テスト・Lint は未導入。変更後は `npx tsc --noEmit` で型チェックする。
 
+メロディ・コード進行・アレンジの生成ルールを変えたら、`npm run quality` で前後を比べる（`tools/quality-report.mjs`）。シンプルモードの「生成する」と同じ手順で全ジャンル×雰囲気を100曲ずつ作り、自動チェックの合格率・総合点と多様さ（進行・メロディのリズムの種類、同じメロディが出ないか）を出す。乱数はシードで決まるので、変更前に `--save before`、変更後に `--compare before` で差が出る（`--detail` でジャンル×雰囲気ごと、`--genre` で絞り込み、`--seed` / `--runs` / `--key`。結果は `output/quality/`）。
+
 grow（内部シンセ。C++）は2通りにビルドする（詳しくは `grow/README.md`）：
 
 ```bash
@@ -32,7 +34,8 @@ electron/main.ts        Electron メインプロセス（ウィンドウ生成�
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ grow（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   grow の wasm（npm run grow:wasm で作る。Grow.ts が読む）
-output/                 曲の出力フォルダ（projects = 作業ファイル、audio = WAV / MP3、midi = MIDI。中身は Git 管理外）
+output/                 曲の出力フォルダ（projects = 作業ファイル、audio = WAV / MP3、midi = MIDI、quality = 一括計測の結果。中身は Git 管理外）
+tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
 src/ui/
@@ -79,7 +82,8 @@ src/engine/
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
   LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、各パートが鳴る小節の判定 arrangementGate、周回表示）
   SongForm.ts             曲の構成（セクション Aメロ／サビ、曲全体のコード進行 songProgression・メロディ songMelody、エンディング、ドラムのフィルの小節、Aメロ・サビのメロディ生成）
-  QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。アレンジャーのテスト中の機能の欄）
+  QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。アレンジャーのテスト中の機能の欄。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
+  QualityBatch.ts         自動チェックの一括計測（npm run quality が Node から呼ぶ。アプリからは使わない。シードを決めて全ジャンル×雰囲気の曲を生成し、合格率と多様さを集める）
   Groove.ts               グルーヴ（スウィング applySwing・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
@@ -182,7 +186,7 @@ src/engine/
   - ドラムのフィル：`isFillBar(bar)`（ドラムが鳴っている周回の最後の小節で、次がセクションの変わり目・編成が変わる所・8小節ごと、またはエンディングの直前）の小節で、`FILLS` の `from` ステップから元のパターン（`keep` 以外）を止めてフィルを鳴らす（小節の終わりへ強くなる）。
   - ドラムの揺らぎ：強さとタイミングを少し揺らす（ハイハットは裏の16分を弱く・最大 6ms、スネアなどは 4ms 遅らせる。キックはずらさない）。`GHOST_RATE` のジャンルではスネアのゴーストノートを確率で入れる。
   - フィル・エンディングの音は `drumStepHits()`（`DrumEngine.ts`）で決め、再生と MIDI書き出しで共通。揺らぎは再生だけ。フィル・揺らぎはドラムが1音ごとに AppState を読むので再生中もすぐ反映される。
-- 自動チェック（`QualityCheck.ts` の `analyzeSong()`）はアレンジャーのテスト中の機能の欄に出す。項目：強拍（1・3拍目）のコード構成音の割合（75% 以上）、周回の最後の音が主音・構成音か、最大の跳躍（休符をはさまない音どうしで 9 半音以内）、サビの平均の高さが Aメロより高いか、セクション、アレンジの抜き差し（ON のパートが前の小節より減る所）、エンディング・フィルの回数、コード進行DB（全進行が実音にできるか・サビの相方があるか）。
+- 自動チェック（`QualityCheck.ts` の `analyzeSong()`）はアレンジャーのテスト中の機能の欄に出す。数値は `songMetrics()`、合否は `QUALITY_RULES` で、`npm run quality`（`QualityBatch.ts`）も同じものを使う。項目を足すときは両方に出るよう `songMetrics` と `QUALITY_RULES`（合否があるなら `QualityBatch.ts` の `RULE_NAMES` と `quality-report.mjs` の `RULE_LABELS` も）に足す。項目：強拍（1・3拍目）のコード構成音の割合（75% 以上）、周回の最後の音が主音・構成音か、最大の跳躍（休符をはさまない音どうしで 9 半音以内）、サビの平均の高さが Aメロより高いか、セクション、アレンジの抜き差し（ON のパートが前の小節より減る所）、エンディング・フィルの回数、コード進行DB（全進行が実音にできるか・サビの相方があるか）。
 - ベースとキック：ベースの強さは `bassVelocity(bar, step)`（`BassPlayer.ts`）で、キック（`kickAt()`。アレンジ・ブロックのパターン・フィルも反映）と同時の音を強く、それ以外は拍の頭 > 裏の順に弱くする。MIDI書き出しも同じ。
 - 再生時は ON のパートを先頭ですべて読み込み、各パートの Part / Sequence のコールバック先頭で `arrangementGate(part)` を呼んで、ブロックの外の小節では鳴らさない。新しいパートを足すときも同じ形にする。判定は再生中も AppState を見るので、アレンジの編集は再生し直さなくてもすぐ反映される。試聴（`Playback.preview`）は判定を外す。
 - アレンジャーでは小節番号の目盛りをクリックして再生開始位置（`AppState.startBar`）を決める。アレンジャータブの再生はそこから始まり（`Playback.play({ fromBar })`）、他のタブでは先頭から。再生中に開始位置を変えると、その位置から再生し直す。
