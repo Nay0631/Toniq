@@ -58,11 +58,27 @@ export interface ArrangeBlock {
   drum?:  string;  // ドラムのブロックだけ：このブロックで鳴らすパターンの ID（なし = 曲の設定 AppState.drumPattern）
 }
 
-// パートごとのブロックの並び（開始小節順・重なりなし）
+// パートごとのブロックの並び（開始小節順・重なりなし）。AppState には持たず、
+// 構成のプリセット（arrangePreset）と変えた所（arrangeEdits）から LoopArranger.getArrangement() が毎回組み立てる
 export type Arrangement = Record<LayerName, ArrangeBlock[]>;
 
 // 曲のセクション（A = Aメロ、B = サビ）。周回（コード進行1周）ごとに決める
 export type Section = "A" | "B";
+
+// 構成のプリセット（LoopArranger.ts の ARRANGE_PRESETS。ジャンルの標準の構成 LOOP_SCHEDULE に変形を足したもの）
+// standard = 標準、quiet = 静かに始まる、drop = サビを強く、short = 短く繰り返す、buildup = だんだん盛り上がる
+export type ArrangePreset = "standard" | "quiet" | "drop" | "short" | "buildup";
+
+// アレンジの「変えた所」。セクション単位（何回目の Aメロ／サビか）で、パートを足す・抜く、ドラムのパターン・FX の種類を変える。
+// 標準（プリセット）を組み直してから当て直すので、ジャンル・小節数・進行の長さを変えても追従する
+export interface ArrangeEdit {
+  section: Section;    // どのセクションの
+  nth:     number;     // 何回目（0 始まり。同じ種類のセクションを先頭から数える）
+  part:    LayerName;
+  on?:     boolean;    // true = セクション全体で鳴らす（足す）、false = 鳴らさない（抜く）、なし = 標準のまま
+  drum?:   string;     // ドラムだけ：このセクションで鳴らすパターンの ID
+  fx?:     FxType;     // FX だけ：このセクションで鳴らす種類
+}
 
 // アプリ全体の状態を一元管理する
 export interface AppState {
@@ -156,8 +172,10 @@ export interface AppState {
   // ベースにサブベース（低いサイン）を重ねるか（null = ジャンルの標準。bass_params.json の sub）
   bassSub:          boolean | null;
 
-  // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
-  arrangement: Arrangement | null;
+  // アレンジ：構成のプリセットと、そこから変えた所（空 = プリセットのまま）。
+  // どちらもジャンル・コード進行・小節数・セクションに合わせて組み直す（ブロックの並びは LoopArranger.getArrangement()）
+  arrangePreset: ArrangePreset;
+  arrangeEdits:  ArrangeEdit[];
   startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
 
   // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
@@ -255,7 +273,8 @@ export const defaultState: AppState = {
   },
   bassSub:          null,  // ジャンルの標準
 
-  arrangement: null,
+  arrangePreset: "standard",
+  arrangeEdits:  [],
   startBar:    0,
 
   pianoRollLength:    "4n",
@@ -297,7 +316,7 @@ export const SONG_FIELDS = [
   "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
   "growPreset", "growParams", "growChordPreset", "growChordParams", "growSounds", "bassSub",
-  "arrangement", "parts", "volumes",
+  "arrangePreset", "arrangeEdits", "parts", "volumes",
 ] as const;
 
 export type SongFields = Pick<AppState, typeof SONG_FIELDS[number]>;

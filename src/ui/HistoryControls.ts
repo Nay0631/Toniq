@@ -12,7 +12,7 @@ import { onRender, render } from "./Router";
 
 // 再生し直さなくても反映できる項目（アレンジは再生中も AppState を見ている）
 const LIGHT_FIELDS: TrackedField[] = [
-  "arrangement", "volumes", "parts", "melodyNotes", "chorusMelodyNotes", "melodyMethod", "melodyVersion",
+  "arrangeEdits", "volumes", "parts", "melodyNotes", "chorusMelodyNotes", "melodyMethod", "melodyVersion",
   "swing", "sidechain",
 ];
 

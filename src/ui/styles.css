@@ -518,6 +518,7 @@ button {
 .chips-mood  .chip.is-active { background: var(--simple-soft); border-color: var(--simple); color: var(--simple-ink); font-weight: 600; }
 .chips-genre .chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
 .chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
+.chips-arrange .chip.is-active { background: var(--list-soft); border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
 
 .bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
 
@@ -966,7 +967,7 @@ button {
     repeating-linear-gradient(to right, var(--grid-loop) 0 1px, transparent 1px calc(100% * var(--loop) / var(--bars))),
     repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px calc(100% / var(--bars)));
   background-color: var(--surface-sunken);
-  cursor: copy;
+  cursor: pointer;
 }
 
 .arr-lane.is-off .arr-track { opacity: 0.45; }
@@ -996,7 +997,7 @@ button {
   font-size: 13px;
   font-weight: 600;
   color: #2b2b3a;
-  cursor: grab;
+  cursor: pointer;
   /* 隣り合うブロックの間に隙間が見えるよう、左右の枠を透明にする */
   border: 0 solid transparent;
   border-width: 0 2px;
@@ -1038,8 +1039,6 @@ button {
 }
 
 .arr-block-select:hover { background-color: rgba(255, 255, 255, 0.35); }
-/* 削除ボタンはブロックの右端に寄せる */
-.arr-block-select + .arr-del { margin-left: auto; }
 
 .arr-block-select:focus-visible { outline: 2px solid var(--custom); outline-offset: -2px; }
 
@@ -1059,34 +1058,46 @@ button {
 .arr-counter, .mix-counter { background: #f5b98a; }
 .arr-perc, .mix-perc   { background: #c9dc8f; }
 
-.arr-handle {
+
+/* 構成のプリセット（ツールバーの左端） */
+.arranger-preset { display: flex; flex: none; align-items: center; gap: 8px; font-size: 12px; color: var(--hw-label); }
+.arranger-preset .select { width: auto; }
+
+/* 変えた所（足した・抜いたセクション）の枠。クリックはトラックへ通す */
+.arr-edit {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  z-index: 1;
+  border: 2px solid var(--hw-orange);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.arr-edit.is-off { border-style: dashed; border-color: var(--hw-label); }
+.arr-edit-tag {
+  position: absolute;
+  top: -2px;
+  right: 4px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--hw-orange);
+  border-radius: 0 0 4px 4px;
+}
+.arr-edit.is-off .arr-edit-tag { color: var(--hw-text); background: var(--hw-box); }
+
+/* セクション（アレンジを変える単位・8小節）の区切り線 */
+.arr-unit-line {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 8px;
-  cursor: ew-resize;
+  margin-left: -1px;
+  border-left: 2px solid var(--hw-label);
+  opacity: 0.35;
 }
-
-.arr-handle-left  { left: 0; }
-.arr-handle-right { right: 0; }
-
-.arr-del {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  margin-right: 8px;
-  padding: 0;
-  font-size: 13px;
-  line-height: 1;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.7);
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-
-.arr-block:hover .arr-del,
-.arr-block:focus-within .arr-del { opacity: 1; }
 
 .arr-overlay {
   position: absolute;
@@ -1475,61 +1486,7 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .hw .arr-sections { background-color: var(--track-bg); }
 .hw .arr-section-lane { border-bottom-color: var(--hw-line); }
 
-/* ── 自動チェック（ArrangerTab.ts）── */
-.test-panel { margin-top: 20px; }
-.hw .test-panel { margin-top: 0; border-top: none; }
-[data-skin="default"] .hw .test-panel { margin-top: 20px; border-top: 1px solid var(--border); }
-[data-skin="pop"] .hw .test-panel { margin-top: 16px; }
 
-.test-panel-note {
-  margin-left: 10px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-muted);
-}
-
-.quality-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 20px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.quality-item {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  grid-template-areas: "mark label" "mark value" "mark hint";
-  column-gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--surface-sunken);
-}
-
-.quality-mark {
-  grid-area: mark;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.quality-label { grid-area: label; font-size: 12px; color: var(--text-muted); }
-.quality-value { grid-area: value; font-weight: 700; }
-.quality-hint  { grid-area: hint; font-size: 11px; color: var(--text-faint); }
-
-.quality-item.is-ok   .quality-mark { color: var(--custom-ink); background: var(--custom-soft); }
-.quality-item.is-warn .quality-mark { color: var(--danger-ink); background: var(--danger-soft); }
-.quality-item.is-info .quality-mark { color: var(--text-muted); background: var(--btn-soft); }
-
-@media (max-width: 720px) {
-  .quality-list { grid-template-columns: 1fr; }
-  .test-panel-note { display: block; margin-left: 0; }
-}
 
 /* ── ミキサー（MixerPanel.ts） ──
    上端の黒い帯にパートの色と名前を並べ、その下に電源・フェーダー＋メーター・値。左端に dB 目盛り、右端にマスター */
@@ -1864,7 +1821,6 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 /* クリップの見出しの帯（16px）に収める */
 [data-skin="studio"] .hw .arr-block-select { height: 15px; }
 
-[data-skin="studio"] .hw .arr-del { width: 14px; height: 14px; margin-right: 4px; font-size: 10px; }
 
 /* ── ポップスキン（<html data-skin="pop">） ──────────────
    クリーム色の地に角の丸いモジュールを並べる、色分けしたグルーヴボックス風。

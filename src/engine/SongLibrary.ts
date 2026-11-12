@@ -1,7 +1,8 @@
 import { getState, setState, defaultState, SONG_FIELDS, SongFields } from "./AppState";
 import { applyAllVolumes } from "./VolumeManager";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./SimpleModeResolver";
-import { emptyArrangement } from "./LoopArranger";
+import { editsFromLegacy } from "./LoopArranger";
+import type { Arrangement } from "./AppState";
 import { resetHistory } from "./History";
 import { presetIdFromSaved } from "./Grow";
 
@@ -146,6 +147,9 @@ function songFields(song: Partial<SongFields>): SongFields {
   const fields = {} as Record<string, unknown>;
   SONG_FIELDS.forEach(f => { fields[f] = song[f] ?? defaultState[f]; });
   const loaded = structuredClone(fields) as SongFields;
+  // 以前の形式のアレンジ（編集したときだけブロックの並びを保存していた。null = ジャンルの標準）
+  const legacy = (song as { arrangement?: Partial<Arrangement> | null }).arrangement;
+  const legacyArrangement = !song.arrangeEdits && legacy ? legacy : null;
   return {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
@@ -160,7 +164,10 @@ function songFields(song: Partial<SongFields>): SongFields {
     // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）。
     // 今の grow は "grow"（growPreset / growParams）
     melodyInstrument: (loaded.melodyInstrument as string) === "toniq" ? "auto" : loaded.melodyInstrument,
-    arrangement: loaded.arrangement ? { ...emptyArrangement(), ...loaded.arrangement } : null,
+    // 以前はアレンジをブロックの並び（arrangement）で保存していた。ジャンルの標準と比べて「変えた所」に読み替える
+    arrangeEdits: legacyArrangement && loaded.chordPattern
+      ? editsFromLegacy(legacyArrangement, loaded.genre, loaded.chordPattern.length_bars, loaded.bars, loaded.sections)
+      : loaded.arrangeEdits,
   };
 }
 
@@ -185,7 +192,9 @@ export function loadSong(id: string): boolean {
 
 const FILE_FORMAT  = "toniq-song";
 // 2：grow のプリセットを番号ではなく ID で保存する（1 の番号は読み込み時に ID へ読み替える）
-const FILE_VERSION = 2;
+// 3：アレンジを構成のプリセット（arrangePreset）と変えた所（arrangeEdits）で保存する
+//    （2 までのブロックの並び arrangement は、読み込み時に songFields が変えた所に読み替える）
+const FILE_VERSION = 3;
 export const SONG_FILE_EXT = ".toniq.json";
 
 interface SongFile {

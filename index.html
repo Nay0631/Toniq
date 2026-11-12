@@ -195,6 +195,12 @@
           </div>
 
           <div class="field">
+            <div class="field-label">▤ 構成 <span class="field-hint" id="s-arrange-hint"></span></div>
+            <!-- 構成のプリセット（AppState.arrangePreset。LoopArranger.ts の ARRANGE_PRESETS から SimpleScreen.ts が作る） -->
+            <div class="chips chips-arrange" id="s-arrange-preset"></div>
+          </div>
+
+          <div class="field">
             <div class="field-label">メロディの入力方法</div>
             <div class="method-cards">
               <button class="method-card" data-melody-method="auto">
@@ -617,19 +623,16 @@
       <div class="screen-body screen-body-wide hw" data-tab-panel="arranger" hidden>
         <div class="card arranger-card">
           <div class="arranger-toolbar">
+            <!-- 構成のプリセット（AppState.arrangePreset。選択肢は LoopArranger.ts の ARRANGE_PRESETS。ArrangerTab.ts が作る） -->
+            <label class="arranger-preset"><span data-term="arrangePreset">構成</span>
+              <select class="select" id="c-arr-preset" aria-label="構成"></select></label>
             <span class="arranger-mode" id="c-arr-mode"></span>
             <span class="arranger-time" id="c-arr-time" title="再生位置 / 曲全体の長さ">0:00.00 / 0:00.00</span>
-            <span class="arranger-hint">小節番号をクリックで再生開始位置／空いている所をクリックで配置／ドラッグで移動／端をドラッグで長さを変更／右クリック・× で削除</span>
+            <span class="arranger-hint">セクションをクリックでパートを足す・抜く（もう一度で元に戻す）／小節番号をクリックで再生開始位置</span>
             <button class="btn btn-small" id="c-arr-to-start">⏮ 先頭へ</button>
-            <button class="btn btn-small" id="c-arr-reset">↺ 標準に戻す</button>
+            <button class="btn btn-small" id="c-arr-reset" title="足した・抜いたセクションとセクションの切り替えを消して、選んだ構成に戻します">↺ 変えた所を消す</button>
           </div>
           <div class="arranger" id="c-arranger"></div>
-        </div>
-
-        <!-- 自動チェック。中身は ArrangerTab.ts で作る（テスト中の機能の ON/OFF は設定タブのドラムの「もっと調整」へ移した） -->
-        <div class="card panel test-panel">
-          <div class="panel-title panel-title-plain"><span data-term="qualityCheck">自動チェック</span><span class="test-panel-note">今の曲を規則で調べた結果です</span></div>
-          <ul class="quality-list" id="c-quality"></ul>
         </div>
 
         <!-- ミキサー（パート別音量。中身は MixerPanel.ts で作る） -->
@@ -847,14 +850,15 @@
           <details class="help-item">
             <summary>アレンジャー（曲の構成）</summary>
             <ul>
-              <li>パートの行の空いている所をクリックすると、その小節にブロックを置きます。</li>
-              <li>ブロックはドラッグで移動、左右の端をドラッグで長さを変えます。</li>
-              <li>ブロックを<b>右クリック</b>・× ボタン・<kbd>Delete</kbd>（選んだ状態で）で消します。</li>
-              <li>ドラム・FX のブロックは、ラベルの文字をクリックするとブロックごとにパターン・種類を選べます。</li>
+              <li>上の「構成」で、曲の流れ（標準・静かに始まる・サビを強く・短く繰り返す・だんだん盛り上がる）を選べます。たいていはこれだけで十分です。</li>
+              <li>パートの行をクリックすると、そのセクション（8小節ごと。縦の線で区切っています）でそのパートを<b>足す／抜く</b>を切り替えます。もう一度クリックすると元に戻ります。</li>
+              <li>変えた所は枠で囲んで「＋ 足した」「− 抜いた」と出ます。「何回目の Aメロ／サビ」で覚えるので、ジャンルや小節数を変えてもそのまま当てはまります。</li>
+              <li>ブロックを<b>右クリック</b>・<kbd>Delete</kbd>（選んだ状態で）でも、そのセクションから抜けます。</li>
+              <li>ドラム・FX のブロックは、ラベルの文字をクリックするとセクションごとにパターン・種類を選べます。</li>
               <li>いちばん上の「セクション」の行をクリックすると、その周回を Aメロ／サビ で切り替えます。</li>
               <li>小節番号の目盛りをクリックすると、そこが再生の開始位置になります（アレンジャータブで再生したとき。「⏮ 先頭へ」で戻ります）。</li>
               <li>スペースキーで再生／停止できます（再生は開始位置から）。</li>
-              <li>OFF のパートにブロックを置くと、そのパートは ON になります。「↺ 標準に戻す」でジャンルの標準の構成に戻ります。</li>
+              <li>OFF のパートの行をクリックすると、そのパートは ON になります。「↺ 変えた所を消す」で、選んだ構成のままに戻ります。</li>
             </ul>
           </details>
 
@@ -918,7 +922,6 @@
             <summary>テスト中の機能</summary>
             <ul>
               <li>カスタムモードの設定タブで、ドラムの「もっと調整」の「ドラムの演奏」から、フィル・揺らぎ・エンディングを ON/OFF できます（端末ごとに保存）。</li>
-              <li>自動チェックの結果は、アレンジャータブのタイムラインの下に出ます。</li>
               <li>カスタムモードの設定タブの下にある grow のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
             </ul>
           </details>

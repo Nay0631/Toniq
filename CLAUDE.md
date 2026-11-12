@@ -49,7 +49,7 @@ src/ui/
   Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab
   SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、書き出し、ジャンルのサンプル試聴）
   CustomScreen.ts         カスタムモード画面の設定タブ（基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオの3列＋書き出し）とアレンジャータブ下部（書き出し）
-  ArrangerTab.ts          アレンジャーのタイムライン（セクションの行、パートごとのブロックの配置・移動・長さ変更・削除、再生位置）と、自動チェックの欄
+  ArrangerTab.ts          アレンジャーのタイムライン（構成のプリセットの選択、セクションの行、セクションごとにパートを足す・抜く、変えた所の印、再生位置）
   MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・音量のフェーダー・レベルメーター、マスターのメーター）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通）
   MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
@@ -87,9 +87,9 @@ src/engine/
   History.ts              元に戻す／やり直すの履歴（setState の直前に曲の内容のスナップショットを積む）
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
-  LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、各パートが鳴る小節の判定 arrangementGate、周回表示）
+  LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、構成のプリセット ARRANGE_PRESETS、変えた所 ArrangeEdit の当て直し、以前のブロックの並びからの読み替え editsFromLegacy、各パートが鳴る小節の判定 arrangementGate、周回表示）
   SongForm.ts             曲の構成（セクション Aメロ／サビ、曲全体のコード進行 songProgression・メロディ songMelody、エンディング、ドラムのフィルの小節、Aメロ・サビのメロディ生成）
-  QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。アレンジャーの自動チェックの欄。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
+  QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。画面には出さず npm run quality だけで使う。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
   QualityBatch.ts         自動チェックの一括計測（npm run quality が Node から呼ぶ。アプリからは使わない。シードを決めて全ジャンル×雰囲気の曲を生成し、合格率と多様さを集める）
   Groove.ts               グルーヴ（スウィング applySwing・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
@@ -147,7 +147,7 @@ src/engine/
   - `chord_progressions.json` / `drum_patterns.json` の `genre` タグにも新ジャンルを付ける。シンプルモードの最初の候補は `easy_mode_table.json` の ID から、差し替え候補はそれに加えてジャンル・雰囲気のタグが一致するものから選ばれる。コード進行のディグリー・`type` が `degree_resolver.ts` に未定義だと鳴らすときに例外になるので、足したら確かめる。
   - 4/4・16ステップの前提で表せないジャンル（スウィング・3連符、32分のハイハットロール、3拍子など）は今の仕組みでは作れない。
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
-- アレンジャーのドラムのブロックは1つずつパターンを持てる（`ArrangeBlock.drum` = パターン ID。ブロックのラベルのセレクトで選ぶ。今のジャンルのパターンを先に並べ、ほかのジャンルも選べる。なし = 曲の設定 `drumPattern`）。鳴らすときはステップごとに `arrangementBlockAt("drum")` でブロックを調べてパターンを決めるので、再生中の変更もすぐ反映される。キットはパターンを切り替えても音が欠けないよう、DB に出てくる全トラック分を作る。16ステップ・`16n` 以外のパターンを足すときは `DrumEngine.ts` の Sequence と `MidiExporter.ts` のドラムを見直す。
+- アレンジャーのドラムはセクションごとにパターンを持てる（変えた所 `ArrangeEdit.drum` → 組み立てたブロックの `ArrangeBlock.drum` = パターン ID。ブロックのラベルのセレクトで選ぶと、ブロックが重なっているセクションの変えた所になる。今のジャンルのパターンを先に並べ、ほかのジャンルも選べる。なし = 曲の設定 `drumPattern`）。鳴らすときはステップごとに `arrangementBlockAt("drum")` でブロックを調べてパターンを決めるので、再生中の変更もすぐ反映される。キットはパターンを切り替えても音が欠けないよう、DB に出てくる全トラック分を作る。16ステップ・`16n` 以外のパターンを足すときは `DrumEngine.ts` の Sequence と `MidiExporter.ts` のドラムを見直す。
 - Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメントでは「grow」と呼ぶ。
 - grow（`grow/`）は C++ のシンセサイザー。音を作るコア（`grow/core/`。JUCE なし）を、Toniq では WebAssembly＋AudioWorklet で、単体では JUCE の Standalone・VST3 で鳴らす。作り・決まりごとは `grow/README.md`。
   - Toniq ではメロディの音色 `melodyInstrument: "grow"`（初期値。選択肢の先頭の「grow」）、コード・ベース・パッド・アルペジオ・シグネチャー・カウンターメロディ・FX / SE はいつも grow で鳴らす（ドラムは音源 `drumSource` が `"grow"`（初期値）のとき）（準備ができていない・wasm がないときは各 Player の Tone.js の音色。シグネチャーは `SIGNATURES` の `create`）。シグネチャーはジャンルの鳴り方（`events`）のまま、音だけ grow で出す（`growTrigger`。ノイズのイベントは `NOISE_NOTE`。レコードノイズはプチプチ音をプリセット「レコードプチ」の2台目で鳴らす `growCreate`）。コードは16音ポリで和音を鳴らし、`GrowInstrument` は同じサンプルに重なる合図（和音の発音・消音）を2サンプルずつずらして渡す。準備ができていない・wasm がないとき、コードはソフトパッドで鳴る。`Grow.ts` が `public/grow/grow.wasm` を読み込み、AudioWorklet（`growWorklet.js`。`?raw` で読み込んで Blob の URL で登録）をオーディオコンテキストごとに登録する。再生・試聴・サンプルは `Playback.audioReady`、WAV / MP3 書き出しは `renderSong` の `schedule` で、`prepareGrowContext()` を待つ（パッドなどはいつも grow なので毎回）。準備ができていない・wasm がないときは `resolveMelodySound()` がジャンルの標準の音色にする。
@@ -183,9 +183,13 @@ src/engine/
 - 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
 - 拍子の変更（3/4 など）は保留中。現状は 4/4・16ステップ前提。
 - 「小節数」は曲全体の最大の長さを表す（コード進行1周の長さではない）。コード進行・ドラムはその長さに達するまでループし、アレンジャーのタイムラインと書き出しの長さもこの値に合わせる。
-- アレンジ（`AppState.arrangement`）はパートごとのブロック（`start` / `length`、小節・0始まり）の並び。`null` はジャンルの標準アレンジで、`LOOP_SCHEDULE` を小節ごとに展開して自動で組む（ジャンル・コード進行・小節数・セクションの変更に追従）。アレンジャーで編集すると初めて AppState に書き込まれ、「標準に戻す」で `null` に戻る（セクションも `null` に戻す）。シンプルモードの生成時も `null` に戻す。
+- アレンジは「構成のプリセット＋変えた所」で持つ（`AppState.arrangePreset` / `arrangeEdits`。どちらも `SONG_FIELDS`）。ブロック（`start` / `length`、小節・0始まり）の並びは AppState に持たず、`getArrangement()` が `LOOP_SCHEDULE` にプリセットの変形を足して小節ごとに展開し、変えた所を当てて毎回組み立てる（条件が同じあいだはキャッシュ。変えた所は配列ごと差し替えるので参照で比べる）。ジャンル・コード進行の長さ・小節数・セクションを変えても、組み直したうえで変えた所を当て直すので、ユーザーは「編集すると追従しない」ことを気にしなくてよい。
+  - 構成のプリセット（`ARRANGE_PRESETS`。アレンジャーのツールバーの「構成」とシンプルモードの設定の「構成」で選ぶ）：`standard` = 標準、`quiet` = 静かに始まる（最初のセクションはコード・パッドだけで、標準のパートは後半から）、`drop` = サビを強く（サビは全パート、直前のセクションの後半でドラム・パーカッション・ベースを抜いて最後の1小節でドラムを戻す）、`short` = 短く繰り返す（2つ目の A とサビを交互にくり返す。セクションの並びも変わるので `defaultSections` / `getSections` もプリセットを見る）、`buildup` = だんだん盛り上がる（サビのパートを `ENERGY_ORDER` の順に、セクションごとに足していく。減らさない）。プリセットを変えたら再生し直す（セクションが変わりうるため）。シンプルモードの生成時は変えた所だけ捨て、プリセットは残す。
+  - 変えた所（`ArrangeEdit`）はセクション単位：`{ section: "A" | "B", nth, part, on?, drum?, fx? }`（何回目の Aメロ／サビ のどのパートを、足す `on: true`／抜く `on: false`、ドラムのパターン・FX の種類）。セクション（`ArrangeUnit`。`arrangeUnits` / `currentUnits()`）は `SECTION_BARS`（コード進行の周回の倍数）ずつ区切った単位で、種類は最初の周回のセクション、`nth` は同じ種類を先頭から数えた回数。当たるセクションがない（曲が短い）変えた所は使わないが消さない。書き換えは `withEdit()`（何も残らなければ変えた所ごと消す）。
+  - アレンジャーの操作：パートの行をクリックすると、そのセクションで変えてあれば元に戻し、変えていなければプリセットで鳴っているなら抜く・鳴っていないなら足す（`toggleUnit`。プリセットで鳴るかは `getBaseArrangement()`）。OFF のパートはクリックで ON にしてそのセクションで鳴らす。ブロックの右クリック・Delete キー（フォーカス中）はそのセクションから抜く。ドラッグでの移動・長さ変更・×ボタンはない。変えた所は枠と「＋ 足した／− 抜いた」、セクションの区切りは縦の線で出す。「↺ 変えた所を消す」で変えた所とセクションの切り替えを消す（プリセットはそのまま）。
+  - 以前の形式（ブロックの並び `arrangement` を保存した曲・曲ファイルの `FILE_VERSION` 2 まで）は、`loadSong()`（`songFields`）が `editsFromLegacy()` でジャンルの標準とセクションごとに比べて変えた所に読み替える（セクションの半分以上で鳴っているかにまとめるので、小節単位の違いは丸まる）。
   - `LOOP_SCHEDULE` は8小節（`SECTION_BARS`）のセクションごとの `{ section, parts, add?, drop?, gap?, build? }` で、どのジャンルも A → A → サビ → A の順（32小節で AABA）。1セクションはコード進行が4小節なら2周、2小節なら4周、8小節なら1周（`loopsPerSection`）。同じ A が続いても単調にならないよう、1つ目と2つ目の A は編成を変え、`add` / `drop` でセクションの後半からパートを足す・抜く（サビの後半でドロップさせる、最後の A で薄くしていく など）。パートは足すだけでなく、ブレイクで抜くセクションもある（標準でも抜き差しがあるようにする。初期状態で OFF のパッド・アルペジオ・シグネチャーだけを抜いても聞こえないので、ドラム・ベースなどで作る）。`gap` は次がサビに変わる周回の最後の1小節だけ抜くパート（サビ前の空白）、`build` はセクションの最後の1小節だけ足すパート（ブレイクの終わりにドラムを戻してフィルでつなぐ）。どちらもコード進行が2小節以上で、曲の最後の小節でないときだけ。定義（4セクション）より長い曲は2つ目以降の定義（A → サビ → A）をくり返す。
-- 読み取りは `getArrangement()`（`LoopArranger.ts`）を通す。`AppState.arrangement` を直接見ない。
+- 読み取りは `getArrangement()`（`LoopArranger.ts`）を通す。`arrangeEdits` から自前でブロックを組み立てない。
 - セクション（`SongForm.ts`）：周回（コード進行1周）ごとに Aメロ（A）／サビ（B）を持つ（`AppState.sections`。`null` = `LOOP_SCHEDULE` の `section`。`SONG_FIELDS` に含む）。サビは `AppState.chorusPattern`（サビの進行）と `chorusMelodyNotes`（サビのメロディ）で鳴らす。
   - サビの進行は Aメロの進行と同じ長さ・`base_scale` のものだけ使う（`chorusFits`。合わない・`null` なら Aメロの進行で鳴らす）。候補は `chorusCandidates()`、自動の選び方は `pickChorus()`（`SimpleModeResolver.ts`。ジャンル・雰囲気が合うものから）。シンプルモードの生成・コード進行の差し替え・起動時・新規作成で選び、カスタムモードは「コード進行」欄の「サビ」で選ぶ（「なし」= `null`）。Aメロの進行を変えて合わなくなったら選び直す（「なし」ならそのまま）。DB に進行を足すときは、同じ長さ・スケールの相方があるようにする（自動チェックの「コード進行DB」で確かめられる）。
   - サビのメロディが空ならサビでも `melodyNotes` を鳴らす。自動生成は `generateSongMelodies()`（Aメロとサビを作る。サビは高めの音域で、Aメロの最後の音から大きく跳ばずに始める）、サビの進行を変えたときは `generateChorusMelody()` でサビだけ作り直す。
@@ -197,11 +201,11 @@ src/engine/
   - ドラムのフィル：`fillKind(bar)`（`SongForm.ts`。ドラムが鳴っている周回の最後の小節で、次がサビ `chorus`・サビの終わり `section`・編成が変わる所 `change`・同じセクションの8小節ごと `regular`、またはエンディングの直前 `ending`。`isFillBar` は入れるかどうか）の小節で、`FILLS` の `from` ステップから元のパターン（`keep` 以外）を止めてフィルを鳴らす（小節の終わりへ強くなる）。`FILLS` はジャンルごとに小・中・大（`small` / `normal` / `big`）の3つで、大きさは `fillSize(kind, mood)` が理由（`KIND_SIZE`：ending・chorus = 大、section・change = 中、regular = 小）と雰囲気（`MOOD_SIZE`：激しい = 1段大きく、落ち着いた = 1段小さく）で決める（`fillAt(bar)`）。大きいフィルほど早く始まり音が多い（EDM・トランスの大は小節の頭からのロール）。乱数は使わないので再生と MIDI書き出しで同じ。
   - ドラムの揺らぎ：強さとタイミングを少し揺らす（ハイハットは裏の16分を弱く・最大 6ms、スネアなどは 4ms 遅らせる。キックはずらさない）。`GHOST_RATE` のジャンルではスネアのゴーストノートを確率で入れる。
   - フィル・エンディングの音は `drumStepHits()`（`DrumEngine.ts`）で決め、再生と MIDI書き出しで共通。揺らぎは再生だけ。フィル・揺らぎはドラムが1音ごとに AppState を読むので再生中もすぐ反映される。
-- 自動チェック（`QualityCheck.ts` の `analyzeSong()`）はアレンジャータブの「自動チェック」の欄に出す。数値は `songMetrics()`、合否は `QUALITY_RULES` で、`npm run quality`（`QualityBatch.ts`）も同じものを使う。項目を足すときは両方に出るよう `songMetrics` と `QUALITY_RULES`（合否があるなら `QualityBatch.ts` の `RULE_NAMES` と `quality-report.mjs` の `RULE_LABELS` も）に足す。項目：強拍（1・3拍目）のコード構成音の割合（75% 以上）、周回の最後の音が主音・構成音か、最大の跳躍（休符をはさまない音どうしで 9 半音以内）、サビの平均の高さが Aメロより高いか、セクション、アレンジの抜き差し（ON のパートが前の小節より減る所）、エンディング・フィルの回数、コード進行DB（全進行が実音にできるか・サビの相方があるか・長さが8小節のセクション（`LoopArranger.ts` の `SECTION_BARS`）を割り切れる 1・2・4・8 小節かその倍数で、コードが長さちょうどを埋めているか）、メロディのリズムDB（`melody_params.json` のリズム・フレーズ形式の書式）。
+- 自動チェック（`QualityCheck.ts`）は画面には出さない（以前はアレンジャータブに欄があった。`analyzeSong()` は残してある）。数値は `songMetrics()`、合否は `QUALITY_RULES` で、`npm run quality`（`QualityBatch.ts`）も同じものを使う。項目を足すときは両方に出るよう `songMetrics` と `QUALITY_RULES`（合否があるなら `QualityBatch.ts` の `RULE_NAMES` と `quality-report.mjs` の `RULE_LABELS` も）に足す。項目：強拍（1・3拍目）のコード構成音の割合（75% 以上）、周回の最後の音が主音・構成音か、最大の跳躍（休符をはさまない音どうしで 9 半音以内）、サビの平均の高さが Aメロより高いか、セクション、アレンジの抜き差し（ON のパートが前の小節より減る所）、エンディング・フィルの回数、コード進行DB（全進行が実音にできるか・サビの相方があるか・長さが8小節のセクション（`LoopArranger.ts` の `SECTION_BARS`）を割り切れる 1・2・4・8 小節かその倍数で、コードが長さちょうどを埋めているか）、メロディのリズムDB（`melody_params.json` のリズム・フレーズ形式の書式）。
 - ベースとキック：ベースの強さは `bassVelocity(bar, step)`（`BassPlayer.ts`）で、キック（`kickAt()`。アレンジ・ブロックのパターン・フィルも反映）と同時の音を強く、それ以外は拍の頭 > 裏の順に弱くする。MIDI書き出しも同じ。
 - 再生時は ON のパートを先頭ですべて読み込み、各パートの Part / Sequence のコールバック先頭で `arrangementGate(part)` を呼んで、ブロックの外の小節では鳴らさない。新しいパートを足すときも同じ形にする。判定は再生中も AppState を見るので、アレンジの編集は再生し直さなくてもすぐ反映される。試聴（`Playback.preview`）は判定を外す。
 - アレンジャーでは小節番号の目盛りをクリックして再生開始位置（`AppState.startBar`）を決める。アレンジャータブの再生はそこから始まり（`Playback.play({ fromBar })`）、他のタブでは先頭から。再生中に開始位置を変えると、その位置から再生し直す。アレンジャータブではスペースキーで再生／停止する（`CustomScreen.ts`。文字の入力欄・セレクト・ダイアログの表示中は除く）。
-- アレンジャーのブロックは右クリック・×ボタン・Delete キー（フォーカス中）で削除する（右クリックはピアノロールと同じ操作。ブラウザの右クリックメニューは出さない）。
+- アレンジャーのブロックの右クリック・Delete キー（フォーカス中）は、そのセクションからパートを抜く（ブラウザの右クリックメニューは出さない）。
 - ドラム・FX のブロックのセレクト（`.arr-block-select`）の当たり判定は文字の幅（`field-sizing: content`）と1行分の高さだけにする。ブロックの残りの部分はドラッグ（移動）に使う。
 - パートは初期状態ですべて ON（シンプルモード・カスタムモードとも。`defaultState.parts`）。保存済みの曲は保存した ON/OFF のまま開く。
 - 曲の長さ（`defaultState.bars`）の初期値は 32 小節（カスタムモードの起動時・新規作成。シンプルモードは生成時に `SIMPLE_SONG_BARS` = 32 にする）。
@@ -213,13 +217,13 @@ src/engine/
 - サブベース（`AppState.bassSub`。`null` = ジャンルの標準で `bass_params.json` の `sub`。EDM・トランス・テクノが ON。`SONG_FIELDS` に含む）：ベースの各音を E1〜D#2 にたたんだ高さ（`subMidi`。オクターブ上の `O` もルートになる）で、grow の「サブベース」（なければ Tone.js のサイン）を −6dB（`SUB_LEVEL_DB`）で重ね、本体のベースは 90Hz から下を削る（`BassPlayer.ts`）。カスタムモードの設定タブの「追加パート」欄で選ぶ。音色と同じく再生開始時に反映される（再生中に変えたら再生し直す）。MIDI書き出しはしない。ジャンルを足すときは `bass_params.json` に `sub` も入れる。
 - シグネチャー（`SignaturePlayer.ts`）はジャンルの特徴を出す追加パート。EDM = オフビートのコードスタブ、テクノ = アシッド（16ステップ表記 R/O/F、大文字はアクセント）、8bit = 32分音符の高速アルペジオ、ローファイ = レコードノイズ（ヒス＋ランダムなプチプチ音）、ゲームBGM = ブラス、ハウス = シンコペーションのピアノスタブ、トランス = スーパーソウのコードを16分で刻むトランスゲート、アンビエント = うねる風のノイズ。ジャンルごとに `label` / `create`（Synth とエフェクト）/ `events`（コードごとの発音）を定義する。音色はほかのパートと同じく再生開始時に反映される。MIDI書き出しは未対応。
 - FX / SE（`FxPlayer.ts`）はループの継ぎ目を演出する効果音。種類は `AppState.fxType`（`SONG_FIELDS` に含む）で、`"auto"` はジャンルの標準（`GENRE_FX`）。カスタムモードのドラム欄の下の「FX / SE」で選び、「▷ 試聴」はループの終わりの盛り上げから次のループの頭の1小節まで鳴らす（`Playback.preview("fx")`）。
-  - アレンジャーの FX のブロックは1つずつ種類を持てる（`ArrangeBlock.fx`。ブロックのラベルのセレクトで選ぶ。なし = 曲の設定 `fxType`）。鳴らすときは発音時刻にあるブロックを `arrangementBlockAt("fx")`（`LoopArranger.ts`）で調べて種類を決めるので、再生中の変更もすぐ反映される。音源は種類ごとに1つで、曲の設定とアレンジで使う種類を読み込み時に作る（WAV書き出しでは鳴らしている途中に作れないため）。再生中に新しい種類を選んだときは鳴らす直前に作る。
+  - アレンジャーの FX はセクションごとに種類を持てる（変えた所 `ArrangeEdit.fx` → `ArrangeBlock.fx`。ブロックのラベルのセレクトで選ぶ。なし = 曲の設定 `fxType`）。鳴らすときは発音時刻にあるブロックを `arrangementBlockAt("fx")`（`LoopArranger.ts`）で調べて種類を決めるので、再生中の変更もすぐ反映される。音源は種類ごとに1つで、曲の設定とアレンジで使う種類を読み込み時に作る（WAV書き出しでは鳴らしている途中に作れないため）。再生中に新しい種類を選んだときは鳴らす直前に作る。
   - 種類（`FX_DEFS`）：`riser` = ライザー（ノイズのバンドパス掃き上げ＋2オクターブ上がる重ねたノコギリ波、トレモロ・オートパンが加速）、`build` = ライザー＋インパクト、`impact` = インパクト（沈むブーム＋閉じていくノイズ）、`downlifter` = ダウンリフター、`reverse` = リバースシンバル、`chip` = チップSE（8bit。矩形波の駆け上がり＋「ピュン」）。
   - 各種類は `rise`（ループの終わりに向けて鳴り、ループの頭ちょうどで終わる。`riseLen` が `bars` なら1小節＝8小節以上の進行は2小節、`2n` なら最後の2拍）と `hit`（ループの頭）の片方または両方を持つ。音量の山は `setValueCurveAtTime` の曲線でかけ、終わりは短いフェードでクリックを防ぐ。
   - 広がり：ノイズは左右別々のノイズ（`stereoNoise`）で鳴らし、各種類の音は `space()`（左右で揺れのずれたコーラス → 左右に跳ねるディレイ）を通す。インパクトの低音のブームは中央のまま広げない。チップSE はコーラスなし（ディレイだけ）。後ろの響きは自前のリバーブを持たず、マスターのリバーブ送りとロングリバーブで付ける。
   - 音は grow で出す（`GROW_FX`。コアの「FX …」のプリセット（ID は `fx_…`）を ID で探し、長さで変わる EG の時間などは、鳴らすたびに `GrowInstrument.setParamAtTime` で発音の少し前（`PARAM_LEAD`）に当てる。AudioParam の合図なので書き出しでもサンプル単位で合う）。grow の準備ができていない・プリセットがない（wasm が古い）ときは `FX_DEFS`（Tone.js）で鳴らす。ライザー・ダウンリフターの音程は、ピッチ EG を直線のカーブにし、時間を長さいっぱいにして一定の速さで動かす（2オクターブ下から上がる／3オクターブ上から下がる）。
   - 種類を足すときは `FxType`（`AppState.ts`）・`FX_DEFS`・`GROW_FX`・`index.html` の `#c-fx-type` にそろえて足す。音色は再生開始時に反映される。
-- パートを増やしたときは、保存済みの曲に新しいパートの項目がないので、`loadSong()`（`SongLibrary.ts`）で `parts` / `volumes` / `arrangement` を初期値で補っている。
+- パートを増やしたときは、保存済みの曲に新しいパートの項目がないので、`loadSong()`（`SongLibrary.ts`）で `parts` / `volumes` を初期値で補っている（アレンジは組み立て直すので補う必要はない）。
 - ピアノロール（`PianoRollTab.ts`）はコード進行1周分（メロディのループの長さ）を表示し、`AppState.melodyNotes`（サビを選んでいるときは `chorusMelodyNotes`）を直接編集する（鳴る音だけを持ち、休符は持たない）。編集中のセクションは表示上の一時的な状態としてモジュール内に持つ。「自動生成」は Aメロとサビの両方を作り直す。編集すると `melodyMethod` は `"manual"` になり、「自動生成」で `"auto"` に戻る。メロディは単音なので、重なる音は手前で切るか消す。再生中の編集はメロディだけ読み込み直して（`reloadLayer("melody")`）すぐ反映する。
 - メロディは起動時・「＋ 新規作成」では作らず空のまま。自動生成ボタン（ピアノロールの「自動生成」、カスタムモードのメロディの差し替え ↻、シンプルモードで「自動生成」を選んで「生成する」／「↻ 再生成」）を押したときに初めて作る。`melodyMethod === "auto"` でも `melodyNotes` が空なら未作成として扱い、コード進行・キーを変えても自動では作らない（作成済みなら作り直す）。
 - ピアノロールの入力設定（音符長 `pianoRollLength`・スケールロック `pianoRollScaleLock`・オクターブ `pianoRollOctave`）は AppState に置く。スケールロックはコード進行の `scaleLock` とは別。スケールの7音は `SCALE_TONES`（core＋accent）から作る。選択中の音と鍵盤入力の位置は表示上の一時的な状態としてモジュール内に持つ。
@@ -291,7 +295,7 @@ src/engine/
 - MIDI書き出し（`exportMidi()`。AppState を読む）は再生と同じ音の並びを使う：曲全体の並び（`songProgression()` / `songMelody()`。セクション・エンディング込み）から、メロディ・コード（`chordEvents()`。コードのリズム込み）・パッド（`padEvents()`）・アルペジオ（`arpNotes()`）・ベース（`bassNotes()`。ジャンル別パターン、強さは `bassVelocity()`）・ドラム（チャンネル10、GM の音の番号。ブロックごとのパターン・フィル・エンディングも反映。`drumStepHits()`）。曲全体（`AppState.bars` 小節）をループで埋め、アレンジのブロックの外・OFF のパートは書き出さない。シグネチャー・FX / SE は音色が特徴のパートなので書き出さない。音色（GM の番号）は目安。強さの揺らし・ストラムは入れない。
 - カスタムモードの「雰囲気」はコード進行の欄の「コード進行の雰囲気」（`#c-mood`。以前の表示名は「カテゴリ」）として選ぶ。スケールは `chordPattern.base_scale` から決まり（別に持たない）、スケールを選ぶとそのスケールのコード進行に切り替わる。この因果が見えにくいので、切り替わったらスケールの下に「スケールに合わせてコード進行を「…」に変えました」を4秒出し、進行の行を光らせる（`CustomScreen.ts` の `notifyChordChange`。`#c-scale-notice`）。
 - コードのリズム（`chordRhythm`）・コードの音色（`growChordPreset`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。コードの音色は grow のプリセット（ChordPlayer の Tone.js の音色は wasm がないときの `FALLBACK` だけ）。メロディの音色の定義は MelodyPlayer の `INSTRUMENTS`。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。
-- パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
+- パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートの行をクリックすると ON になる。
 - シンプルモードの曲の長さは 32 小節（`SimpleScreen.ts` の `SIMPLE_SONG_BARS`。生成時・コード進行の差し替え時に設定する）。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
 - 各パートの Synth はモジュールに1つずつ。WAV書き出しは再生を止めて Synth を作り直し、終わったら破棄する。再生中に書き出すと再生は止まる。

@@ -24,7 +24,7 @@ beforeEach(() => {
 function song(genre: string, mood: string): void {
   const chordPattern = chords.find(c => c.length_bars === 4)!;
   const drumPattern  = drums.find(d => d.genre?.includes(genre)) ?? drums[0];
-  setState({ genre, mood, chordPattern, chorusPattern: null, drumPattern, bars: 32, arrangement: null, sections: null,
+  setState({ genre, mood, chordPattern, chorusPattern: null, drumPattern, bars: 32, arrangeEdits: [], sections: null,
              drumFill: true, endingEnabled: true });
 }
 

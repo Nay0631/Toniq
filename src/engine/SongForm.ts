@@ -35,11 +35,11 @@ export function chorusProgression(): ChordProgression | null {
   return chorusFits(s.chorusPattern, s.chordPattern) ? s.chorusPattern : null;
 }
 
-// 周回ごとのセクション（AppState.sections が null なら、または足りない分はジャンルの標準）
+// 周回ごとのセクション（AppState.sections が null なら、または足りない分はジャンルと構成のプリセットの標準）
 export function getSections(): Section[] {
   const s = getState();
   const loops = songLoops();
-  const base  = defaultSections(s.genre, loops, loopBars());
+  const base  = defaultSections(s.genre, loops, loopBars(), s.arrangePreset);
   return base.map((section, i) => s.sections?.[i] ?? section);
 }
 

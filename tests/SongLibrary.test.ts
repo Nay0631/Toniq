@@ -10,6 +10,7 @@ import {
   SongStorageError, SavedSong,
 } from "../src/engine/SongLibrary";
 import { LEGACY_PRESET_IDS } from "../src/engine/Grow";
+import { getArrangement } from "../src/engine/LoopArranger";
 import { chordById, drums, resetState, MemoryStorage } from "./helpers";
 
 const STORAGE_KEY = "toniq.songs";
@@ -86,16 +87,35 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(s.volumes.signature).toBe(defaultState.volumes.signature);
     expect(s.volumes.fx).toBe(defaultState.volumes.fx);
     expect(s.volumes.melody).toBe(80);
-    expect(s.arrangement?.signature).toEqual([]);
-    expect(s.arrangement?.fx).toEqual([]);
     expect(s.volumes.counter).toBe(defaultState.volumes.counter);
     expect(s.volumes.perc).toBe(defaultState.volumes.perc);
     expect(s.parts.counter).toBe(defaultState.parts.counter);
     expect(s.parts.perc).toBe(defaultState.parts.perc);
-    // アレンジを編集して保存した曲には、カウンターメロディ・パーカッションのブロックは無い（鳴らない）
-    expect(s.arrangement?.counter).toEqual([]);
-    expect(s.arrangement?.perc).toEqual([]);
-    expect(s.arrangement?.melody).toEqual([{ start: 4, length: 12 }]);
+  });
+
+  it("以前のブロックの並びのアレンジ（arrangement）を、構成の標準＋変えた所に読み替える", () => {
+    const s = getState();
+    expect(s.arrangePreset).toBe("standard");
+    expect("arrangement" in s).toBe(false);
+    // 4 小節の進行・16 小節のローファイ：Aメロ1回目（0〜7）・2回目（8〜15）
+    expect(s.arrangeEdits).toContainEqual({ section: "A", nth: 0, part: "drum", on: true });    // 全部の小節で鳴らしていた
+    expect(s.arrangeEdits).toContainEqual({ section: "A", nth: 0, part: "melody", on: true });  // 後半から → 半分以上なのでセクション全体
+    expect(s.arrangeEdits).toContainEqual({ section: "A", nth: 0, part: "chord", on: false });  // 鳴らしていなかった
+    const a = getArrangement();
+    expect(a.drum).toEqual([{ start: 0, length: 16 }]);
+    expect(a.melody).toEqual([{ start: 0, length: 16 }]);
+    // 保存した曲にブロックが無いパート（あとから増えたパートも）は鳴らさない
+    for (const part of ["chord", "bass", "arp", "pad", "signature", "fx", "counter", "perc"] as const) {
+      expect(a[part], part).toEqual([]);
+    }
+  });
+
+  it("今の形式（arrangeEdits）で保存した曲は、そのまま読む", () => {
+    storeRaw([legacySong({ arrangement: undefined, arrangePreset: "drop",
+                           arrangeEdits: [{ section: "B", nth: 0, part: "pad", on: false }] })]);
+    expect(loadSong("song_old")).toBe(true);
+    expect(getState().arrangePreset).toBe("drop");
+    expect(getState().arrangeEdits).toEqual([{ section: "B", nth: 0, part: "pad", on: false }]);
   });
 
   it("無い項目（スウィング・サビ・FX の種類など）は初期値、曲の情報はそのまま", () => {
