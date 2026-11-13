@@ -71,6 +71,7 @@ export function buildDrumRoll(pane: HTMLElement, target: string): void {
       <span data-dr-status-pattern></span>
       <span class="pr-status-sep"></span>
       <span data-dr-status-note></span>
+      <span class="dr-status-warn" data-dr-status-warn></span>
     </div>`;
 }
 
@@ -110,6 +111,13 @@ export function renderDrumRoll(pane: HTMLElement): void {
   q(pane, "[data-dr-status-note]").textContent = overridden
     ? "アレンジャーで別のパターンを選んだセクションでは、そちらが鳴ります"
     : `${bars}小節をくり返して鳴らします`;
+
+  // 設定のフィル・エンディング（カスタムモードの設定タブのドラムの「もっと調整」）が ON なら、
+  // その小節は作ったドラムの代わりにフィル・エンディングの音が鳴るので、競合することを知らせる
+  const conflicts = [s.drumFill && "フィル", s.endingEnabled && "エンディング"].filter(Boolean);
+  const warn = q(pane, "[data-dr-status-warn]");
+  warn.hidden = conflicts.length === 0;
+  warn.textContent = `※ 設定の${conflicts.map(c => `「${c}」`).join("・")}が ON のため、その小節では作ったドラムと競合し、違う音が鳴る可能性があります`;
 
   renderDrumPlayhead(pane);
 }

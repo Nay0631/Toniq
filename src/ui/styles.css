@@ -2611,6 +2611,9 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   pointer-events: none;
 }
 
+.dr-status-warn { flex-basis: 100%; color: var(--text-sub); }
+.dr-status-warn[hidden] { display: none; }
+
 .dr-load {
   max-width: 220px;
   padding: 5px 8px;
