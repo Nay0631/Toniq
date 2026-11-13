@@ -11,6 +11,7 @@ import {
 } from "../src/engine/SongLibrary";
 import { LEGACY_PRESET_IDS } from "../src/engine/Grow";
 import { getArrangement } from "../src/engine/LoopArranger";
+import { customDrumPattern, withDrumHit } from "../src/engine/DrumEngine";
 import { chordById, drums, resetState, MemoryStorage } from "./helpers";
 
 const STORAGE_KEY = "toniq.songs";
@@ -184,6 +185,15 @@ describe("loadSong：そのほかの読み替え", () => {
     resetState();
     loadSong(saved.id);
     for (const f of SONG_FIELDS) expect(getState()[f], f).toEqual(before[f]);
+  });
+
+  it("ピアノロールで作ったオリジナルのドラムも保存・読み込みで同じになる", () => {
+    const drumPattern = withDrumHit(customDrumPattern(drums[0], 2), "rim", 21, 0.45);
+    setState({ chordPattern: chordById("chord_001"), drumPattern });
+    const { id } = saveCurrentSong();
+    resetState();
+    expect(loadSong(id)).toBe(true);
+    expect(getState().drumPattern).toEqual(drumPattern);
   });
 });
 

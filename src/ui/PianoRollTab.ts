@@ -11,6 +11,7 @@ import { onRender, render } from "./Router";
 import { SCALE_LABELS, chordSpans, displayNote } from "./format";
 import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import type { ChordProgression } from "../data/types";
+import { buildDrumRoll, initDrumRoll, renderDrumPlayhead, renderDrumRoll } from "./DrumRoll";
 
 // 表示する音域（MIDI ノート番号。C3〜C7）
 const LOW  = 48;
@@ -49,6 +50,16 @@ let cursor = 0;
 
 // 編集中のセクション（A = Aメロ、B = サビ。サビは AppState.chorusMelodyNotes）。表示上の一時的な状態
 let section: Section = "A";
+
+// 編集するパート（メロディ／ドラム。ドラムは DrumRoll.ts）。表示上の一時的な状態
+type RollTarget = "melody" | "drum";
+let target: RollTarget = "melody";
+
+// メロディ／ドラムの切り替え（両方のツールバーの先頭に置く）
+const TARGET_SEG = `
+  <div class="pr-seg pr-target" role="group" aria-label="編集するパート">
+    <button data-pr-target="melody">メロディ</button><button data-pr-target="drum">ドラム</button>
+  </div>`;
 
 // 編集中のセクションのコード進行（サビの進行がなければ Aメロと同じ）
 function rollProgression(): ChordProgression | null {
@@ -163,7 +174,10 @@ const TRASH_ICON = `
 // 枠組みは最初の1回だけ作る（スクロール位置を保つため、描画では中身だけ作り直す）
 function buildSkeleton(root: HTMLElement): void {
   root.innerHTML = `
+    <div class="pr-pane" data-pr-pane="melody">
     <div class="pr-toolbar">
+      ${TARGET_SEG}
+      <span class="pr-sep"></span>
       <div class="pr-seg" role="group" aria-label="編集するセクション" data-term="section">
         <button data-pr-section="A">Aメロ</button><button data-pr-section="B">サビ</button>
       </div>
@@ -205,13 +219,30 @@ function buildSkeleton(root: HTMLElement): void {
         <kbd>Del</kbd> 削除
         <kbd>A〜K</kbd> 鍵盤入力
       </span>
-    </div>`;
+    </div>
+    </div>
+    <div class="pr-pane dr-pane" data-pr-pane="drum" hidden></div>`;
+  buildDrumRoll(q(root, '[data-pr-pane="drum"]'), TARGET_SEG);
+}
+
+function pane(root: HTMLElement, name: RollTarget): HTMLElement {
+  return q(root, `[data-pr-pane="${name}"]`);
 }
 
 export function renderPianoRoll(): void {
   const root = currentRoot();
   const s = getState();
   if (!root || !s.chordPattern || drag) return;
+
+  root.querySelectorAll<HTMLElement>("[data-pr-target]").forEach(btn =>
+    btn.classList.toggle("is-active", btn.dataset.prTarget === target));
+  pane(root, "melody").hidden = target !== "melody";
+  pane(root, "drum").hidden   = target !== "drum";
+  if (target === "drum") {
+    renderDrumRoll(pane(root, "drum"));
+    if (Playback.isPlaying()) startPianoRollPlayhead();
+    return;
+  }
 
   const total = loopUnits();
   const bars  = s.chordPattern.length_bars;
@@ -305,7 +336,11 @@ function renderPlayhead(): void {
   const root = currentRoot();
   const s = getState();
   if (!root || !s.chordPattern) return;
-  const playhead = root.querySelector<HTMLElement>(".pr-playhead");
+  if (target === "drum") {
+    renderDrumPlayhead(pane(root, "drum"));
+    return;
+  }
+  const playhead = pane(root, "melody").querySelector<HTMLElement>(".pr-playhead");
   if (!playhead) return;
   const playing = Playback.isPlaying();
   playhead.hidden = !playing;
@@ -472,6 +507,17 @@ export function initPianoRoll(): void {
 
   document.querySelectorAll<HTMLElement>(".pianoroll").forEach(rootEl => {
     buildSkeleton(rootEl);
+    initDrumRoll(pane(rootEl, "drum"));
+
+    // メロディ／ドラムの切り替え
+    rootEl.querySelectorAll<HTMLElement>("[data-pr-target]").forEach(btn =>
+      btn.addEventListener("click", () => {
+        target = btn.dataset.prTarget === "drum" ? "drum" : "melody";
+        selected = null;
+        render();
+        // 隠している間にスクロール位置が戻ることがあるので、鍵盤入力のオクターブが見える位置へスクロールし直す
+        if (target === "melody") scrollToOctave(rootEl);
+      }));
 
     // ツールバー
     rootEl.querySelectorAll<HTMLElement>("[data-pr-length]").forEach(btn =>
@@ -545,7 +591,7 @@ export function initPianoRoll(): void {
 
   // キーボード：A〜K で鍵盤入力、Z / X でオクターブ切替、Delete で選択中の音を削除
   document.addEventListener("keydown", e => {
-    if (!currentRoot() || isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey || drag) return;
+    if (!currentRoot() || target !== "melody" || isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey || drag) return;
 
     if (e.code === "KeyZ" || e.code === "KeyX") {
       setOctave(getState().pianoRollOctave + (e.code === "KeyZ" ? -1 : 1));

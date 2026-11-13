@@ -194,6 +194,7 @@ export interface AppState {
   pianoRollLength:    PianoRollLength;
   pianoRollScaleLock: boolean;  // ON のときはスケール外の音を置けない
   pianoRollOctave:    number;   // 鍵盤入力（A〜K）のオクターブ
+  drumRollVelocity:   number;   // ピアノロールのドラムで置く音の強さ（0〜1。強・中・弱）
 
   // パートのON/OFF
   parts: {
@@ -295,6 +296,7 @@ export const defaultState: AppState = {
   pianoRollLength:    "4n",
   pianoRollScaleLock: true,
   pianoRollOctave:    4,
+  drumRollVelocity:   1,
 
   parts: {
     drum:   true,

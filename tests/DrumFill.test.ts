@@ -5,7 +5,9 @@ vi.mock("../src/engine/VolumeManager", () => ({ createVolumeNode: vi.fn() }));
 vi.mock("../src/engine/SynthFactory", () => ({ createDrumKit: vi.fn() }));
 vi.mock("../src/engine/Groove", () => ({ sidechainHit: vi.fn() }));
 
-import { drumStepHits, fillAt, fillSize, FILLS, FILL_SIZES } from "../src/engine/DrumEngine";
+import {
+  customDrumPattern, drumStepHits, fillAt, fillSize, FILLS, FILL_SIZES, isCustomDrum, withDrumHit,
+} from "../src/engine/DrumEngine";
 import { fillKind } from "../src/engine/SongForm";
 import { setState } from "../src/engine/AppState";
 import { setArrangementBypass } from "../src/engine/LoopArranger";
@@ -94,6 +96,43 @@ describe("曲の中のフィル（セクションで変わる）", () => {
     setState({ drumFill: true });
     setArrangementBypass(true);
     expect(fillAt(15)).toBeNull();
+  });
+});
+
+describe("オリジナルのドラムパターン（ピアノロールのドラム）", () => {
+  it("DB のパターンをもとに作ると同じ音で、長くすると繰り返す", () => {
+    const base = edmPattern();
+    const custom = customDrumPattern(base, 2);
+    expect(isCustomDrum(custom)).toBe(true);
+    expect(isCustomDrum(base)).toBe(false);
+    expect(custom.steps).toBe(32);
+    for (const name of TRACKS) {
+      const src = base.tracks[name]?.pattern ?? new Array(16).fill(0);
+      expect(custom.tracks[name].pattern, name).toEqual([...src, ...src].map(v => (v ? 1 : 0)));
+    }
+    expect(custom.notes).toContain(base.name);
+  });
+
+  it("音を置く・消すと新しいパターンを返し、元は変えない", () => {
+    const empty = customDrumPattern(null, 1);
+    const one = withDrumHit(empty, "kick", 3, 0.75);
+    expect(one.tracks.kick.pattern[3]).toBe(1);
+    expect(one.tracks.kick.velocity[3]).toBe(0.75);
+    expect(empty.tracks.kick.pattern[3]).toBe(0);
+    expect(withDrumHit(one, "kick", 3, 0).tracks.kick.pattern[3]).toBe(0);
+  });
+
+  it("2小節のパターンは、曲の小節の偶数・奇数で前半・後半を鳴らす", () => {
+    song("EDM", "明るい");
+    setState({ drumFill: false, endingEnabled: false });
+    let p = customDrumPattern(null, 2);
+    p = withDrumHit(p, "kick", 0, 1);        // 1小節目の頭
+    p = withDrumHit(p, "snare", 16 + 4, 1);  // 2小節目の2拍目
+    expect(drumStepHits(p, 0, 0).map(h => h.name)).toEqual(["kick"]);
+    expect(drumStepHits(p, 1, 0)).toEqual([]);
+    expect(drumStepHits(p, 1, 4).map(h => h.name)).toEqual(["snare"]);
+    expect(drumStepHits(p, 2, 0).map(h => h.name)).toEqual(["kick"]);
+    expect(drumStepHits(p, 2, 4)).toEqual([]);
   });
 });
 

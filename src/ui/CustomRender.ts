@@ -9,7 +9,7 @@ import { bassSubStandard } from "../engine/BassPlayer";
 import { isMetronomeOn } from "../engine/Metronome";
 import { isScalePreviewOn, scalePreviewNotes, scalePreviewStep } from "../engine/ScalePreview";
 import * as Playback from "../engine/Playback";
-import { ChordProgression, DrumPattern } from "../data/types";
+import { CUSTOM_DRUM_ID, ChordProgression, DrumPattern } from "../data/types";
 import { SCALE_LABELS, chordNames, displayNote, toDoremi } from "./format";
 import { renderArranger } from "./ArrangerTab";
 import { renderMixer } from "./MixerPanel";
@@ -65,6 +65,7 @@ export function chordLabel(c: ChordProgression, key: string): string {
 }
 
 function drumLabel(d: DrumPattern): string {
+  if (d.id === CUSTOM_DRUM_ID) return `${d.name}（ピアノロールで作成）`;
   return `#${d.id.replace(/\D/g, "")} ${d.name}`;
 }
 

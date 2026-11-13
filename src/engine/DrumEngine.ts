@@ -1,9 +1,10 @@
 import * as Tone from "tone";
-import { DrumPattern } from "../data/types";
+import { CUSTOM_DRUM_ID, DrumPattern, DrumTrack } from "../data/types";
 import drumDB from "../data/drum_patterns.json";
 import { getState, ArrangeBlock } from "./AppState";
 import { createDrumKit, DrumKit } from "./SynthFactory";
 import { createVolumeNode } from "./VolumeManager";
+import { prepareGrowContext } from "./Grow";
 import { arrangementBlockAt, findBlock, getArrangement, isArrangementBypassed, positionAt } from "./LoopArranger";
 import { endingBar, fillKind, FillKind, isFillBar } from "./SongForm";
 import { sidechainHit } from "./Groove";
@@ -20,6 +21,101 @@ const CHOKES: Record<string, string[]> = {
 
 export function drumPatternById(id: string): DrumPattern | undefined {
   return DRUM_PATTERNS.find(p => p.id === id);
+}
+
+// ===== オリジナルのドラムパターン（ピアノロールのドラムで作る。id は CUSTOM_DRUM_ID） =====
+
+// ピアノロールの行の並び（上から。シンバル類を上、キックを下にする）と表示名
+export const DRUM_ROLL_TRACKS = ["hihat_open", "hihat_closed", "clap", "rim", "snare", "kick"] as const;
+export const DRUM_TRACK_LABELS: Record<string, string> = {
+  hihat_open:   "オープンハイハット",
+  hihat_closed: "クローズドハイハット",
+  clap:         "クラップ",
+  rim:          "リム",
+  snare:        "スネア",
+  kick:         "キック",
+};
+// DB と同じ音名（MIDI 書き出しは MidiExporter の GM_DRUMS を使うので、ここは記録用）
+const DRUM_NOTES: Record<string, string> = {
+  kick: "C1", rim: "C#1", snare: "D1", clap: "D#1", hihat_closed: "F#1", hihat_open: "A#1",
+};
+
+// オリジナルのパターンの長さ（小節）の選択肢
+export const CUSTOM_DRUM_BARS = [1, 2, 4] as const;
+
+export function isCustomDrum(pattern: DrumPattern | null | undefined): boolean {
+  return pattern?.id === CUSTOM_DRUM_ID;
+}
+
+// パターンの長さ（小節。16分音符 16 ステップで 1 小節）
+export function drumPatternBars(pattern: DrumPattern): number {
+  return Math.max(1, Math.round(pattern.steps / 16));
+}
+
+// source をもとに、bars 小節のオリジナルのパターンを作る（長くするときは source を繰り返し、短くするときは切る。
+// source がオリジナルなら説明 notes を引き継ぐ。source が null なら空のパターン）
+export function customDrumPattern(source: DrumPattern | null, bars: number): DrumPattern {
+  const steps = bars * 16;
+  const s = getState();
+  const tracks: Record<string, DrumTrack> = {};
+  for (const name of DRUM_ROLL_TRACKS) {
+    const src = source?.tracks[name];
+    const at  = (i: number) => (src ? i % source!.steps : 0);
+    tracks[name] = {
+      pattern:  Array.from({ length: steps }, (_, i) => (src?.pattern[at(i)] ? 1 : 0)),
+      velocity: Array.from({ length: steps }, (_, i) => (src?.pattern[at(i)] ? src.velocity?.[at(i)] ?? 1 : 0)),
+      note:     src?.note ?? DRUM_NOTES[name],
+    };
+  }
+  const based = !source ? "空のパターンから作成"
+    : isCustomDrum(source) ? source.notes
+    : `#${source.id.replace(/\D/g, "")} ${source.name} をもとに作成`;
+  return {
+    id:        CUSTOM_DRUM_ID,
+    name:      "オリジナル",
+    genre:     [s.genre],
+    mood:      [s.mood],
+    bpm_range: source?.bpm_range ?? { min: 60, max: 200 },
+    steps,
+    step_unit: "16n",
+    tracks,
+    ...(based ? { notes: based } : {}),
+  };
+}
+
+// track の step を velocity で鳴らす（0 = 消す）。元のパターンは変えずに新しいパターンを返す
+export function withDrumHit(pattern: DrumPattern, track: string, step: number, velocity: number): DrumPattern {
+  const old = pattern.tracks[track] ?? {
+    pattern:  new Array(pattern.steps).fill(0),
+    velocity: new Array(pattern.steps).fill(0),
+    note:     DRUM_NOTES[track] ?? "C1",
+  };
+  const next: DrumTrack = { ...old, pattern: [...old.pattern], velocity: [...(old.velocity ?? [])] };
+  next.pattern[step]  = velocity > 0 ? 1 : 0;
+  next.velocity[step] = velocity > 0 ? velocity : 0;
+  return { ...pattern, tracks: { ...pattern.tracks, [track]: next } };
+}
+
+// ===== 試聴（ピアノロールのドラムで行をクリック・音を置いたとき） =====
+
+let previewKit: DrumKit | null = null;
+let previewKey = "";
+let previewContext: Tone.BaseContext | null = null;
+
+export async function previewDrumHit(name: string, velocity = 1): Promise<void> {
+  await Tone.start();
+  const { genre, drumSource } = getState();
+  if (drumSource === "grow") await prepareGrowContext();
+  // ジャンル・音源・オーディオコンテキストが変わったら作り直す
+  const key = `${genre}/${drumSource}`;
+  if (!previewKit || previewKey !== key || previewContext !== Tone.getContext()) {
+    previewContext = Tone.getContext();
+    previewKit?.dispose();
+    previewKit = createDrumKit(genre, [...DRUM_ROLL_TRACKS], drumSource);
+    previewKit.output.connect(createVolumeNode("drum"));
+    previewKey = key;
+  }
+  previewKit.voices[name]?.trigger(Tone.now() + 0.01, velocity);
 }
 
 // ブロックで鳴らすパターン（ブロックに指定がない・DB に見つからないときは曲の設定のパターン）
@@ -115,13 +211,15 @@ export interface DrumHit {
 }
 
 // 曲の小節 bar・小節のステップ step（0〜15）でパターン pattern を鳴らすときの音（フィル・エンディングを含む。
+// パターンは 16 ステップの倍数（DB は 1 小節、オリジナルは 1・2・4 小節）。
 // 揺らぎは含まない。再生と MIDI 書き出しで共通）
 export function drumStepHits(pattern: DrumPattern, bar: number, step: number): DrumHit[] {
   if (bar === endingBar()) {
     return step === 0 ? Object.entries(ENDING_HITS).map(([name, velocity]) => ({ name, velocity })) : [];
   }
 
-  const i    = step % pattern.steps;
+  // 複数小節のパターン（オリジナル）は、曲の小節からパターンの何小節目かを決める
+  const i    = (bar * 16 + step) % pattern.steps;
   const hits = Object.entries(pattern.tracks)
     .filter(([, track]) => track.pattern[i])
     .map(([name, track]) => ({ name, velocity: track.velocity?.[i] ?? 1 }));
@@ -207,7 +305,8 @@ export function loadDrumPattern(pattern: DrumPattern) {
     (time, step) => {
       const block = blockAt(time);
       if (block === undefined) return;
-      const current = block === null ? pattern : blockDrumPattern(block) ?? pattern;
+      // block === null（アレンジを通さない試聴）も今の曲の設定のパターンで鳴らす（ピアノロールのドラムの編集がすぐ反映される）
+      const current = blockDrumPattern(block) ?? pattern;
       const { bar } = position(time);
       const hits = drumStepHits(current, bar, step);
 
@@ -233,8 +332,9 @@ export function loadDrumPattern(pattern: DrumPattern) {
         }
       });
     },
-    [...Array(pattern.steps).keys()],
-    pattern.step_unit as Tone.Unit.Time
+    // 1小節 16 ステップで回す（複数小節のパターンは drumStepHits が小節から位置を決める）
+    [...Array(16).keys()],
+    "16n"
   );
 
   currentSeq.start(0);

@@ -10,7 +10,7 @@ import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
 import { percLabel } from "../engine/PercPlayer";
 import { bassSubOn } from "../engine/BassPlayer";
 import drumDB from "../data/drum_patterns.json";
-import { DrumPattern } from "../data/types";
+import { CUSTOM_DRUM_ID, DrumPattern } from "../data/types";
 import { render } from "./Router";
 import { formatTimePrecise } from "./format";
 import { chorusProgression, getSections, loopBars } from "../engine/SongForm";
@@ -43,6 +43,7 @@ const BLOCK_SELECT = ".arr-block-select";
 // ===== 表示 =====
 
 function patternNo(id: string): string {
+  if (id === CUSTOM_DRUM_ID) return "オリジナル";
   return `#${id.replace(/\D/g, "")}`;
 }
 

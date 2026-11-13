@@ -18,6 +18,8 @@ import { initGrowPanel } from "./GrowPanel";
 import { initCustomMore, EXTRA_PARTS } from "./CustomMore";
 import { setTestFeature, type TestFeature } from "./Preferences";
 import { setGrowSound } from "../engine/Grow";
+import { isCustomDrum } from "../engine/DrumEngine";
+import { bindSpaceToPlay } from "./SpaceKey";
 import {
   KEYS, SCALES, DRUM_CATEGORIES, chords, drums, makeMelody, hasAutoMelody, setChordPattern, setChorusPattern,
   GROOVE, setGroove, playFromBar, setBpm, chordCandidates, drumCandidates,
@@ -46,18 +48,6 @@ async function startPlayback(): Promise<void> {
   startArrangerPlayhead();
   startPianoRollPlayhead();
   render();
-}
-
-// 文字の入力欄・セレクトの操作中か（キー操作を横取りしない。ノブ・フェーダーの range は除く）
-function isTyping(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && !!target.closest(
-    "input:not([type=range]):not([type=checkbox]), select, textarea, [contenteditable]");
-}
-
-// 書き出しの進み具合などのダイアログが出ているか
-function modalOpen(): boolean {
-  return Array.from(document.querySelectorAll('[aria-modal="true"]'))
-    .some(el => el.getClientRects().length > 0);
 }
 
 // キー・スケールの試聴中なら、今のキー・スケールで鳴らし直す
@@ -91,22 +81,11 @@ export function initCustomScreen(): void {
     render();
   });
 
-  // アレンジャータブではスペースキーで再生／停止する（再生は開始位置から）。
-  // ボタンにフォーカスがあってもクリックさせないよう、キャプチャで受けて既定の動作を止める
-  document.addEventListener("keydown", e => {
+  // アレンジャー・ピアノロールのタブではスペースキーで再生／停止する（アレンジャーは開始位置から、ピアノロールは先頭から）
+  bindSpaceToPlay(() => {
     const s = getState();
-    if (s.screen !== "custom" || s.tab !== "arranger") return;
-    if (e.code !== "Space" || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-    if (isTyping(e.target) || modalOpen()) return;
-    e.preventDefault();
-    if (e.repeat) return;
-    if (Playback.isPlaying()) {
-      Playback.stop();
-      render();
-    } else {
-      void startPlayback();
-    }
-  }, { capture: true });
+    return s.screen === "custom" && (s.tab === "arranger" || s.tab === "pianoroll");
+  }, startPlayback);
 
   // ===== 基本設定 =====
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
@@ -294,7 +273,8 @@ export function initCustomScreen(): void {
     setState({ drumCategory: (e.target as HTMLSelectElement).value });
     const candidates = drumCandidates();
     const current = getState().drumPattern;
-    if (candidates.length > 0 && !candidates.some(d => d.id === current?.id)) {
+    // ピアノロールで作ったオリジナルのパターンは、絞り込みを変えても置き換えない
+    if (candidates.length > 0 && !isCustomDrum(current) && !candidates.some(d => d.id === current?.id)) {
       setState({ drumPattern: candidates[0] });
     }
     render();
