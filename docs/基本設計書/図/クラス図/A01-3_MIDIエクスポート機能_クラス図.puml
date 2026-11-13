@@ -25,7 +25,7 @@ class "ファイル名入力" as C6 <<control>> {
 class "MIDI書き出し" as C1 <<control>> {
   {method} <U+002B> MIDI で書き出す() : void
   {method} <U+002D> スウィングに合わせて発音位置をずらす() : void
-  {method} <U+002D> テンポ・拍子と6トラックを書く() : void
+  {method} <U+002D> テンポ・拍子と8トラックを書く() : void
 }
 class "曲の構成" as C2 <<control>> {
   {method} <U+002B> 曲全体のコード進行とメロディを求める() : void
@@ -37,7 +37,7 @@ class "コード変換" as C4 <<control>> {
   {method} <U+002B> コード・パッドのボイシングを求める() : void
 }
 class "各パートの演奏" as C5 <<control>> {
-  {method} <U+002B> コード・パッド・アルペジオ・ベース・ドラムの音を並べる() : void
+  {method} <U+002B> コード・パッド・アルペジオ・ベース・カウンターメロディ・ドラム・パーカッションの音を並べる() : void
 }
 class "出力ファイル保存" as C7 <<control>> {
   {method} <U+002B> 出力フォルダに保存する() : void
@@ -75,7 +75,7 @@ class "アルペジオ設定マスタ" as E6 <<entity>> {
   {method} <U+002B> ジャンルのアルペジオの設定を取得する() : void
 }
 class "MIDIファイル" as E7 <<entity>> {
-  {field} <U+002B> Melody・Chord・Pad・Arpeggio・Bass・Drums のトラック
+  {field} <U+002B> Melody・Chord・Pad・Arpeggio・Bass・Counter Melody・Drums・Percussion のトラック
   {field} <U+002B> 保存先（output/midi）
   {method} <U+002B> 保存する() : void
 }

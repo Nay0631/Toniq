@@ -3,7 +3,7 @@
 mainframe **pkg**
 
 class "ミュージックリスト画面" as B1 <<boundary>> {
-  {method} <U+002B> 「○○モードで開く」を押下する() : void
+  {method} <U+002B> 曲の編集ボタンを押下する() : void
 }
 class "シンプルモード画面" as B2 <<boundary>> {
   {method} <U+002B> 生成後の画面を表示する() : void

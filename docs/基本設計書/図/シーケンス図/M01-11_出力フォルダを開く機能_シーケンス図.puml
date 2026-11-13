@@ -7,7 +7,7 @@ boundary ":ミュージックリスト画面" as L2
 control ":出力フォルダを開く" as L3
 control ":出力ファイル保存" as L4
 
-note over L2 : ブラウザで開いたときはボタンを出さない
+note over L2 : ブラウザで開いたときはボタンを出さない。\n出力フォルダには audio（WAV・MP3）と midi（MIDI）がある
 
 L1 -> L2 : 出力フォルダボタンを押下する() : void
 activate L2

@@ -4,7 +4,6 @@ mainframe sd G01-1_楽曲生成機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":シンプルモード画面" as L2
-boundary ":アレンジ画面" as L3
 control ":楽曲生成" as L4
 control ":再生" as L5
 control ":パターン選出" as L6
@@ -17,84 +16,53 @@ control ":曲の構成" as L12
 control ":メロディ生成" as L13
 entity ":メロディ設定マスタ" as L14
 entity ":アプリの状態" as L15
-control ":メロディ再生成" as L16
-boundary ":ピアノロール画面" as L17
 
-alt シンプルモード画面（生成する）
-  L1 -> L2 : 生成するボタンを押下する() : void
-  activate L2
-  L2 -> L4 : 楽曲を生成する() : void
-  activate L4
-  L4 -> L5 : 再生・クリック音を止める() : void
-  activate L5
-  deactivate L5
-  L4 -> L6 : コード進行・ドラム・サビの進行を選ぶ() : void
-  activate L6
-  L6 -> L7 : ジャンル×雰囲気の候補を取得する() : void
-  activate L7
-  deactivate L7
-  L6 -> L8 : コード進行と同じ長さ・スケールのサビの進行を取得する() : void
-  activate L8
-  deactivate L8
-  L6 -> L9 : ドラムパターンを取得する() : void
-  activate L9
-  deactivate L9
-  deactivate L6
-  L4 -> L10 : 全パートがそろう周回数を求める() : void
-  activate L10
-  L10 -> L11 : ジャンルの標準アレンジを取得する() : void
-  activate L11
-  deactivate L11
-  deactivate L10
-  opt メロディが自動生成
-    L4 -> L12 : Aメロとサビのメロディを作る() : void
-    activate L12
-    L12 -> L13 : メロディを作る() : void
-    activate L13
-    L13 -> L14 : 生成パラメータを取得する() : void
-    activate L14
-    deactivate L14
-    deactivate L13
-    deactivate L12
-  end
-  L4 -> L15 : 曲の内容を更新し生成済みにする() : void
-  activate L15
-  deactivate L15
-  L4 -> L2 : 生成結果を表示する() : void
-  activate L2
-  deactivate L2
-  deactivate L4
-  deactivate L2
-else アレンジ画面（メロディの差し替え）
-  L1 -> L3 : メロディの差し替えボタンを押下する() : void
-  activate L3
-  L3 -> L16 : メロディを作り直す() : void
-  activate L16
-  alt メロディが自動生成
-    L16 -> L12 : Aメロとサビのメロディを作る() : void
-    activate L12
-    L12 -> L13 : メロディを作る() : void
-    activate L13
-    L13 -> L14 : 生成パラメータを取得する() : void
-    activate L14
-    deactivate L14
-    deactivate L13
-    deactivate L12
-    L16 -> L15 : メロディとサビのメロディを更新する() : void
-    activate L15
-    deactivate L15
-    opt 再生中
-      L16 -> L5 : 再生し直す() : void
-      activate L5
-      deactivate L5
-    end
-  else 自分で入力
-    L16 -> L17 : ピアノロールを開く() : void
-    activate L17
-    deactivate L17
-  end
-  deactivate L16
-  deactivate L3
+note over L2 : カスタムモードでメロディを作り直すときは\nピアノロールの「自動生成」（P01-1）を使う
+
+L1 -> L2 : 生成するボタンを押下する() : void
+activate L2
+L2 -> L4 : 楽曲を生成する() : void
+activate L4
+L4 -> L5 : 再生・クリック音を止める() : void
+activate L5
+deactivate L5
+L4 -> L6 : コード進行・ドラム・サビの進行を選ぶ() : void
+activate L6
+L6 -> L7 : ジャンル×雰囲気の候補を取得する() : void
+activate L7
+deactivate L7
+L6 -> L8 : コード進行と同じ長さ・スケールのサビの進行を取得する() : void
+activate L8
+deactivate L8
+L6 -> L9 : ドラムパターンを取得する() : void
+activate L9
+deactivate L9
+deactivate L6
+L4 -> L10 : 全パートがそろう周回数を求める() : void
+activate L10
+L10 -> L11 : ジャンルの標準アレンジを取得する() : void
+activate L11
+deactivate L11
+deactivate L10
+opt メロディが自動生成
+  L4 -> L12 : Aメロとサビのメロディを作る() : void
+  activate L12
+  L12 -> L13 : メロディを作る() : void
+  activate L13
+  L13 -> L14 : 生成パラメータを取得する() : void
+  activate L14
+  deactivate L14
+  deactivate L13
+  deactivate L12
 end
+L4 -> L15 : 曲の内容を更新し生成済みにする() : void
+activate L15
+note right of L15 : アレンジ・セクションは標準に、\n今の曲は未保存に戻す
+deactivate L15
+L4 -> L2 : 生成結果を表示する() : void
+activate L2
+deactivate L2
+deactivate L4
+deactivate L2
 
 @enduml

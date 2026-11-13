@@ -39,6 +39,7 @@ alt サンプルが止まっている
   deactivate L8
   L3 -> L10 : サンプルを1周再生する() : void
   activate L10
+  note right of L10 : ドラム・パーカッション・コード・ベース・\nパッド・シグネチャー・メロディを\nアレンジに関係なく同時に鳴らす
   L10 -> L11 : 曲の内容を一時的に差し替える() : void
   activate L11
   deactivate L11

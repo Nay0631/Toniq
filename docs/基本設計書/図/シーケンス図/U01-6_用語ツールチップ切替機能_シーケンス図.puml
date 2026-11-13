@@ -8,6 +8,8 @@ control ":用語の説明" as L3
 entity ":アプリの状態" as L4
 entity ":端末の設定データ" as L5
 
+note over L3 : ON のときは、用語とドロップダウンの選択肢（スケール・コードのリズム・\nFX/SE の種類・コードの音色・メロディの音色・grow のプリセット）に\nカーソルを乗せると説明を出す（説明のない grow のプリセットは出さない）
+
 L1 -> L2 : 用語の説明のスイッチを押下する() : void
 activate L2
 L2 -> L3 : 用語の説明を切り替える() : void
@@ -23,7 +25,7 @@ opt OFF にした
   activate L3
   deactivate L3
 end
-L3 -> L2 : 点線の下線の表示を切り替える() : void
+L3 -> L2 : 点線の下線と選択肢の説明の表示を切り替える() : void
 activate L2
 deactivate L2
 deactivate L3

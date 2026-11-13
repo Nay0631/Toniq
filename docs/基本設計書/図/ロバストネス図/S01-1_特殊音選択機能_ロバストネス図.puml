@@ -4,17 +4,25 @@ mainframe **uc** S01-1_特殊音選択機能_ロバストネス図
 
 actor "利用者" as A1
 boundary "カスタムモード画面" as B1
+control "追加パート設定" as C5
 control "パート管理" as C1
 control "各パートの演奏" as C2
 control "FX設定" as C3
 control "再生" as C4
 entity "アプリの状態" as E1
+entity "ベース設定マスタ" as E2
 
-A1 --> B1 : パッド・アルペジオ・シグネチャーの ON/OFF を押下する
+A1 --> B1 : 追加パートの\nON/OFF を押下する
+A1 --> B1 : サブベースを選ぶ
 A1 --> B1 : FX / SE の種類を選ぶ
-B1 --> C1 : パートを ON/OFF する
+B1 --> C5 : 追加パートを ON/OFF する
+B1 --> C5 : サブベースを設定する
+C5 --> C1 : パートを ON/OFF する
 C1 --> E1 : パートの ON/OFF を更新する
-C1 --> C2 : OFF なら音源を破棄する・再生中に ON ならすぐ読み込む
+C1 --> C2 : OFF なら音源を破棄する・\n再生中に ON ならすぐ読み込む
+C5 --> E2 : ジャンルのサブベースの\n標準を取得する
+C5 --> E1 : サブベースを更新する
+C5 --> C4 : サブベースは\n再生中なら再生し直す
 B1 --> C3 : FX / SE の種類を設定する
 C3 --> E1 : FX / SE の種類を更新する
 C3 --> C4 : 再生中なら再生し直す

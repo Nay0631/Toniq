@@ -4,16 +4,20 @@ mainframe sd S01-1_特殊音選択機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
+control ":追加パート設定" as L8
 control ":パート管理" as L3
 entity ":アプリの状態" as L4
 control ":各パートの演奏" as L5
+entity ":ベース設定マスタ" as L9
 control ":FX設定" as L6
 control ":再生" as L7
 
-alt パッド・アルペジオ・シグネチャーの ON/OFF
+alt 追加パート（パッド・アルペジオ・シグネチャー・カウンターメロディ・パーカッション）の ON/OFF
   L1 -> L2 : ON/OFF ボタンを押下する() : void
   activate L2
-  L2 -> L3 : パートを ON/OFF する() : void
+  L2 -> L8 : 追加パートを ON/OFF する() : void
+  activate L8
+  L8 -> L3 : パートを ON/OFF する() : void
   activate L3
   L3 -> L4 : パートの ON/OFF を更新する() : void
   activate L4
@@ -28,6 +32,27 @@ alt パッド・アルペジオ・シグネチャーの ON/OFF
     deactivate L5
   end
   deactivate L3
+  deactivate L8
+  deactivate L2
+else サブベース
+  L1 -> L2 : サブベースを選ぶ() : void
+  activate L2
+  L2 -> L8 : サブベースを設定する() : void
+  activate L8
+  L8 -> L4 : サブベースを更新する() : void
+  activate L4
+  deactivate L4
+  opt ジャンルに合わせる
+    L8 -> L9 : ジャンルのサブベースの標準を取得する() : void
+    activate L9
+    deactivate L9
+  end
+  opt 再生中
+    L8 -> L7 : 再生し直す() : void
+    activate L7
+    deactivate L7
+  end
+  deactivate L8
   deactivate L2
 else FX / SE の種類
   L1 -> L2 : FX / SE の種類を選ぶ() : void

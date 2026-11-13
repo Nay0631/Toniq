@@ -9,6 +9,8 @@ entity ":アプリの状態" as L4
 control ":パート管理" as L5
 control ":ミックス" as L6
 
+note over L2 : 10パート（メロディ・カウンター・コード・ドラム・パーカス・\nベース・パッド・アルペジオ・シグネチャー・FX）のチャンネルがある
+
 alt フェーダー
   L1 -> L2 : フェーダーを動かす() : void
   activate L2

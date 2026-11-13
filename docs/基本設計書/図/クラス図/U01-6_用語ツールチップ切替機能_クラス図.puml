@@ -4,10 +4,10 @@ mainframe **pkg**
 
 class "設定画面" as B1 <<boundary>> {
   {method} <U+002B> 用語の説明のスイッチを押下する() : void
-  {method} <U+002B> 点線の下線の表示を切り替える() : void
+  {method} <U+002B> 点線の下線と選択肢の説明の表示を切り替える() : void
 }
 class "用語の説明" as C1 <<control>> {
-  {field} <U+002D> 用語と説明の一覧
+  {field} <U+002D> 用語と説明の一覧（選択肢の説明を含む）
   {method} <U+002B> 用語の説明を切り替える() : void
   {method} <U+002D> 表示中の説明を消す() : void
 }
