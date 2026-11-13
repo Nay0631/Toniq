@@ -1,0 +1,38 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> 雰囲気のチップを押下する() : void
+  {method} <U+002B> 選択中の雰囲気と雰囲気に合うジャンルのチップを表示する() : void
+}
+class "雰囲気選択" as C1 <<control>> {
+  {method} <U+002B> 雰囲気を選択する() : void
+}
+class "パターン選出" as C2 <<control>> {
+  {method} <U+002B> BPMを求める() : void
+}
+class "ジャンル試聴" as C3 <<control>> {
+  {method} <U+002B> 新しいジャンルのサンプルを鳴らす() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 雰囲気
+  {field} <U+002B> ジャンル
+  {field} <U+002B> BPM
+  {method} <U+002B> 雰囲気を更新する() : void
+  {method} <U+002B> 合うジャンルの先頭とBPMに更新する() : void
+}
+class "テンポマスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> ゆっくり・普通・速いのBPM
+  {method} <U+002B> BPMを取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> E2
+C1 --> C3
+C1 --> B1
+
+@enduml

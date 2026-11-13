@@ -1,0 +1,53 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd H01-1_元に戻す・やり直す機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":履歴管理" as L3
+control ":再生" as L4
+entity ":アプリの状態" as L5
+control ":音量管理" as L6
+control ":パート管理" as L7
+
+note over L2 : シンプルモード画面も同じ流れ。\n履歴は、曲の内容が変わる直前の内容を\n履歴管理が積んでおく（最大100件）
+
+L1 -> L2 : 元に戻すボタンを押下する() : void
+activate L2
+L2 -> L3 : 元に戻す() : void
+activate L3
+L3 -> L4 : ジャンルのサンプルを止める() : void
+activate L4
+deactivate L4
+alt 戻せる履歴がある
+  L3 -> L5 : 1つ前の曲の内容に戻す() : void
+  activate L5
+  deactivate L5
+  opt 音量が変わった
+    L3 -> L6 : 音量を反映する() : void
+    activate L6
+    deactivate L6
+  end
+  opt 再生中
+    alt アレンジ・音量・ON/OFF・メロディだけが変わった
+      L3 -> L7 : パートの ON/OFF・メロディを反映する() : void
+      activate L7
+      deactivate L7
+    else それ以外も変わった
+      L3 -> L4 : 再生し直す() : void
+      activate L4
+      deactivate L4
+    end
+  end
+  L3 -> L2 : 表示を更新する() : void
+  activate L2
+  deactivate L2
+else 戻せる履歴がない
+  L3 -> L3 : 何もしない() : void
+  activate L3
+  deactivate L3
+end
+deactivate L3
+deactivate L2
+
+@enduml

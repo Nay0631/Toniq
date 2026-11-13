@@ -1,0 +1,31 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** M01-4_楽曲を開く機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ミュージックリスト画面" as B1
+boundary "シンプルモード画面" as B2
+boundary "カスタムモード画面" as B3
+control "楽曲切り替え" as C1
+control "再生" as C2
+control "曲の管理" as C3
+control "音量管理" as C4
+control "履歴管理" as C5
+control "画面切り替え" as C6
+entity "楽曲データ" as E1
+entity "アプリの状態" as E2
+
+A1 --> B1 : 曲の編集ボタンを押下する\n（曲名のダブルクリック）
+B1 --> C1 : 選んだ曲を今の曲にする
+C1 --> C1 : 未保存の曲を\n捨てる確認で取り消した\n（開かない）
+C1 --> C2 : 再生を止める
+C1 --> C3 : 今の曲でなければ\n保存した曲を読み込む
+C3 --> E1 : 曲の内容を取得する
+C3 --> E2 : 曲の内容を反映する
+C3 --> C4 : 音量を反映する
+C3 --> C5 : 履歴を捨てる
+C1 --> C6 : 保存したモードの画面にする
+C6 --> B2 : 生成後の画面を表示する
+C6 --> B3 : 設定タブを表示する
+
+@enduml

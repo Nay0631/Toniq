@@ -1,0 +1,17 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-1_BPM選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "BPM設定" as C1
+control "再生" as C2
+entity "アプリの状態" as E1
+
+A1 --> B1 : BPMノブを回す
+B1 --> C1 : BPMを設定する
+C1 --> C1 : 20〜240の範囲外\n（範囲内に丸める）
+C1 --> E1 : BPMを更新する
+C1 --> C2 : 再生中ならテンポを反映する
+
+@enduml

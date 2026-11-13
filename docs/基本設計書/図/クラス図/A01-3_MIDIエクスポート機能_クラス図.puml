@@ -1,0 +1,107 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> MIDIで書き出すボタンを押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> MIDI ボタンを押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
+}
+class "ファイル名ダイアログ" as B3 <<boundary>> {
+  {method} <U+002B> 初期値のファイル名でダイアログを表示する() : void
+  {method} <U+002B> ファイル名を入力して書き出すボタンを押下する() : void
+  {method} <U+002B> キャンセルボタンを押下する() : void
+}
+class "ファイル名入力" as C6 <<control>> {
+  {method} <U+002B> ファイル名を聞く() : void
+  {method} <U+002B> ファイル名を確定する() : void
+  {method} <U+002B> 取り消す() : void
+}
+class "MIDI書き出し" as C1 <<control>> {
+  {method} <U+002B> MIDI で書き出す() : void
+  {method} <U+002D> スウィングに合わせて発音位置をずらす() : void
+  {method} <U+002D> テンポ・拍子と8トラックを書く() : void
+}
+class "曲の構成" as C2 <<control>> {
+  {method} <U+002B> 曲全体のコード進行とメロディを求める() : void
+}
+class "アレンジ管理" as C3 <<control>> {
+  {method} <U+002B> 鳴らす小節か確かめる() : void
+}
+class "コード変換" as C4 <<control>> {
+  {method} <U+002B> コード・パッドのボイシングを求める() : void
+}
+class "各パートの演奏" as C5 <<control>> {
+  {method} <U+002B> コード・パッド・アルペジオ・ベース・カウンターメロディ・ドラム・パーカッションの音を並べる() : void
+}
+class "出力ファイル保存" as C7 <<control>> {
+  {method} <U+002B> 出力フォルダに保存する() : void
+  {method} <U+002B> ファイルをフォルダで表示する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> キー・BPM・小節数
+  {field} <U+002B> パートの ON/OFF
+  {field} <U+002B> スウィング
+  {method} <U+002B> キー・BPM・小節数・パートの ON/OFF・スウィングを取得する() : void
+}
+class "標準アレンジマスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 周回ごとのセクション・鳴らすパート
+  {method} <U+002B> 標準のセクションを取得する() : void
+  {method} <U+002B> 標準アレンジを取得する() : void
+}
+class "スケールマスタ" as E3 <<entity>> {
+  {field} <U+002B> スケール
+  {field} <U+002B> 音程
+  {method} <U+002B> スケールの音程を取得する() : void
+}
+class "ドラムパターンマスタ" as E4 <<entity>> {
+  {field} <U+002B> 16ステップのパターン
+  {method} <U+002B> ブロックのドラムパターンを取得する() : void
+}
+class "ベース設定マスタ" as E5 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 16ステップのパターン
+  {method} <U+002B> ジャンルのベースのパターンを取得する() : void
+}
+class "アルペジオ設定マスタ" as E6 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 刻み・パターン・オクターブ数
+  {method} <U+002B> ジャンルのアルペジオの設定を取得する() : void
+}
+class "MIDIファイル" as E7 <<entity>> {
+  {field} <U+002B> Melody・Chord・Pad・Arpeggio・Bass・Counter Melody・Drums・Percussion のトラック
+  {field} <U+002B> 保存先（output/midi）
+  {method} <U+002B> 保存する() : void
+}
+
+B1 --> C6
+B2 --> C6
+C6 --> B3
+B3 --> C6
+B1 --> C1
+B2 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> E2
+C1 --> C3
+C3 --> E2
+C1 --> C4
+C4 --> E3
+C1 --> C5
+C5 --> E4
+C5 --> E5
+C5 --> E6
+C1 --> C7
+C7 --> E7
+C7 --> B1
+C7 --> B2
+B1 --> C7
+B2 --> C7
+
+@enduml

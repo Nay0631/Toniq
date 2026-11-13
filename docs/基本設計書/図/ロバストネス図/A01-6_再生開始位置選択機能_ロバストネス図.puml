@@ -1,0 +1,17 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-6_再生開始位置選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "アレンジ画面" as B1
+control "再生開始位置設定" as C1
+control "再生" as C2
+entity "アプリの状態" as E1
+
+A1 --> B1 : 小節の目盛りを押下する・先頭へボタンを押下する
+B1 --> C1 : 再生開始位置を設定する
+C1 --> E1 : 再生開始位置を更新する
+C1 --> C2 : 再生中ならその位置から再生し直す
+C1 --> B1 : 再生ボタンの表示を「○小節目から」にする
+
+@enduml

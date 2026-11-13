@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** C01-1_コード進行カテゴリ選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "カテゴリ設定" as C1
+control "再生" as C2
+entity "アプリの状態" as E1
+entity "コード進行マスタ" as E2
+
+A1 --> B1 : カテゴリを選ぶ
+B1 --> C1 : カテゴリを設定する
+C1 --> E1 : 雰囲気を更新する
+C1 --> E2 : 雰囲気が合うコード進行を取得する
+C1 --> C1 : スケールロックが有効\n（同じスケールに絞る）
+C1 --> E1 : 候補になければ先頭の進行に切り替える
+C1 --> C2 : 再生中なら再生し直す
+
+@enduml

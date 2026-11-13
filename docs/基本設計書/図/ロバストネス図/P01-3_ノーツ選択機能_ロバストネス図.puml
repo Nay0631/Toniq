@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** P01-3_ノーツ選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ピアノロール画面" as B1
+control "音符編集" as C1
+control "スケール判定" as C2
+control "メロディ演奏" as C3
+control "パート管理" as C4
+entity "スケールマスタ" as E1
+entity "アプリの状態" as E2
+
+A1 --> B1 : 音符を押下してドラッグする
+A1 --> B1 : 右クリック・Delete キーで削除する
+B1 --> C1 : 音を選択して位置・高さ・長さを変える
+B1 --> C1 : 選んだ音を削除する
+C1 --> C3 : 選んだ音を試聴する
+C1 --> C2 : スケールロック中はスケール音に寄せる
+C2 --> E1 : スケールの7音を取得する
+C1 --> C1 : 変わっていない\n（メロディを更新しない）
+C1 --> E2 : メロディを更新し「自分で入力」にする
+C1 --> C4 : 再生中ならメロディを読み込み直す
+C1 --> B1 : 音符を表示する
+
+@enduml

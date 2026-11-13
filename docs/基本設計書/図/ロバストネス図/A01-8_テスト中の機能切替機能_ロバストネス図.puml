@@ -1,0 +1,23 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-8_テスト中の機能切替機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "アレンジ画面" as B1
+control "テスト機能設定" as C1
+control "端末の設定" as C2
+control "再生" as C3
+control "ドラム演奏" as C4
+entity "アプリの状態" as E1
+entity "端末の設定データ" as E2
+
+A1 --> B1 : テスト中の機能のスイッチを押下する
+B1 --> C1 : エンディング・ドラムのフィル・ドラムの揺らぎを ON/OFF する
+C1 --> C2 : テスト中の機能を切り替える
+C2 --> E1 : テスト中の機能を更新する
+C2 --> E2 : テスト中の機能を保存する
+C1 --> C3 : エンディングなら、再生中は再生し直す
+C4 --> E1 : 再生中、1音ごとにフィル・揺らぎを取得する
+C1 --> B1 : スイッチの ON/OFF を表示する
+
+@enduml

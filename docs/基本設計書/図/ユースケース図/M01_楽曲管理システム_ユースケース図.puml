@@ -1,0 +1,31 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** M01_楽曲管理システム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "楽曲管理システム" <<システム名>> {
+  rectangle " " {
+    usecase "楽曲保存機能" as UC1
+    usecase "新規作成機能" as UC2
+    usecase "楽曲検索機能" as UC3
+    usecase "楽曲を開く機能" as UC4
+    usecase "楽曲情報変更機能" as UC5
+    usecase "楽曲削除機能" as UC6
+    usecase "曲ファイル書き出し機能" as UC7
+    usecase "曲ファイル読み込み機能" as UC8
+    usecase "出力フォルダを開く機能" as UC11
+  }
+}
+
+A1 -- UC1
+A1 -- UC2
+A1 -- UC3
+A1 -- UC4
+A1 -- UC5
+A1 -- UC6
+A1 -- UC7
+A1 -- UC8
+A1 -- UC11
+
+@enduml

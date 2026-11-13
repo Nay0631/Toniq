@@ -1,0 +1,31 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> タップで調整ボタンを押下する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> タップボタンを押下する() : void
+}
+class "タップテンポ" as C1 <<control>> {
+  {field} <U+002D> タップの時刻（最大8回）
+  {method} <U+002B> タップを記録する() : void
+  {method} <U+002D> 間隔の平均からBPMを求める() : void
+  {method} <U+002D> 記録をやり直す() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> テンポを反映する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> BPM
+  {method} <U+002B> BPMを更新する() : void
+}
+
+B1 --> C1
+B2 --> C1
+B1 --> C2
+B2 --> C2
+C1 --> E1
+
+@enduml

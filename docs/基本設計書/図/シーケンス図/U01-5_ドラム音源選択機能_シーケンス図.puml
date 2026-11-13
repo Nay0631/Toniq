@@ -1,0 +1,63 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd U01-5_ドラム音源選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":設定画面" as L2
+control ":端末の設定" as L3
+entity ":アプリの状態" as L4
+entity ":端末の設定データ" as L5
+control ":ドラム音源読み込み" as L6
+entity ":ドラム音源ファイル" as L7
+control ":grow" as L9
+entity ":growプリセット" as L10
+control ":パート管理" as L8
+control ":ドラムキット作成" as L11
+
+L1 -> L2 : ドラムの音源を押下する() : void
+activate L2
+L2 -> L3 : ドラムの音源を選ぶ() : void
+activate L3
+L3 -> L4 : ドラムの音源を更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : ドラムの音源を保存する() : void
+activate L5
+deactivate L5
+alt サンプル音源
+  L3 -> L6 : 音源を読み込む() : void
+  activate L6
+  L6 -> L7 : ジャンルの音源を取得する() : void
+  activate L7
+  deactivate L7
+  deactivate L6
+else grow
+  L3 -> L9 : grow の準備を待つ() : void
+  activate L9
+  deactivate L9
+end
+opt 再生中
+  L3 -> L8 : ドラムを読み込み直す() : void
+  activate L8
+  L8 -> L11 : 選んだ音源でキットを作る() : void
+  activate L11
+  opt grow
+    L11 -> L9 : grow のドラムの音をジャンルのキットに合わせて作る() : void
+    activate L9
+    L9 -> L10 : ドラムのプリセットを取得する() : void
+    activate L10
+    deactivate L10
+    deactivate L9
+    opt grow で鳴らせないトラック
+      L11 -> L11 : シンセで鳴らす() : void
+      activate L11
+      deactivate L11
+    end
+  end
+  deactivate L11
+  deactivate L8
+end
+deactivate L3
+deactivate L2
+
+@enduml

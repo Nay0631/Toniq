@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** M01-8_曲ファイル読み込み機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ミュージックリスト画面" as B1
+control "曲ファイル読み込み" as C1
+control "曲の管理" as C2
+entity "曲ファイル" as E1
+entity "楽曲データ" as E2
+
+A1 --> B1 : ファイルを読み込むボタンを押下してファイルを選ぶ
+B1 --> C1 : 選んだファイルを読み込む
+C1 --> E1 : 中身を取得する
+C1 --> C2 : 曲を追加する
+C2 --> C2 : 曲ファイルでない・\n鳴らせない曲\n（飛ばす）
+C2 --> E2 : 足りない項目を補い、新しい ID で追加する
+C1 --> B1 : 追加した曲数・読み込めなかった曲数を表示する
+
+@enduml

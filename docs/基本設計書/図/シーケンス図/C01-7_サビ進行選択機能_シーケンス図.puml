@@ -1,0 +1,59 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd C01-7_サビ進行選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":サビ進行設定" as L3
+entity ":アプリの状態" as L4
+control ":パターン選出" as L5
+entity ":コード進行マスタ" as L6
+control ":曲の構成" as L7
+control ":メロディ生成" as L8
+entity ":メロディ設定マスタ" as L9
+control ":再生" as L10
+
+note over L2 : サビのドロップダウンで選んだときは「サビの進行を切り替える()」で、\n候補から選ぶ代わりに選んだコード進行を取得する（「なし」なら空にする）。あとは同じ流れ
+
+L1 -> L2 : サビの差し替えボタンを押下する() : void
+activate L2
+L2 -> L3 : サビの進行を差し替える() : void
+activate L3
+L3 -> L4 : コード進行・ジャンル・雰囲気を取得する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 今のサビ以外から選ぶ() : void
+activate L5
+L5 -> L6 : 同じ長さ・スケールの候補を取得する() : void
+activate L6
+deactivate L6
+deactivate L5
+L3 -> L4 : サビの進行を更新する() : void
+activate L4
+deactivate L4
+opt メロディがある
+  L3 -> L7 : サビのメロディを作り直す() : void
+  activate L7
+  L7 -> L8 : 高めの音域でメロディを作る() : void
+  activate L8
+  L8 -> L9 : 生成パラメータを取得する() : void
+  activate L9
+  deactivate L9
+  deactivate L8
+  deactivate L7
+  L3 -> L4 : サビのメロディを更新する() : void
+  activate L4
+  deactivate L4
+end
+opt 再生中
+  L3 -> L10 : 再生し直す() : void
+  activate L10
+  deactivate L10
+end
+L3 -> L2 : サビの進行を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

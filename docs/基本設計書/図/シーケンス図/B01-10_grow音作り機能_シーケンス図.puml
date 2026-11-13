@@ -1,0 +1,84 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-10_grow音作り機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":growパネル" as L2
+control ":音作り設定" as L3
+entity ":growプリセット" as L4
+entity ":アプリの状態" as L5
+control ":grow" as L6
+
+note over L2 : grow を読み込めないときは、その旨を表示してつまみを出さない。\n「対象」はカウンターメロディ・コード・ベース・パッド・アルペジオ・シグネチャー。\nメロディは、メロディの音色が grow のときだけ出る
+
+L1 -> L2 : 対象を選ぶ() : void
+activate L2
+L2 -> L3 : 対象のパートを切り替える() : void
+activate L3
+L3 -> L5 : 対象のパートの音作りの値を取得する() : void
+activate L5
+deactivate L5
+L3 -> L2 : プリセットとつまみの値を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : プリセットを選ぶ() : void
+activate L2
+L2 -> L3 : 音作りの値を設定する() : void
+activate L3
+alt プリセット
+  L3 -> L4 : プリセットの値を取得する() : void
+  activate L4
+  deactivate L4
+else ジャンルの標準
+  L3 -> L4 : ジャンルの標準のプリセットを取得する() : void
+  activate L4
+  deactivate L4
+end
+L3 -> L5 : 対象のパートの音作りの値を更新する() : void
+activate L5
+deactivate L5
+L3 -> L6 : 鳴っている grow にすぐ反映する() : void
+activate L6
+deactivate L6
+L3 -> L2 : プリセットとつまみの値を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : つまみ・セレクト・チェックを動かす() : void
+activate L2
+L2 -> L3 : 音作りの値を設定する() : void
+activate L3
+L3 -> L5 : 対象のパートの音作りの値を更新する() : void
+activate L5
+deactivate L5
+L3 -> L6 : 鳴っている grow にすぐ反映する() : void
+activate L6
+deactivate L6
+L3 -> L2 : プリセットからの変更を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : プリセットに戻すボタンを押下する() : void
+activate L2
+L2 -> L3 : 変えた値を捨てる() : void
+activate L3
+L3 -> L5 : 対象のパートの音作りの値を更新する() : void
+activate L5
+deactivate L5
+L3 -> L6 : 鳴っている grow にすぐ反映する() : void
+activate L6
+deactivate L6
+L3 -> L2 : プリセットとつまみの値を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

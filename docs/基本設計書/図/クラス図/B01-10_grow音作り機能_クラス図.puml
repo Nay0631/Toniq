@@ -1,0 +1,42 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "growパネル" as B1 <<boundary>> {
+  {method} <U+002B> 対象を選ぶ() : void
+  {method} <U+002B> プリセットを選ぶ() : void
+  {method} <U+002B> つまみ・セレクト・チェックを動かす() : void
+  {method} <U+002B> プリセットに戻すボタンを押下する() : void
+  {method} <U+002B> プリセットとつまみの値を表示する() : void
+  {method} <U+002B> プリセットからの変更を表示する() : void
+}
+class "音作り設定" as C1 <<control>> {
+  {method} <U+002B> 対象のパートを切り替える() : void
+  {method} <U+002B> 音作りの値を設定する() : void
+  {method} <U+002B> 変えた値を捨てる() : void
+}
+class "grow" as C2 <<control>> {
+  {method} <U+002B> 鳴っている grow にすぐ反映する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> メロディの音作りの値
+  {field} <U+002B> コードの音作りの値
+  {field} <U+002B> ベース・パッド・アルペジオ・シグネチャー・カウンターメロディの音作りの値
+  {method} <U+002B> 対象のパートの音作りの値を取得する() : void
+  {method} <U+002B> 対象のパートの音作りの値を更新する() : void
+}
+class "growプリセット" as E2 <<entity>> {
+  {field} <U+002B> ID
+  {field} <U+002B> プリセット名
+  {field} <U+002B> 音作りの値
+  {method} <U+002B> プリセットの値を取得する() : void
+  {method} <U+002B> ジャンルの標準のプリセットを取得する() : void
+}
+
+B1 --> C1
+C1 --> E2
+C1 --> E1
+C1 --> C2
+C1 --> B1
+
+@enduml

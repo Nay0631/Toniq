@@ -1,0 +1,65 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd Q01-1_音楽クイズ機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":音楽クイズ画面" as L2
+control ":クイズ出題" as L3
+entity ":アプリの状態" as L4
+entity ":クイズ問題マスタ" as L5
+control ":クイズの音" as L6
+control ":採点" as L7
+
+L1 -> L2 : カテゴリ・出題モードを押下する() : void
+activate L2
+L2 -> L3 : 出題モードを選ぶ() : void
+activate L3
+L3 -> L4 : 出題モードを更新する() : void
+activate L4
+deactivate L4
+L3 -> L6 : 前の音を止める() : void
+activate L6
+deactivate L6
+L3 -> L5 : 問題を作る() : void
+activate L5
+deactivate L5
+L3 -> L2 : 問題を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : 音の再生ボタンを押下する() : void
+activate L2
+L2 -> L6 : 問題の音を鳴らす() : void
+activate L6
+deactivate L6
+deactivate L2
+
+L1 -> L2 : 選択肢・鍵盤で回答する() : void
+activate L2
+L2 -> L7 : 採点する() : void
+activate L7
+L7 -> L7 : 正解数・連続正解を数える() : void
+activate L7
+deactivate L7
+L7 -> L2 : 正誤・解説・成績を表示する() : void
+activate L2
+deactivate L2
+deactivate L7
+deactivate L2
+
+L1 -> L2 : 次の問題ボタンを押下する() : void
+activate L2
+L2 -> L3 : 次の問題を出す() : void
+activate L3
+L3 -> L5 : 問題を作る() : void
+activate L5
+deactivate L5
+L3 -> L2 : 問題を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

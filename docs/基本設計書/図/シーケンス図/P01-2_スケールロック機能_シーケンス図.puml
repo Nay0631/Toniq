@@ -1,0 +1,66 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd P01-2_スケールロック機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ピアノロール画面" as L2
+boundary ":カスタムモード画面" as L3
+control ":スケールロック設定" as L4
+entity ":アプリの状態" as L5
+control ":音符編集" as L6
+control ":スケール判定" as L7
+entity ":スケールマスタ" as L8
+entity ":コード進行マスタ" as L9
+
+L1 -> L2 : スケールロックボタンを押下する() : void
+activate L2
+L2 -> L4 : ピアノロールのロックを切り替える() : void
+activate L4
+L4 -> L5 : スケールロックを更新する() : void
+activate L5
+deactivate L5
+deactivate L4
+deactivate L2
+
+L1 -> L2 : 音を置く・動かす() : void
+activate L2
+L2 -> L6 : 音を置く・動かす() : void
+activate L6
+L6 -> L7 : スケールの音か確かめる() : void
+activate L7
+L7 -> L5 : キーとスケールを取得する() : void
+activate L5
+deactivate L5
+L7 -> L8 : スケールの7音を取得する() : void
+activate L8
+deactivate L8
+deactivate L7
+alt スケールの音（またはロックが無効）
+  L6 -> L6 : 音を置く() : void
+  activate L6
+  deactivate L6
+else スケール外
+  L6 -> L6 : 置かない・動かしたときはスケール音に寄せる() : void
+  activate L6
+  deactivate L6
+end
+deactivate L6
+deactivate L2
+
+L1 -> L3 : スケールロックのスイッチを押下する() : void
+activate L3
+L3 -> L4 : コード進行のロックを切り替える() : void
+activate L4
+L4 -> L5 : スケールロックを更新する() : void
+activate L5
+deactivate L5
+L4 -> L9 : 同じスケールのコード進行に絞る() : void
+activate L9
+deactivate L9
+L4 -> L3 : 絞ったコード進行の一覧を表示する() : void
+activate L3
+deactivate L3
+deactivate L4
+deactivate L3
+
+@enduml

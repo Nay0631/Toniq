@@ -1,0 +1,28 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "設定画面" as B1 <<boundary>> {
+  {method} <U+002B> 配色を押下する() : void
+  {method} <U+002B> 画面の配色を変える() : void
+}
+class "見た目設定" as C1 <<control>> {
+  {method} <U+002B> 配色を選ぶ() : void
+  {method} <U+002D> OS の配色を調べる() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 配色の選び方
+  {field} <U+002B> 実際の配色
+  {method} <U+002B> 配色を更新する() : void
+}
+class "端末の設定データ" as E2 <<entity>> {
+  {field} <U+002B> 配色・スキン・音名・ループ・ドラムの音源・用語の説明
+  {method} <U+002B> 配色を保存する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> E2
+C1 --> B1
+
+@enduml

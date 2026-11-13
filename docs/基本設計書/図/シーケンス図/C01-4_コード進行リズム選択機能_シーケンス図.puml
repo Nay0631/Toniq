@@ -1,0 +1,36 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd C01-4_コード進行リズム選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":リズム設定" as L3
+entity ":アプリの状態" as L4
+control ":再生" as L5
+control ":コード演奏" as L6
+
+L1 -> L2 : リズムを選ぶ() : void
+activate L2
+L2 -> L3 : リズムを設定する() : void
+activate L3
+L3 -> L4 : コードのリズムを更新する() : void
+activate L4
+deactivate L4
+opt 再生中
+  L3 -> L5 : 再生し直す() : void
+  activate L5
+  L5 -> L6 : コードを読み込む() : void
+  activate L6
+  L6 -> L4 : リズムを取得する() : void
+  activate L4
+  deactivate L4
+  L6 -> L6 : リズムの間隔でコードを刻んで並べる() : void
+  activate L6
+  deactivate L6
+  deactivate L6
+  deactivate L5
+end
+deactivate L3
+deactivate L2
+
+@enduml

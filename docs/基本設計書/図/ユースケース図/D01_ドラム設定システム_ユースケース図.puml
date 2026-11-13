@@ -1,0 +1,19 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** D01_ドラム設定システム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "ドラム設定システム" <<システム名>> {
+  rectangle " " {
+    usecase "ドラムカテゴリ選択機能" as UC1
+    usecase "ドラムパターン選択機能" as UC2
+    usecase "ドラム試聴機能" as UC3
+  }
+}
+
+A1 -- UC1
+A1 -- UC2
+A1 -- UC3
+
+@enduml

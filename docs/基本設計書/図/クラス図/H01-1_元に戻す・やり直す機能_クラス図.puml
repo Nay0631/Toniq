@@ -1,0 +1,44 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> 元に戻す・やり直すボタンを押下する() : void
+  {method} <U+002B> 表示を更新する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> 元に戻す・やり直すボタンを押下する() : void
+  {method} <U+002B> 表示を更新する() : void
+}
+class "履歴管理" as C1 <<control>> {
+  {field} <U+002D> 元に戻す履歴（最大100件）
+  {field} <U+002D> やり直す履歴
+  {method} <U+002B> 元に戻す() : void
+  {method} <U+002B> やり直す() : void
+  {method} <U+002B> 履歴を捨てる() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> ジャンルのサンプルを止める() : void
+  {method} <U+002B> 再生し直す() : void
+}
+class "音量管理" as C3 <<control>> {
+  {method} <U+002B> 音量を反映する() : void
+}
+class "パート管理" as C4 <<control>> {
+  {method} <U+002B> パートの ON/OFF・メロディを反映する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 曲の内容
+  {method} <U+002B> 1つ前（後）の曲の内容に戻す() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> C2
+C1 --> E1
+C1 --> C3
+C1 --> C4
+C1 --> B1
+C1 --> B2
+
+@enduml

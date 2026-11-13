@@ -1,0 +1,21 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** C01-5_コード進行試聴機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "再生" as C1
+control "コード演奏" as C2
+control "コード変換" as C3
+entity "アプリの状態" as E1
+entity "スケールマスタ" as E2
+
+A1 --> B1 : コード進行の試聴ボタンを押下する
+B1 --> C1 : コード進行を試聴する
+C1 --> C1 : ほかの再生を止め、\n進行1周で止める
+C1 --> C2 : コードを読み込む
+C2 --> E1 : コード進行とキーを取得する
+C2 --> C3 : ボイシングを決める
+C3 --> E2 : スケールの音程を取得する
+
+@enduml

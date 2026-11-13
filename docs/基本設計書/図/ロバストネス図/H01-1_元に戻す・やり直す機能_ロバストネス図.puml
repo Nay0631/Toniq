@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** H01-1_元に戻す・やり直す機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "履歴管理" as C1
+control "再生" as C2
+control "音量管理" as C3
+control "パート管理" as C4
+entity "アプリの状態" as E1
+
+A1 --> B1 : 元に戻す・やり直すボタンを押下する（Ctrl+Z など）
+A1 --> B2 : 元に戻す・やり直すボタンを押下する（Ctrl+Z など）
+B1 --> C1 : 元に戻す・やり直す
+B2 --> C1 : 元に戻す・やり直す
+C1 --> C1 : 戻せる履歴がない\n（何もしない）
+C1 --> C2 : ジャンルのサンプルを止める
+C1 --> E1 : 1つ前（後）の曲の内容に戻す
+C1 --> C3 : 音量を反映する
+C1 --> C4 : 再生中ならパートの ON/OFF・メロディを反映する
+C1 --> C2 : それ以外が変わったら再生し直す
+C1 --> B2 : 表示を更新する
+
+@enduml

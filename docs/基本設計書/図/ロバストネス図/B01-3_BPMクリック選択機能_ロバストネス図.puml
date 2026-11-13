@@ -1,0 +1,21 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-3_BPMクリック選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "タップテンポ" as C1
+control "再生" as C2
+entity "アプリの状態" as E1
+
+A1 --> B1 : タップで調整ボタンを押下する
+A1 --> B2 : タップボタンを押下する
+B1 --> C1 : タップを記録する
+B2 --> C1 : タップを記録する
+C1 --> C1 : タップが1回だけ・\n2秒以上空いた\n（BPMを求めない）
+C1 --> E1 : 間隔の平均からBPMを更新する
+B1 --> C2 : サンプル再生中ならテンポを反映する
+B2 --> C2 : 再生中ならテンポを反映する
+
+@enduml

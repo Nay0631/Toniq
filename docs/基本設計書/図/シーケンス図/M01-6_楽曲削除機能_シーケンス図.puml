@@ -1,0 +1,58 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-6_楽曲削除機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+control ":楽曲削除" as L3
+control ":再生" as L4
+control ":曲の管理" as L5
+entity ":楽曲データ" as L6
+entity ":アプリの状態" as L7
+
+L1 -> L2 : 「削除」を押下する() : void
+activate L2
+L2 -> L3 : 曲を削除する() : void
+activate L3
+L3 -> L1 : 削除してよいか確認する() : void
+activate L1
+deactivate L1
+alt OK
+  opt 再生中の曲
+    L3 -> L4 : 再生を止める() : void
+    activate L4
+    deactivate L4
+  end
+  L3 -> L5 : 曲を削除する() : void
+  activate L5
+  L5 -> L6 : 曲を削除する() : void
+  activate L6
+  deactivate L6
+  alt 書き込めた
+    opt 今の曲
+      L5 -> L7 : 未保存の曲にする() : void
+      activate L7
+      deactivate L7
+    end
+    deactivate L5
+    L3 -> L2 : 曲の一覧を表示し直す() : void
+    activate L2
+    deactivate L2
+  else 書き込めない（保存容量がいっぱいなど）
+    L5 -> L5 : 削除しない() : void
+    activate L5
+    deactivate L5
+    deactivate L5
+    L3 -> L2 : 保存容量の案内を知らせる() : void
+    activate L2
+    deactivate L2
+  end
+else 取り消し
+  L3 -> L3 : 削除しない() : void
+  activate L3
+  deactivate L3
+end
+deactivate L3
+deactivate L2
+
+@enduml

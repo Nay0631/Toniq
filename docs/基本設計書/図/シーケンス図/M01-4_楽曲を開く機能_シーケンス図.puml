@@ -1,0 +1,60 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-4_楽曲を開く機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+control ":楽曲切り替え" as L3
+control ":再生" as L4
+control ":曲の管理" as L5
+entity ":楽曲データ" as L6
+entity ":アプリの状態" as L7
+control ":音量管理" as L8
+control ":履歴管理" as L9
+control ":画面切り替え" as L10
+boundary ":カスタムモード画面" as L11
+
+note over L11 : シンプルモードで保存した曲は\nシンプルモード画面（生成後）を開く
+note over L2 : 曲名のダブルクリックも同じ流れ
+
+L1 -> L2 : 曲の編集ボタンを押下する() : void
+activate L2
+L2 -> L3 : 選んだ曲を今の曲にする() : void
+activate L3
+alt 開く曲がすでに今の曲
+  note over L3 : 読み込み直さない
+else ほかの曲
+  opt 今の曲がリストに保存されていない
+    L3 -> L1 : 失われてよいか確認する() : void
+    activate L1
+    deactivate L1
+  end
+  L3 -> L4 : 再生を止める() : void
+  activate L4
+  deactivate L4
+  L3 -> L5 : 保存した曲を読み込む() : void
+  activate L5
+  L5 -> L6 : 曲の内容を取得する() : void
+  activate L6
+  deactivate L6
+  L5 -> L7 : 曲の内容を反映する() : void
+  activate L7
+  deactivate L7
+  L5 -> L8 : 音量を反映する() : void
+  activate L8
+  deactivate L8
+  L5 -> L9 : 履歴を捨てる() : void
+  activate L9
+  deactivate L9
+  deactivate L5
+end
+L3 -> L10 : 保存したモードの画面にする() : void
+activate L10
+L10 -> L11 : 設定タブを表示する() : void
+activate L11
+deactivate L11
+deactivate L10
+deactivate L3
+deactivate L2
+
+@enduml

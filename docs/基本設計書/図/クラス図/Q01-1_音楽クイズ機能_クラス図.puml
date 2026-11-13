@@ -1,0 +1,46 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "音楽クイズ画面" as B1 <<boundary>> {
+  {method} <U+002B> カテゴリ・出題モードを押下する() : void
+  {method} <U+002B> 音の再生ボタンを押下する() : void
+  {method} <U+002B> 選択肢・鍵盤で回答する() : void
+  {method} <U+002B> 次の問題ボタンを押下する() : void
+  {method} <U+002B> 問題を表示する() : void
+  {method} <U+002B> 正誤・解説・成績を表示する() : void
+}
+class "クイズ出題" as C1 <<control>> {
+  {method} <U+002B> 出題モードを選ぶ() : void
+  {method} <U+002B> 次の問題を出す() : void
+}
+class "クイズの音" as C2 <<control>> {
+  {method} <U+002B> 問題の音を鳴らす() : void
+  {method} <U+002B> 前の音を止める() : void
+}
+class "採点" as C3 <<control>> {
+  {field} <U+002D> 正解数・連続正解
+  {method} <U+002B> 採点する() : void
+  {method} <U+002D> 正解数・連続正解を数える() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 出題モード
+  {field} <U+002B> 音名の表記
+  {method} <U+002B> 出題モードを更新する() : void
+}
+class "クイズ問題マスタ" as E2 <<entity>> {
+  {field} <U+002B> カテゴリ（4）
+  {field} <U+002B> 出題モード（19）と出題設定
+  {method} <U+002B> 問題を作る() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> E2
+C1 --> C2
+C1 --> B1
+B1 --> C2
+B1 --> C3
+C3 --> B1
+
+@enduml

@@ -1,0 +1,62 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-2_新規作成機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":新規作成" as L3
+control ":再生" as L4
+control ":曲の管理" as L5
+entity ":アプリの状態" as L6
+control ":パターン選出" as L7
+entity ":シンプルモード表マスタ" as L8
+entity ":テンポマスタ" as L9
+control ":音量管理" as L10
+control ":履歴管理" as L11
+
+note over L2 : シンプルモード画面も同じ流れ（生成前の設定画面に戻る）
+
+L1 -> L2 : 新規作成ボタンを押下する() : void
+activate L2
+L2 -> L3 : 新しい曲を作る() : void
+activate L3
+L3 -> L1 : 設定をリセットしてよいか確認する() : void
+activate L1
+deactivate L1
+alt OK
+  L3 -> L4 : 再生を止める() : void
+  activate L4
+  deactivate L4
+  L3 -> L5 : 曲の内容を初期状態に戻す() : void
+  activate L5
+  L5 -> L6 : 曲の内容を初期値にし、未保存の曲にする() : void
+  activate L6
+  deactivate L6
+  L5 -> L7 : パターンとテンポを選ぶ() : void
+  activate L7
+  L7 -> L8 : 候補を取得する() : void
+  activate L8
+  deactivate L8
+  L7 -> L9 : BPMを取得する() : void
+  activate L9
+  deactivate L9
+  deactivate L7
+  L5 -> L10 : 音量を反映する() : void
+  activate L10
+  deactivate L10
+  L5 -> L11 : 履歴を捨てる() : void
+  activate L11
+  deactivate L11
+  deactivate L5
+  L3 -> L2 : 設定タブを表示する() : void
+  activate L2
+  deactivate L2
+else 取り消し
+  L3 -> L3 : 何もしない() : void
+  activate L3
+  deactivate L3
+end
+deactivate L3
+deactivate L2
+
+@enduml
