@@ -5,7 +5,7 @@ import { getState, ArrangeBlock } from "./AppState";
 import { createDrumKit, DrumKit } from "./SynthFactory";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementBlockAt, findBlock, getArrangement, isArrangementBypassed, positionAt } from "./LoopArranger";
-import { endingBar, isFillBar } from "./SongForm";
+import { endingBar, fillKind, FillKind, isFillBar } from "./SongForm";
 import { sidechainHit } from "./Groove";
 
 const DRUM_PATTERNS = drumDB as unknown as DrumPattern[];
@@ -30,25 +30,81 @@ export function blockDrumPattern(block?: ArrangeBlock | null): DrumPattern | nul
 
 // ===== フィル・エンディング =====
 
-// ジャンルごとのフィル（SongForm.isFillBar の小節で鳴らす）。
-// from: 小節の何ステップ目から（16分音符・0 始まり）。tracks: from からの 16 ステップ表記（x = 鳴らす）。
+// ジャンルごとのフィル（SongForm.fillKind の小節で鳴らす）。大きさは3段階（小・中・大）。
+// from: 小節の何ステップ目から（16分音符・0 始まり）。tracks: from からの 16 ステップ表記（x = 鳴らす。長さは 16 - from）。
 // keep: フィルの間も元のパターンのまま鳴らすトラック（それ以外は止める）。強さは from から小節の終わりへ向けて強くする
-interface FillDef {
+export interface FillDef {
   from:   number;
   tracks: Record<string, string>;
   keep:   string[];
 }
 
-const FILLS: Record<string, FillDef> = {
-  "EDM":         { from: 8,  tracks: { snare: "xxxxxxxx", kick: "x...x..." }, keep: [] },  // 2拍のスネアロール
-  "トランス":     { from: 8,  tracks: { snare: "xxxxxxxx", kick: "x...x..." }, keep: [] },
-  "8bit":        { from: 8,  tracks: { snare: "x.xxx.xx", kick: "x.x....." }, keep: [] },
-  "ゲームBGM":   { from: 8,  tracks: { snare: "x.x.xxxx", kick: "x...x..." }, keep: ["hihat_closed"] },
-  "テクノ":       { from: 12, tracks: { clap: "x.xx", kick: "x..." },           keep: ["hihat_closed", "hihat_open"] },
-  "ハウス":       { from: 12, tracks: { snare: "x.xx", clap: "x...", kick: "x..." }, keep: ["hihat_closed", "hihat_open"] },
-  "ローファイ":   { from: 12, tracks: { snare: "x.xx", kick: "..x." },          keep: ["hihat_closed"] },
-  "アンビエント": { from: 12, tracks: { rim: "x.x.", hihat_open: "..x." },     keep: [] },
+export type FillSize = "small" | "normal" | "big";
+export const FILL_SIZES: readonly FillSize[] = ["small", "normal", "big"];
+
+const HATS_KEEP = ["hihat_closed", "hihat_open"];
+
+export const FILLS: Record<string, Record<FillSize, FillDef>> = {
+  "EDM": {
+    small:  { from: 12, tracks: { snare: "xxxx", kick: "x..." }, keep: ["hihat_closed"] },
+    normal: { from: 8,  tracks: { snare: "xxxxxxxx", kick: "x...x..." }, keep: [] },  // 2拍のスネアロール
+    big:    { from: 0,  tracks: { snare: "x...x...x.x.xxxx", kick: "x...x...x...x..." }, keep: [] },  // 4分→8分→16分と細かくなるビルド
+  },
+  "トランス": {
+    small:  { from: 12, tracks: { snare: "xxxx", kick: "x..." }, keep: ["hihat_closed"] },
+    normal: { from: 8,  tracks: { snare: "xxxxxxxx", kick: "x...x..." }, keep: [] },
+    big:    { from: 0,  tracks: { snare: "x.x.x.x.xxxxxxxx", kick: "x...x...x...x..." }, keep: [] },  // 8分→16分のロール
+  },
+  "8bit": {
+    small:  { from: 12, tracks: { snare: "xxxx", kick: "x..." }, keep: ["hihat_closed"] },
+    normal: { from: 8,  tracks: { snare: "x.xxx.xx", kick: "x.x....." }, keep: [] },
+    big:    { from: 4,  tracks: { snare: "x.x.xxx.xxxx", kick: "x...x.x.x..." }, keep: [] },
+  },
+  "ゲームBGM": {
+    small:  { from: 12, tracks: { snare: "x.xx", kick: "x..." }, keep: ["hihat_closed"] },
+    normal: { from: 8,  tracks: { snare: "x.x.xxxx", kick: "x...x..." }, keep: ["hihat_closed"] },
+    big:    { from: 4,  tracks: { snare: "x.x.x.x.xxxx", kick: "x...x...x..." }, keep: [] },
+  },
+  "テクノ": {
+    small:  { from: 14, tracks: { clap: "xx", kick: "x." }, keep: HATS_KEEP },
+    normal: { from: 12, tracks: { clap: "x.xx", kick: "x..." }, keep: HATS_KEEP },
+    big:    { from: 8,  tracks: { clap: "x.x.x.xx", kick: "x...x..." }, keep: HATS_KEEP },
+  },
+  "ハウス": {
+    small:  { from: 14, tracks: { snare: "xx", kick: "x." }, keep: HATS_KEEP },
+    normal: { from: 12, tracks: { snare: "x.xx", clap: "x...", kick: "x..." }, keep: HATS_KEEP },
+    big:    { from: 8,  tracks: { snare: "x.x.xxxx", clap: "x...x...", kick: "x...x..." }, keep: HATS_KEEP },
+  },
+  "ローファイ": {
+    small:  { from: 12, tracks: { snare: "x..x", kick: "..x." }, keep: ["hihat_closed"] },
+    normal: { from: 12, tracks: { snare: "x.xx", kick: "..x." }, keep: ["hihat_closed"] },
+    big:    { from: 8,  tracks: { snare: "x..xx.xx", kick: "..x...x." }, keep: ["hihat_closed"] },
+  },
+  "アンビエント": {
+    small:  { from: 12, tracks: { rim: "..x." }, keep: ["kick", "hihat_closed"] },
+    normal: { from: 12, tracks: { rim: "x.x.", hihat_open: "..x." }, keep: [] },
+    big:    { from: 8,  tracks: { rim: "x...x.x.", hihat_open: "......x.", kick: "x......." }, keep: [] },
+  },
 };
+
+// フィルの理由ごとの大きさ（0 = 小・1 = 中・2 = 大）。次がサビ・エンディングは大きく、同じセクションの中の区切りは小さく
+const KIND_SIZE: Record<FillKind, number> = { ending: 2, chorus: 2, section: 1, change: 1, regular: 0 };
+// 雰囲気で大きさをずらす（ないものは 0）
+const MOOD_SIZE: Record<string, number> = { "激しい": 1, "落ち着いた": -1 };
+
+// フィルの理由と雰囲気から大きさを決める
+export function fillSize(kind: FillKind, mood: string): FillSize {
+  const i = KIND_SIZE[kind] + (MOOD_SIZE[mood] ?? 0);
+  return FILL_SIZES[Math.min(2, Math.max(0, i))];
+}
+
+// 曲の小節 bar で鳴らすフィル（フィルの小節でなければ null）
+export function fillAt(bar: number): FillDef | null {
+  const kind = fillKind(bar);
+  if (!kind) return null;
+  const { genre, mood } = getState();
+  return (FILLS[genre] ?? FILLS["ローファイ"])[fillSize(kind, mood)];
+}
 
 // エンディングの小節の頭で鳴らす音（このあとは鳴らさない）
 const ENDING_HITS: Record<string, number> = { kick: 1, snare: 0.85, hihat_open: 1 };
@@ -70,8 +126,8 @@ export function drumStepHits(pattern: DrumPattern, bar: number, step: number): D
     .filter(([, track]) => track.pattern[i])
     .map(([name, track]) => ({ name, velocity: track.velocity?.[i] ?? 1 }));
 
-  const fill = FILLS[getState().genre] ?? FILLS["ローファイ"];
-  if (step < fill.from || !isFillBar(bar)) return hits;
+  const fill = fillAt(bar);
+  if (!fill || step < fill.from) return hits;
 
   // フィルの間：keep 以外の元の音を止め、フィルの音を鳴らす（小節の終わりへ向けて強くする）
   const pos      = step - fill.from;

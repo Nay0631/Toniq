@@ -1,133 +1,37 @@
-import { getState, setState, ChordRhythm, MelodyInstrument, FxType } from "../engine/AppState";
-import { fxLabel } from "../engine/FxPlayer";
-import { resolveTempoPreset, chorusCandidates, pickChorus } from "../engine/SimpleModeResolver";
-import { chorusFits, chorusProgression, generateChorusMelody, generateSongMelodies } from "../engine/SongForm";
-import { setLayerEnabled, LayerName } from "../engine/LayerManager";
-import { signatureLabel } from "../engine/SignaturePlayer";
-import { percLabel } from "../engine/PercPlayer";
-import { bassSubStandard } from "../engine/BassPlayer";
+import { getState, setState, ChordRhythm, MelodyInstrument, FxType, ModulationScope, SwingUnit } from "../engine/AppState";
+import { applySwing } from "../engine/Groove";
+import { resolveTempoPreset } from "../engine/SimpleModeResolver";
+import { setLayerEnabled } from "../engine/LayerManager";
 import { tap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
-import {
-  isScalePreviewOn, onScalePreviewChange, playScalePreview, scalePreviewNotes, scalePreviewStep, stopScalePreview,
-} from "../engine/ScalePreview";
-import { applySwing, swingAmount, sidechainAmount } from "../engine/Groove";
+import { isScalePreviewOn, onScalePreviewChange, playScalePreview, stopScalePreview } from "../engine/ScalePreview";
 import * as Playback from "../engine/Playback";
-import chordDB from "../data/chord_progressions.json";
-import drumDB  from "../data/drum_patterns.json";
-import { ChordProgression, DrumPattern } from "../data/types";
-import { onRender } from "./Router";
-import { SCALE_LABELS, chordNames, displayNote, toDoremi } from "./format";
-import { initArranger, renderArranger, startArrangerPlayhead } from "./ArrangerTab";
-import { initMixer, renderMixer } from "./MixerPanel";
+import { onRender, render as renderAll, showTab } from "./Router";
+import { SCALE_LABELS } from "./format";
+import { initArranger, startArrangerPlayhead } from "./ArrangerTab";
+import { initMixer } from "./MixerPanel";
 import { startPianoRollPlayhead } from "./PianoRollTab";
-import { attachKnob, attachStepper, syncControls } from "./Controls";
+import { attachKnob, attachStepper } from "./Controls";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import type { AudioFormat } from "../engine/Playback";
 import { initGrowPanel } from "./GrowPanel";
+import { initCustomMore, EXTRA_PARTS } from "./CustomMore";
+import { setTestFeature, type TestFeature } from "./Preferences";
+import { setGrowSound } from "../engine/Grow";
 import {
-  CHORD_PRESET_CHOICES, growPresetIds, growPresetNames, isGrowLoaded, setGrowSound, standardGrowPreset,
-} from "../engine/Grow";
+  KEYS, SCALES, DRUM_CATEGORIES, chords, drums, makeMelody, hasAutoMelody, setChordPattern, setChorusPattern,
+  GROOVE, setGroove, playFromBar, setBpm, chordCandidates, drumCandidates,
+} from "./CustomState";
+import { render, notifyChordChange } from "./CustomRender";
 
-// コードの音色の選択肢の表示名（grow の wasm を読み込むまでの仮の名前。読み込んだらコアのプリセット名を使う）
-const CHORD_PRESET_LABELS: Record<string, string> = {
-  soft_pad: "ソフトパッド", wide_pad: "ワイドパッド", epiano: "エレピ", strings: "ストリングス",
-  organ: "オルガン", square: "スクエア（8bit）", supersaw: "スーパーソウ",
-};
-
-// コードの音色のセレクト（grow のプリセット。空 = ジャンルに合わせる）。
-// grow のパネルで選択肢にないプリセットを選んでいたら、その音も選択肢に足す
-function renderChordInstrument(): void {
-  const s = getState();
-  const select = $select("c-chord-instrument");
-  const ids = growPresetIds(), names = growPresetNames();
-  const label = (id: string) => (isGrowLoaded() ? names[ids.indexOf(id)] : undefined) ?? CHORD_PRESET_LABELS[id] ?? id;
-  const standard = isGrowLoaded() ? label(ids[standardGrowPreset("chord")]) : "";
-  const choices = [...CHORD_PRESET_CHOICES];
-  if (s.growChordPreset && !choices.includes(s.growChordPreset)) choices.push(s.growChordPreset);
-  const html = `<option value="" data-term="sound.auto">ジャンルに合わせる${standard ? `（${standard}）` : ""}</option>`
-    + choices.map(id => `<option value="${id}" data-term="sound.${id}">${label(id)}</option>`).join("");
-  if (select.innerHTML !== html) select.innerHTML = html;
-  select.value = s.growChordPreset ?? "";
-}
-
-const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
-const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント"];
-
-const chords = chordDB as unknown as ChordProgression[];
-const drums  = drumDB  as unknown as DrumPattern[];
-
-// DB にあるスケール（スケール選択肢）
-const SCALES = [...new Set(chords.map(c => c.base_scale))];
-
-// ドラムのカテゴリ：アプリのジャンルを先に、それ以外の DB のタグを後ろに並べる
-const DRUM_CATEGORIES = [
-  ...APP_GENRES.filter(g => drums.some(d => d.genre.includes(g))),
-  ...[...new Set(drums.flatMap(d => d.genre))].filter(g => !APP_GENRES.includes(g)),
-];
+// カスタムモード画面のイベントの登録と再生の操作。表示は CustomRender.ts、状態の更新は CustomState.ts
 
 const $ = (id: string) => document.getElementById(id);
 const $select = (id: string) => document.getElementById(id) as HTMLSelectElement;
 
-// ===== 状態の更新 =====
-
-// Aメロとサビのメロディを作る（サビは高めの音域）
-function makeMelody(): void {
-  const s = getState();
-  if (!s.chordPattern) return;
-  setState(s.melodyMethod === "auto" ? generateSongMelodies() : { melodyNotes: [], chorusMelodyNotes: [] });
-}
-
-// 自動生成したメロディがあるか（空のときはまだ作っていないので、設定を変えても勝手に作らない）
-function hasAutoMelody(): boolean {
-  const s = getState();
-  return s.melodyMethod === "auto" && s.melodyNotes.length > 0;
-}
-
-// コード進行を変えたら、スケールや長さが変わることがあるので自動生成のメロディは作り直す。
-// サビの進行が新しい進行と長さ・スケールが合わなくなったら、合うものを選び直す（「なし」にしていればそのまま）
-function setChordPattern(next: ChordProgression): void {
-  const s = getState();
-  if (next.id === s.chordPattern?.id) return;
-  const regenerate = hasAutoMelody();
-  const chorusPattern = s.chorusPattern === null || chorusFits(s.chorusPattern, next)
-    ? s.chorusPattern
-    : pickChorus(next, s.genre, s.mood);
-  setState({ chordPattern: next, chorusPattern });
-  if (regenerate) {
-    setState({ melodyVersion: s.melodyVersion + 1 });
-    makeMelody();
-  }
-}
-
-// サビの進行を変える。メロディがあればサビのメロディだけ作り直す（Aメロのメロディはそのまま）
-function setChorusPattern(next: ChordProgression | null): void {
-  setState({ chorusPattern: next });
-  if (getState().melodyNotes.length > 0) setState({ chorusMelodyNotes: generateChorusMelody() });
-}
-
-// グルーヴのノブ（スウィング・サイドチェイン）
-const GROOVE = [
-  { key: "swing",     id: "c-swing",     label: "スウィング",     amount: swingAmount },
-  { key: "sidechain", id: "c-sidechain", label: "サイドチェイン", amount: sidechainAmount },
-] as const;
-
-// グルーヴの量を変える。サイドチェインはキックのたびに AppState を読むので、スウィングだけ Transport に当て直す
-function setGroove(key: "swing" | "sidechain", value: number | null): void {
-  setState(key === "swing" ? { swing: value } : { sidechain: value });
-  if (key === "swing") applySwing();
-}
-
 // 再生中に曲の内容が変わったら先頭から再生し直す
 export async function restartIfPlaying(): Promise<void> {
   if (Playback.isPlaying()) await startPlayback();
-}
-
-// アレンジャータブでは再生開始位置から、それ以外のタブでは先頭から再生する
-function playFromBar(): number {
-  const s = getState();
-  return s.tab === "arranger" ? Math.min(s.startBar, s.bars - 1) : 0;
 }
 
 async function startPlayback(): Promise<void> {
@@ -156,175 +60,6 @@ function modalOpen(): boolean {
     .some(el => el.getClientRects().length > 0);
 }
 
-function setBpm(bpm: number): void {
-  if (!Number.isFinite(bpm)) return;
-  const clamped = Math.max(20, Math.min(240, Math.round(bpm)));
-  setState({ bpm: clamped, tempoPreset: "custom" });
-  if (Playback.isPlaying()) Playback.applyBpm();
-}
-
-// 選択中のカテゴリ（雰囲気）とスケールロックで絞ったコード進行
-function chordCandidates(): ChordProgression[] {
-  const s = getState();
-  const scale = s.chordPattern?.base_scale;
-  return chords.filter(c =>
-    c.mood.includes(s.mood) && (!s.scaleLock || c.base_scale === scale));
-}
-
-function drumCandidates(): DrumPattern[] {
-  return drums.filter(d => d.genre.includes(getState().drumCategory));
-}
-
-// ===== 表示 =====
-
-function chordLabel(c: ChordProgression, key: string): string {
-  try {
-    return `${chordNames(c, key).replace(/ - /g, "-")}（${c.name}）`;
-  } catch (e) {
-    // DB に未定義のディグリーがあっても一覧全体は表示できるようにする
-    console.warn(`コード名の解決に失敗: ${c.id}`, e);
-    return c.name;
-  }
-}
-
-function drumLabel(d: DrumPattern): string {
-  return `#${d.id.replace(/\D/g, "")} ${d.name}`;
-}
-
-// select の選択肢を作り直す。選択中のものが候補になければ先頭に足して表示する
-function fillSelect<T extends { id: string }>(
-  select: HTMLSelectElement, items: T[], current: T | null, label: (item: T) => string
-): void {
-  const list = current && !items.some(i => i.id === current.id) ? [current, ...items] : items;
-  select.innerHTML = "";
-  for (const item of list) {
-    const opt = document.createElement("option");
-    opt.value = item.id;
-    opt.textContent = label(item);
-    select.appendChild(opt);
-  }
-  if (current) select.value = current.id;
-}
-
-function render(): void {
-  const s = getState();
-  if (s.screen !== "custom") return;
-
-  const playing = Playback.isPlaying();
-  const scale   = s.chordPattern?.base_scale ?? "";
-
-  // 情報バー
-  $("c-info-bpm")!.textContent  = `${s.bpm}`;
-  $("c-info-key")!.textContent  = `${s.key}${SCALE_LABELS[scale] ?? ""}`;
-  $("c-info-bars")!.textContent = `${s.bars}`;
-  $("c-info-loop")!.hidden = !playing;
-  const fromBar = playFromBar();
-  $("c-play")!.textContent = fromBar > 0
-    ? `${playing ? "↺" : "▷"} ${fromBar + 1}小節目から`
-    : playing ? "↺ 最初から" : "▷ 再生";
-
-  // 基本設定
-  const bpmRange = $("c-bpm-range") as HTMLInputElement;
-  if (document.activeElement !== bpmRange) bpmRange.value = String(s.bpm);
-  $("c-bpm-value")!.textContent = `${s.bpm}`;
-
-  // グルーヴ（null = ジャンルの標準の量を表示し、「標準」ボタンを押した状態にする）
-  for (const g of GROOVE) {
-    const input = $(g.id) as HTMLInputElement;
-    const value = g.amount();
-    if (document.activeElement !== input) input.value = String(value);
-    $(`${g.id}-value`)!.textContent = `${value}`;
-    $(`${g.id}-auto`)!.classList.toggle("is-active", s[g.key] === null);
-  }
-  syncControls();
-  $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
-  const metronomeOn = isMetronomeOn();
-  $("c-metronome")!.textContent = metronomeOn ? "■ 停止" : "♪ 試聴";
-  $("c-metronome")!.classList.toggle("is-active", metronomeOn);
-
-  // 小節数：選択肢にない値（シンプルモードから引き継いだ値など）も表示できるようにする
-  const barsSelect = $select("c-bars");
-  const barOptions = [...new Set([...BAR_OPTIONS, s.bars])].sort((a, b) => a - b);
-  if (barsSelect.options.length !== barOptions.length) {
-    barsSelect.innerHTML = barOptions.map(b => `<option value="${b}">${b}小節</option>`).join("");
-  }
-  barsSelect.value = String(s.bars);
-
-  $select("c-genre").value      = s.genre;
-  $select("c-instrument").value = s.melodyInstrument;
-
-  // スケール・キー
-  // ルート音は単音なので、ドレミ表記なら読みを添える（値・キー名は CDE 表記のまま）
-  Array.from($select("c-key").options).forEach(o => {
-    o.textContent = s.noteNames === "doremi" ? `${o.value}（${toDoremi(o.value)}）` : o.value;
-  });
-  $select("c-key").value   = s.key;
-  $select("c-scale").value = scale;
-  const lock = $("c-scale-lock")!;
-  lock.classList.toggle("is-on", s.scaleLock);
-  lock.setAttribute("aria-checked", String(s.scaleLock));
-  $("c-scale-lock-label")!.textContent = s.scaleLock ? "有効" : "無効";
-
-  // スケールの音（試聴中は鳴っている音を光らせる。最後の和音では 1・3・5番目の音を光らせる）
-  const notes = scalePreviewNotes(s.key, scale);
-  const step  = scalePreviewStep();
-  const chordStep = step === notes.length;
-  $("c-scale-notes")!.innerHTML = notes.map((n, i) => {
-    const lit = chordStep ? (i === 0 || i === 2 || i === 4 || i === 7) : i === step;
-    return `<span class="scale-note${i === 0 || i === 7 ? " is-root" : ""}${lit ? " is-lit" : ""}">${displayNote(n.name.replace(/-?\d+$/, ""))}</span>`;
-  }).join("");
-  const scaleOn = isScalePreviewOn();
-  $("c-scale-preview")!.textContent = scaleOn ? "■ 停止" : "▷ 試聴";
-  $("c-scale-preview")!.classList.toggle("is-active", scaleOn);
-
-  // コード進行
-  $select("c-mood").value = s.mood;
-  fillSelect($select("c-chord"), chordCandidates(), s.chordPattern, c => chordLabel(c, s.key));
-  renderChorusSelect();
-  $select("c-rhythm").value = s.chordRhythm;
-  renderChordInstrument();
-
-  // ドラム
-  $select("c-drum-category").value = s.drumCategory;
-
-  // FX / SE（「ジャンルの標準」には今のジャンルで鳴る種類を添える）
-  const fxSelect = $select("c-fx-type");
-  fxSelect.options[0].textContent = s.fxType === "auto" ? `ジャンルの標準（${fxLabel()}）` : "ジャンルの標準";
-  fxSelect.value = s.fxType;
-  fillSelect($select("c-drum"), drumCandidates(), s.drumPattern, drumLabel);
-
-  // 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション / サブベース）
-  const sigLabel = document.getElementById("c-signature-label");
-  if (sigLabel) sigLabel.textContent = `（${signatureLabel(s.genre)}）`;
-  const percNote = document.getElementById("c-perc-label");
-  if (percNote) percNote.textContent = `（${percLabel(s.genre)}）`;
-  const subSelect = $select("c-bass-sub");
-  subSelect.options[0].textContent = `ジャンルに合わせる（${bassSubStandard(s.genre) ? "ON" : "OFF"}）`;
-  subSelect.value = s.bassSub === null ? "auto" : s.bassSub ? "on" : "off";
-  document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el => {
-    const on = s.parts[el.dataset.partToggle as LayerName];
-    el.classList.toggle("is-on", on);
-    el.textContent = on ? "ON" : "OFF";
-    el.setAttribute("aria-pressed", String(on));
-  });
-
-  renderMixer();
-
-  // アレンジャー
-  renderArranger();
-}
-
-// サビの進行：「なし」（Aメロと同じ進行）と、今の進行と同じ長さ・スケールの進行
-function renderChorusSelect(): void {
-  const s = getState();
-  const select = $select("c-chorus");
-  const candidates = s.chordPattern ? chorusCandidates(s.chordPattern, s.genre, s.mood) : [];
-  select.innerHTML = `<option value="">なし（Aメロと同じ進行）</option>` + candidates
-    .map(c => `<option value="${c.id}">${chordLabel(c, s.key)}</option>`).join("");
-  select.value = chorusProgression()?.id ?? "";
-  ($("c-chorus-reroll") as HTMLButtonElement).disabled = candidates.length === 0;
-}
-
 // キー・スケールの試聴中なら、今のキー・スケールで鳴らし直す
 function replayScalePreview(): void {
   if (!isScalePreviewOn()) return;
@@ -347,6 +82,7 @@ export function initCustomScreen(): void {
   // コード進行・ドラムパターンは ◀ ▶ で順に聴き比べられるようにする
   attachStepper($select("c-chord"), "コード進行");
   attachStepper($select("c-drum"),  "ドラムパターン");
+  attachStepper($select("c-chorus"), "サビの進行");
 
   // 情報バー
   $("c-play")?.addEventListener("click", startPlayback);
@@ -376,7 +112,7 @@ export function initCustomScreen(): void {
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
   attachKnob(bpmRange, "BPM", "lg");
   bpmRange.addEventListener("input", () => {
-    setBpm(parseInt(bpmRange.value));
+    setBpm(parseInt(bpmRange.value, 10));
     render();
   });
 
@@ -385,7 +121,7 @@ export function initCustomScreen(): void {
     const input = $(g.id) as HTMLInputElement;
     attachKnob(input, g.label);
     input.addEventListener("input", () => {
-      setGroove(g.key, parseInt(input.value));
+      setGroove(g.key, parseInt(input.value, 10));
       render();
     });
     $(`${g.id}-auto`)?.addEventListener("click", () => {
@@ -393,6 +129,13 @@ export function initCustomScreen(): void {
       render();
     });
   }
+
+  // 跳ねる単位（16分／8分のシャッフル）。Transport に当て直すだけなので再生中もすぐ反映される
+  $select("c-swing-unit").addEventListener("change", e => {
+    setState({ swingUnit: (e.target as HTMLSelectElement).value as SwingUnit });
+    applySwing();
+    render();
+  });
 
   // 今の BPM の速さをクリック音で確かめる（鳴らしたままノブを回すとすぐ反映される）
   $("c-metronome")?.addEventListener("click", () => {
@@ -411,7 +154,7 @@ export function initCustomScreen(): void {
   });
 
   $select("c-bars").addEventListener("change", async e => {
-    setState({ bars: parseInt((e.target as HTMLSelectElement).value) });
+    setState({ bars: parseInt((e.target as HTMLSelectElement).value, 10) });
     render();
     await restartIfPlaying();
   });
@@ -432,6 +175,12 @@ export function initCustomScreen(): void {
   // grow（テスト中）の音作りのパネル。値はその場で鳴っているメロディに当たるので再生し直さない
   initGrowPanel();
 
+  // 「もっと調整」の欄（grow の欄は initGrowPanel が作るのでそのあと）。標準に戻したら描画し、要るなら再生し直す
+  initCustomMore(async restart => {
+    renderAll();
+    if (restart) await restartIfPlaying();
+  });
+
   // インスト：メロディの Synth は再生開始時に作り直されるので、再生中なら再生し直す
   $select("c-instrument").addEventListener("change", async e => {
     setState({ melodyInstrument: (e.target as HTMLSelectElement).value as MelodyInstrument });
@@ -449,7 +198,8 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  // スケール：そのスケールのコード進行に切り替える（同じカテゴリのものを優先）
+  // スケール：そのスケールのコード進行に切り替える（同じ雰囲気のものを優先）。
+  // スケールはコード進行から決まるので、進行が変わったことを知らせる
   $select("c-scale").addEventListener("change", async e => {
     const scale = (e.target as HTMLSelectElement).value;
     const s = getState();
@@ -458,6 +208,7 @@ export function initCustomScreen(): void {
     if (next) setChordPattern(next);
     replayScalePreview();
     render();
+    if (next && next.id !== s.chordPattern?.id) notifyChordChange(next);
     await restartIfPlaying();
   });
 
@@ -507,15 +258,6 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  $("c-chorus-reroll")?.addEventListener("click", async () => {
-    const s = getState();
-    if (!s.chordPattern) return;
-    const next = pickChorus(s.chordPattern, s.genre, s.mood, chorusProgression()?.id);
-    if (next) setChorusPattern(next);
-    render();
-    await restartIfPlaying();
-  });
-
   $("c-chord-preview")?.addEventListener("click", async () => {
     await Playback.preview("chord", render);
     render();
@@ -523,6 +265,18 @@ export function initCustomScreen(): void {
 
   $select("c-rhythm").addEventListener("change", async e => {
     setState({ chordRhythm: (e.target as HTMLSelectElement).value as ChordRhythm });
+    render();
+    await restartIfPlaying();
+  });
+
+  // 転調：曲全体の並びを読み込み時に作るので、再生中なら再生し直す
+  $select("c-modulation").addEventListener("change", async e => {
+    setState({ modulation: Number((e.target as HTMLSelectElement).value) || 0 });
+    render();
+    await restartIfPlaying();
+  });
+  $select("c-modulation-scope").addEventListener("change", async e => {
+    setState({ modulationScope: (e.target as HTMLSelectElement).value as ModulationScope });
     render();
     await restartIfPlaying();
   });
@@ -580,13 +334,27 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  // ===== 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション） =====
-  document.querySelectorAll<HTMLElement>("[data-part-toggle]").forEach(el =>
-    el.addEventListener("click", () => {
-      const part = el.dataset.partToggle as LayerName;
-      setLayerEnabled(part, !getState().parts[part]);
+  // ===== ドラムの演奏（テスト中の機能。端末ごとに保存） =====
+  // フィル・揺らぎはドラムが1音ごとに AppState を読むので再生中もすぐ反映される。
+  // エンディングは読み込み時に曲の並びを作るので、再生中なら再生し直す
+  document.querySelectorAll<HTMLElement>("[data-test-toggle]").forEach(el =>
+    el.addEventListener("click", async () => {
+      const feature = el.dataset.testToggle as TestFeature;
+      setTestFeature(feature, !getState()[feature]);
       render();
+      if (feature === "endingEnabled") await restartIfPlaying();
     }));
+
+  // ===== 追加パート（パッド / アルペジオ / シグネチャー / カウンターメロディ / パーカッション） =====
+  // すべて ON ならすべて止め、それ以外（一部・すべて OFF）ならすべて鳴らす
+  $("c-extra-parts")?.addEventListener("click", () => {
+    const parts = getState().parts;
+    const next = !EXTRA_PARTS.every(p => parts[p]);
+    for (const p of EXTRA_PARTS) if (parts[p] !== next) setLayerEnabled(p, next);
+    render();
+  });
+  // 1つずつの切り替えはアレンジャー（レーンの ON ボタン・ミキサー）で行う
+  $("c-extra-parts-open")?.addEventListener("click", () => showTab("arranger"));
 
   // ===== ミキサー（パート別音量。アレンジャータブ） =====
   initMixer(["c-arr-mixer"], render);

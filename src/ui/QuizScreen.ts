@@ -68,7 +68,7 @@ function finish(correct: boolean, correctText: string): void {
   }
   const feedback = $("quiz-feedback");
   feedback.textContent = correct ? "正解！" : `不正解。正解は ${correctText}`;
-  feedback.className = "quiz-feedback " + (correct ? "is-good" : "is-bad");
+  feedback.className = `quiz-feedback ${correct ? "is-good" : "is-bad"}`;
   $("quiz-explain").textContent = question?.explain ?? "";
   $("quiz-next").classList.add("is-shown");
   renderStats();
@@ -80,7 +80,7 @@ function finish(correct: boolean, correctText: string): void {
 // octaves オクターブ分の鍵盤を作る。onPress を渡すと押せる鍵盤になる
 function buildKeyboard(octaves: number, onPress?: (note: string, key: HTMLElement) => void): HTMLElement {
   const piano = document.createElement("div");
-  piano.className = "quiz-piano" + (onPress ? " is-input" : "");
+  piano.className = `quiz-piano${onPress ? " is-input" : ""}`;
   piano.style.width = `${octaves * 7 * WHITE_W}px`;
 
   const addKey = (semi: number, octave: number, left: number, color: "white" | "black") => {
@@ -167,7 +167,7 @@ function buildChoiceAnswer(area: HTMLElement, answer: Extract<QuizAnswer, { kind
   const grid = document.createElement("div");
   // 二択と長い選択肢は2列にする
   const wide = answer.choices.length <= 2 || answer.choices.some(c => c.length > 4);
-  grid.className = "quiz-choices" + (wide ? " is-wide" : "");
+  grid.className = `quiz-choices${wide ? " is-wide" : ""}`;
   answer.choices.forEach(value => {
     const btn = document.createElement("button");
     btn.className = "quiz-choice";
@@ -195,7 +195,7 @@ function renderQuestion(): void {
 
   $("quiz-label").textContent = q.label;
   const prompt = $("quiz-prompt");
-  prompt.className = "quiz-prompt" + (q.size ? ` is-${q.size}` : "");
+  prompt.className = `quiz-prompt${q.size ? ` is-${q.size}` : ""}`;
   prompt.innerHTML = q.prompt;
   $("quiz-sub").textContent = q.sub ?? "";
 
@@ -340,7 +340,7 @@ function render(): void {
   modeTabs.innerHTML = "";
   category.modes.forEach(m => {
     const btn = document.createElement("button");
-    btn.className = "quiz-mode" + (m === mode ? " is-active" : "");
+    btn.className = `quiz-mode${m === mode ? " is-active" : ""}`;
     btn.textContent = m.title;
     btn.addEventListener("click", () => selectMode(m.id));
     modeTabs.appendChild(btn);

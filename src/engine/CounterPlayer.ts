@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
-import { NOTE_INDEX, SCALE_TONES, resolveChord, scaleSemitones } from "../data/degree_resolver";
+import { NOTE_INDEX, SCALE_TONES, resolveChord, scaleSemitones, chordKey } from "../data/degree_resolver";
 import { MelodyNote, noteToMidi, midiToNote, timeToUnits, durationToUnits } from "./MelodyGenerator";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
@@ -41,19 +41,20 @@ function placedMelody(melody: MelodyNote[]): Placed[] {
     .sort((a, b) => a.start - b.start);
 }
 
-// 16分音符の位置ごとのコード（構成音のピッチクラスとセクション）
-interface ChordAt { tones: number[]; section: "A" | "B" }
+// 16分音符の位置ごとのコード（構成音のピッチクラス・セクション・転調の量）
+interface ChordAt { tones: number[]; section: "A" | "B"; shift: number }
 
 function chordTimeline(progression: ChordProgression, key: string): (unit: number) => ChordAt {
   const spans = progression.progression.map(c => ({
     start:   (c.bar - 1) * 16,
     end:     (c.bar - 1 + c.duration_bars) * 16,
-    tones:   resolveChord(c.degree, c.type, 0, key, progression.base_scale, 4).notes.map(n => noteToMidi(n) % 12),
+    tones:   resolveChord(c.degree, c.type, 0, chordKey(key, c), progression.base_scale, 4).notes.map(n => noteToMidi(n) % 12),
     section: c.section ?? "A",
+    shift:   c.keyShift ?? 0,
   }));
   return unit => {
     const found = spans.find(s => unit >= s.start && unit < s.end) ?? spans[spans.length - 1];
-    return { tones: found.tones, section: found.section };
+    return { tones: found.tones, section: found.section, shift: found.shift };
   };
 }
 
@@ -124,10 +125,13 @@ export function counterNotes(progression: ChordProgression, melody: MelodyNote[]
   const notes = placedMelody(melody);
   if (notes.length === 0 || progression.progression.length === 0) return [];
 
-  const root   = NOTE_INDEX[key] ?? 0;
-  const scale  = new Set(scaleSemitones(progression.base_scale).map(t => (root + t) % 12));
-  const core   = (SCALE_TONES[progression.base_scale] ?? SCALE_TONES.minor).core.map(t => (root + t) % 12);
-  const penta  = Array.from({ length: FILL_HIGH - FILL_LOW + 1 }, (_, i) => FILL_LOW + i).filter(m => core.includes(m % 12));
+  // スケールの音（ピッチクラス）と合いの手のペンタトニック。転調している所（shift）はずらしたキーで作る
+  const root     = NOTE_INDEX[key] ?? 0;
+  const scaleOf  = (shift: number) => new Set(scaleSemitones(progression.base_scale).map(t => (root + shift + t) % 12));
+  const pentaOf  = (shift: number) => {
+    const core = (SCALE_TONES[progression.base_scale] ?? SCALE_TONES.minor).core.map(t => (root + shift + t) % 12);
+    return Array.from({ length: FILL_HIGH - FILL_LOW + 1 }, (_, i) => FILL_LOW + i).filter(m => core.includes(m % 12));
+  };
   const chordAt = chordTimeline(progression, key);
   const total   = progression.length_bars * 16;
 
@@ -138,7 +142,7 @@ export function counterNotes(progression: ChordProgression, melody: MelodyNote[]
   notes.forEach((n, i) => {
     const chord = chordAt(n.start);
     if (chord.section === "B") {
-      const midi = harmonyNote(n.midi, chord.tones, scale, n.start % 8 === 0, prevHarmony);
+      const midi = harmonyNote(n.midi, chord.tones, scaleOf(chord.shift), n.start % 8 === 0, prevHarmony);
       prevHarmony = midi;
       if (midi !== null) out.push({ sixteenth: n.start, length: n.length, midi, velocity: n.start % 4 === 0 ? 0.82 : 0.74 });
       return;
@@ -154,7 +158,7 @@ export function counterNotes(progression: ChordProgression, melody: MelodyNote[]
     // 合いの手を入れる所もセクション A（次がサビの頭なら、サビに食い込まない）
     const from = n.start + 4;
     if (chordAt(Math.min(end - 1, total - 1)).section === "B") return;
-    const figure = fillFigure(from, end, chordAt, penta, n.midi, bar % 2 === 0);
+    const figure = fillFigure(from, end, chordAt, pentaOf(chord.shift), n.midi, bar % 2 === 0);
     if (figure.length === 0) return;
     filledBars.add(bar);
     out.push(...figure);

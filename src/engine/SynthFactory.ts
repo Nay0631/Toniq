@@ -88,7 +88,7 @@ const DRUM_KITS: Record<string, DrumKitParams> = {
 
 // 強弱を音量に変換する（弱い音が小さくなりすぎないよう曲線をつける）
 function velGain(velocity: number): number {
-  return Math.pow(Math.max(0, Math.min(1, velocity)), 1.5);
+  return Math.max(0, Math.min(1, velocity)) ** 1.5;
 }
 
 // 短いノイズのアタック（キックのクリック・スネアの胴鳴り以外の部分などに使う）

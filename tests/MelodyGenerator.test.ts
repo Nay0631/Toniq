@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
-  generateMelody, noteToMidi, timeToUnits, durationToUnits, unitsToDuration, unitsToTime, MelodyNote,
+  generateMelody, noteToMidi, timeToUnits, durationToUnits, unitsToDuration, unitsToTime, MelodyNote, JUMP_LIMIT,
 } from "../src/engine/MelodyGenerator";
 import { resolveChord, NOTE_INDEX, SCALE_TONES } from "../src/data/degree_resolver";
 import melodyParams from "../src/data/melody_params.json";
@@ -108,5 +108,46 @@ describe("generateMelody", () => {
       const first = sounding(withSeed(seed, () => generateMelody(prog, "C", "ゲームBGM", { section: "B", prevNote: 72 })))[0];
       expect(Math.abs(first.midi - 72)).toBeLessThanOrEqual(12);
     }
+  });
+});
+
+describe("跳躍（JUMP_LIMIT）", () => {
+  // 続けて鳴る音（間の休符が1拍未満）の跳躍のうち、JUMP_LIMIT を超えるものの数。ループの継ぎ目（最後 → 最初）も数える
+  function bigLeaps(notes: MelodyNote[], totalUnits: number): number {
+    const s = sounding(notes);
+    let count = 0;
+    for (let i = 1; i < s.length; i++) {
+      if (s[i].start - (s[i - 1].start + s[i - 1].units) >= 4) continue;
+      if (Math.abs(s[i].midi - s[i - 1].midi) > JUMP_LIMIT) count++;
+    }
+    const last = s[s.length - 1];
+    if (totalUnits - (last.start + last.units) + s[0].start < 4 && Math.abs(last.midi - s[0].midi) > JUMP_LIMIT) count++;
+    return count;
+  }
+
+  it.each(GENRES)("%s：Aメロ・サビとも、ループの継ぎ目を含めて大きな跳躍がほとんどない", genre => {
+    let melodies = 0, withLeap = 0;
+    for (const prog of chords.filter((_, i) => i % 5 === 0)) {
+      for (const section of ["A", "B"] as const) {
+        const notes = withSeed(melodies + 1, () => generateMelody(prog, "C", genre, { section }));
+        melodies++;
+        if (bigLeaps(notes, prog.length_bars * 16) > 0) withLeap++;
+      }
+    }
+    // 小節の一部をオクターブ動かして直すので、直しきれないのは 1 割未満
+    expect(withLeap / melodies, `${genre} ${withLeap}/${melodies}`).toBeLessThan(0.1);
+  });
+
+  it("nextNote（サビのあとの Aメロの最初の音）を渡すと、サビの最後の音がそこへ近づく", () => {
+    const prog = chordById("chord_001");
+    const distance = (nextNote?: number) => {
+      let sum = 0;
+      for (let seed = 1; seed <= 50; seed++) {
+        const s = sounding(withSeed(seed, () => generateMelody(prog, "A", "トランス", { section: "B", prevNote: 69, nextNote })));
+        sum += Math.abs(s[s.length - 1].midi - 64);
+      }
+      return sum / 50;
+    };
+    expect(distance(64)).toBeLessThan(distance(undefined) - 1);
   });
 });

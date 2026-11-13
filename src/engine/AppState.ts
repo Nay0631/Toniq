@@ -58,11 +58,35 @@ export interface ArrangeBlock {
   drum?:  string;  // ドラムのブロックだけ：このブロックで鳴らすパターンの ID（なし = 曲の設定 AppState.drumPattern）
 }
 
-// パートごとのブロックの並び（開始小節順・重なりなし）
+// パートごとのブロックの並び（開始小節順・重なりなし）。AppState には持たず、
+// 構成のプリセット（arrangePreset）と変えた所（arrangeEdits）から LoopArranger.getArrangement() が毎回組み立てる
 export type Arrangement = Record<LayerName, ArrangeBlock[]>;
 
 // 曲のセクション（A = Aメロ、B = サビ）。周回（コード進行1周）ごとに決める
 export type Section = "A" | "B";
+
+// スウィングでずらす単位（16n = 裏の16分音符、8n = 裏の8分音符。8n で量を上げると3連符のシャッフルになる）
+export type SwingUnit = "16n" | "8n";
+
+// 転調する範囲（last = 最後のサビから曲の終わりまで、chorus = サビだけ（Aメロで元のキーに戻る））
+export type ModulationScope = "last" | "chorus";
+
+// 構成のプリセット（LoopArranger.ts の ARRANGE_PRESETS。ジャンルの標準の構成 LOOP_SCHEDULE に変形を足したもの）
+// standard = 標準、quiet = 静かに始まる、drop = サビを強く、short = 短く繰り返す、buildup = だんだん盛り上がる
+export type ArrangePreset = "standard" | "quiet" | "drop" | "short" | "buildup";
+
+// アレンジの「変えた所」。セクション単位（何回目の Aメロ／サビか）で、パートを足す・抜く、ドラムのパターン・FX の種類を変える。
+// 標準（プリセット）を組み直してから当て直すので、ジャンル・小節数・進行の長さを変えても追従する
+export interface ArrangeEdit {
+  section: Section;    // どのセクションの
+  nth:     number;     // 何回目（0 始まり。同じ種類のセクションを先頭から数える）
+  part:    LayerName;
+  on?:     boolean;    // true = セクション全体で鳴らす（足す）、false = 鳴らさない（抜く）、なし = 標準のまま
+  bars?:   number[];   // セクションの一部だけで鳴らす：鳴らす小節（セクションの頭からの位置。0 始まり）。on より後に当てる。アレンジャーのドラッグ・長さ変更で作る
+  splits?: number[];   // ブロックの切れ目：前の小節から続いていても、この小節（セクションの頭からの位置）で別のブロックにする（アレンジャーで隣に置いたブロックを結合しない）
+  drum?:   string;     // ドラムだけ：このセクションで鳴らすパターンの ID
+  fx?:     FxType;     // FX だけ：このセクションで鳴らす種類
+}
 
 // アプリ全体の状態を一元管理する
 export interface AppState {
@@ -121,8 +145,11 @@ export interface AppState {
   chorusMelodyNotes: MelodyNote[];
   // 周回ごとのセクション（null = ジャンルの標準。LoopArranger の LOOP_SCHEDULE）
   sections:          Section[] | null;
+  // 転調：キーを上げる量（半音。0 = しない）と、上げる範囲（last = 最後のサビから曲の終わりまで、chorus = サビだけ（Aメロで戻る））
+  modulation:        number;
+  modulationScope:   ModulationScope;
 
-  // テスト中の機能の ON/OFF（アレンジャータブでまとめて切り替える。Preferences.ts が端末ごとに保存する。曲には保存しない）
+  // テスト中の機能の ON/OFF（カスタムモードの設定タブのドラムの「もっと調整」で切り替える。Preferences.ts が端末ごとに保存する。曲には保存しない）
   endingEnabled: boolean;  // 曲の最後の小節を主和音で終わらせる（エンディング）
   drumFill:      boolean;  // セクションの継ぎ目でドラムのフィルを入れる
   drumHumanize:  boolean;  // ドラムの強さ・タイミングを少し揺らし、ゴーストノートを入れる
@@ -138,6 +165,7 @@ export interface AppState {
   fxType:           FxType;  // FX / SE の種類
   // グルーヴ（0〜100。null = ジャンルの標準。mix_presets.json の swing / sidechain）
   swing:            number | null;  // 裏の16分音符を後ろへずらす量（跳ねたノリ）
+  swingUnit:        SwingUnit;      // ずらす単位（16n = 裏の16分音符、8n = 裏の8分音符（シャッフル））
   sidechain:        number | null;  // キックに合わせてベース・コードなどを沈める量（ポンピング）
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
@@ -156,8 +184,10 @@ export interface AppState {
   // ベースにサブベース（低いサイン）を重ねるか（null = ジャンルの標準。bass_params.json の sub）
   bassSub:          boolean | null;
 
-  // アレンジ（null = ジャンルの標準アレンジ。ジャンル・コード進行・小節数に合わせて自動で組まれる）
-  arrangement: Arrangement | null;
+  // アレンジ：構成のプリセットと、そこから変えた所（空 = プリセットのまま）。
+  // どちらもジャンル・コード進行・小節数・セクションに合わせて組み直す（ブロックの並びは LoopArranger.getArrangement()）
+  arrangePreset: ArrangePreset;
+  arrangeEdits:  ArrangeEdit[];
   startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
 
   // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
@@ -227,6 +257,8 @@ export const defaultState: AppState = {
   chorusPattern:     null,
   chorusMelodyNotes: [],
   sections:          null,
+  modulation:        0,
+  modulationScope:   "last",
   endingEnabled: true,
   drumFill:      true,
   drumHumanize:  true,
@@ -238,6 +270,7 @@ export const defaultState: AppState = {
   chordInstrument:  "grow",
   fxType:           "auto",
   swing:            null,
+  swingUnit:        "16n",
   sidechain:        null,
   scaleLock:        true,
   drumCategory:     "EDM",
@@ -255,7 +288,8 @@ export const defaultState: AppState = {
   },
   bassSub:          null,  // ジャンルの標準
 
-  arrangement: null,
+  arrangePreset: "standard",
+  arrangeEdits:  [],
   startBar:    0,
 
   pianoRollLength:    "4n",
@@ -294,10 +328,11 @@ export const defaultState: AppState = {
 export const SONG_FIELDS = [
   "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
+  "modulation", "modulationScope",
   "melodyMethod", "melodyVersion",
-  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
+  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "swingUnit", "sidechain", "scaleLock", "drumCategory",
   "growPreset", "growParams", "growChordPreset", "growChordParams", "growSounds", "bassSub",
-  "arrangement", "parts", "volumes",
+  "arrangePreset", "arrangeEdits", "parts", "volumes",
 ] as const;
 
 export type SongFields = Pick<AppState, typeof SONG_FIELDS[number]>;

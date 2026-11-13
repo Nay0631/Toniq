@@ -209,7 +209,7 @@ export function attachStepper(select: HTMLSelectElement, label: string): void {
     const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-step]");
     const n   = select.options.length;
     if (!btn || n === 0) return;
-    select.selectedIndex = (select.selectedIndex + parseInt(btn.dataset.step!) + n) % n;
+    select.selectedIndex = (select.selectedIndex + parseInt(btn.dataset.step!, 10) + n) % n;
     select.dispatchEvent(new Event("change", { bubbles: true }));
   });
 }

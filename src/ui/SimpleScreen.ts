@@ -1,8 +1,8 @@
-import { getState, setState } from "../engine/AppState";
+import { getState, setState, type ArrangePreset } from "../engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset, rerollChord, rerollDrum, pickChorus } from "../engine/SimpleModeResolver";
 import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import { generateMelody } from "../engine/MelodyGenerator";
-import { isArrangedAt, LAYERS } from "../engine/LoopArranger";
+import { isArrangedAt, LAYERS, ARRANGE_PRESETS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
 import * as Playback from "../engine/Playback";
@@ -96,7 +96,7 @@ function generate(): void {
     melodyVersion: 0,
     generated:     true,
     songId:        null,  // 新しい曲としてミュージックリストに保存する
-    arrangement:   null,  // カスタムモードで編集したアレンジは捨ててジャンルの標準に戻す
+    arrangeEdits:  [],    // カスタムモードで変えたアレンジは捨てて、選んだ構成のプリセットのままにする
     sections:      null,  // セクションもジャンルの標準に戻す
   });
   setState({ bars: songBars() });
@@ -233,6 +233,10 @@ function render(): void {
     el.classList.toggle("is-active", el.dataset.tempo === s.tempoPreset));
   $("s-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   $("s-bpm")!.textContent = `${s.bpm} BPM`;
+  // 構成のプリセット（選んだものの説明を見出しの横に出す）
+  $$("[data-arrange-preset]").forEach(el =>
+    el.classList.toggle("is-active", el.dataset.arrangePreset === s.arrangePreset));
+  $("s-arrange-hint")!.textContent = ARRANGE_PRESETS.find(p => p.id === s.arrangePreset)?.desc ?? "";
   const metronomeOn = isMetronomeOn();
   $("s-metronome")!.textContent = metronomeOn ? "■ クリックを止める" : "♪ クリックで試聴";
   $("s-metronome")!.classList.toggle("is-active", metronomeOn);
@@ -304,6 +308,18 @@ export function initSimpleScreen(): void {
     } else {
       void playGenreSample();
     }
+  });
+
+  // 構成のプリセット：「生成する」で作る曲の流れ（生成した曲の再生中に変えたら再生し直す）
+  const presetBox = $("s-arrange-preset")!;
+  presetBox.innerHTML = ARRANGE_PRESETS.map(p =>
+    `<button class="chip" data-arrange-preset="${p.id}">${p.label}</button>`).join("");
+  presetBox.addEventListener("click", async e => {
+    const chip = (e.target as HTMLElement).closest<HTMLElement>("[data-arrange-preset]");
+    if (!chip) return;
+    setState({ arrangePreset: chip.dataset.arrangePreset as ArrangePreset });
+    render();
+    await restartIfPlaying();
   });
 
   $$("[data-tempo]").forEach(el =>

@@ -195,6 +195,12 @@
           </div>
 
           <div class="field">
+            <div class="field-label">▤ 構成 <span class="field-hint" id="s-arrange-hint"></span></div>
+            <!-- 構成のプリセット（AppState.arrangePreset。LoopArranger.ts の ARRANGE_PRESETS から SimpleScreen.ts が作る） -->
+            <div class="chips chips-arrange" id="s-arrange-preset"></div>
+          </div>
+
+          <div class="field">
             <div class="field-label">メロディの入力方法</div>
             <div class="method-cards">
               <button class="method-card" data-melody-method="auto">
@@ -323,14 +329,6 @@
             </div>
 
             <label class="form-row">
-              <span class="form-label" data-term="meter">拍子</span>
-              <select class="select" id="c-meter">
-                <option value="4/4">4/4</option>
-                <option value="3/4" disabled>3/4（準備中）</option>
-              </select>
-            </label>
-
-            <label class="form-row">
               <span class="form-label" data-term="bars">小節数</span>
               <select class="select" id="c-bars"></select>
             </label>
@@ -349,8 +347,21 @@
               </select>
             </label>
 
+            <!-- もっと調整：標準（ジャンルに合わせる）のままでも鳴る項目は畳んでおく（CustomMore.ts） -->
+            <details class="panel-more" data-more="basic">
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">拍子・インスト・グルーヴ</span><span class="panel-more-badge"></span></summary>
+            <div class="panel-more-body">
+
             <label class="form-row">
-              <span class="form-label" data-term="instrument">インスト</span>
+              <span class="form-label" data-term="meter">拍子</span>
+              <select class="select" id="c-meter">
+                <option value="4/4">4/4</option>
+                <option value="3/4" disabled>3/4（準備中）</option>
+              </select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label" data-term="instrument" data-std="melodySound">インスト</span>
               <select class="select" id="c-instrument">
                 <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
                 <option value="grow" data-term="melodySound.grow">grow（Toniq専用シンセ）</option>
@@ -377,19 +388,32 @@
             </div>
             <div class="groove-grid">
               <div class="groove-item">
-                <span class="groove-label" data-term="swing">スウィング</span>
+                <span class="groove-label" data-term="swing" data-std="swing">スウィング</span>
                 <!-- range はノブ（Controls.ts）に置き換わる -->
                 <input type="range" class="range" id="c-swing" min="0" max="100" step="1" aria-label="スウィング">
                 <span class="lcd groove-value" id="c-swing-value"></span>
                 <button class="btn btn-small groove-auto" id="c-swing-auto" title="ジャンルの標準の量にする">標準</button>
               </div>
               <div class="groove-item">
-                <span class="groove-label" data-term="sidechain">サイドチェイン</span>
+                <span class="groove-label" data-term="sidechain" data-std="sidechain">サイドチェイン</span>
                 <input type="range" class="range" id="c-sidechain" min="0" max="100" step="1" aria-label="サイドチェイン">
                 <span class="lcd groove-value" id="c-sidechain-value"></span>
                 <button class="btn btn-small groove-auto" id="c-sidechain-auto" title="ジャンルの標準の量にする">標準</button>
               </div>
             </div>
+
+            <label class="form-row">
+              <span class="form-label" data-term="swingUnit" data-std="swingUnit">跳ねる単位</span>
+              <!-- AppState.swingUnit（Groove.ts の applySwing が Transport の swingSubdivision に当てる） -->
+              <select class="select" id="c-swing-unit">
+                <option value="16n" data-term="swingUnit.16n">16分音符</option>
+                <option value="8n" data-term="swingUnit.8n">8分音符（シャッフル）</option>
+              </select>
+            </label>
+
+            <div class="panel-more-foot"><button class="btn btn-small" data-more-reset>この欄を標準に戻す</button></div>
+            </div>
+            </details>
           </div>
 
           <!-- スケール・キー／コード進行 -->
@@ -410,6 +434,8 @@
               <span class="form-label" data-term="scale">スケール</span>
               <select class="select" id="c-scale"></select>
             </label>
+            <!-- スケールを変えてコード進行が切り替わったことを少しの間だけ知らせる（CustomScreen.ts の notifyChordChange） -->
+            <p class="panel-notice" id="c-scale-notice" role="status" aria-live="polite" hidden></p>
 
             <div class="form-row">
               <span class="form-label">響き</span>
@@ -417,11 +443,6 @@
                 <div class="scale-preview-notes" id="c-scale-notes" aria-label="スケールの音"></div>
                 <button class="btn btn-small" id="c-scale-preview" title="今のキー・スケールの音を低い順に鳴らし、最後に主音の和音を鳴らします">▷ 試聴</button>
               </div>
-            </div>
-
-            <div class="switch-row">
-              <button class="toggle toggle-green" id="c-scale-lock" role="switch" aria-label="スケールロック"><span></span></button>
-              <span><span data-term="scaleLock">スケールロック</span><span id="c-scale-lock-label"></span></span>
             </div>
 
             <hr class="panel-divider">
@@ -434,7 +455,7 @@
             </div>
 
             <label class="form-row">
-              <span class="form-label" data-term="chordCategory">カテゴリ</span>
+              <span class="form-label" data-term="chordCategory">コード進行の雰囲気</span>
               <select class="select" id="c-mood">
                 <option value="明るい">明るい</option>
                 <option value="暗い">暗い</option>
@@ -456,12 +477,20 @@
               <span class="form-label" data-term="chorus">サビ</span>
               <div class="select-with-btn">
                 <select class="select" id="c-chorus" aria-label="サビの進行"></select>
-                <button class="btn btn-small btn-icon" id="c-chorus-reroll" aria-label="サビの進行を差し替え" title="差し替え">↻</button>
               </div>
             </div>
 
+            <details class="panel-more" data-more="chord">
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">スケールロック・リズム・転調・音色</span><span class="panel-more-badge"></span></summary>
+            <div class="panel-more-body">
+
+            <div class="switch-row">
+              <button class="toggle toggle-green" id="c-scale-lock" role="switch" aria-label="スケールロック"><span></span></button>
+              <span data-std="scaleLock"><span data-term="scaleLock">スケールロック</span><span id="c-scale-lock-label"></span></span>
+            </div>
+
             <label class="form-row">
-              <span class="form-label" data-term="chordRhythm">リズム</span>
+              <span class="form-label" data-term="chordRhythm" data-std="chordRhythm">リズム</span>
               <select class="select" id="c-rhythm">
                 <option value="whole" data-term="chordRhythm.whole">全音符</option>
                 <option value="half" data-term="chordRhythm.half">2分音符</option>
@@ -471,10 +500,35 @@
             </label>
 
             <label class="form-row">
-              <span class="form-label" data-term="instrument">音色</span>
+              <span class="form-label" data-term="modulation" data-std="modulation">転調</span>
+              <!-- AppState.modulation（半音。0 = しない） -->
+              <select class="select" id="c-modulation">
+                <option value="0">しない</option>
+                <option value="1">半音上げる</option>
+                <option value="2">全音上げる</option>
+                <option value="3">短3度上げる</option>
+                <option value="5">4度上げる</option>
+              </select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label" data-term="modulation">転調する所</span>
+              <!-- AppState.modulationScope -->
+              <select class="select" id="c-modulation-scope">
+                <option value="last" data-term="modulation.last">最後のサビから</option>
+                <option value="chorus" data-term="modulation.chorus">サビだけ</option>
+              </select>
+            </label>
+
+            <label class="form-row">
+              <span class="form-label" data-term="instrument" data-std="chordSound">音色</span>
               <!-- grow のプリセット（AppState.growChordPreset。値は ID、空 = ジャンルに合わせる）。CustomScreen.ts が作る -->
               <select class="select" id="c-chord-instrument"></select>
             </label>
+
+            <div class="panel-more-foot"><button class="btn btn-small" data-more-reset>この欄を標準に戻す</button></div>
+            </div>
+            </details>
           </div>
 
           <!-- ドラム／パッド・アルペジオ／パート別音量 -->
@@ -499,6 +553,34 @@
               </div>
             </div>
 
+            <details class="panel-more" data-more="parts">
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">フィル・揺らぎ・エンディング・追加パート・サブベース・FX / SE</span><span class="panel-more-badge"></span></summary>
+            <div class="panel-more-body">
+
+            <!-- ドラムの演奏（テスト中の機能。AppState.drumFill / drumHumanize / endingEnabled。端末ごとに保存（Preferences.ts の setTestFeature）。曲には保存しない） -->
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+                <path d="M4 20l7-7M13 11l7-7"/><circle cx="12" cy="12" r="1.5"/>
+              </svg>
+              <span>ドラムの演奏</span><span class="panel-title-note">テスト中・端末ごとに保存</span>
+            </div>
+
+            <div class="pill-row">
+              <span data-std="test.drumFill"><span data-term="drumFill">フィル</span></span>
+              <button class="pill" data-test-toggle="drumFill"></button>
+            </div>
+            <p class="pill-desc">サビの前・ドラムが抜ける前・8小節ごとにフィルを入れる</p>
+            <div class="pill-row">
+              <span data-std="test.drumHumanize"><span data-term="humanize">揺らぎ</span></span>
+              <button class="pill" data-test-toggle="drumHumanize"></button>
+            </div>
+            <p class="pill-desc">強さ・タイミングを少し揺らし、ゴーストノートを入れる</p>
+            <div class="pill-row">
+              <span data-std="test.endingEnabled"><span data-term="ending">エンディング</span></span>
+              <button class="pill" data-test-toggle="endingEnabled"></button>
+            </div>
+            <p class="pill-desc">曲の最後の小節を主和音（全音符）で終わらせる</p>
+
             <hr class="panel-divider">
 
             <div class="panel-title">
@@ -508,28 +590,16 @@
               <span>追加パート</span>
             </div>
 
+            <!-- 追加パートの入り口：まとめて ON/OFF するだけ。1つずつの切り替えはアレンジャー（レーン・ミキサー）で行う -->
             <div class="pill-row">
-              <span><span data-term="pad">パッド</span> / <span data-term="strings">Str</span></span>
-              <button class="pill" data-part-toggle="pad"></button>
+              <span data-std="extraParts"><span data-term="extraParts">追加パートを使う</span></span>
+              <button class="pill" id="c-extra-parts"></button>
             </div>
-            <div class="pill-row">
-              <span><span data-term="arp">アルペジオ</span></span>
-              <button class="pill" data-part-toggle="arp"></button>
-            </div>
-            <div class="pill-row">
-              <span><span data-term="signature">シグネチャー</span><span class="pill-note" id="c-signature-label"></span></span>
-              <button class="pill" data-part-toggle="signature"></button>
-            </div>
-            <div class="pill-row">
-              <span><span data-term="counter">カウンターメロディ</span></span>
-              <button class="pill" data-part-toggle="counter"></button>
-            </div>
-            <div class="pill-row">
-              <span><span data-term="perc">パーカッション</span><span class="pill-note" id="c-perc-label"></span></span>
-              <button class="pill" data-part-toggle="perc"></button>
-            </div>
+            <!-- 今 ON のパート（表示だけ。CustomScreen.ts が作る） -->
+            <div class="extra-parts-list" id="c-extra-parts-list"></div>
+            <button class="link-btn extra-parts-open" id="c-extra-parts-open">パートごとの ON/OFF はアレンジャーで →</button>
             <label class="form-row">
-              <span class="form-label" data-term="subBass">サブベース</span>
+              <span class="form-label" data-term="subBass" data-std="bassSub">サブベース</span>
               <select class="select" id="c-bass-sub" aria-label="サブベース">
                 <option value="auto">ジャンルに合わせる</option>
                 <option value="on">ON</option>
@@ -547,7 +617,7 @@
             </div>
 
             <div class="form-row">
-              <span class="form-label">種類</span>
+              <span class="form-label" data-std="fxType">種類</span>
               <div class="select-with-btn">
                 <select class="select" id="c-fx-type" aria-label="FX の種類">
                   <option value="auto" data-term="fx.auto">ジャンルの標準</option>
@@ -561,10 +631,14 @@
                 <button class="btn btn-small" id="c-fx-preview">▷ 試聴</button>
               </div>
             </div>
+
+            <div class="panel-more-foot"><button class="btn btn-small" data-more-reset>この欄を標準に戻す</button></div>
+            </div>
+            </details>
           </div>
         </div>
 
-        <!-- grow（テスト中）の音作り。メロディのインストが grow のときだけ出す。中身は GrowPanel.ts が作る -->
+        <!-- grow（テスト中）の音作り。いつも出す（閉じた状態から開く）。中身は GrowPanel.ts が作る -->
         <div class="card panel grow-panel" id="c-grow" hidden></div>
 
         <div class="export-row">
@@ -578,21 +652,16 @@
       <div class="screen-body screen-body-wide hw" data-tab-panel="arranger" hidden>
         <div class="card arranger-card">
           <div class="arranger-toolbar">
+            <!-- 構成のプリセット（AppState.arrangePreset。選択肢は LoopArranger.ts の ARRANGE_PRESETS。ArrangerTab.ts が作る） -->
+            <label class="arranger-preset"><span data-term="arrangePreset">構成</span>
+              <select class="select" id="c-arr-preset" aria-label="構成"></select></label>
             <span class="arranger-mode" id="c-arr-mode"></span>
             <span class="arranger-time" id="c-arr-time" title="再生位置 / 曲全体の長さ">0:00.00 / 0:00.00</span>
-            <span class="arranger-hint">小節番号をクリックで再生開始位置／空いている所をクリックで配置／ドラッグで移動／端をドラッグで長さを変更／右クリック・× で削除</span>
+            <span class="arranger-hint">ドラッグで移動・端で長さを変更・× で削除・空いた所をクリックで配置／小節番号をクリックで再生開始位置</span>
             <button class="btn btn-small" id="c-arr-to-start">⏮ 先頭へ</button>
-            <button class="btn btn-small" id="c-arr-reset">↺ 標準に戻す</button>
+            <button class="btn btn-small" id="c-arr-reset" title="足した・抜いたセクションとセクションの切り替えを消して、選んだ構成に戻します">↺ 変えた所を消す</button>
           </div>
           <div class="arranger" id="c-arranger"></div>
-        </div>
-
-        <!-- テスト中の機能（聴き比べ用の ON/OFF）と自動チェック。中身は ArrangerTab.ts で作る -->
-        <div class="card panel test-panel">
-          <div class="panel-title panel-title-plain">テスト中の機能<span class="test-panel-note">聴き比べ用。端末ごとに保存されます</span></div>
-          <div class="test-toggles" id="c-test-toggles"></div>
-          <div class="panel-title panel-title-plain test-panel-sub"><span data-term="qualityCheck">自動チェック</span><span class="test-panel-note">今の曲を規則で調べた結果です</span></div>
-          <ul class="quality-list" id="c-quality"></ul>
         </div>
 
         <!-- ミキサー（パート別音量。中身は MixerPanel.ts で作る） -->
@@ -810,14 +879,26 @@
           <details class="help-item">
             <summary>アレンジャー（曲の構成）</summary>
             <ul>
-              <li>パートの行の空いている所をクリックすると、その小節にブロックを置きます。</li>
-              <li>ブロックはドラッグで移動、左右の端をドラッグで長さを変えます。</li>
-              <li>ブロックを<b>右クリック</b>・× ボタン・<kbd>Delete</kbd>（選んだ状態で）で消します。</li>
-              <li>ドラム・FX のブロックは、ラベルの文字をクリックするとブロックごとにパターン・種類を選べます。</li>
+              <li>上の「構成」で、曲の流れ（標準・静かに始まる・サビを強く・短く繰り返す・だんだん盛り上がる）を選べます。たいていはこれだけで十分です。</li>
+              <li>パートの行をクリックすると、そのセクション（8小節ごと。縦の線で区切っています）でそのパートを<b>足す／抜く</b>を切り替えます。もう一度クリックすると元に戻ります。</li>
+              <li>変えた所は枠で囲んで「＋ 足した」「− 抜いた」と出ます。「何回目の Aメロ／サビ」で覚えるので、ジャンルや小節数を変えてもそのまま当てはまります。</li>
+              <li>ブロックを<b>右クリック</b>・<kbd>Delete</kbd>（選んだ状態で）でも、そのセクションから抜けます。</li>
+              <li>ドラム・FX のブロックは、ラベルの文字をクリックするとセクションごとにパターン・種類を選べます。</li>
               <li>いちばん上の「セクション」の行をクリックすると、その周回を Aメロ／サビ で切り替えます。</li>
               <li>小節番号の目盛りをクリックすると、そこが再生の開始位置になります（アレンジャータブで再生したとき。「⏮ 先頭へ」で戻ります）。</li>
               <li>スペースキーで再生／停止できます（再生は開始位置から）。</li>
-              <li>OFF のパートにブロックを置くと、そのパートは ON になります。「↺ 標準に戻す」でジャンルの標準の構成に戻ります。</li>
+              <li>OFF のパートの行をクリックすると、そのパートは ON になります。「↺ 変えた所を消す」で、選んだ構成のままに戻ります。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>カスタムモードの「もっと調整」</summary>
+            <ul>
+              <li>各欄の下の「もっと調整」には、触らなくてもジャンルに合った音で鳴る項目（インスト・グルーヴ・コードのリズムと音色・追加パート・FX など）が入っています。クリックで開閉します。</li>
+              <li>見出しの「○件変更」は、その中で標準から変えている項目の数です。変えた項目の名前の左には印（●）が付きます。</li>
+              <li>「この欄を標準に戻す」で、その欄の項目をまとめてジャンルの標準・初期値に戻します（<kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻せます）。</li>
+              <li>「追加パートを使う」は、パッド・アルペジオなどの追加パートをまとめて ON/OFF します。1つずつ切り替えるときはアレンジャー（レーンの ON ボタンやミキサー）を使います。</li>
+              <li>スケールを変えると、そのスケールのコード進行に切り替わります（切り替わった進行はスケールの下に少しの間表示されます）。</li>
             </ul>
           </details>
 
@@ -869,7 +950,7 @@
           <details class="help-item">
             <summary>テスト中の機能</summary>
             <ul>
-              <li>アレンジャータブの「テスト中の機能」で、エンディング・ドラムのフィル・ドラムの揺らぎをまとめて ON/OFF できます。自動チェックの結果もここに出ます。</li>
+              <li>カスタムモードの設定タブで、ドラムの「もっと調整」の「ドラムの演奏」から、フィル・揺らぎ・エンディングを ON/OFF できます（端末ごとに保存）。</li>
               <li>カスタムモードの設定タブの下にある grow のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
             </ul>
           </details>

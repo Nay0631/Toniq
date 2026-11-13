@@ -30,7 +30,7 @@ function begin(): { c: AudioContext; out: GainNode; t: number } {
 }
 
 function midiToFreq(midi: number): number {
-  return 440 * Math.pow(2, (midi - 69) / 12);
+  return 440 * 2 ** ((midi - 69) / 12);
 }
 
 // ピアノ風の音（三角波に2倍音のサイン波を薄く重ねる）

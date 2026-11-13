@@ -1,4 +1,4 @@
-import { getState, setState } from "./AppState";
+import { setState } from "./AppState";
 
 const TAP_TIMEOUT_MS = 2000; // 2秒以上間隔が空いたらリセット
 const MAX_TAPS       = 8;    // 最大タップ数（平均を取る）

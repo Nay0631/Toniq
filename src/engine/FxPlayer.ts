@@ -140,7 +140,7 @@ function impactHit(dry: Tone.ToneAudioNode, wide: Tone.ToneAudioNode, level: num
     close.frequency.cancelScheduledValues(time);
     close.frequency.setValueAtTime(7000, time);
     close.frequency.exponentialRampToValueAtTime(350, time + len);
-    curve(amp.gain, time, len, x => Math.pow(1 - x, 3));
+    curve(amp.gain, time, len, x => (1 - x) ** 3);
     burst.start(time).stop(time + len + 0.01);
   };
   return { hit, nodes: [boom, dist, ...burst.nodes, close, amp] as Tone.ToneAudioNode[] };
@@ -210,11 +210,11 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
         band.frequency.cancelScheduledValues(time);
         band.frequency.setValueAtTime(9000, time);
         band.frequency.exponentialRampToValueAtTime(250, end);
-        curve(amp.gain, time, dur, x => Math.pow(1 - x, 2.2));
+        curve(amp.gain, time, dur, x => (1 - x) ** 2.2);
         osc.frequency.cancelScheduledValues(time);
         osc.frequency.setValueAtTime(700, time);
         osc.frequency.exponentialRampToValueAtTime(60, time + dur * 0.6);
-        curve(toneAmp.gain, time, dur * 0.6, x => Math.pow(1 - x, 2));
+        curve(toneAmp.gain, time, dur * 0.6, x => (1 - x) ** 2);
         noise.start(time).stop(end + 0.01);
         osc.start(time).stop(time + dur * 0.6 + 0.01);
       };
@@ -245,9 +245,9 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
 
       const rise = (time: number, dur: number) => {
         const end = time + dur;
-        curve(amp.gain, time, dur - 0.02, x => Math.pow(x, 3));
+        curve(amp.gain, time, dur - 0.02, x => x ** 3);
         fadeOut(amp.gain, end - 0.02, 0.02);
-        curve(metalAmp.gain, time, dur - 0.02, x => Math.pow(x, 3));
+        curve(metalAmp.gain, time, dur - 0.02, x => x ** 3);
         fadeOut(metalAmp.gain, end - 0.02, 0.02);
         metal.triggerAttackRelease(dur + 0.1, time);
         noise.start(time).stop(end + 0.01);
@@ -273,7 +273,7 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
         osc.frequency.cancelScheduledValues(time);
         for (let i = 0; i < steps; i++) {
           // 3半音ずつ上がる（4オクターブ）
-          osc.frequency.setValueAtTime(220 * Math.pow(2, (i * 3) / 12), time + i * step);
+          osc.frequency.setValueAtTime(220 * 2 ** ((i * 3) / 12), time + i * step);
         }
         amp.gain.cancelScheduledValues(time);
         amp.gain.setValueAtTime(0, time);

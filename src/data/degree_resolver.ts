@@ -12,6 +12,19 @@ export const NOTE_INDEX: Record<string, number> = {
 
 const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
+// キーを半音 semitones だけずらしたキー（転調。"A" を 2 なら "B"）
+export function shiftKey(key: string, semitones: number): string {
+  if (!semitones) return key;
+  const index = NOTE_INDEX[key];
+  if (index === undefined) return key;
+  return NOTE_NAMES[((index + semitones) % 12 + 12) % 12];
+}
+
+// コードを鳴らすキー（曲全体の並びで転調している所のコードは keyShift だけずらす）
+export function chordKey(key: string, chord: { keyShift?: number }): string {
+  return shiftKey(key, chord.keyShift ?? 0);
+}
+
 const SCALE_INTERVALS: Record<string, Record<string, number>> = {
   major:    { I:0, II:2, III:4, IV:5, V:7, VI:9, VII:11, IIm:2, IIIm:4, VIm:9 },
   minor:    { I:0, II:2, bIII:3, IV:5, V:7, bVI:8, bVII:10, Im:0, IVm:5, Vm:7, IIm:2 },
@@ -86,7 +99,7 @@ export function resolveChord(
   const chordIntervals = CHORD_INTERVALS[type];
   if (!chordIntervals) throw new Error(`Unknown chord type: ${type}`);
 
-  let notes = chordIntervals.map((interval) => {
+  const notes = chordIntervals.map((interval) => {
     const noteIndex = (chordRootIndex + interval) % 12;
     const noteName = NOTE_NAMES[noteIndex];
     const noteOctave = (chordRootIndex + interval) >= 12 ? octave + 1 : octave;
@@ -97,7 +110,7 @@ export function resolveChord(
     for (let i = 0; i < inversion; i++) {
       const bottom = notes.shift()!;
       const noteName = bottom.slice(0, -1);
-      const oct = parseInt(bottom.slice(-1));
+      const oct = parseInt(bottom.slice(-1), 10);
       notes.push(`${noteName}${oct + 1}`);
     }
   }
@@ -111,7 +124,7 @@ export function resolveChord(
 export function noteToMidi(note: string): number {
   const m = note.match(/^([A-G][#b]?)(-?\d+)$/);
   if (!m) throw new Error(`Unknown note: ${note}`);
-  return NOTE_INDEX[m[1]] + (parseInt(m[2]) + 1) * 12;
+  return NOTE_INDEX[m[1]] + (parseInt(m[2], 10) + 1) * 12;
 }
 
 export function midiToNote(midi: number): string {
@@ -166,7 +179,7 @@ export function voiceProgression(
   options: { spread?: boolean } = {}
 ): string[][] {
   const chords = progression.progression.map((c) => ({
-    notes:     resolveChord(c.degree, c.type, 0, key, progression.base_scale, 4).notes.map(noteToMidi),
+    notes:     resolveChord(c.degree, c.type, 0, chordKey(key, c), progression.base_scale, 4).notes.map(noteToMidi),
     inversion: c.inversion,
   }));
 

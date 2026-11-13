@@ -518,6 +518,7 @@ button {
 .chips-mood  .chip.is-active { background: var(--simple-soft); border-color: var(--simple); color: var(--simple-ink); font-weight: 600; }
 .chips-genre .chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
 .chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
+.chips-arrange .chip.is-active { background: var(--list-soft); border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
 
 .bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
 
@@ -722,6 +723,17 @@ button {
 
 .select-with-btn .select { grid-column: 1 / -1; }
 .select-with-btn .btn { grid-column: 3; }
+
+/* 試聴ボタンのない行（サビ）でも ◀ ▶ を同じ高さにする：.btn-small と同じ字の大きさ・余白の
+   見えない支え（幅 0）を並べて、ボタンを縦に伸ばす */
+.select-with-btn .stepper::after {
+  content: "\200b";
+  width: 0;
+  margin-left: -2px;
+  padding: 7px 0;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
 
 /* キー・スケールの試聴：スケールの8音を並べ、試聴中は鳴っている音を光らせる。右に試聴ボタン */
 .scale-preview {
@@ -1059,6 +1071,7 @@ button {
 .arr-counter, .mix-counter { background: #f5b98a; }
 .arr-perc, .mix-perc   { background: #c9dc8f; }
 
+/* ブロックの左右の端：ドラッグで長さを変える */
 .arr-handle {
   position: absolute;
   top: 0;
@@ -1070,6 +1083,7 @@ button {
 .arr-handle-left  { left: 0; }
 .arr-handle-right { right: 0; }
 
+/* ブロックの削除ボタン（×）。マウスを乗せた・フォーカスしたブロックだけに出す */
 .arr-del {
   flex-shrink: 0;
   width: 20px;
@@ -1081,12 +1095,29 @@ button {
   border: none;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
   opacity: 0;
   transition: opacity 0.1s;
 }
 
 .arr-block:hover .arr-del,
 .arr-block:focus-within .arr-del { opacity: 1; }
+
+
+/* 構成のプリセット（ツールバーの左端） */
+.arranger-preset { display: flex; flex: none; align-items: center; gap: 8px; font-size: 12px; color: var(--hw-label); }
+.arranger-preset .select { width: auto; }
+
+
+/* セクション（アレンジを変える単位・8小節）の区切り線 */
+.arr-unit-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  margin-left: -1px;
+  border-left: 2px solid var(--hw-label);
+  opacity: 0.35;
+}
 
 .arr-overlay {
   position: absolute;
@@ -1475,85 +1506,7 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .hw .arr-sections { background-color: var(--track-bg); }
 .hw .arr-section-lane { border-bottom-color: var(--hw-line); }
 
-/* ── テスト中の機能と自動チェック（ArrangerTab.ts）── */
-.test-panel { margin-top: 20px; }
-.hw .test-panel { margin-top: 0; border-top: none; }
-[data-skin="default"] .hw .test-panel { margin-top: 20px; border-top: 1px solid var(--border); }
-[data-skin="pop"] .hw .test-panel { margin-top: 16px; }
 
-.test-panel-note {
-  margin-left: 10px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-muted);
-}
-
-.test-panel-sub { margin-top: 18px; }
-
-.test-toggles {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 20px;
-}
-
-.test-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "name toggle" "desc toggle";
-  align-items: center;
-  column-gap: 10px;
-}
-
-.test-name { grid-area: name; font-weight: 700; }
-.test-desc { grid-area: desc; font-size: 12px; color: var(--text-muted); }
-.test-row .pill { grid-area: toggle; min-width: 52px; }
-
-.quality-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 20px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.quality-item {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  grid-template-areas: "mark label" "mark value" "mark hint";
-  column-gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--surface-sunken);
-}
-
-.quality-mark {
-  grid-area: mark;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.quality-label { grid-area: label; font-size: 12px; color: var(--text-muted); }
-.quality-value { grid-area: value; font-weight: 700; }
-.quality-hint  { grid-area: hint; font-size: 11px; color: var(--text-faint); }
-
-.quality-item.is-ok   .quality-mark { color: var(--custom-ink); background: var(--custom-soft); }
-.quality-item.is-warn .quality-mark { color: var(--danger-ink); background: var(--danger-soft); }
-.quality-item.is-info .quality-mark { color: var(--text-muted); background: var(--btn-soft); }
-
-@media (max-width: 1000px) {
-  .test-toggles { grid-template-columns: 1fr; }
-}
-
-@media (max-width: 720px) {
-  .quality-list { grid-template-columns: 1fr; }
-  .test-panel-note { display: block; margin-left: 0; }
-}
 
 /* ── ミキサー（MixerPanel.ts） ──
    上端の黒い帯にパートの色と名前を並べ、その下に電源・フェーダー＋メーター・値。左端に dB 目盛り、右端にマスター */
@@ -1889,6 +1842,7 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 [data-skin="studio"] .hw .arr-block-select { height: 15px; }
 
 [data-skin="studio"] .hw .arr-del { width: 14px; height: 14px; margin-right: 4px; font-size: 10px; }
+
 
 /* ── ポップスキン（<html data-skin="pop">） ──────────────
    クリーム色の地に角の丸いモジュールを並べる、色分けしたグルーヴボックス風。
@@ -3303,6 +3257,119 @@ span[data-term],
 .groove-label { font-size: 13px; font-weight: 600; }
 .groove-value { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
 .groove-auto.is-active { border-color: var(--custom); color: var(--custom); }
+
+/* ===== もっと調整（カスタムモードの設定タブ。標準のままでも鳴る項目を畳む。CustomMore.ts） =====
+   色は --hw-* のトークンだけを使い、どのスキン・ライト／ダークにも合わせる */
+.panel-more { margin-top: 16px; }
+
+.panel-more-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hw-line);
+  font-size: 12px;
+  color: var(--hw-label);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.panel-more-summary::-webkit-details-marker { display: none; }
+.panel-more-summary::before {
+  content: "▸";
+  flex: none;
+  width: 10px;
+  color: var(--hw-faint);
+  transition: transform 0.15s;
+}
+.panel-more[open] > .panel-more-summary::before { transform: rotate(90deg); }
+.panel-more-summary:hover .panel-more-label { color: var(--hw-text); }
+.panel-more-summary:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 2px; border-radius: 2px; }
+
+.panel-more-label { flex: none; font-weight: 600; }
+/* 中に何があるか（閉じているときだけ出す） */
+.panel-more-items {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--hw-faint);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.panel-more[open] .panel-more-items { visibility: hidden; }
+
+/* 変更の数（標準のままなら控えめに「標準」） */
+.panel-more-badge {
+  flex: none;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: var(--hw-faint);
+  border: 1px solid var(--hw-line);
+  border-radius: 999px;
+}
+.panel-more-badge.is-changed { color: var(--hw-orange); border-color: var(--hw-orange); }
+
+.panel-more-body { padding-top: 14px; }
+.panel-more-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+/* 標準から変えている項目の名前に付ける印。名前の左の余白に置く（狭いラベルの列でも折り返さず、用語の点線の下線も伸ばさない） */
+[data-std] { position: relative; }
+[data-std].is-changed::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -11px;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--hw-orange);
+}
+
+/* 追加パートの入り口（設定タブ）：今 ON のパートの一覧（表示だけ）と、アレンジャーへの案内 */
+.extra-parts-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 2px 0 8px;
+  font-size: 12px;
+  color: var(--hw-text);
+}
+.extra-part::before { content: "✓"; display: inline-block; width: 1.1em; color: var(--hw-green); }  /* インラインブロックで取り消し線を付けない */
+.extra-part.is-off { color: var(--hw-faint); text-decoration: line-through; }
+.extra-part.is-off::before { content: "—"; color: var(--hw-faint); }
+.extra-parts-open { margin-bottom: 12px; font-size: 12px; color: var(--hw-label); }
+.extra-parts-open:hover { color: var(--hw-orange); }
+
+/* ドラムの演奏（テスト中の機能）：スイッチの下の短い説明と、見出しに添える注記 */
+.pill-desc { margin: -4px 0 10px; font-size: 11px; color: var(--hw-faint); }
+.panel-title-note { margin-left: auto; font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--hw-faint); }
+
+/* 一時的なお知らせ（スケールに合わせてコード進行を変えた など） */
+.panel-notice {
+  margin: -4px 0 12px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--hw-text);
+  border-left: 3px solid var(--hw-orange);
+  background: var(--hw-box);
+}
+/* お知らせに合わせて、変わった欄を少し光らせる */
+.form-row.is-flash { animation: row-flash 1.6s ease-out; border-radius: 4px; }
+@keyframes row-flash {
+  0%, 30% { box-shadow: 0 0 0 2px var(--hw-orange); }
+  100%    { box-shadow: 0 0 0 2px transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .form-row.is-flash { animation: none; box-shadow: 0 0 0 2px var(--hw-orange); }
+}
+
+/* スタジオスキンの見出しの帯は、畳んだ中では上に詰めない */
+[data-skin="studio"] .hw .panel-more-body > .panel-title:first-child { margin-top: 0; }
+
+/* grow の欄は見出しそのものが開閉のつまみ（上の線は付けない） */
+.grow-more { margin-top: 0; }
+.grow-more > .panel-more-summary { padding-top: 0; border-top: none; font-size: 13px; }
 
 /* ===== grow（テスト中。カスタムモードの設定タブの下。GrowPanel.ts） ===== */
 .grow-panel { margin-top: 20px; }

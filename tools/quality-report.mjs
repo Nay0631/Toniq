@@ -13,6 +13,7 @@
 //   npm run quality -- --compare before    保存した結果との差を出す（同じシード・回数・キーで測ること）
 //   npm run quality -- --json              結果を JSON で出す
 //
+// DB の誤り（コード進行DB・メロディのリズムDB）があれば終了コード 1 で終わる（CI の .github/workflows/test.yml）。
 // 総合点 = 合否のある項目（強拍・フレーズの終わり・跳躍・サビの高さ・セクション・抜き差し）の合格率の平均（0〜100）。
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -186,4 +187,11 @@ if (value("--save")) {
   const file = join(OUT, `${value("--save")}.json`);
   writeFileSync(file, JSON.stringify(saved, null, 2));
   if (!flag("--json")) console.log(`\n保存しました：${file}`);
+}
+
+// DB の誤り（実音にできない進行・サビの相方がない進行・長さが合わない進行・リズムの書式の誤り）があれば失敗にする（CI で気づけるように）
+const dbErrors = result.chordDB.broken.length + result.chordDB.alone.length + result.chordDB.misfit.length + result.melodyParams.length;
+if (dbErrors > 0) {
+  console.error(`\nDB に誤りが ${dbErrors} 件あります（上の「コード進行DB」「メロディのリズムDB」を見てください）`);
+  process.exitCode = 1;
 }

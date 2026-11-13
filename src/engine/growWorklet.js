@@ -44,12 +44,12 @@ class GrowProcessor extends AudioWorkletProcessor {
     // 前の音の off が、同じ高さの次の音の on のあとに来たときは無視する（Grow.ts は off を少し遅らせて送る）
     this.overlapFrames = Math.ceil((overlap ?? 0.002) * sampleRate) + 2;
 
-    // スロットごとの状態（開いているか・直前の合図・音ごとの最後の on の位置）
+    // スロットごとの状態
     this.slots = slots.map(({ values, bpm }, s) => {
       this.ex.grow_open(s);
       values.forEach((v, i) => this.ex.grow_set_param_slot(s, i, v));
       this.ex.grow_set_bpm_slot(s, bpm);
-      return { open: true, prevOn: 0, prevOff: 0, prevPidx: 0, lastOnFrame: new Float64Array(128).fill(-Infinity) };
+      return this.freshSlot();
     });
     this.openCount = this.slots.length;
     this.views();
@@ -60,12 +60,26 @@ class GrowProcessor extends AudioWorkletProcessor {
       if (!slot?.open) return;
       if (msg.type === "params") msg.values.forEach(([i, v]) => this.ex.grow_set_param_slot(msg.slot, i, v));
       else if (msg.type === "bpm") this.ex.grow_set_bpm_slot(msg.slot, msg.bpm);
-      else if (msg.type === "allOff") this.ex.grow_all_notes_off_slot(msg.slot);
+      else if (msg.type === "allOff") {
+        this.ex.grow_all_notes_off_slot(msg.slot);
+        slot.held.fill(0);
+        slot.retrig.fill(0);
+      }
       else if (msg.type === "close") {
         this.ex.grow_close(msg.slot);
         slot.open = false;
         this.openCount--;
       }
+    };
+  }
+
+  // スロットの状態：直前の合図、音ごとの最後の on の位置・押している（on のあと off がない）か・押したまま弾き直したか
+  freshSlot() {
+    return {
+      open: true, prevOn: 0, prevOff: 0, prevPidx: 0,
+      lastOnFrame: new Float64Array(128).fill(-Infinity),
+      held:        new Uint8Array(128),
+      retrig:      new Uint8Array(128),
     };
   }
 
@@ -87,12 +101,22 @@ class GrowProcessor extends AudioWorkletProcessor {
       if (note >= 0 && note < 128) {
         this.ex.grow_note_on_slot(s, note, Math.min(1, (code - note) * 2));
         slot.lastOnFrame[note] = frame;
+        slot.retrig[note] = slot.held[note];
+        slot.held[note]   = 1;
       }
     }
     if (offValue !== 0 && offValue !== slot.prevOff) {
       const note = Math.round(offValue - 1);
-      if (note >= 0 && note < 128 && frame - slot.lastOnFrame[note] > this.overlapFrames) {
-        this.ex.grow_note_off_slot(s, note);
+      if (note >= 0 && note < 128) {
+        // 前の音の off が、同じ高さを押したまま弾き直した次の音の on の直後に来たときだけ無視する
+        // （弾き直しでない音の off は捨てない。捨てると鳴りっぱなしになる）
+        if (slot.retrig[note] && frame - slot.lastOnFrame[note] <= this.overlapFrames) {
+          slot.retrig[note] = 0;
+        } else {
+          this.ex.grow_note_off_slot(s, note);
+          slot.held[note]   = 0;
+          slot.retrig[note] = 0;
+        }
       }
     }
     slot.prevPidx = pidxValue;

@@ -102,7 +102,8 @@ function generateSong(genre: string, mood: string, key: string): void {
     chorusPattern: pickChorus(result.chordPattern, genre, mood),
     drumPattern:   result.drumPattern,
     bpm:           result.bpm,
-    arrangement:   null,
+    arrangePreset: "standard",
+    arrangeEdits:  [],
     sections:      null,
     bars:          32,  // SimpleScreen.ts の SIMPLE_SONG_BARS
     melodyMethod:  "auto",
