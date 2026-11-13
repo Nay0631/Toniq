@@ -10,6 +10,8 @@ import { onRender, showTab } from "./Router";
 import { SCALE_LABELS, chordNames, formatTime } from "./format";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
+import { CUSTOM_DRUM_ID } from "../data/types";
+import { bindSpaceToPlay } from "./SpaceKey";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -135,13 +137,14 @@ function renderWave(): void {
 
   const beats    = s.bars * 4;
   const drum     = s.drumPattern;
-  const stepsPerBeat = drum.steps / 4;
+  // パターンは16分音符のステップ（オリジナルは複数小節あるので、曲の拍からパターンの位置を決める）
+  const stepsPerBeat = 4;
   const energies: number[] = [];
   for (let i = 0; i < beats; i++) {
     let e = 0;
     for (const track of Object.values(drum.tracks)) {
       for (let k = 0; k < stepsPerBeat; k++) {
-        const step = ((i % 4) * stepsPerBeat + k) % drum.steps;
+        const step = (i * stepsPerBeat + k) % drum.steps;
         if (track.pattern[step]) e += track.velocity?.[step] ?? 1;
       }
     }
@@ -267,7 +270,9 @@ function render(): void {
     : chorus ? `${chordNames(s.chordPattern, s.key)}（サビ：${chordNames(chorus, s.key)}）`
     : chordNames(s.chordPattern, s.key);
   if (s.drumPattern) {
-    $("s-drum-desc")!.textContent = `#${s.drumPattern.id.replace(/\D/g, "")} ${s.drumPattern.name}`;
+    $("s-drum-desc")!.textContent = s.drumPattern.id === CUSTOM_DRUM_ID
+      ? `${s.drumPattern.name}（ピアノロールで作成）`
+      : `#${s.drumPattern.id.replace(/\D/g, "")} ${s.drumPattern.name}`;
   }
 
   renderWave();
@@ -370,6 +375,11 @@ export function initSimpleScreen(): void {
   });
 
   $("s-play")?.addEventListener("click", startPlayback);
+  // ピアノロールのタブではスペースキーで再生／停止する
+  bindSpaceToPlay(() => {
+    const s = getState();
+    return s.screen === "simple" && s.tab === "pianoroll" && s.generated;
+  }, startPlayback);
   $("s-stop")?.addEventListener("click", () => {
     Playback.stop();
     render();

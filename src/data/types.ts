@@ -43,3 +43,5 @@ export interface ChordProgression {
   // ベースのフィルなど「1周の最後の小節」を求めるのに使う
   section_bars?: number;
 }
+// ピアノロールで作ったオリジナルのドラムパターンの ID（drum_patterns.json にはない。AppState.drumPattern に丸ごと持つ）
+export const CUSTOM_DRUM_ID = "custom";
