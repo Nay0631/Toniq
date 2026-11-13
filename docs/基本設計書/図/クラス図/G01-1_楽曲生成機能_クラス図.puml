@@ -6,21 +6,11 @@ class "シンプルモード画面" as B1 <<boundary>> {
   {method} <U+002B> 生成するボタンを押下する() : void
   {method} <U+002B> 生成結果を表示する() : void
 }
-class "アレンジ画面" as B2 <<boundary>> {
-  {method} <U+002B> メロディの差し替えボタンを押下する() : void
-}
-class "ピアノロール画面" as B3 <<boundary>> {
-  {method} <U+002B> ピアノロールを開く() : void
-}
 class "楽曲生成" as C1 <<control>> {
   {method} <U+002B> 楽曲を生成する() : void
 }
-class "メロディ再生成" as C2 <<control>> {
-  {method} <U+002B> メロディを作り直す() : void
-}
 class "再生" as C3 <<control>> {
   {method} <U+002B> 再生・クリック音を止める() : void
-  {method} <U+002B> 再生し直す() : void
 }
 class "パターン選出" as C4 <<control>> {
   {method} <U+002B> コード進行・ドラム・サビの進行を選ぶ() : void
@@ -62,8 +52,8 @@ class "アプリの状態" as E6 <<entity>> {
   {field} <U+002B> メロディ・サビのメロディ
   {field} <U+002B> 小節数
   {field} <U+002B> 生成済み
+  {field} <U+002B> 今の曲・アレンジ・セクション
   {method} <U+002B> 曲の内容を更新し生成済みにする() : void
-  {method} <U+002B> メロディとサビのメロディを更新する() : void
 }
 
 B1 --> C1
@@ -79,10 +69,5 @@ C6 --> C7
 C7 --> E5
 C1 --> E6
 C1 --> B1
-B2 --> C2
-C2 --> C6
-C2 --> E6
-C2 --> C3
-C2 --> B3
 
 @enduml

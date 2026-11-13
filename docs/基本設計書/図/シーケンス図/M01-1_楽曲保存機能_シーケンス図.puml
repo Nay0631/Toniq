@@ -7,7 +7,6 @@ boundary ":カスタムモード画面" as L2
 control ":曲の管理" as L3
 entity ":アプリの状態" as L4
 entity ":楽曲データ" as L5
-control ":作業ファイル保存" as L6
 
 note over L2 : シンプルモード画面の保存ボタンも同じ流れ
 
@@ -39,18 +38,10 @@ alt 書き込めた
   deactivate L2
 else 書き込めない（保存容量がいっぱいなど）
   note over L3 : 楽曲データと今の曲は変えない
-  L3 -> L2 : 保存容量の案内と作業ファイルに保存するかの確認を表示する() : void
+  L3 -> L2 : 保存容量の案内と保存し直すよう知らせる() : void
   activate L2
+  note right of L2 : 不要な曲を削除するか「すべて書き出す」で\nファイルに残してから整理し、もう一度「♪ 保存」する
   deactivate L2
-  opt OK
-    L1 -> L2 : 作業ファイルへの保存を OK する() : void
-    activate L2
-    L2 -> L6 : 作業ファイルに保存する() : void
-    activate L6
-    note right of L6 : M01-9 作業ファイル保存機能
-    deactivate L6
-    deactivate L2
-  end
 end
 deactivate L3
 deactivate L2

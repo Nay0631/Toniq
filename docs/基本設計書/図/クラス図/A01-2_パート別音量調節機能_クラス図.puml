@@ -22,7 +22,7 @@ class "ミックス" as C3 <<control>> {
   {method} <U+002B> マスターのレベルを取得する() : void
 }
 class "アプリの状態" as E1 <<entity>> {
-  {field} <U+002B> パートごとの音量（0〜100）
+  {field} <U+002B> 10パートの音量（0〜100）
   {field} <U+002B> パートの ON/OFF
   {method} <U+002B> 音量を更新する() : void
   {method} <U+002B> パートの ON/OFF を更新する() : void

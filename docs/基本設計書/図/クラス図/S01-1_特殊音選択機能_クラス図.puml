@@ -4,8 +4,13 @@ mainframe **pkg**
 
 class "カスタムモード画面" as B1 <<boundary>> {
   {method} <U+002B> ON/OFF ボタンを押下する() : void
+  {method} <U+002B> サブベースを選ぶ() : void
   {method} <U+002B> FX / SE の種類を選ぶ() : void
   {method} <U+002B> FX / SE の試聴ボタンを押下する() : void
+}
+class "追加パート設定" as C5 <<control>> {
+  {method} <U+002B> 追加パートを ON/OFF する() : void
+  {method} <U+002B> サブベースを設定する() : void
 }
 class "パート管理" as C1 <<control>> {
   {method} <U+002B> パートを ON/OFF する() : void
@@ -23,14 +28,25 @@ class "再生" as C4 <<control>> {
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> パートの ON/OFF
+  {field} <U+002B> サブベース
   {field} <U+002B> FX / SE の種類
   {method} <U+002B> パートの ON/OFF を更新する() : void
+  {method} <U+002B> サブベースを更新する() : void
   {method} <U+002B> FX / SE の種類を更新する() : void
 }
+class "ベース設定マスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> サブベースの標準
+  {method} <U+002B> ジャンルのサブベースの標準を取得する() : void
+}
 
-B1 --> C1
+B1 --> C5
+C5 --> C1
 C1 --> E1
 C1 --> C2
+C5 --> E1
+C5 --> E2
+C5 --> C4
 B1 --> C3
 C3 --> E1
 C3 --> C4

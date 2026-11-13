@@ -9,7 +9,7 @@ entity ":growプリセット" as L4
 entity ":アプリの状態" as L5
 control ":grow" as L6
 
-note over L2 : grow を読み込めないときは、その旨を表示してつまみを出さない。\n「対象」のメロディは、メロディの音色が grow のときだけ出る
+note over L2 : grow を読み込めないときは、その旨を表示してつまみを出さない。\n「対象」はカウンターメロディ・コード・ベース・パッド・アルペジオ・シグネチャー。\nメロディは、メロディの音色が grow のときだけ出る
 
 L1 -> L2 : 対象を選ぶ() : void
 activate L2
@@ -32,7 +32,7 @@ alt プリセット
   L3 -> L4 : プリセットの値を取得する() : void
   activate L4
   deactivate L4
-else ジャンルの標準（メロディ以外）
+else ジャンルの標準
   L3 -> L4 : ジャンルの標準のプリセットを取得する() : void
   activate L4
   deactivate L4
