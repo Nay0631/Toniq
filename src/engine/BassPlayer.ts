@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
-import { resolveChord } from "../data/degree_resolver";
+import { resolveChord, chordKey } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate, positionAt } from "./LoopArranger";
 import { kickAt } from "./DrumEngine";
@@ -122,7 +122,7 @@ export function bassNotes(progression: ChordProgression, key: string, octave: nu
       chord.degree,
       chord.type,
       0,
-      key,
+      chordKey(key, chord),  // 転調している所はずらしたキー
       progression.base_scale,
       octave + param.octaveShift
     );

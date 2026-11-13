@@ -1,0 +1,38 @@
+# アプリの確認：Lint（Biome）・型チェック（アプリとテスト）・テスト（Vitest）・自動チェックの一括計測。
+# push・プルリクエストのたび（と手動）に動く。grow の wasm のビルドは grow-wasm.yml
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # テストでは Electron の本体を使わないので、インストール時のダウンロードを省く
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: 依存をインストールする
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: 型チェック
+        run: npm run typecheck
+
+      - name: テスト
+        run: npm test
+
+      # 生成ルールが壊れていないかの目安（合格率は出すだけで失敗にはしない。DB の誤りがあれば失敗する）
+      - name: 自動チェックの一括計測
+        run: npm run quality -- --runs 20

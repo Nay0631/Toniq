@@ -10,7 +10,7 @@ import { percStepHits } from "./PercPlayer";
 import { blockDrumPattern, drumStepHits } from "./DrumEngine";
 import { songMelody, songProgression } from "./SongForm";
 import { getArrangement, findBlock } from "./LoopArranger";
-import { swingAmount, SWING_MAX } from "./Groove";
+import { swungBeats } from "./Groove";
 import type { LayerName } from "./LayerManager";
 import { saveOutput } from "./OutputFiles";
 
@@ -33,7 +33,7 @@ const NOTE_INDEX: Record<string, number> = {
 function noteToMidi(note: string): number {
   const m = note.match(/^([A-G][#b]?)(-?\d+)$/);
   if (!m) return 60;
-  return NOTE_INDEX[m[1]] + (parseInt(m[2]) + 1) * 12;
+  return NOTE_INDEX[m[1]] + (parseInt(m[2], 10) + 1) * 12;
 }
 
 const DURATION_TO_BEATS: Record<string, number> = {
@@ -95,15 +95,9 @@ export async function exportMidi(filename?: string): Promise<void> {
   const totalBeats  = s.bars * 4;
   const loopBeats   = progression.length_bars * 4;
   const arrangement = getArrangement();
-  // Tone.js の swing と同じ：8分音符の中の位置に応じて sin の形でずらす（裏の16分で最大 16分 × 2/3 × 量）
-  const swing = (swingAmount() / 100) * SWING_MAX;
-
+  // Tone.js の swing と同じずらし方（Groove.ts の swungBeats。シャッフルなら8分音符の裏）
+  const swung = swungBeats;
   const toTicks = (beats: number) => Math.round(beats * ppq);
-  const swung = (beats: number): number => {
-    const pos = beats % 0.5;
-    if (swing <= 0 || pos < 1e-6) return beats;
-    return beats + Math.sin((pos / 0.5) * Math.PI) * swing * (0.5 / 3);
-  };
 
   // アレンジ上、その拍（曲の頭から）でパートが鳴るか
   const arranged = (part: LayerName, beats: number) =>

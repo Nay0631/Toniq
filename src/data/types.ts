@@ -25,6 +25,7 @@ export interface ChordDegree {
   // 曲全体の並び（SongForm.songProgression）でだけ付く印
   ending?:  boolean;      // 曲の終わり（エンディング）の主和音
   section?: "A" | "B";    // どのセクション（Aメロ／サビ）のコードか
+  keyShift?: number;      // 転調（半音。曲のキーからずらす量。AppState.modulation）
 }
 
 export interface ChordProgression {

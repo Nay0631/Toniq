@@ -32,11 +32,26 @@ export function genreSidechain(genre: string): number { return genreDefault("sid
 // 100 で3連符に近いシャッフル（約 0.67）になるようにする
 export const SWING_MAX = 0.67;
 
-// 現在のコンテキストの Transport に当てる（再生・試聴・WAV書き出しの開始時と、量を変えたとき）。
-// 判定は Transport の16分音符の裏拍なので、各パートの Part / Sequence のイベントがまとめてずれる
+// ずらす単位（AppState.swingUnit）を拍の数で。16n = 0.25 拍、8n = 0.5 拍
+export function swingUnitBeats(): number {
+  return getState().swingUnit === "8n" ? 0.5 : 0.25;
+}
+
+// 拍（曲の頭から）を、Tone.js の Transport の swing と同じ形でずらした位置（MIDI書き出しで使う）。
+// Tone.js は単位の2倍（16n なら8分音符）の中の位置に応じて sin の形でずらし、いちばん大きい所で「単位の2倍 ÷ 3 × 量」ずれる
+export function swungBeats(beats: number): number {
+  const swing  = (swingAmount() / 100) * SWING_MAX;
+  const period = swingUnitBeats() * 2;
+  const pos    = beats % period;
+  if (swing <= 0 || pos < 1e-6) return beats;
+  return beats + Math.sin((pos / period) * Math.PI) * swing * (period / 3);
+}
+
+// 現在のコンテキストの Transport に当てる（再生・試聴・WAV書き出しの開始時と、量・単位を変えたとき）。
+// 判定は Transport の16分音符（シャッフルなら8分音符）の裏拍なので、各パートの Part / Sequence のイベントがまとめてずれる
 export function applySwing(): void {
   const transport = Tone.getTransport();
-  transport.swingSubdivision = "16n";
+  transport.swingSubdivision = getState().swingUnit;
   transport.swing = (swingAmount() / 100) * SWING_MAX;
 }
 

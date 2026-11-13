@@ -16,6 +16,20 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// 重みを付けて1つ選ぶ
+function pickWeighted<T>(arr: T[], weight: (item: T) => number): T {
+  const total = arr.reduce((sum, item) => sum + weight(item), 0);
+  let r = Math.random() * total;
+  for (const item of arr) {
+    r -= weight(item);
+    if (r < 0) return item;
+  }
+  return arr[arr.length - 1];
+}
+
+// シンプルモードの生成で、表（easy_mode_table.json）の候補をタグが合うだけの進行より何倍選ばれやすくするか
+const TABLE_WEIGHT = 2;
+
 export function resolveSimpleMode(
   genre: string,
   mood:  string
@@ -30,16 +44,19 @@ export function resolveSimpleMode(
   const genreTable = table[genre] ?? table["ローファイ"];
   const entry      = genreTable[mood] ?? genreTable["落ち着いた"];
 
-  // IDをランダムに1つ選択
-  const chordId = pickRandom(entry.chord_ids);
-  const drumId  = pickRandom(entry.drum_ids);
-
-  // DBから該当パターンを取得
   const chords = chordDB as unknown as ChordProgression[];
   const drums  = drumDB  as unknown as DrumPattern[];
 
-  const chordPattern = chords.find(c => c.id === chordId) ?? chords[0];
-  const drumPattern  = drums.find(d  => d.id === drumId)  ?? drums[0];
+  // コード進行は、シンプルモード表の候補に加え、DB でジャンル・雰囲気のタグが合う進行からも選ぶ（同じ進行ばかり出ないように）。
+  // 表の候補は選ばれやすくする（TABLE_WEIGHT 倍）
+  const chordPool = matchedPatterns(chords, entry.chord_ids, genre, mood);
+  const chordPattern = chordPool.length > 0
+    ? pickWeighted(chordPool, c => entry.chord_ids.includes(c.id) ? TABLE_WEIGHT : 1)
+    : chords.find(c => c.id === pickRandom(entry.chord_ids)) ?? chords[0];
+
+  // ドラムは表の候補から選ぶ
+  const drumId      = pickRandom(entry.drum_ids);
+  const drumPattern = drums.find(d => d.id === drumId) ?? drums[0];
 
   return {
     bpm: entry.bpm,

@@ -1,6 +1,6 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
-import { resolveChord } from "../data/degree_resolver";
+import { resolveChord, chordKey } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState } from "./AppState";
@@ -47,7 +47,7 @@ const t = (bar: number, step: number) => `${bar}:${Math.floor(step / 4)}:${step 
 // 音名のオクターブをずらす（"C#4" → "C#5"）
 function shiftOctave(note: string, by: number): string {
   const m = note.match(/^([A-G]#?b?)(-?\d+)$/);
-  return m ? `${m[1]}${parseInt(m[2]) + by}` : note;
+  return m ? `${m[1]}${parseInt(m[2], 10) + by}` : note;
 }
 
 // ===== ジャンル別の定義 =====
@@ -367,7 +367,7 @@ export function loadSignature(progression: ChordProgression, key: string = "A") 
   const events: SignatureEvent[] = [];
   progression.progression.forEach(chord => {
     if (chord.ending) return;  // エンディングの主和音では鳴らさない
-    const resolved = resolveChord(chord.degree, chord.type, chord.inversion, key, progression.base_scale, 4);
+    const resolved = resolveChord(chord.degree, chord.type, chord.inversion, chordKey(key, chord), progression.base_scale, 4);
     events.push(...def.events(resolved.notes, chord.bar - 1, chord.duration_bars));
   });
 

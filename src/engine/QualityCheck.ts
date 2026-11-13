@@ -1,6 +1,6 @@
 import { getState } from "./AppState";
 import { ChordProgression } from "../data/types";
-import { resolveChord, NOTE_INDEX } from "../data/degree_resolver";
+import { resolveChord, chordKey, NOTE_INDEX } from "../data/degree_resolver";
 import { noteToMidi, timeToUnits, durationToUnits } from "./MelodyGenerator";
 import { getArrangement, findBlock, LAYERS, SECTION_BARS } from "./LoopArranger";
 import { chorusProgression, endingBar, getSections, isFillBar, loopBars, songMelody, songProgression } from "./SongForm";
@@ -29,10 +29,14 @@ function melodyNotes(): SongNote[] {
 }
 
 // 16分音符単位の位置で鳴っているコードの構成音（ピッチクラス）
+function chordOf(song: ChordProgression, unit: number) {
+  return song.progression.find(c => unit >= (c.bar - 1) * 16 && unit < (c.bar - 1 + c.duration_bars) * 16);
+}
+
 function chordAt(song: ChordProgression, key: string, unit: number): number[] {
-  const chord = song.progression.find(c => unit >= (c.bar - 1) * 16 && unit < (c.bar - 1 + c.duration_bars) * 16);
+  const chord = chordOf(song, unit);
   if (!chord) return [];
-  return resolveChord(chord.degree, chord.type, chord.inversion, key, song.base_scale, 4).notes.map(n => noteToMidi(n) % 12);
+  return resolveChord(chord.degree, chord.type, chord.inversion, chordKey(key, chord), song.base_scale, 4).notes.map(n => noteToMidi(n) % 12);
 }
 
 const pct = (a: number, b: number) => `${Math.round((a / Math.max(1, b)) * 100)}%`;
@@ -109,7 +113,9 @@ function melodyMetrics(sections: string[]): MelodyMetrics | null {
     const last = inLoop[inLoop.length - 1];
     if (!last) continue;
     phrases++;
-    if (last.midi % 12 === tonic) tonicEnds++;
+    // 転調している周回は、ずらしたキーの主音で数える
+    const shift = chordOf(song, last.start)?.keyShift ?? 0;
+    if (last.midi % 12 === (tonic + shift) % 12) tonicEnds++;
     else if (chordAt(song, s.key, last.start).includes(last.midi % 12)) chordEnds++;
   }
 
@@ -232,7 +238,7 @@ export function melodyParamIssues(): string[] {
   const issues: string[] = [];
   for (const [genre, p] of Object.entries(melodyParams as Record<string, { rhythmPatterns: string[]; chorusRhythmPatterns?: string[]; phraseForms: string[] }>)) {
     for (const r of [...p.rhythmPatterns, ...(p.chorusRhythmPatterns ?? [])]) {
-      if (!/^[x.\-]{16}$/.test(r) || !r.includes("x") || /^\.*-/.test(r)) issues.push(`${genre} のリズム "${r}"`);
+      if (!/^[x.-]{16}$/.test(r) || !r.includes("x") || /^\.*-/.test(r)) issues.push(`${genre} のリズム "${r}"`);
     }
     for (const f of p.phraseForms) if (!/^[A-Za-z]+$/.test(f)) issues.push(`${genre} のフレーズ形式 "${f}"`);
   }

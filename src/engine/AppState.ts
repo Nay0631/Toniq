@@ -65,6 +65,12 @@ export type Arrangement = Record<LayerName, ArrangeBlock[]>;
 // 曲のセクション（A = Aメロ、B = サビ）。周回（コード進行1周）ごとに決める
 export type Section = "A" | "B";
 
+// スウィングでずらす単位（16n = 裏の16分音符、8n = 裏の8分音符。8n で量を上げると3連符のシャッフルになる）
+export type SwingUnit = "16n" | "8n";
+
+// 転調する範囲（last = 最後のサビから曲の終わりまで、chorus = サビだけ（Aメロで元のキーに戻る））
+export type ModulationScope = "last" | "chorus";
+
 // 構成のプリセット（LoopArranger.ts の ARRANGE_PRESETS。ジャンルの標準の構成 LOOP_SCHEDULE に変形を足したもの）
 // standard = 標準、quiet = 静かに始まる、drop = サビを強く、short = 短く繰り返す、buildup = だんだん盛り上がる
 export type ArrangePreset = "standard" | "quiet" | "drop" | "short" | "buildup";
@@ -137,6 +143,9 @@ export interface AppState {
   chorusMelodyNotes: MelodyNote[];
   // 周回ごとのセクション（null = ジャンルの標準。LoopArranger の LOOP_SCHEDULE）
   sections:          Section[] | null;
+  // 転調：キーを上げる量（半音。0 = しない）と、上げる範囲（last = 最後のサビから曲の終わりまで、chorus = サビだけ（Aメロで戻る））
+  modulation:        number;
+  modulationScope:   ModulationScope;
 
   // テスト中の機能の ON/OFF（カスタムモードの設定タブのドラムの「もっと調整」で切り替える。Preferences.ts が端末ごとに保存する。曲には保存しない）
   endingEnabled: boolean;  // 曲の最後の小節を主和音で終わらせる（エンディング）
@@ -154,6 +163,7 @@ export interface AppState {
   fxType:           FxType;  // FX / SE の種類
   // グルーヴ（0〜100。null = ジャンルの標準。mix_presets.json の swing / sidechain）
   swing:            number | null;  // 裏の16分音符を後ろへずらす量（跳ねたノリ）
+  swingUnit:        SwingUnit;      // ずらす単位（16n = 裏の16分音符、8n = 裏の8分音符（シャッフル））
   sidechain:        number | null;  // キックに合わせてベース・コードなどを沈める量（ポンピング）
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
@@ -245,6 +255,8 @@ export const defaultState: AppState = {
   chorusPattern:     null,
   chorusMelodyNotes: [],
   sections:          null,
+  modulation:        0,
+  modulationScope:   "last",
   endingEnabled: true,
   drumFill:      true,
   drumHumanize:  true,
@@ -256,6 +268,7 @@ export const defaultState: AppState = {
   chordInstrument:  "grow",
   fxType:           "auto",
   swing:            null,
+  swingUnit:        "16n",
   sidechain:        null,
   scaleLock:        true,
   drumCategory:     "EDM",
@@ -313,8 +326,9 @@ export const defaultState: AppState = {
 export const SONG_FIELDS = [
   "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
+  "modulation", "modulationScope",
   "melodyMethod", "melodyVersion",
-  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "sidechain", "scaleLock", "drumCategory",
+  "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "swingUnit", "sidechain", "scaleLock", "drumCategory",
   "growPreset", "growParams", "growChordPreset", "growChordParams", "growSounds", "bassSub",
   "arrangePreset", "arrangeEdits", "parts", "volumes",
 ] as const;

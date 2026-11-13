@@ -109,7 +109,7 @@ function build(list: HTMLElement): void {
     const input = e.target as HTMLInputElement;
     const ch    = input.closest<HTMLElement>("[data-part]");
     if (!ch) return;
-    setVolume(ch.dataset.part!, parseInt(input.value));
+    setVolume(ch.dataset.part!, parseInt(input.value, 10));
     ch.querySelector(".mixer-value")!.textContent = input.value;
   });
 

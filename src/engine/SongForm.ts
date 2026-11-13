@@ -49,6 +49,26 @@ export function sectionAt(bar: number): Section {
   return getSections()[Math.floor(bar / loopBars())] ?? "A";
 }
 
+// ===== 転調 =====
+
+// 周回ごとの転調の量（半音）。AppState.modulation が 0・サビがない・試聴中は全部 0。
+//   last   = 最後のサビ（最後に続くサビの1周目）から曲の終わりまで上げる（ラスサビ転調。元のキーには戻らない）
+//   chorus = サビの周回だけ上げる（Aメロでは元のキーに戻る）
+export function loopKeyShifts(sections: Section[] = getSections()): number[] {
+  const s = getState();
+  const none = sections.map(() => 0);
+  if (!s.modulation || isArrangementBypassed() || !sections.includes("B")) return none;
+  if (s.modulationScope === "chorus") return sections.map(sec => sec === "B" ? s.modulation : 0);
+  let start = sections.lastIndexOf("B");
+  while (start > 0 && sections[start - 1] === "B") start--;
+  return sections.map((_, i) => i >= start ? s.modulation : 0);
+}
+
+// 曲の小節（0 始まり）の転調の量（半音）
+export function keyShiftAt(bar: number): number {
+  return loopKeyShifts()[Math.floor(bar / loopBars())] ?? 0;
+}
+
 // ===== エンディング =====
 
 // エンディングの小節（0 始まり。曲の最後の小節）。使わないとき・試聴中は null
@@ -66,7 +86,8 @@ function tonicChord(scale: string): Pick<ChordDegree, "degree" | "type"> {
 // ===== 曲全体のコード進行 =====
 
 // 曲全体のコードの並び。周回ごとにセクションの進行（Aメロ／サビ）を並べ、
-// エンディングを使うなら最後の小節を主和音（全音符1つ）にする。試聴中はコード進行1周のまま
+// エンディングを使うなら最後の小節を主和音（全音符1つ）にする。転調している周回のコードには keyShift を付ける
+// （各パートは chordKey でずらしたキーで鳴らす）。試聴中はコード進行1周のまま
 export function songProgression(): ChordProgression | null {
   const s = getState();
   const base = s.chordPattern;
@@ -76,10 +97,13 @@ export function songProgression(): ChordProgression | null {
   const chorus   = chorusProgression() ?? base;
   const L        = base.length_bars;
   const sections = getSections();
+  const shifts   = loopKeyShifts(sections);
   let chords: ChordDegree[] = [];
   sections.forEach((section, i) => {
     const prog = section === "B" ? chorus : base;
-    for (const c of prog.progression) chords.push({ ...c, bar: c.bar + i * L, section });
+    for (const c of prog.progression) {
+      chords.push({ ...c, bar: c.bar + i * L, section, ...(shifts[i] ? { keyShift: shifts[i] } : {}) });
+    }
   });
 
   let length = sections.length * L;
@@ -89,9 +113,10 @@ export function songProgression(): ChordProgression | null {
     chords = chords
       .filter(c => c.bar < endBar)
       .map(c => c.bar + c.duration_bars > endBar ? { ...c, duration_bars: endBar - c.bar } : c);
+    const shift = shifts[Math.floor(end / L)] ?? 0;
     chords.push({
       bar: endBar, ...tonicChord(base.base_scale), inversion: 0, duration_bars: 1,
-      ending: true, section: sections[Math.floor(end / L)] ?? "A",
+      ending: true, section: sections[Math.floor(end / L)] ?? "A", ...(shift ? { keyShift: shift } : {}),
     });
     length = s.bars;
   }
@@ -112,7 +137,8 @@ function toPlaced(notes: MelodyNote[], offset: number, limit: number): PlacedNot
 }
 
 // 曲全体のメロディ。周回ごとにセクションのメロディ（サビは chorusMelodyNotes。空なら melodyNotes）を並べ、
-// エンディングを使うなら最後の小節を主音の全音符にする（直前の音にいちばん近い高さ）。試聴中はコード進行1周のまま
+// エンディングを使うなら最後の小節を主音の全音符にする（直前の音にいちばん近い高さ）。転調している周回は同じだけ上げる。
+// 試聴中はコード進行1周のまま
 export function songMelody(): MelodyNote[] {
   const s = getState();
   if (!s.chordPattern || isArrangementBypassed()) return s.melodyNotes;
@@ -120,8 +146,12 @@ export function songMelody(): MelodyNote[] {
   const loopUnits = loopBars() * 16;
   const chorus    = s.chorusMelodyNotes.length > 0 ? s.chorusMelodyNotes : s.melodyNotes;
   let placed: PlacedNote[] = [];
-  getSections().forEach((section, i) => {
-    placed.push(...toPlaced(section === "B" ? chorus : s.melodyNotes, i * loopUnits, loopUnits));
+  const sections = getSections();
+  const shifts   = loopKeyShifts(sections);
+  sections.forEach((section, i) => {
+    // 転調している周回はメロディも同じだけ上げる
+    placed.push(...toPlaced(section === "B" ? chorus : s.melodyNotes, i * loopUnits, loopUnits)
+      .map(n => ({ ...n, midi: n.midi + shifts[i] })));
   });
 
   const end = endingBar();
@@ -131,7 +161,7 @@ export function songMelody(): MelodyNote[] {
       .filter(n => n.start < endUnit)
       .map(n => ({ ...n, units: Math.min(n.units, endUnit - n.start) }));
     const last  = placed[placed.length - 1]?.midi ?? 72;
-    const tonic = NOTE_INDEX[s.key] ?? 0;
+    const tonic = ((NOTE_INDEX[s.key] ?? 0) + (shifts[Math.floor(end / loopBars())] ?? 0)) % 12;
     // 直前の音の 6 半音下〜5 半音上の 12 音のうち、主音のもの（ちょうど1つある）
     const midi  = Array.from({ length: 12 }, (_, k) => last - 6 + k).find(m => m % 12 === tonic) ?? last;
     placed.push({ midi, start: endUnit, units: 16 });
@@ -181,7 +211,7 @@ export function isFillBar(bar: number): boolean {
 // ===== メロディの自動生成（Aメロとサビ） =====
 
 // 今のコード進行（Aメロ）とサビの進行でメロディを作る。サビは高めの音域で作る
-// サビは Aメロの最後の音から大きく跳ばずに始める
+// サビは Aメロの最後の音から大きく跳ばずに始め、Aメロの最初の音へ大きく跳ばずに戻る
 export function generateSongMelodies(): { melodyNotes: MelodyNote[]; chorusMelodyNotes: MelodyNote[] } {
   const s = getState();
   if (!s.chordPattern) return { melodyNotes: [], chorusMelodyNotes: [] };
@@ -197,8 +227,10 @@ export function generateChorusMelody(): MelodyNote[] {
 function chorusMelodyAfter(verse: MelodyNote[]): MelodyNote[] {
   const s = getState();
   if (!s.chordPattern) return [];
-  const last = [...verse].reverse().find(n => n.note !== null)?.note;
+  const first = verse.find(n => n.note !== null)?.note;
+  const last  = [...verse].reverse().find(n => n.note !== null)?.note;
+  // サビのあとは Aメロに戻るので、サビの最後の音は Aメロの最初の音からも大きく離さない
   return generateMelody(chorusProgression() ?? s.chordPattern, s.key, s.genre, {
-    section: "B", prevNote: last ? noteToMidi(last) : undefined,
+    section: "B", prevNote: last ? noteToMidi(last) : undefined, nextNote: first ? noteToMidi(first) : undefined,
   });
 }

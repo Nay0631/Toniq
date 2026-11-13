@@ -28,10 +28,12 @@ const CHANGED: Record<string, () => boolean> = {
   // メロディの音色は grow（初期値）とジャンルに合わせる（auto）が標準
   melodySound: () => !["grow", "auto"].includes(getState().melodyInstrument),
   swing:       () => getState().swing !== null,
+  swingUnit:   () => getState().swingUnit !== defaultState.swingUnit,
   sidechain:   () => getState().sidechain !== null,
   scaleLock:   () => getState().scaleLock !== defaultState.scaleLock,
   chordRhythm: () => getState().chordRhythm !== defaultState.chordRhythm,
   chordSound:  () => getState().growChordPreset !== null,
+  modulation:  () => getState().modulation !== defaultState.modulation,
   bassSub:     () => getState().bassSub !== null,
   fxType:      () => getState().fxType !== "auto",
   extraParts:  () => EXTRA_PARTS.some(p => getState().parts[p] !== defaultState.parts[p]),
@@ -52,11 +54,14 @@ function resetGroup(group: MoreGroup): boolean {
   switch (group) {
     case "basic":
       if (CHANGED.melodySound()) setState({ melodyInstrument: defaultState.melodyInstrument });
-      setState({ swing: null, sidechain: null });
+      setState({ swing: null, sidechain: null, swingUnit: defaultState.swingUnit });
       applySwing();
       return true;
     case "chord":
-      setState({ scaleLock: defaultState.scaleLock, chordRhythm: defaultState.chordRhythm });
+      setState({
+        scaleLock: defaultState.scaleLock, chordRhythm: defaultState.chordRhythm,
+        modulation: defaultState.modulation, modulationScope: defaultState.modulationScope,
+      });
       if (CHANGED.chordSound()) setGrowSound("chord", null, null);
       return true;
     case "parts":

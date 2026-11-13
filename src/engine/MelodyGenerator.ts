@@ -22,6 +22,8 @@ interface MelodyParam {
   accentProbability: number;    // 弱拍でアクセント音（ペンタトニック外の2音）を使う確率
   variation?:        number;    // くり返すモチーフの最後の音を変える確率（なし = DEFAULT_VARIATION）
   suspension?:       number;    // コードが変わる小節の頭で掛留を使う確率（なし = DEFAULT_SUSPENSION）
+  chorusBand?:       number[];  // サビ（section B）で使う音域の範囲 [下, 上]（0〜1。なし = SECTION_SHAPE.B.band）。音域の狭いジャンルでサビを持ち上げる
+  verseBand?:        number[];  // Aメロ（section A）で使う音域の範囲（なし = SECTION_SHAPE.A.band）
 }
 
 // ===== 音名→MIDIノート番号 =====
@@ -29,7 +31,7 @@ const NOTE_ORDER = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
 export function noteToMidi(note: string): number {
   const name   = note.slice(0, -1);
-  const octave = parseInt(note.slice(-1));
+  const octave = parseInt(note.slice(-1), 10);
   return NOTE_ORDER.indexOf(name) + (octave + 1) * 12;
 }
 
@@ -148,6 +150,9 @@ const DEFAULT_SUSPENSION: Record<string, number> = {  // コードが変わる�
   "EDM": 0.2, "ゲームBGM": 0.2, "テクノ": 0.15, "8bit": 0.1,
 };
 const STRONG_BEAT_CHORD_TONE = 0.7;  // 3拍目の頭の音をコード構成音にする確率
+// 休符をはさまずに続く音どうしで許す跳躍（半音）。ループの継ぎ目も含め、超えた所は小節の一部をオクターブ動かして直す。
+// 自動チェック（QualityCheck.ts の QUALITY_RULES.leap）の基準と同じ
+export const JUMP_LIMIT = 9;
 
 // ===== 次の音を選ぶ =====
 interface PickContext {
@@ -247,6 +252,7 @@ function pickNextNote(
 export interface MelodyOptions {
   section?:  Section;  // B（サビ）なら高めの音域で、山型・上昇の形にする。省略すると A
   prevNote?: number;   // このメロディの直前に鳴る音（MIDI。Aメロの最後の音など）。最初の音を近くに置き、継ぎ目で大きく跳ばない
+  nextNote?: number;   // このメロディのあとに鳴る別のメロディの最初の音（MIDI。サビのあとの Aメロの最初の音など）。最後の音をそこからも離しすぎない
 }
 
 export function generateMelody(
@@ -290,7 +296,10 @@ export function generateMelody(
   const events = barEvents.flat();
 
   // 輪郭：フレーズ形式1回分を1つの形で動く。音域のうちセクションの範囲を使う
-  const shape       = SECTION_SHAPE[section];
+  const bandParam   = section === "B" ? param.chorusBand : param.verseBand;
+  const shape       = bandParam?.length === 2
+    ? { ...SECTION_SHAPE[section], band: [bandParam[0], bandParam[1]] as [number, number] }
+    : SECTION_SHAPE[section];
   const contour     = CONTOURS[pickRandom(shape.contours)];
   const lowMidi     = scaleNotes[0];
   const highMidi    = scaleNotes[scaleNotes.length - 1];
@@ -466,7 +475,7 @@ export function generateMelody(
 
   // preferences：主音からの半音数の候補を優先順に。maxUnits：この長さ（16分音符）までは伸ばす。
   // wrapTo：ループで次に鳴る音（進行の最初の音）。指定すると、その音からも離れすぎない高さを選ぶ
-  function land(i: number, preferences: number[][], avoidRoot: boolean, maxUnits: number, wrapTo?: number): void {
+  function land(i: number, preferences: number[][], avoidRoot: boolean, maxUnits: number, wrapTo: number[] = []): void {
     if (i < 0) return;
     const ctx  = makeContext(i);
     const prev = i > 0 ? midis[i - 1] : midis[i];
@@ -479,7 +488,10 @@ export function generateMelody(
     }
     if (pool.length === 0) pool = scaleNotes.filter(fits);
     if (pool.length === 0) return;
-    const cost = (n: number) => Math.abs(n - prev) + (wrapTo === undefined ? 0 : Math.abs(n - wrapTo) * 0.7);
+    // 直前の音から跳びすぎない候補を優先する（ループの頭との継ぎ目はあとで smoothLeaps が直す）
+    const near = pool.filter(n => Math.abs(n - prev) <= JUMP_LIMIT);
+    if (near.length > 0) pool = near;
+    const cost = (n: number) => Math.abs(n - prev) + wrapTo.reduce((sum, w) => sum + Math.abs(n - w) * 0.7, 0);
     const best = Math.min(...pool.map(cost));
     midis[i] = pickRandom(pool.filter(n => cost(n) === best));
     keep.add(i);
@@ -496,7 +508,62 @@ export function generateMelody(
     const halfIndex = lastIndexInBar(halfBar);
     if (halfIndex >= 0 && halfIndex !== finalIndex) land(halfIndex, [[7], [2], [3, 4]], true, 4);
   }
-  land(finalIndex, [[0], [7], [3, 4]], false, 6, midis[0]);
+  land(finalIndex, [[0], [7], [3, 4]], false, 6,
+       options.nextNote === undefined ? [midis[0]] : [midis[0], options.nextNote]);
+
+  // ===== 大きな跳躍を直す =====
+  // 続けて鳴る音（間の休符が1拍未満）の跳躍が JUMP_LIMIT を超える所を、小節の前側か後ろ側をまとめてオクターブ動かして直す。
+  // まとめて動かすので小節の中の動き（モチーフ・掛留・アクセント音の解決）は変わらない。
+  // ループの継ぎ目（最後の音 → 最初の音）と、前後に鳴る別のメロディ（prevNote / nextNote）との継ぎ目も数える
+  smoothLeaps();
+
+  function smoothLeaps(): void {
+    const n = midis.length;
+    if (n === 0) return;
+    const endOf     = (i: number) => events[i].start + events[i].units;
+    const connected = (i: number) => events[i].start - endOf(i - 1) < 4;
+    const wraps     = totalUnits - endOf(n - 1) + events[0].start < 4;
+    const opensNear = events[0].start < 4;
+    const endsNear  = totalUnits - endOf(n - 1) < 4;
+    const excess    = (a: number, b: number) => Math.max(0, Math.abs(a - b) - JUMP_LIMIT);
+    const cost = (m: number[]): number => {
+      let c = 0;
+      for (let i = 1; i < n; i++) if (connected(i)) c += excess(m[i - 1], m[i]);
+      if (wraps) c += excess(m[n - 1], m[0]);
+      if (options.prevNote !== undefined && opensNear) c += excess(options.prevNote, m[0]);
+      if (options.nextNote !== undefined && endsNear)  c += excess(m[n - 1], options.nextNote);
+      return c;
+    };
+
+    // 動かす範囲の候補：小節ごとに、ある音より前（小節の頭から）か、その音から後ろ（小節の終わりまで）
+    const segments: [number, number][] = [];
+    let barStart = 0;
+    for (let i = 1; i <= n; i++) {
+      if (i < n && Math.floor(events[i].start / 16) === Math.floor(events[barStart].start / 16)) continue;
+      for (let k = barStart + 1; k < i; k++) segments.push([barStart, k], [k, i]);
+      segments.push([barStart, i]);
+      barStart = i;
+    }
+
+    let current = cost(midis);
+    for (let round = 0; round < 16 && current > 0; round++) {
+      let best: number[] | null = null;
+      let bestCost = current, bestSize = Infinity;
+      for (const [from, to] of segments) {
+        for (const shift of [-12, 12]) {
+          const moved = midis.map((m, i) => i >= from && i < to ? m + shift : m);
+          if (moved.slice(from, to).some(m => m < lowMidi || m > highMidi)) continue;
+          const c = cost(moved);
+          if (c < bestCost || (c === bestCost && best && to - from < bestSize)) {
+            best = moved; bestCost = c; bestSize = to - from;
+          }
+        }
+      }
+      if (!best || bestCost >= current) break;
+      best.forEach((m, i) => { midis[i] = m; });
+      current = bestCost;
+    }
+  }
 
   // ===== MelodyNote に変換（音の間は休符） =====
   const notes: MelodyNote[] = [];

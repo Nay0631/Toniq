@@ -118,13 +118,16 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(getState().arrangeEdits).toEqual([{ section: "B", nth: 0, part: "pad", on: false }]);
   });
 
-  it("無い項目（スウィング・サビ・FX の種類など）は初期値、曲の情報はそのまま", () => {
+  it("無い項目（スウィング・サビ・FX の種類・転調・跳ねる単位など）は初期値、曲の情報はそのまま", () => {
     const s = getState();
     expect(s.swing).toBe(defaultState.swing);
+    expect(s.swingUnit).toBe("16n");  // シャッフル（8分音符）は以前はなかった
     expect(s.bassSub).toBe(defaultState.bassSub);  // サブベースはジャンルの標準（null）
     expect(s.chorusPattern).toBe(defaultState.chorusPattern);
     expect(s.fxType).toBe(defaultState.fxType);
     expect(s.sections).toBe(defaultState.sections);
+    expect(s.modulation).toBe(0);  // 転調は以前はなかった（しない）
+    expect(s.modulationScope).toBe(defaultState.modulationScope);
     expect(s.key).toBe("D");
     expect(s.bpm).toBe(85);
     expect(s.melodyNotes).toEqual([{ note: "D5", duration: "4n", time: "0:0:0" }]);
