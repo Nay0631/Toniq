@@ -596,6 +596,11 @@ for item in zin.infolist():
         m = re.search(r'<w:style [^>]*w:styleId="10".*?</w:style>', st, re.S)
         assert '<w:tab w:val="left" w:pos="1155"/>' in m.group(0)
         st = st.replace(m.group(0), m.group(0).replace('<w:tab w:val="left" w:pos="1155"/>', '<w:tab w:val="left" w:pos="1365"/>'))
+        # 目次3の番号のあとのタブ位置も広げる（手本のままだと「7.11.10」のように番号が7文字になると入りきらず、
+        # 名前が右端のページ番号のタブまで飛ばされて「7.11.10・・・・・M01-10 …」と崩れるため）
+        m = re.search(r'<w:style [^>]*w:styleId="30".*?</w:style>', st, re.S)
+        assert '<w:tab w:val="left" w:pos="2205"/>' in m.group(0)
+        st = st.replace(m.group(0), m.group(0).replace('<w:tab w:val="left" w:pos="2205"/>', '<w:tab w:val="left" w:pos="2415"/>'))
         data = st.encode('utf-8')
     zout.writestr(item.filename, data)
 for rp, rs, png, svg, n in IMG:
