@@ -1,6 +1,6 @@
 import { getState, setState, ArrangeBlock, ArrangePreset, FxType } from "../engine/AppState";
 import {
-  getArrangement, getBaseArrangement, currentUnits, findBlock, findEdit, withEdit, ARRANGE_PRESETS, arrangePresetLabel,
+  getArrangement, currentUnits, currentEditsWithPartBlocks, findBlock, withEdit, ARRANGE_PRESETS, arrangePresetLabel,
   type ArrangeUnit,
 } from "../engine/LoopArranger";
 import { setLayerEnabled, LayerName } from "../engine/LayerManager";
@@ -15,8 +15,8 @@ import { render } from "./Router";
 import { formatTimePrecise } from "./format";
 import { chorusProgression, getSections, loopBars } from "../engine/SongForm";
 
-// アレンジャー：構成のプリセット（AppState.arrangePreset）を選び、セクション（8小節）ごとにパートを足す・抜く。
-// 変えた所は「何回目の Aメロ／サビ のどのパートか」で AppState.arrangeEdits に持つので、
+// アレンジャー：構成のプリセット（AppState.arrangePreset）を選び、ブロックをドラッグで動かす・端で長さを変える・× で消す。
+// 結果はセクション（8小節）ごとのプリセットとの差として「何回目の Aメロ／サビ のどのパートか」で AppState.arrangeEdits に持つので、
 // ジャンル・小節数・コード進行の長さを変えても、プリセットを組み直したうえで当て直される（LoopArranger.ts）
 
 // アレンジャーのレーン（上から表示する順）
@@ -122,10 +122,6 @@ function blockLabel(part: LayerName, b: ArrangeBlock, label: string): string {
   return `<span class="arr-block-label">${label}</span>`;
 }
 
-function sectionName(unit: ArrangeUnit): string {
-  return `${unit.section === "B" ? "サビ" : "Aメロ"}${unit.nth + 1}回目`;
-}
-
 // セクション（Aメロ／サビ）の行：周回ごとのボタン。クリックで切り替える
 function sectionLane(bars: number): string {
   const L = loopBars();
@@ -155,18 +151,6 @@ function blockStyle(b: { start: number; length: number }, bars: number): string 
   return `left:${(b.start / bars) * 100}%;width:${((end - b.start) / bars) * 100}%`;
 }
 
-// 変えた所の印（足した・抜いたセクションを枠で囲む）
-function editMarks(part: LayerName, units: ArrangeUnit[], bars: number): string {
-  const edits = getState().arrangeEdits;
-  return units.map(unit => {
-    const on = findEdit(edits, unit, part)?.on;
-    if (on === undefined) return "";
-    const what = on ? "足した" : "抜いた";
-    return `<div class="arr-edit is-${on ? "on" : "off"}" style="${blockStyle(unit, bars)}"
-              title="${sectionName(unit)}：${what}（クリックで元に戻す）"><span class="arr-edit-tag">${on ? "＋" : "−"} ${what}</span></div>`;
-  }).join("");
-}
-
 // 構成のプリセットのセレクト
 function renderPresetSelect(): void {
   const select = $("c-arr-preset") as HTMLSelectElement | null;
@@ -181,7 +165,7 @@ function renderPresetSelect(): void {
 export function renderArranger(): void {
   const root = $("c-arranger");
   const s = getState();
-  if (!root || !s.chordPattern) return;
+  if (!root || !s.chordPattern || drag) return;
   // ブロックの種類・パターンを選んでいる途中に描き直すとドロップダウンが閉じるので待つ（選び終えると blur して描き直す）
   if (document.activeElement?.closest(BLOCK_SELECT)) return;
   const bars        = s.bars;
@@ -200,11 +184,14 @@ export function renderArranger(): void {
     const blocks = arrangement[name].filter(b => b.start < bars);
     const sub    = !on ? "OFF" : blocks.length === 0 ? "鳴らさない" : labels.sub;
     const body   = blocks.length === 0
-      ? `<div class="arr-empty">セクションをクリックで足す</div>`
+      ? `<div class="arr-empty">クリックして配置…</div>`
       : blocks.map(b => `
           <div class="arr-block arr-${name}" tabindex="0" data-start="${b.start}" style="${blockStyle(b, bars)}"
-               title="${b.start + 1}〜${b.start + b.length}小節（クリックでそのセクションから抜く・もう一度で元に戻す）">
+               title="${b.start + 1}〜${b.start + b.length}小節（ドラッグで移動・端で長さを変更・× ／右クリック／Delete で削除）">
+            <span class="arr-handle arr-handle-left"></span>
             ${blockLabel(name, b, labels.block)}
+            <button class="arr-del" aria-label="削除" title="このブロックを消す">×</button>
+            <span class="arr-handle arr-handle-right"></span>
           </div>`).join("");
     return `
       <div class="arr-lane${on ? "" : " is-off"}">
@@ -215,7 +202,7 @@ export function renderArranger(): void {
           </div>
           <button class="pill${on ? " is-on" : ""}" data-arr-toggle="${name}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
         </div>
-        <div class="arr-track" data-part="${name}">${body}${editMarks(name, units, bars)}</div>
+        <div class="arr-track" data-part="${name}">${body}</div>
       </div>`;
   }).join("");
 
@@ -289,44 +276,109 @@ export function startArrangerPlayhead(): void {
   rafId = requestAnimationFrame(tick);
 }
 
-// ===== 編集（セクション単位で足す・抜く） =====
+// ===== 編集（ブロックを置く・動かす・長さを変える・消す） =====
+// 編集の結果は「パートのブロックの並び」として LoopArranger の currentEditsWithPartBlocks に渡し、
+// セクションごとのプリセットとの差（変えた所）に直して保存する。隣のブロックとは結合しない（切れ目も変えた所に持つ）
+
+// ブロック（orig）を next の位置・長さに変える。next = null なら消す。新しい所に置くときは orig = null
+function changeBlock(
+  part: LayerName, orig: { start: number; length: number } | null, next: { start: number; length: number } | null,
+): void {
+  const blocks: { start: number; length: number }[] = getArrangement()[part]
+    .filter(b => b.start !== orig?.start)
+    .map(b => ({ start: b.start, length: b.length }));
+  if (next) blocks.push(next);
+  setState({ arrangeEdits: currentEditsWithPartBlocks(part, blocks) });
+}
+
+// ブロックが動ける範囲（前後のブロックと曲の長さ）
+function freeRange(blocks: ArrangeBlock[], target: ArrangeBlock | null, bar: number): { min: number; max: number } {
+  const others = blocks.filter(b => b !== target);
+  const min = Math.max(0, ...others.filter(b => b.start + b.length <= bar).map(b => b.start + b.length));
+  const max = Math.min(getState().bars, ...others.filter(b => b.start > bar).map(b => b.start));
+  return { min, max };
+}
 
 function unitAtBar(bar: number): ArrangeUnit | undefined {
   return currentUnits().find(u => bar >= u.start && bar < u.start + u.length);
 }
 
-// プリセットのままで、そのセクションのどこかでパートが鳴るか
-function basePlays(part: LayerName, unit: ArrangeUnit): boolean {
-  const blocks = getBaseArrangement()[part];
-  for (let bar = unit.start; bar < unit.start + unit.length; bar++) if (findBlock(blocks, bar)) return true;
-  return false;
+// 空いている所をクリック：その小節を含むセクションの空いている所にブロックを置く。OFF のパートは ON にする
+function addBlock(part: LayerName, bar: number): void {
+  const blocks = getArrangement()[part];
+  const unit   = unitAtBar(bar);
+  if (!unit || findBlock(blocks, bar)) return;
+  const { min, max } = freeRange(blocks, null, bar);
+  const start = Math.max(min, unit.start);
+  const end   = Math.min(max, unit.start + unit.length);
+  changeBlock(part, null, { start, length: end - start });
+  if (!getState().parts[part]) setLayerEnabled(part, true);
 }
 
-// セクションのパートを切り替える：変えてあれば元に戻し、変えていなければ
-// プリセットで鳴っているなら抜く・鳴っていないなら足す。OFF のパートは ON にして、そのセクションで鳴らす
-function toggleUnit(part: LayerName, unit: ArrangeUnit): void {
-  const s = getState();
-  if (!s.parts[part]) {
-    setLayerEnabled(part, true);
-    if (!basePlays(part, unit) && findEdit(s.arrangeEdits, unit, part)?.on !== true) {
-      setState({ arrangeEdits: withEdit(s.arrangeEdits, unit, part, { on: true }) });
-    }
-    return;
+function removeBlock(part: LayerName, start: number): void {
+  const block = getArrangement()[part].find(b => b.start === start);
+  if (block) changeBlock(part, block, null);
+}
+
+interface Drag {
+  part:  LayerName;
+  el:    HTMLElement;
+  mode:  "move" | "left" | "right";
+  x:     number;
+  barPx: number;
+  orig:  ArrangeBlock;
+  min:   number;
+  max:   number;
+  next:  { start: number; length: number };
+}
+
+// ドラッグ中のブロック（ドラッグ中は描き直さない。離したときに保存して描き直す）
+let drag: Drag | null = null;
+
+function startDrag(e: PointerEvent, part: LayerName, el: HTMLElement, track: HTMLElement): void {
+  const blocks = getArrangement()[part];
+  const block  = blocks.find(b => b.start === Number(el.dataset.start));
+  if (!block) return;
+  const target = e.target as HTMLElement;
+  const mode = target.classList.contains("arr-handle-left")  ? "left"
+             : target.classList.contains("arr-handle-right") ? "right"
+             : "move";
+  const { min, max } = freeRange(blocks, block, block.start);
+  drag = {
+    part, el, mode, min, max,
+    x:     e.clientX,
+    barPx: track.getBoundingClientRect().width / getState().bars,
+    orig:  { ...block },
+    next:  { start: block.start, length: block.length },
+  };
+  el.classList.add("is-dragging");
+  el.setPointerCapture(e.pointerId);
+}
+
+// 1小節単位で動かす。前後のブロックには重ならない
+function moveDrag(e: PointerEvent): void {
+  if (!drag) return;
+  const { orig, min, max } = drag;
+  const d   = Math.round((e.clientX - drag.x) / drag.barPx);
+  const end = orig.start + orig.length;
+  if (drag.mode === "move") {
+    drag.next = { start: Math.max(min, Math.min(orig.start + d, max - orig.length)), length: orig.length };
+  } else if (drag.mode === "left") {
+    const start = Math.max(min, Math.min(orig.start + d, end - 1));
+    drag.next = { start, length: end - start };
+  } else {
+    const newEnd = Math.max(orig.start + 1, Math.min(end + d, max));
+    drag.next = { start: orig.start, length: newEnd - orig.start };
   }
-  const edit = findEdit(s.arrangeEdits, unit, part);
-  const patch = edit?.on !== undefined ? { on: undefined } : { on: !basePlays(part, unit) };
-  setState({ arrangeEdits: withEdit(s.arrangeEdits, unit, part, patch) });
+  drag.el.setAttribute("style", blockStyle(drag.next, getState().bars));
 }
 
-// セクションからパートを抜く（右クリック・Delete）。足してあったセクションなら足したのを取り消す
-function removeFromUnit(part: LayerName, unit: ArrangeUnit): void {
-  const s = getState();
-  const edit = findEdit(s.arrangeEdits, unit, part);
-  const patch = edit?.on === true ? { on: undefined } : { on: false };
-  let next = withEdit(s.arrangeEdits, unit, part, patch);
-  // 取り消してもプリセットで鳴るなら、抜く
-  if (patch.on === undefined && basePlays(part, unit)) next = withEdit(next, unit, part, { on: false });
-  setState({ arrangeEdits: next });
+function endDrag(): void {
+  if (!drag) return;
+  const { part, orig, next } = drag;
+  drag = null;
+  if (next.start !== orig.start || next.length !== orig.length) changeBlock(part, orig, next);
+  renderArranger();
 }
 
 // ブロックが重なっているセクション
@@ -348,6 +400,25 @@ function barAt(track: HTMLElement, clientX: number): number {
 export function initArranger(onSeek: () => void, onSongChange: () => void): void {
   const root = $("c-arranger");
   if (!root) return;
+
+  // トラック：ブロックをつかんでドラッグ（移動・端で長さを変える）、空いている所を押すとブロックを置く
+  root.addEventListener("pointerdown", e => {
+    const target = e.target as HTMLElement;
+    if (e.button !== 0 || target.closest(`.arr-del, ${BLOCK_SELECT}`)) return;
+    const track = target.closest<HTMLElement>(".arr-track");
+    if (!track) return;
+    const part  = track.dataset.part as LayerName;
+    const block = target.closest<HTMLElement>(".arr-block");
+    if (block) {
+      startDrag(e, part, block, track);
+    } else {
+      addBlock(part, barAt(track, e.clientX));
+      render();
+    }
+  });
+  root.addEventListener("pointermove", moveDrag);
+  root.addEventListener("pointerup", endDrag);
+  root.addEventListener("pointercancel", endDrag);
 
   root.addEventListener("click", e => {
     const target = e.target as HTMLElement;
@@ -377,24 +448,22 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
       render();  // 設定タブの ON/OFF ボタンなど、アレンジャー以外の表示もそろえる
       return;
     }
-    // トラックをクリック：そのセクションのパートを足す・抜く・元に戻す（再生中もすぐ反映される）
-    const track = target.closest<HTMLElement>(".arr-track");
-    if (track) {
-      const unit = unitAtBar(barAt(track, e.clientX));
-      if (!unit) return;
-      toggleUnit(track.dataset.part as LayerName, unit);
+    // × ボタン：ブロックを消す（再生中もすぐ反映される）
+    const del = target.closest(".arr-del");
+    if (del) {
+      const block = del.closest<HTMLElement>(".arr-block")!;
+      removeBlock(block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName, Number(block.dataset.start));
       render();
     }
   });
 
-  // ブロックを右クリック：そのセクションから抜く（ブラウザの右クリックメニューは出さない）
+  // ブロックを右クリック：消す（ピアノロールと同じ操作。ブラウザの右クリックメニューは出さない）
   root.addEventListener("contextmenu", e => {
     const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
     if (!block) return;
     e.preventDefault();
-    const track = block.closest<HTMLElement>(".arr-track")!;
-    const unit = unitAtBar(barAt(track, e.clientX));
-    if (unit) removeFromUnit(track.dataset.part as LayerName, unit);
+    if (drag) return;
+    removeBlock(block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName, Number(block.dataset.start));
     render();
   });
 
@@ -415,14 +484,13 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
     renderArranger();
   });
 
-  // フォーカス中のブロックは Delete / Backspace で、重なっているセクションから抜く（種類のセレクトを操作中は除く）
+  // フォーカス中のブロックは Delete / Backspace で消す（種類のセレクトを操作中は除く）
   root.addEventListener("keydown", e => {
     if (e.key !== "Delete" && e.key !== "Backspace") return;
     if ((e.target as HTMLElement).closest(BLOCK_SELECT)) return;
     const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
     if (!block) return;
-    const part = block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName;
-    for (const unit of unitsOfBlock(Number(block.dataset.start), part)) removeFromUnit(part, unit);
+    removeBlock(block.closest<HTMLElement>(".arr-track")!.dataset.part as LayerName, Number(block.dataset.start));
     render();
   });
 

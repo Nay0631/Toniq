@@ -978,7 +978,7 @@ button {
     repeating-linear-gradient(to right, var(--grid-loop) 0 1px, transparent 1px calc(100% * var(--loop) / var(--bars))),
     repeating-linear-gradient(to right, var(--grid) 0 1px, transparent 1px calc(100% / var(--bars)));
   background-color: var(--surface-sunken);
-  cursor: pointer;
+  cursor: copy;
 }
 
 .arr-lane.is-off .arr-track { opacity: 0.45; }
@@ -1008,7 +1008,7 @@ button {
   font-size: 13px;
   font-weight: 600;
   color: #2b2b3a;
-  cursor: pointer;
+  cursor: grab;
   /* 隣り合うブロックの間に隙間が見えるよう、左右の枠を透明にする */
   border: 0 solid transparent;
   border-width: 0 2px;
@@ -1050,6 +1050,8 @@ button {
 }
 
 .arr-block-select:hover { background-color: rgba(255, 255, 255, 0.35); }
+/* 削除ボタンはブロックの右端に寄せる */
+.arr-block-select + .arr-del { margin-left: auto; }
 
 .arr-block-select:focus-visible { outline: 2px solid var(--custom); outline-offset: -2px; }
 
@@ -1069,36 +1071,43 @@ button {
 .arr-counter, .mix-counter { background: #f5b98a; }
 .arr-perc, .mix-perc   { background: #c9dc8f; }
 
+/* ブロックの左右の端：ドラッグで長さを変える */
+.arr-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.arr-handle-left  { left: 0; }
+.arr-handle-right { right: 0; }
+
+/* ブロックの削除ボタン（×）。マウスを乗せた・フォーカスしたブロックだけに出す */
+.arr-del {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.arr-block:hover .arr-del,
+.arr-block:focus-within .arr-del { opacity: 1; }
+
 
 /* 構成のプリセット（ツールバーの左端） */
 .arranger-preset { display: flex; flex: none; align-items: center; gap: 8px; font-size: 12px; color: var(--hw-label); }
 .arranger-preset .select { width: auto; }
 
-/* 変えた所（足した・抜いたセクション）の枠。クリックはトラックへ通す */
-.arr-edit {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  z-index: 1;
-  border: 2px solid var(--hw-orange);
-  border-radius: 6px;
-  pointer-events: none;
-}
-.arr-edit.is-off { border-style: dashed; border-color: var(--hw-label); }
-.arr-edit-tag {
-  position: absolute;
-  top: -2px;
-  right: 4px;
-  padding: 0 6px;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 15px;
-  white-space: nowrap;
-  color: #fff;
-  background: var(--hw-orange);
-  border-radius: 0 0 4px 4px;
-}
-.arr-edit.is-off .arr-edit-tag { color: var(--hw-text); background: var(--hw-box); }
 
 /* セクション（アレンジを変える単位・8小節）の区切り線 */
 .arr-unit-line {
@@ -1831,6 +1840,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 
 /* クリップの見出しの帯（16px）に収める */
 [data-skin="studio"] .hw .arr-block-select { height: 15px; }
+
+[data-skin="studio"] .hw .arr-del { width: 14px; height: 14px; margin-right: 4px; font-size: 10px; }
 
 
 /* ── ポップスキン（<html data-skin="pop">） ──────────────

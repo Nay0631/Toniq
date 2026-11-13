@@ -203,7 +203,8 @@ export interface BuildOptions {
 }
 
 // 小節ごとに鳴らすパートと、ドラムのパターン・FX の種類（変えた所で決まるもの）
-interface BarState { active: Set<LayerName>; drum?: string; fx?: FxType }
+// splits：この小節で別のブロックを始めるパート（前の小節から続いていても結合しない）
+interface BarState { active: Set<LayerName>; drum?: string; fx?: FxType; splits?: Set<LayerName> }
 
 function buildBars(o: BuildOptions): { bars: BarState[]; units: ArrangeUnit[] } {
   const preset     = o.preset ?? "standard";
@@ -240,6 +241,11 @@ function buildBars(o: BuildOptions): { bars: BarState[]; units: ArrangeUnit[] } 
       const b = bars[bar];
       if (edit.on === true)  b.active.add(edit.part);
       if (edit.on === false) b.active.delete(edit.part);
+      if (edit.bars) {
+        if (edit.bars.includes(bar - unit.start)) b.active.add(edit.part);
+        else b.active.delete(edit.part);
+      }
+      if (edit.splits?.includes(bar - unit.start)) (b.splits ??= new Set()).add(edit.part);
       if (edit.part === "drum" && edit.drum) b.drum = edit.drum;
       if (edit.part === "fx"   && edit.fx)   b.fx   = edit.fx;
     }
@@ -259,7 +265,7 @@ export function buildArrangement(o: BuildOptions): Arrangement {
       const fx   = part === "fx"   ? b.fx   : undefined;
       const blocks = arrangement[part];
       const last   = blocks[blocks.length - 1];
-      if (last && last.start + last.length === bar && last.drum === drum && last.fx === fx) {
+      if (last && last.start + last.length === bar && last.drum === drum && last.fx === fx && !b.splits?.has(part)) {
         last.length += 1;
       } else {
         const block: ArrangeBlock = { start: bar, length: 1 };
@@ -291,7 +297,6 @@ function currentOptions(withEdits: boolean): BuildOptions | null {
 
 // アレンジは再生中に何度も参照するので、条件が同じあいだは作り直さない（変えた所は配列ごと差し替えるので参照で比べる）
 let arrangedCache: { key: string; edits: ArrangeEdit[]; arrangement: Arrangement } | null = null;
-let baseCache:     { key: string; arrangement: Arrangement } | null = null;
 
 function cacheKey(): string {
   const s = getState();
@@ -309,15 +314,6 @@ export function getArrangement(): Arrangement {
   return arrangedCache.arrangement;
 }
 
-// 変えた所を当てる前のアレンジ（構成のプリセットのまま）。アレンジャーで「プリセットではこのパートが鳴るか」を調べるのに使う
-export function getBaseArrangement(): Arrangement {
-  const o = currentOptions(false);
-  if (!o) return emptyArrangement();
-  const key = cacheKey();
-  if (baseCache?.key !== key) baseCache = { key, arrangement: buildArrangement(o) };
-  return baseCache.arrangement;
-}
-
 // 今の曲のセクション（アレンジを変える単位）
 export function currentUnits(): ArrangeUnit[] {
   const o = currentOptions(false);
@@ -333,15 +329,61 @@ export function findEdit(edits: ArrangeEdit[], unit: ArrangeUnit, part: LayerNam
 // patch の項目が undefined ならその項目を消し、何も残らなければ変えた所ごと消す（null も消す）
 export function withEdit(
   edits: ArrangeEdit[], unit: ArrangeUnit, part: LayerName,
-  patch: { on?: boolean; drum?: string; fx?: FxType } | null,
+  patch: { on?: boolean; bars?: number[]; splits?: number[]; drum?: string; fx?: FxType } | null,
 ): ArrangeEdit[] {
   const rest = edits.filter(e => !(e.section === unit.section && e.nth === unit.nth && e.part === part));
   if (patch === null) return rest;
   const next: ArrangeEdit = { ...(findEdit(edits, unit, part) ?? { section: unit.section, nth: unit.nth, part }) };
-  if ("on" in patch)   { if (patch.on === undefined) delete next.on;   else next.on = patch.on; }
-  if ("drum" in patch) { if (!patch.drum) delete next.drum; else next.drum = patch.drum; }
-  if ("fx" in patch)   { if (!patch.fx || patch.fx === "auto") delete next.fx; else next.fx = patch.fx; }
-  return next.on === undefined && !next.drum && !next.fx ? rest : [...rest, next];
+  if ("on" in patch)     { if (patch.on === undefined) delete next.on;   else next.on = patch.on; }
+  if ("bars" in patch)   { if (!patch.bars) delete next.bars; else next.bars = patch.bars; }
+  if ("splits" in patch) { if (!patch.splits?.length) delete next.splits; else next.splits = patch.splits; }
+  if ("drum" in patch)   { if (!patch.drum) delete next.drum; else next.drum = patch.drum; }
+  if ("fx" in patch)     { if (!patch.fx || patch.fx === "auto") delete next.fx; else next.fx = patch.fx; }
+  return next.on === undefined && !next.bars && !next.splits && !next.drum && !next.fx ? rest : [...rest, next];
+}
+
+// アレンジャーで並べたブロック（曲全体）を、プリセットとの差の変えた所に直す（ドラッグ・長さ変更・削除・配置）。
+// セクションごとに比べ、鳴らす小節がプリセットと同じなら on / bars を消し、全部鳴らす／全部鳴らさないなら on、一部なら bars にする。
+// 前のブロックと隙間なく続くブロックは、その頭を切れ目（splits）にして結合しない（ドラムのパターン・FX の種類が違って
+// もともと分かれる所には付けない）。ドラムのパターン・FX の種類と、曲が短くて当たるセクションがない変えた所はそのまま残す
+export function editsWithPartBlocks(
+  o: BuildOptions, part: LayerName, blocks: { start: number; length: number }[],
+): ArrangeEdit[] {
+  const { bars: base, units } = buildBars({ ...o, edits: [] });
+  const { bars: now } = buildBars(o);
+  const playing = new Array<boolean>(o.totalBars).fill(false);
+  const starts  = new Array<boolean>(o.totalBars).fill(false);
+  for (const b of blocks) {
+    if (b.start >= o.totalBars) continue;
+    starts[b.start] = true;
+    for (let bar = b.start; bar < Math.min(b.start + b.length, o.totalBars); bar++) playing[bar] = true;
+  }
+  // ドラムのパターン・FX の種類が前の小節と同じか（違えばもともと別のブロックになる）
+  const sameKind = (bar: number) => now[bar].drum === now[bar - 1].drum && now[bar].fx === now[bar - 1].fx;
+  let edits = o.edits ?? [];
+  for (const unit of units) {
+    const offsets = Array.from({ length: unit.length }, (_, i) => i);
+    const want   = offsets.map(i => playing[unit.start + i]);
+    const std    = offsets.map(i => base[unit.start + i].active.has(part));
+    const splits = offsets.filter(i => {
+      const bar = unit.start + i;
+      return bar > 0 && starts[bar] && playing[bar - 1] && ((part !== "drum" && part !== "fx") || sameKind(bar));
+    });
+    let patch: { on?: boolean; bars?: number[]; splits?: number[] };
+    if (want.every((w, i) => w === std[i])) patch = { on: undefined, bars: undefined };
+    else if (want.every(w => w))             patch = { on: true, bars: undefined };
+    else if (want.every(w => !w))            patch = { on: false, bars: undefined };
+    else patch = { on: undefined, bars: offsets.filter(i => want[i]) };
+    patch.splits = splits.length > 0 ? splits : undefined;
+    edits = withEdit(edits, unit, part, patch);
+  }
+  return edits;
+}
+
+// 今の曲で、パートのブロックの並びを変える（editsWithPartBlocks を今の AppState で）
+export function currentEditsWithPartBlocks(part: LayerName, blocks: { start: number; length: number }[]): ArrangeEdit[] {
+  const o = currentOptions(true);
+  return o ? editsWithPartBlocks(o, part, blocks) : getState().arrangeEdits;
 }
 
 // ===== 以前の形式（ブロックの並び）からの読み替え =====

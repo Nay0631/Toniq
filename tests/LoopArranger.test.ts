@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { setState, getState, type ArrangeEdit } from "../src/engine/AppState";
 import {
-  arrangementGate, arrangementBlockAt, buildArrangement, buildDefaultArrangement, currentUnits, defaultSections,
+  arrangementGate, arrangementBlockAt, buildArrangement, buildDefaultArrangement, currentEditsWithPartBlocks, currentUnits, defaultSections,
   editsFromLegacy, findBlock, findEdit, getArrangement, setArrangementBypass, withEdit, ARRANGE_PRESETS, LAYERS, SECTION_BARS,
 } from "../src/engine/LoopArranger";
 import { chordById, chords, resetState } from "./helpers";
@@ -165,6 +165,84 @@ describe("変えた所（ArrangeEdit）", () => {
     expect(findEdit(edits, unit, "drum")).toEqual({ section: "A", nth: 0, part: "drum", drum: "drum_002" });
     edits = withEdit(edits, unit, "drum", { drum: undefined });
     expect(edits).toEqual([]);
+  });
+});
+
+describe("editsWithPartBlocks（アレンジャーのドラッグ・長さ変更・削除・配置）", () => {
+  // 鳴らす小節を、続いた小節ごとのブロックにする
+  const toBlocks = (playing: boolean[]) => {
+    const blocks: { start: number; length: number }[] = [];
+    playing.forEach((on, bar) => {
+      if (!on) return;
+      const last = blocks[blocks.length - 1];
+      if (last && last.start + last.length === bar) last.length++;
+      else blocks.push({ start: bar, length: 1 });
+    });
+    return blocks;
+  };
+  // 4 小節の進行・32 小節：Aメロ1回目 0〜7、Aメロ2回目 8〜15、サビ1回目 16〜23、Aメロ3回目 24〜31
+  const setup = () => setState({ genre: "EDM", chordPattern: chordById("chord_001"), bars: 32, sections: null, arrangeEdits: [] });
+  const playing = (part: "pad" | "chord") => {
+    const blocks = getArrangement()[part];
+    return Array.from({ length: 32 }, (_, bar) => findBlock(blocks, bar) !== undefined);
+  };
+
+  it("今のまま渡すと変えた所はできない", () => {
+    setup();
+    expect(currentEditsWithPartBlocks("chord", getArrangement().chord)).toEqual([]);
+  });
+
+  it("隙間なく隣に置いたブロックは結合しない（切れ目 splits を持つ）。前のブロックを消すと切れ目も消える", () => {
+    setup();
+    // パッドは Aメロ1回目（0〜7）で鳴らない。0〜3 と 4〜7 の2つを隣り合わせに置く
+    const blocks = [{ start: 0, length: 4 }, { start: 4, length: 4 }, ...getArrangement().pad];
+    const edits = currentEditsWithPartBlocks("pad", blocks);
+    expect(edits).toEqual([
+      { section: "A", nth: 0, part: "pad", on: true, splits: [4] },
+      { section: "A", nth: 1, part: "pad", splits: [0] },  // プリセットのパッドの頭（8 小節目〜）
+    ]);
+    setState({ arrangeEdits: edits });
+    expect(getArrangement().pad.slice(0, 2)).toEqual([{ start: 0, length: 4 }, { start: 4, length: 4 }]);
+    // プリセットのパッドの頭（8 小節目〜）とも結合しない
+    expect(getArrangement().pad[2].start).toBe(8);
+    // 0〜3 を消すと 4〜7 の頭の切れ目は要らなくなる（8 小節目の切れ目は残る）
+    expect(currentEditsWithPartBlocks("pad", getArrangement().pad.slice(1))).toEqual(expect.arrayContaining([
+      { section: "A", nth: 1, part: "pad", splits: [0] },
+      { section: "A", nth: 0, part: "pad", bars: [4, 5, 6, 7] },
+    ]));
+  });
+
+  it("セクションの一部だけ鳴らすと bars（セクションの頭からの位置）で持ち、その小節だけ鳴る", () => {
+    setup();
+    const want = playing("pad");
+    for (let bar = 0; bar < 8; bar++) want[bar] = bar >= 2 && bar < 5;  // Aメロ1回目の 3〜5 小節目だけ
+    const edits = currentEditsWithPartBlocks("pad", toBlocks(want));
+    expect(edits).toEqual([{ section: "A", nth: 0, part: "pad", bars: [2, 3, 4] }]);
+    setState({ arrangeEdits: edits });
+    expect(playing("pad")).toEqual(want);
+  });
+
+  it("セクション全体を消す・置くと on で持ち、プリセットに戻すと変えた所が消える", () => {
+    setup();
+    const want = playing("chord");
+    for (let bar = 16; bar < 24; bar++) want[bar] = false;
+    setState({ arrangeEdits: currentEditsWithPartBlocks("chord", toBlocks(want)) });
+    expect(getState().arrangeEdits).toEqual([{ section: "B", nth: 0, part: "chord", on: false }]);
+    const before = buildDefaultArrangement("EDM", 4, 32, null).chord;
+    const back = Array.from({ length: 32 }, (_, bar) => findBlock(before, bar) !== undefined);
+    expect(currentEditsWithPartBlocks("chord", toBlocks(back))).toEqual([]);
+  });
+
+  it("小節単位の変えた所も、小節数を延ばしても同じセクションに当て直す。ドラムのパターンは残す", () => {
+    setState({ genre: "EDM", chordPattern: chordById("chord_001"), bars: 32, sections: null,
+               arrangeEdits: [{ section: "B", nth: 0, part: "drum", drum: "drum_002" }] });
+    const want = Array.from({ length: 32 }, (_, bar) => findBlock(getArrangement().drum, bar) !== undefined);
+    for (let bar = 16; bar < 24; bar++) want[bar] = bar < 20;  // サビ1回目の前半だけ
+    const edits = currentEditsWithPartBlocks("drum", toBlocks(want));
+    expect(findEdit(edits, currentUnits()[2], "drum")).toEqual({ section: "B", nth: 0, part: "drum", drum: "drum_002", bars: [0, 1, 2, 3] });
+    setState({ arrangeEdits: edits, bars: 48 });
+    const drum = getArrangement().drum;
+    for (let bar = 16; bar < 24; bar++) expect(findBlock(drum, bar) !== undefined, `小節${bar + 1}`).toBe(bar < 20);
   });
 });
 
