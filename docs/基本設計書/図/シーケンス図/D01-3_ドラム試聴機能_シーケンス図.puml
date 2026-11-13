@@ -1,0 +1,44 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd D01-3_ドラム試聴機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":再生" as L3
+control ":ドラム音源読み込み" as L4
+entity ":ドラム音源ファイル" as L5
+control ":ドラム演奏" as L6
+entity ":アプリの状態" as L7
+control ":ドラムキット作成" as L8
+
+L1 -> L2 : ドラムの試聴ボタンを押下する() : void
+activate L2
+L2 -> L3 : ドラムを試聴する() : void
+activate L3
+L3 -> L3 : ほかの再生を止める() : void
+activate L3
+deactivate L3
+opt ドラムの音源がサンプル音源
+  L3 -> L4 : 音源を読み込む() : void
+  activate L4
+  L4 -> L5 : ジャンルの音源を取得する() : void
+  activate L5
+  deactivate L5
+  deactivate L4
+end
+L3 -> L6 : ドラムを読み込む() : void
+activate L6
+L6 -> L7 : ドラムパターンを取得する() : void
+activate L7
+deactivate L7
+L6 -> L8 : ジャンルのドラムキットを作る() : void
+activate L8
+deactivate L8
+deactivate L6
+L3 -> L3 : 2小節で止める予約をして鳴らす() : void
+activate L3
+deactivate L3
+deactivate L3
+deactivate L2
+
+@enduml

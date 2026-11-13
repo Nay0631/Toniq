@@ -1,0 +1,47 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> メロディの音色を選ぶ() : void
+}
+class "音色設定" as C1 <<control>> {
+  {method} <U+002B> 音色を設定する() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "メロディ演奏" as C3 <<control>> {
+  {method} <U+002B> メロディの音源を作り直す() : void
+}
+class "grow" as C4 <<control>> {
+  {method} <U+002B> 音作りの値で音源を作る() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> メロディの音色
+  {field} <U+002B> メロディの音作りの値（プリセット・変えた値）
+  {method} <U+002B> メロディの音色を更新する() : void
+  {method} <U+002B> 音色・音作りの値を取得する() : void
+}
+class "メロディ設定マスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 標準の音色
+  {method} <U+002B> ジャンルの標準の音色を取得する() : void
+}
+class "growプリセット" as E3 <<entity>> {
+  {field} <U+002B> ID
+  {field} <U+002B> プリセット名
+  {field} <U+002B> 音作りの値
+  {method} <U+002B> プリセットの値を取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> E1
+C3 --> E2
+C3 --> C4
+C4 --> E3
+
+@enduml

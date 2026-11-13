@@ -1,0 +1,42 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "カスタムモード画面" as B1 <<boundary>> {
+  {method} <U+002B> コードの音色を選ぶ() : void
+}
+class "コード音色設定" as C1 <<control>> {
+  {method} <U+002B> コードの音色を設定する() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "コード演奏" as C3 <<control>> {
+  {method} <U+002B> コードの音源を作り直す() : void
+  {method} <U+002D> ソフトパッドで鳴らす() : void
+}
+class "grow" as C4 <<control>> {
+  {method} <U+002B> コードの音作りの値で音源を作る() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> コードのプリセット
+  {field} <U+002B> コードの変えた値
+  {method} <U+002B> コードのプリセットを更新し変えた値を捨てる() : void
+  {method} <U+002B> コードの音作りの値を取得する() : void
+}
+class "growプリセット" as E2 <<entity>> {
+  {field} <U+002B> ID
+  {field} <U+002B> プリセット名
+  {field} <U+002B> 音作りの値
+  {method} <U+002B> プリセットを取得する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> C3
+C3 --> E1
+C3 --> C4
+C4 --> E2
+
+@enduml

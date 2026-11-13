@@ -1,0 +1,37 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-4_BPM試聴機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":再生" as L3
+control ":クリック音" as L4
+entity ":アプリの状態" as L5
+
+note over L2 : シンプルモード画面の「クリックで試聴」も同じ流れ
+
+L1 -> L2 : 試聴ボタンを押下する() : void
+activate L2
+alt クリック音が止まっている
+  L2 -> L3 : 曲の再生を止める() : void
+  activate L3
+  deactivate L3
+  L2 -> L4 : クリック音を鳴らす() : void
+  activate L4
+  loop 止めるまで、拍ごと
+    L4 -> L5 : BPMを取得する() : void
+    activate L5
+    deactivate L5
+    L4 -> L4 : 次の拍のクリック音を予約する() : void
+    activate L4
+    deactivate L4
+  end
+  deactivate L4
+else クリック音が鳴っている
+  L2 -> L4 : クリック音を止める() : void
+  activate L4
+  deactivate L4
+end
+deactivate L2
+
+@enduml

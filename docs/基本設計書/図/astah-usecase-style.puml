@@ -1,0 +1,57 @@
+' astah 風の見た目の共通設定（ユースケース図用）
+' 各ユースケース図の先頭で相対パスで !include して使う。
+' 例: !include ../../astah-usecase-style.puml
+' 図の枠は .puml 側で「mainframe **uc** <図名>」と書く（astah と同じ「uc 図名」の枠になる）。
+' ※ このファイル単体では図にならないよう、@startuml / @enduml は書かない。
+
+' 影なし・背景は白
+skinparam shadowing false
+skinparam BackgroundColor white
+
+' 利用者（アクター）は左、ユースケースは右に並べる
+left to right direction
+
+' 線はまっすぐ引く（曲線にしない）
+skinparam linetype polyline
+
+' 線は細い黒
+skinparam ArrowColor black
+skinparam ArrowThickness 1
+
+' 利用者（アクター）は頭が薄い黄色の人形、名前は太字
+skinparam actorStyle default
+skinparam ActorBackgroundColor #FFFFCC
+skinparam ActorBorderColor black
+
+' ユースケースは薄い黄色の楕円、枠線は太い黒
+skinparam UsecaseBackgroundColor #FFFFCC
+skinparam UsecaseBorderColor black
+skinparam UsecaseBorderThickness 2
+
+' システムの範囲（rectangle）は白い四角、枠線は細い黒、名前は普通の文字
+skinparam RectangleBackgroundColor white
+skinparam RectangleBorderColor black
+skinparam RectangleBorderThickness 1
+skinparam RectangleRoundCorner 0
+skinparam RectangleFontStyle plain
+
+' ステレオタイプは «» ではなく << >> で書く
+skinparam guillemet false
+
+' 図全体の枠（mainframe）は黒
+skinparam DiagramBorderColor black
+skinparam DiagramBorderThickness 1
+
+' ユースケース名・アクター名は太字。
+' ※ 文字の太さの設定はファイルの最後に置く（前のほうに書くと効かないことがある）。
+skinparam UsecaseFontStyle bold
+skinparam ActorFontStyle bold
+
+' システム名は境界（システムの範囲の四角）の外側の上に出す。
+' 枠線なしの外側の四角（ステレオタイプ <<システム名>>）に名前を置き、その中に名前なしの境界の四角 rectangle " " を入れる。
+skinparam rectangle<<システム名>> {
+  BorderColor transparent
+  BackgroundColor transparent
+  FontStyle bold
+}
+hide <<システム名>> stereotype

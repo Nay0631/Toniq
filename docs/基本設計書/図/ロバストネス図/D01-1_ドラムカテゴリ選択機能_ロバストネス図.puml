@@ -1,0 +1,19 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** D01-1_ドラムカテゴリ選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "ドラムカテゴリ設定" as C1
+control "再生" as C2
+entity "アプリの状態" as E1
+entity "ドラムパターンマスタ" as E2
+
+A1 --> B1 : ドラムのカテゴリを選ぶ
+B1 --> C1 : カテゴリを設定する
+C1 --> E1 : ドラムのカテゴリを更新する
+C1 --> E2 : カテゴリのパターンを取得する
+C1 --> E1 : 候補になければ先頭のパターンに切り替える
+C1 --> C2 : 再生中なら再生し直す
+
+@enduml

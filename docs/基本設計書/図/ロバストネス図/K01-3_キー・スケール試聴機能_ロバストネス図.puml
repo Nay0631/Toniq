@@ -1,0 +1,24 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** K01-3_キー・スケール試聴機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "スケール試聴の切り替え" as C1
+control "再生" as C2
+control "クリック音" as C3
+control "スケール試聴" as C4
+entity "アプリの状態" as E1
+entity "スケールマスタ" as E2
+
+A1 --> B1 : 響きの試聴ボタンを押下する
+B1 --> C1 : 試聴を始める・止める
+C1 --> C2 : 鳴らし始めるときは曲の再生を止める
+C1 --> C3 : 鳴らし始めるときはクリック音を止める
+C1 --> E1 : キー・スケールを取得する
+C1 --> C4 : スケールを鳴らす・止める
+C4 --> E2 : スケールの7音を取得する
+C4 --> C4 : 主音から1オクターブ上までの\n8音を順に鳴らし、\n主音の和音で終わる
+C4 --> B1 : 鳴っている音を強調表示する
+
+@enduml

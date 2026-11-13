@@ -1,0 +1,38 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-2_テンポ選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":シンプルモード画面" as L2
+control ":テンポ選択" as L3
+control ":タップテンポ" as L4
+control ":パターン選出" as L5
+entity ":テンポマスタ" as L6
+entity ":アプリの状態" as L7
+control ":再生" as L8
+
+L1 -> L2 : テンポのチップを押下する() : void
+activate L2
+L2 -> L3 : テンポを選択する() : void
+activate L3
+L3 -> L4 : タップの記録を消す() : void
+activate L4
+deactivate L4
+L3 -> L5 : ジャンルとテンポからBPMを求める() : void
+activate L5
+L5 -> L6 : BPMを取得する() : void
+activate L6
+deactivate L6
+deactivate L5
+L3 -> L7 : テンポとBPMを更新する() : void
+activate L7
+deactivate L7
+opt ジャンルのサンプルを再生中
+  L3 -> L8 : テンポを反映する() : void
+  activate L8
+  deactivate L8
+end
+deactivate L3
+deactivate L2
+
+@enduml

@@ -1,0 +1,22 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-2_テンポ選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+control "テンポ選択" as C1
+control "タップテンポ" as C2
+control "パターン選出" as C3
+control "再生" as C4
+entity "テンポマスタ" as E1
+entity "アプリの状態" as E2
+
+A1 --> B1 : テンポのチップを押下する
+B1 --> C1 : テンポを選択する
+C1 --> C2 : タップの記録を消す
+C1 --> C3 : ジャンルとテンポからBPMを求める
+C3 --> E1 : BPMを取得する
+C1 --> E2 : テンポとBPMを更新する
+C1 --> C4 : サンプル再生中ならテンポを反映する
+
+@enduml

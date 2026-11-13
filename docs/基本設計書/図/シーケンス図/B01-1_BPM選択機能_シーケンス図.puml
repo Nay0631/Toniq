@@ -1,0 +1,29 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-1_BPM選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":BPM設定" as L3
+entity ":アプリの状態" as L4
+control ":再生" as L5
+
+L1 -> L2 : BPMノブを回す() : void
+activate L2
+L2 -> L3 : BPMを設定する() : void
+activate L3
+L3 -> L3 : BPMを20〜240に丸める() : void
+activate L3
+deactivate L3
+L3 -> L4 : BPMを更新する() : void
+activate L4
+deactivate L4
+opt 再生中
+  L3 -> L5 : テンポを反映する() : void
+  activate L5
+  deactivate L5
+end
+deactivate L3
+deactivate L2
+
+@enduml

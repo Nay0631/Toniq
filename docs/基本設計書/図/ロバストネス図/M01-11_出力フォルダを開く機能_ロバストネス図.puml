@@ -1,0 +1,15 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** M01-11_出力フォルダを開く機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ミュージックリスト画面" as B1
+control "出力フォルダを開く" as C1
+control "出力ファイル保存" as C2
+
+A1 --> B1 : 出力フォルダボタンを押下する
+B1 --> C1 : 出力フォルダを開く
+C1 --> C2 : 出力フォルダ（output/。\naudio・midi）を\nエクスプローラーで開く
+C1 --> C1 : ブラウザで開いている\n（ボタンを出さない）
+
+@enduml

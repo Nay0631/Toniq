@@ -1,0 +1,44 @@
+' astah 風の見た目の共通設定（ロバストネス図用）
+' 各ロバストネス図の先頭で相対パスで !include して使う。
+' 例: !include ../../astah-robustness-style.puml
+' 図の枠は .puml 側で「mainframe **uc** <図名>」と書く（astah と同じ「uc 図名」の枠になる）。
+' 線は astah と同じく向きのある矢印（A --> B）で書く。
+' ※ このファイル単体では図にならないよう、@startuml / @enduml は書かない。
+
+' 影なし・背景は白
+skinparam shadowing false
+skinparam BackgroundColor white
+
+' 利用者 → 画面（boundary）→ 処理（control）の順に左から右へ並べる
+left to right direction
+
+' 線はまっすぐ引く（曲線にしない）
+skinparam linetype polyline
+
+' 線は細い黒
+skinparam ArrowColor black
+skinparam ArrowThickness 1
+
+' 利用者（アクター）は頭が薄い黄色の人形
+skinparam actorStyle default
+skinparam ActorBackgroundColor #FFFFCC
+skinparam ActorBorderColor black
+
+' boundary・control・entity のアイコンは薄い黄色、枠線は黒
+skinparam BoundaryBackgroundColor #FFFFCC
+skinparam BoundaryBorderColor black
+skinparam ControlBackgroundColor #FFFFCC
+skinparam ControlBorderColor black
+skinparam EntityBackgroundColor #FFFFCC
+skinparam EntityBorderColor black
+
+' 図全体の枠（mainframe）は黒
+skinparam DiagramBorderColor black
+skinparam DiagramBorderThickness 1
+
+' 名前は太字。
+' ※ 文字の太さの設定はファイルの最後に置く（前のほうに書くと効かないことがある）。
+skinparam ActorFontStyle bold
+skinparam BoundaryFontStyle bold
+skinparam ControlFontStyle bold
+skinparam EntityFontStyle bold

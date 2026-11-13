@@ -1,0 +1,15 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** L01_楽曲再生システム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "楽曲再生システム" <<システム名>> {
+  rectangle " " {
+    usecase "楽曲再生機能" as UC1
+  }
+}
+
+A1 -- UC1
+
+@enduml

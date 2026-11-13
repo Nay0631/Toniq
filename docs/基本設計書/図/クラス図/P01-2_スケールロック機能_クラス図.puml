@@ -1,0 +1,50 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ピアノロール画面" as B1 <<boundary>> {
+  {method} <U+002B> スケールロックボタンを押下する() : void
+  {method} <U+002B> 音を置く・動かす() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> スケールロックのスイッチを押下する() : void
+  {method} <U+002B> 絞ったコード進行の一覧を表示する() : void
+}
+class "スケールロック設定" as C1 <<control>> {
+  {method} <U+002B> ピアノロールのロックを切り替える() : void
+  {method} <U+002B> コード進行のロックを切り替える() : void
+}
+class "音符編集" as C2 <<control>> {
+  {method} <U+002B> 音を置く・動かす() : void
+}
+class "スケール判定" as C3 <<control>> {
+  {method} <U+002B> スケールの音か確かめる() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> スケールロック（ピアノロール）
+  {field} <U+002B> スケールロック（コード進行）
+  {field} <U+002B> キー
+  {method} <U+002B> スケールロックを更新する() : void
+  {method} <U+002B> キーとスケールを取得する() : void
+}
+class "スケールマスタ" as E2 <<entity>> {
+  {field} <U+002B> スケール
+  {field} <U+002B> ペンタトニックの5音・アクセントの2音
+  {method} <U+002B> スケールの7音を取得する() : void
+}
+class "コード進行マスタ" as E3 <<entity>> {
+  {field} <U+002B> スケール
+  {method} <U+002B> 同じスケールのコード進行に絞る() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> E1
+B1 --> C2
+C2 --> C3
+C3 --> E1
+C3 --> E2
+C1 --> E3
+C1 --> B2
+
+@enduml

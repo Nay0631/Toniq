@@ -1,0 +1,58 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> 新規作成ボタンを押下する() : void
+  {method} <U+002B> 設定画面（生成前）を表示する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> 新規作成ボタンを押下する() : void
+  {method} <U+002B> 設定タブを表示する() : void
+}
+class "新規作成" as C1 <<control>> {
+  {method} <U+002B> 新しい曲を作る() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 再生を止める() : void
+}
+class "曲の管理" as C3 <<control>> {
+  {method} <U+002B> 曲の内容を初期状態に戻す() : void
+}
+class "パターン選出" as C4 <<control>> {
+  {method} <U+002B> パターンとテンポを選ぶ() : void
+}
+class "音量管理" as C5 <<control>> {
+  {method} <U+002B> 音量を反映する() : void
+}
+class "履歴管理" as C6 <<control>> {
+  {method} <U+002B> 履歴を捨てる() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 曲の内容
+  {field} <U+002B> 今の曲（リストの曲か）
+  {method} <U+002B> 曲の内容を初期値にし、未保存の曲にする() : void
+}
+class "シンプルモード表マスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル×雰囲気
+  {method} <U+002B> 候補を取得する() : void
+}
+class "テンポマスタ" as E3 <<entity>> {
+  {field} <U+002B> ゆっくり・普通・速いのBPM
+  {method} <U+002B> BPMを取得する() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> C2
+C1 --> C3
+C3 --> E1
+C3 --> C4
+C4 --> E2
+C4 --> E3
+C3 --> C5
+C3 --> C6
+C1 --> B1
+C1 --> B2
+
+@enduml

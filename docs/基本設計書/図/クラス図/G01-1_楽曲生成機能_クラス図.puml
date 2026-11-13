@@ -1,0 +1,73 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> 生成するボタンを押下する() : void
+  {method} <U+002B> 生成結果を表示する() : void
+}
+class "楽曲生成" as C1 <<control>> {
+  {method} <U+002B> 楽曲を生成する() : void
+}
+class "再生" as C3 <<control>> {
+  {method} <U+002B> 再生・クリック音を止める() : void
+}
+class "パターン選出" as C4 <<control>> {
+  {method} <U+002B> コード進行・ドラム・サビの進行を選ぶ() : void
+}
+class "アレンジ管理" as C5 <<control>> {
+  {method} <U+002B> 全パートがそろう周回数を求める() : void
+}
+class "曲の構成" as C6 <<control>> {
+  {method} <U+002B> Aメロとサビのメロディを作る() : void
+}
+class "メロディ生成" as C7 <<control>> {
+  {method} <U+002B> メロディを作る() : void
+}
+class "シンプルモード表マスタ" as E1 <<entity>> {
+  {field} <U+002B> ジャンル×雰囲気
+  {field} <U+002B> コード進行の候補・ドラムの候補
+  {method} <U+002B> ジャンル×雰囲気の候補を取得する() : void
+}
+class "コード進行マスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル・雰囲気・スケール
+  {field} <U+002B> ディグリーの並び（長さ）
+  {method} <U+002B> コード進行と同じ長さ・スケールのサビの進行を取得する() : void
+}
+class "ドラムパターンマスタ" as E3 <<entity>> {
+  {field} <U+002B> 16ステップのパターン
+  {method} <U+002B> ドラムパターンを取得する() : void
+}
+class "標準アレンジマスタ" as E4 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 周回ごとのセクション・鳴らすパート
+  {method} <U+002B> ジャンルの標準アレンジを取得する() : void
+}
+class "メロディ設定マスタ" as E5 <<entity>> {
+  {field} <U+002B> リズム・フレーズ形式・音域
+  {method} <U+002B> 生成パラメータを取得する() : void
+}
+class "アプリの状態" as E6 <<entity>> {
+  {field} <U+002B> コード進行・サビの進行・ドラムパターン
+  {field} <U+002B> メロディ・サビのメロディ
+  {field} <U+002B> 小節数
+  {field} <U+002B> 生成済み
+  {field} <U+002B> 今の曲・アレンジ・セクション
+  {method} <U+002B> 曲の内容を更新し生成済みにする() : void
+}
+
+B1 --> C1
+C1 --> C3
+C1 --> C4
+C4 --> E1
+C4 --> E2
+C4 --> E3
+C1 --> C5
+C5 --> E4
+C1 --> C6
+C6 --> C7
+C7 --> E5
+C1 --> E6
+C1 --> B1
+
+@enduml

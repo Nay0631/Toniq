@@ -1,0 +1,46 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "シンプルモード画面" as B1 <<boundary>> {
+  {method} <U+002B> ドラムの再抽選ボタンを押下する() : void
+}
+class "カスタムモード画面" as B2 <<boundary>> {
+  {method} <U+002B> ドラムパターンを選ぶ() : void
+}
+class "ドラムパターン設定" as C1 <<control>> {
+  {method} <U+002B> ドラムパターンを再抽選する() : void
+  {method} <U+002B> 選んだパターンに切り替える() : void
+}
+class "パターン選出" as C2 <<control>> {
+  {method} <U+002B> 今のパターン以外から選ぶ() : void
+}
+class "再生" as C3 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "シンプルモード表マスタ" as E1 <<entity>> {
+  {field} <U+002B> ジャンル×雰囲気
+  {field} <U+002B> ドラムの候補
+  {method} <U+002B> ジャンル×雰囲気の候補を取得する() : void
+}
+class "ドラムパターンマスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル・雰囲気のタグ
+  {field} <U+002B> 16ステップのパターン
+  {method} <U+002B> 候補のパターンを取得する() : void
+  {method} <U+002B> 選んだパターンを取得する() : void
+}
+class "アプリの状態" as E3 <<entity>> {
+  {field} <U+002B> ドラムパターン
+  {method} <U+002B> ドラムパターンを更新する() : void
+}
+
+B1 --> C1
+B2 --> C1
+C1 --> C2
+C2 --> E1
+C2 --> E2
+C1 --> E2
+C1 --> E3
+C1 --> C3
+
+@enduml

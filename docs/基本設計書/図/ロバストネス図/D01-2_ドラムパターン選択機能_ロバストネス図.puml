@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** D01-2_ドラムパターン選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "ドラムパターン設定" as C1
+control "パターン選出" as C2
+control "再生" as C3
+entity "シンプルモード表マスタ" as E1
+entity "ドラムパターンマスタ" as E2
+entity "アプリの状態" as E3
+
+A1 --> B1 : ドラムの再抽選ボタンを押下する
+A1 --> B2 : ドラムパターンを選ぶ（◀▶）
+B1 --> C1 : ドラムパターンを再抽選する
+B2 --> C1 : 選んだパターンに切り替える
+C1 --> C2 : 今のパターン以外から選ぶ（再抽選のとき）
+C2 --> E1 : ジャンル×雰囲気の候補を取得する
+C2 --> E2 : 候補のパターンを取得する
+C1 --> E2 : 選んだパターンを取得する
+C1 --> E3 : ドラムパターンを更新する
+C1 --> C3 : 再生中なら再生し直す
+
+@enduml

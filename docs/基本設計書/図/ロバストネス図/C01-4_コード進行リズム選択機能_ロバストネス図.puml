@@ -1,0 +1,20 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** C01-4_コード進行リズム選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "カスタムモード画面" as B1
+control "リズム設定" as C1
+control "再生" as C2
+control "コード演奏" as C3
+entity "アプリの状態" as E1
+
+A1 --> B1 : リズムを選ぶ
+B1 --> C1 : リズムを設定する
+C1 --> E1 : コードのリズムを更新する
+C1 --> C2 : 再生中なら再生し直す
+C2 --> C3 : コードを読み込む
+C3 --> E1 : リズムを取得する
+C3 --> C3 : リズムの間隔で\nコードを刻んで並べる
+
+@enduml

@@ -1,0 +1,15 @@
+@startuml
+!include ../astah-usecase-style.puml
+mainframe **uc** Q01_音楽クイズシステム_ユースケース図
+
+actor "利用者" as A1
+
+rectangle "音楽クイズシステム" <<システム名>> {
+  rectangle " " {
+    usecase "音楽クイズ機能" as UC1
+  }
+}
+
+A1 -- UC1
+
+@enduml

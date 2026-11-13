@@ -1,0 +1,23 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-2_パート別音量調節機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "ミキサー" as B1
+control "音量管理" as C1
+control "パート管理" as C2
+control "ミックス" as C3
+entity "アプリの状態" as E1
+
+A1 --> B1 : アレンジャータブで\n10パートのフェーダーを動かす
+A1 --> B1 : ON ボタンを押下する
+B1 --> C1 : パートの音量を変える
+C1 --> E1 : 音量を更新する
+C1 --> C1 : 0〜100 を dB に\n変換して再生中の\n音量に反映する
+C1 --> B1 : 音量の数値を表示する
+B1 --> C2 : パートを ON/OFF する
+C2 --> E1 : パートの ON/OFF を更新する
+B1 --> C1 : 再生中、パートのレベルを取得してメーターに表示する
+B1 --> C3 : 再生中、マスターのレベルを取得してメーターに表示する
+
+@enduml

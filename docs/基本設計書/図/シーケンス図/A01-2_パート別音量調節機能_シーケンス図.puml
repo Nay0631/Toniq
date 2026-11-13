@@ -1,0 +1,56 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-2_パート別音量調節機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミキサー" as L2
+control ":音量管理" as L3
+entity ":アプリの状態" as L4
+control ":パート管理" as L5
+control ":ミックス" as L6
+
+note over L2 : 10パート（メロディ・カウンター・コード・ドラム・パーカス・\nベース・パッド・アルペジオ・シグネチャー・FX）のチャンネルがある
+
+alt フェーダー
+  L1 -> L2 : フェーダーを動かす() : void
+  activate L2
+  L2 -> L3 : パートの音量を変える() : void
+  activate L3
+  L3 -> L4 : 音量を更新する() : void
+  activate L4
+  deactivate L4
+  opt 再生中
+    L3 -> L3 : dB に変換して再生中の音量に反映する() : void
+    activate L3
+    deactivate L3
+  end
+  L3 -> L2 : 音量の数値を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+else ON ボタン
+  L1 -> L2 : ON ボタンを押下する() : void
+  activate L2
+  L2 -> L5 : パートを ON/OFF する() : void
+  activate L5
+  L5 -> L4 : パートの ON/OFF を更新する() : void
+  activate L4
+  deactivate L4
+  deactivate L5
+  deactivate L2
+end
+
+loop 再生中、画面を描くたび
+  L2 -> L3 : パートのレベルを取得する() : void
+  activate L3
+  deactivate L3
+  L2 -> L6 : マスターのレベルを取得する() : void
+  activate L6
+  deactivate L6
+  L2 -> L2 : レベルメーターを表示する() : void
+  activate L2
+  deactivate L2
+end
+
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-7_ジャンル試聴機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+control "ジャンル試聴" as C1
+control "パターン選出" as C2
+control "メロディ生成" as C3
+control "再生" as C4
+entity "シンプルモード表マスタ" as E1
+entity "コード進行マスタ" as E2
+entity "ドラムパターンマスタ" as E3
+entity "メロディ設定マスタ" as E4
+entity "アプリの状態" as E5
+
+A1 --> B1 : サンプルを聴くボタンを押下する
+B1 --> C1 : サンプルを鳴らす
+C1 --> C2 : コード進行とドラムを選ぶ
+C2 --> E1 : ジャンル×雰囲気の候補を取得する
+C2 --> E2 : コード進行を取得する
+C2 --> E3 : ドラムパターンを取得する
+C1 --> C3 : メロディを生成する
+C3 --> E4 : 生成パラメータを取得する
+C1 --> C4 : パーカッションなど7パートで\nサンプルを1周再生する
+C4 --> E5 : 曲の内容を一時的に差し替え、止めたら元に戻す
+
+@enduml

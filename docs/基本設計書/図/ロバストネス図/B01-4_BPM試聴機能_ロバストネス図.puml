@@ -1,0 +1,21 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-4_BPM試聴機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "シンプルモード画面" as B1
+boundary "カスタムモード画面" as B2
+control "クリック音" as C1
+control "再生" as C2
+entity "アプリの状態" as E1
+
+A1 --> B1 : クリックで試聴ボタンを押下する
+A1 --> B2 : 試聴ボタンを押下する
+B1 --> C1 : クリック音を鳴らす・止める
+B2 --> C1 : クリック音を鳴らす・止める
+B1 --> C2 : 鳴らし始めるときは曲の再生を止める
+B2 --> C2 : 鳴らし始めるときは曲の再生を止める
+C1 --> E1 : 拍ごとにBPMを取得する
+C1 --> C1 : 止めるまで次の拍を予約する
+
+@enduml

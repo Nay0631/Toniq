@@ -1,0 +1,49 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd C01-6_コード音色選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":カスタムモード画面" as L2
+control ":コード音色設定" as L3
+entity ":アプリの状態" as L4
+control ":再生" as L5
+control ":コード演奏" as L6
+control ":grow" as L7
+entity ":growプリセット" as L8
+
+note over L2 : 選択肢は「ジャンルに合わせる（標準のプリセット名）」と\ngrow のコードのプリセット
+
+L1 -> L2 : コードの音色を選ぶ() : void
+activate L2
+L2 -> L3 : コードの音色を設定する() : void
+activate L3
+L3 -> L4 : コードのプリセットを更新し変えた値を捨てる() : void
+activate L4
+deactivate L4
+opt 再生中
+  L3 -> L5 : 再生し直す() : void
+  activate L5
+  L5 -> L6 : コードの音源を作り直す() : void
+  activate L6
+  L6 -> L4 : コードの音作りの値を取得する() : void
+  activate L4
+  deactivate L4
+  alt grow を読み込めている
+    L6 -> L7 : コードの音作りの値で音源を作る() : void
+    activate L7
+    L7 -> L8 : プリセットを取得する() : void
+    activate L8
+    deactivate L8
+    deactivate L7
+  else grow を読み込めない
+    L6 -> L6 : ソフトパッドで鳴らす() : void
+    activate L6
+    deactivate L6
+  end
+  deactivate L6
+  deactivate L5
+end
+deactivate L3
+deactivate L2
+
+@enduml
