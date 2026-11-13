@@ -1,7 +1,6 @@
 import { getState, setState, ChordRhythm, MelodyInstrument, FxType, ModulationScope, SwingUnit } from "../engine/AppState";
 import { applySwing } from "../engine/Groove";
-import { resolveTempoPreset, pickChorus } from "../engine/SimpleModeResolver";
-import { chorusProgression } from "../engine/SongForm";
+import { resolveTempoPreset } from "../engine/SimpleModeResolver";
 import { setLayerEnabled } from "../engine/LayerManager";
 import { tap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
@@ -83,6 +82,7 @@ export function initCustomScreen(): void {
   // コード進行・ドラムパターンは ◀ ▶ で順に聴き比べられるようにする
   attachStepper($select("c-chord"), "コード進行");
   attachStepper($select("c-drum"),  "ドラムパターン");
+  attachStepper($select("c-chorus"), "サビの進行");
 
   // 情報バー
   $("c-play")?.addEventListener("click", startPlayback);
@@ -254,15 +254,6 @@ export function initCustomScreen(): void {
   $select("c-chorus").addEventListener("change", async e => {
     const id = (e.target as HTMLSelectElement).value;
     setChorusPattern(chords.find(c => c.id === id) ?? null);
-    render();
-    await restartIfPlaying();
-  });
-
-  $("c-chorus-reroll")?.addEventListener("click", async () => {
-    const s = getState();
-    if (!s.chordPattern) return;
-    const next = pickChorus(s.chordPattern, s.genre, s.mood, chorusProgression()?.id);
-    if (next) setChorusPattern(next);
     render();
     await restartIfPlaying();
   });

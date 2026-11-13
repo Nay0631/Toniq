@@ -724,6 +724,17 @@ button {
 .select-with-btn .select { grid-column: 1 / -1; }
 .select-with-btn .btn { grid-column: 3; }
 
+/* 試聴ボタンのない行（サビ）でも ◀ ▶ を同じ高さにする：.btn-small と同じ字の大きさ・余白の
+   見えない支え（幅 0）を並べて、ボタンを縦に伸ばす */
+.select-with-btn .stepper::after {
+  content: "\200b";
+  width: 0;
+  margin-left: -2px;
+  padding: 7px 0;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
 /* キー・スケールの試聴：スケールの8音を並べ、試聴中は鳴っている音を光らせる。右に試聴ボタン */
 .scale-preview {
   display: flex;

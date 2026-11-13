@@ -216,7 +216,9 @@ function renderChorusSelect(): void {
   select.innerHTML = `<option value="">なし（Aメロと同じ進行）</option>${candidates
     .map(c => `<option value="${c.id}">${chordLabel(c, s.key)}</option>`).join("")}`;
   select.value = chorusProgression()?.id ?? "";
-  ($("c-chorus-reroll") as HTMLButtonElement).disabled = candidates.length === 0;
+  // 候補がなければ ◀ ▶ を押せなくする（attachStepper が select の直後に置く）
+  select.parentElement?.querySelectorAll<HTMLButtonElement>(".stepper-btn")
+    .forEach(b => { b.disabled = candidates.length === 0; });
 }
 
 // スケールに合わせてコード進行を変えたことを、スケールの下に少しの間だけ出し、進行の欄を光らせる
