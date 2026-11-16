@@ -11,8 +11,8 @@ const isDev = !!devServerUrl || process.env.NODE_ENV === "development";
 // ===== 出力フォルダ =====
 // 開発時は toniq フォルダ（package.json の場所）、インストール版は Toniq.exe と同じ場所に output フォルダを作る。
 // 書き込めない場所なら「ドキュメント/Toniq/output」を使う
-type OutputKind = "audio" | "midi";
-const OUTPUT_KINDS: OutputKind[] = ["audio", "midi"];
+type OutputKind = "audio" | "midi" | "quality";
+const OUTPUT_KINDS: OutputKind[] = ["audio", "midi", "quality"];
 const SONG_FILE_EXT = ".toniq.json";
 
 let outputRoot = "";

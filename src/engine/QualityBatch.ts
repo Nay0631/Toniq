@@ -1,4 +1,4 @@
-import { defaultState, getState, setState } from "./AppState";
+import { defaultState, getState, setState, SONG_FIELDS, SongFields } from "./AppState";
 import { resolveSimpleMode, pickChorus } from "./SimpleModeResolver";
 import { generateSongMelodies } from "./SongForm";
 import { songMetrics, chordDBIssues, melodyParamIssues, QUALITY_RULES, SongMetrics } from "./QualityCheck";
@@ -6,7 +6,8 @@ import { noteToMidi, timeToUnits, MelodyNote } from "./MelodyGenerator";
 import { NOTE_INDEX } from "../data/degree_resolver";
 import easyTable from "../data/easy_mode_table.json";
 
-// 自動チェックをまとめて測る（npm run quality。tools/quality-report.mjs が Node から呼ぶ。アプリからは使わない）。
+// 自動チェックをまとめて測る（npm run quality。tools/quality-report.mjs が Node から呼ぶ）。
+// アプリからは、メロディの評価画面（RatingScreen.ts）が同じ曲を作るのに generateBatchSong だけを使う。
 // シンプルモードの「生成する」と同じ手順で、ジャンル×雰囲気ごとに何曲も作り、自動チェックの数値と
 // 「どれも似た曲にならないか」（進行・ドラム・メロディのリズムの種類）を集める。
 // 乱数は曲ごとにシードから作るので、同じシード・同じ回数なら生成ルールを変えた前後で同じ条件で比べられる
@@ -52,7 +53,7 @@ export interface BatchResult {
   melodyParams: string[];  // 書式が違うメロディのパラメータ
 }
 
-const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+export const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 // シードから作る乱数（mulberry32）
 function seededRandom(seed: number): () => number {
@@ -87,15 +88,17 @@ function barRhythms(notes: MelodyNote[]): string[] {
 }
 
 // メロディの中身（キーの主音からの音程と位置）。キーが違っても同じメロディなら同じ文字列になる
-function melodySignature(notes: MelodyNote[], key: string): string {
+export function melodySignature(notes: MelodyNote[], key: string): string {
   const tonic = NOTE_INDEX[key] ?? 0;
   return notes.filter(n => n.note !== null)
     .map(n => `${timeToUnits(n.time)}:${noteToMidi(n.note!) - tonic}:${n.duration}`).join(" ");
 }
 
-// シンプルモードの「生成する」と同じ手順で1曲作る（SimpleScreen.ts の generate / makeMelody）
+// シンプルモードの「生成する」と同じ手順で1曲作る（SimpleScreen.ts の generate / makeMelody）。
+// 曲の内容（SONG_FIELDS）だけを初期値に戻すので、画面・配色などの設定はそのまま
 function generateSong(genre: string, mood: string, key: string): void {
-  setState({ ...defaultState, parts: { ...defaultState.parts }, volumes: { ...defaultState.volumes }, genre, mood, key });
+  const fresh = structuredClone(Object.fromEntries(SONG_FIELDS.map(f => [f, defaultState[f]]))) as SongFields;
+  setState({ ...fresh, genre, mood, key });
   const result = resolveSimpleMode(genre, mood);
   setState({
     chordPattern:  result.chordPattern,
@@ -111,7 +114,19 @@ function generateSong(genre: string, mood: string, key: string): void {
   setState(generateSongMelodies());
 }
 
-function judge(metrics: SongMetrics): Record<RuleName, boolean | null> {
+// 一括計測の run 曲目と同じ曲を AppState に作る（乱数はシード・ジャンル・雰囲気・番号で決まる）。
+// key が null なら一括計測と同じく 12 のキーを順に使う
+export function generateBatchSong(seed: number, genre: string, mood: string, run: number, key: string | null = null): void {
+  const random = Math.random;
+  Math.random = seededRandom(hash(`${seed}/${genre}/${mood}/${run}`));
+  try {
+    generateSong(genre, mood, key ?? KEYS[run % KEYS.length]);
+  } finally {
+    Math.random = random;
+  }
+}
+
+export function judge(metrics: SongMetrics): Record<RuleName, boolean | null> {
   const m = metrics.melody;
   return {
     strongFit:  m ? QUALITY_RULES.strongFit(m) : null,
@@ -126,67 +141,60 @@ function judge(metrics: SongMetrics): Record<RuleName, boolean | null> {
 export function runBatch(options: BatchOptions): BatchResult {
   const table = easyTable as Record<string, Record<string, unknown>>;
   const genres = (options.genres ?? Object.keys(table)).filter(g => table[g]);
-  const random = Math.random;
   const combos: ComboResult[] = [];
 
-  try {
-    for (const genre of genres) {
-      for (const mood of Object.keys(table[genre])) {
-        const pass = Object.fromEntries(RULE_NAMES.map(r => [r, { ok: 0, judged: 0 }])) as ComboResult["pass"];
-        const sum = { strongFit: 0, stepRatio: 0, maxLeap: 0, range: 0, chorusLift: 0, notesPerBar: 0, drops: 0 };
-        let melodyCount = 0, liftCount = 0;
-        const chords = new Set<string>(), drums = new Set<string>(), rhythms = new Set<string>(), melodies = new Set<string>();
+  for (const genre of genres) {
+    for (const mood of Object.keys(table[genre])) {
+      const pass = Object.fromEntries(RULE_NAMES.map(r => [r, { ok: 0, judged: 0 }])) as ComboResult["pass"];
+      const sum = { strongFit: 0, stepRatio: 0, maxLeap: 0, range: 0, chorusLift: 0, notesPerBar: 0, drops: 0 };
+      let melodyCount = 0, liftCount = 0;
+      const chords = new Set<string>(), drums = new Set<string>(), rhythms = new Set<string>(), melodies = new Set<string>();
 
-        for (let run = 0; run < options.runs; run++) {
-          Math.random = seededRandom(hash(`${options.seed}/${genre}/${mood}/${run}`));
-          const key = options.key ?? KEYS[run % KEYS.length];
-          generateSong(genre, mood, key);
-          const s = getState();
-          const metrics = songMetrics();
+      for (let run = 0; run < options.runs; run++) {
+        generateBatchSong(options.seed, genre, mood, run, options.key);
+        const s = getState();
+        const metrics = songMetrics();
 
-          const verdict = judge(metrics);
-          for (const r of RULE_NAMES) {
-            if (verdict[r] === null) continue;
-            pass[r].judged++;
-            if (verdict[r]) pass[r].ok++;
-          }
-          sum.drops += metrics.drops;
-          const m = metrics.melody;
-          if (m) {
-            melodyCount++;
-            sum.strongFit += m.strongTotal === 0 ? 0 : m.strongFit / m.strongTotal;
-            sum.stepRatio += m.stepRatio;
-            sum.maxLeap += m.maxLeap;
-            sum.range += m.range;
-            sum.notesPerBar += m.notes / s.bars;
-            if (m.chorusLift !== null) { sum.chorusLift += m.chorusLift; liftCount++; }
-          }
-
-          if (s.chordPattern) chords.add(s.chordPattern.id);
-          if (s.drumPattern) drums.add(s.drumPattern.id);
-          for (const r of [...barRhythms(s.melodyNotes), ...barRhythms(s.chorusMelodyNotes)]) rhythms.add(r);
-          melodies.add(melodySignature(s.melodyNotes, s.key));
+        const verdict = judge(metrics);
+        for (const r of RULE_NAMES) {
+          if (verdict[r] === null) continue;
+          pass[r].judged++;
+          if (verdict[r]) pass[r].ok++;
+        }
+        sum.drops += metrics.drops;
+        const m = metrics.melody;
+        if (m) {
+          melodyCount++;
+          sum.strongFit += m.strongTotal === 0 ? 0 : m.strongFit / m.strongTotal;
+          sum.stepRatio += m.stepRatio;
+          sum.maxLeap += m.maxLeap;
+          sum.range += m.range;
+          sum.notesPerBar += m.notes / s.bars;
+          if (m.chorusLift !== null) { sum.chorusLift += m.chorusLift; liftCount++; }
         }
 
-        const per = (v: number, n: number) => n === 0 ? 0 : v / n;
-        combos.push({
-          genre, mood, runs: options.runs, pass,
-          avg: {
-            strongFit:   per(sum.strongFit, melodyCount),
-            stepRatio:   per(sum.stepRatio, melodyCount),
-            maxLeap:     per(sum.maxLeap, melodyCount),
-            range:       per(sum.range, melodyCount),
-            chorusLift:  per(sum.chorusLift, liftCount),
-            notesPerBar: per(sum.notesPerBar, melodyCount),
-            drops:       per(sum.drops, options.runs),
-          },
-          variety: { chords: chords.size, drums: drums.size, rhythms: rhythms.size, melodies: melodies.size },
-          rhythmSet: [...rhythms],
-        });
+        if (s.chordPattern) chords.add(s.chordPattern.id);
+        if (s.drumPattern) drums.add(s.drumPattern.id);
+        for (const r of [...barRhythms(s.melodyNotes), ...barRhythms(s.chorusMelodyNotes)]) rhythms.add(r);
+        melodies.add(melodySignature(s.melodyNotes, s.key));
       }
+
+      const per = (v: number, n: number) => n === 0 ? 0 : v / n;
+      combos.push({
+        genre, mood, runs: options.runs, pass,
+        avg: {
+          strongFit:   per(sum.strongFit, melodyCount),
+          stepRatio:   per(sum.stepRatio, melodyCount),
+          maxLeap:     per(sum.maxLeap, melodyCount),
+          range:       per(sum.range, melodyCount),
+          chorusLift:  per(sum.chorusLift, liftCount),
+          notesPerBar: per(sum.notesPerBar, melodyCount),
+          drops:       per(sum.drops, options.runs),
+        },
+        variety: { chords: chords.size, drums: drums.size, rhythms: rhythms.size, melodies: melodies.size },
+        rhythmSet: [...rhythms],
+      });
     }
-  } finally {
-    Math.random = random;
   }
   return { options, combos, chordDB: chordDBIssues(), melodyParams: melodyParamIssues() };
 }

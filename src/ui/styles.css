@@ -3279,7 +3279,8 @@ span[data-term],
   color: var(--text-muted);
 }
 .help-item li + li { margin-top: 4px; }
-.help-item kbd {
+.help-item kbd,
+.rating kbd {
   display: inline-block;
   padding: 0 5px;
   border: 1px solid var(--border);
@@ -3290,6 +3291,124 @@ span[data-term],
   line-height: 1.5;
   color: var(--text);
   background: var(--surface);
+}
+
+/* ===== メロディの評価（RatingScreen.ts。開発用） ===== */
+.rating {
+  max-width: 920px;
+  margin: 0 auto;
+  display: grid;
+  gap: 20px;
+}
+.rating > .card { padding: 8px 24px 18px; }
+.rating code { font-size: 12px; padding: 0 4px; border-radius: 4px; background: var(--hover); }
+
+.rating-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  margin-top: 14px;
+  align-items: flex-end;
+}
+.rating-field { display: grid; gap: 4px; min-width: 0; }
+.rating-field .settings-label { margin: 0; font-size: 13px; }
+.rating-field .select { width: auto; min-width: 130px; }
+.rating-field .chip.is-active,
+.rating-tags .chip.is-active {
+  background: var(--simple-soft);
+  border-color: var(--simple);
+  color: var(--simple-ink);
+  font-weight: 600;
+}
+
+.text-input {
+  font: inherit;
+  font-size: 15px;
+  padding: 9px 12px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 0;
+}
+.text-input:focus { outline: 2px solid var(--simple-soft); border-color: var(--simple); }
+.rating-seed { width: 100px; }
+
+.rating-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 14px;
+}
+.rating-no { font-size: 20px; font-weight: 700; }
+.rating-nav { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+
+.rating-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.rating-pos { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.rating-scores {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.rating-score {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 10px 4px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.rating-score b { font-size: 22px; }
+.rating-score span { font-size: 12px; color: var(--text-muted); }
+.rating-score:hover { border-color: var(--border-strong); }
+.rating-score.is-active { background: var(--simple-soft); border-color: var(--simple); }
+.rating-score.is-active span { color: var(--simple-ink); }
+
+.rating-tags { margin-top: 12px; }
+.rating-memo { width: 100%; margin-top: 12px; box-sizing: border-box; }
+.rating-song .hint { text-align: left; }
+
+.rating-compare {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin: 10px 0 6px;
+}
+.rating-compare .settings-label { margin: 0; font-size: 13px; }
+.rating-compare .select { width: auto; min-width: 120px; }
+.rating-compare-result { font-size: 14px; font-weight: 600; }
+
+.rating-table-wrap { overflow-x: auto; margin-top: 12px; }
+.rating-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.rating-table th,
+.rating-table td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+.rating-table th { color: var(--text-muted); font-weight: 600; }
+.rating-table td.num, .rating-table th.num { text-align: right; }
+.rating-dist { display: inline-flex; align-items: flex-end; gap: 2px; height: 22px; vertical-align: middle; }
+.rating-dist i { display: block; width: 9px; min-height: 1px; background: var(--simple); border-radius: 2px 2px 0 0; }
+.rating-empty { font-size: 13px; color: var(--text-muted); margin: 12px 0 0; }
+
+.rating-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.rating-danger { color: var(--danger-ink); }
+.rating-danger:hover { border-color: var(--danger); }
+
+@media (max-width: 640px) {
+  .rating > .card { padding: 4px 16px 14px; }
+  .rating-head { flex-direction: column; }
+  .rating-nav { justify-content: flex-start; }
+  .rating-score span { display: none; }
 }
 
 @media (max-width: 640px) {
