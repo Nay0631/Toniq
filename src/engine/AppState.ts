@@ -4,7 +4,7 @@ import type { LayerName } from "./LayerManager";
 import type { DrumSource } from "./SynthFactory";
 
 // 表示中の画面
-export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings";
+export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings" | "rating";
 
 // 画面内のタブ
 export type Tab = "settings" | "arranger" | "pianoroll";

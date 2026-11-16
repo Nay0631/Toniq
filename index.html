@@ -860,6 +860,18 @@
           </div>
         </div>
 
+        <div class="card settings-group">
+          <h2 class="settings-group-title">開発用</h2>
+
+          <div class="settings-row">
+            <div class="settings-text">
+              <div class="settings-label">メロディの評価</div>
+              <div class="settings-desc">自動生成した曲を聴いて、良しあしを 1〜5 の点数で付けます。生成ルールを変える前と後で同じ曲を聴き比べ、点数の平均と差を出します（評価はこのパソコンに保存され、CSV / JSON に書き出せます）。</div>
+            </div>
+            <button class="btn btn-small" data-goto="rating">評価を始める</button>
+          </div>
+        </div>
+
         <div class="card settings-group settings-help">
           <h2 class="settings-group-title">ヘルプ（見ただけではわかりにくい操作）</h2>
 
@@ -963,11 +975,98 @@
             <ul>
               <li>カスタムモードの設定タブで、ドラムの「もっと調整」の「ドラムの演奏」から、フィル・揺らぎ・エンディングを ON/OFF できます（端末ごとに保存）。</li>
               <li>カスタムモードの設定タブの下にある grow のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
+              <li>設定画面の「開発用」の「メロディの評価」で、生成した曲を聴いて 1〜5 の点数を付けられます。<kbd>1</kbd>〜<kbd>5</kbd> で点数、<kbd>Space</kbd> で再生／停止、<kbd>C</kbd> でサビから再生、<kbd>←</kbd> / <kbd>→</kbd> で前後の曲です。</li>
             </ul>
           </details>
         </div>
 
         <p class="hint">設定はこのパソコンに保存され、曲には含まれません。</p>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="rating" hidden>
+      <div class="rating">
+        <div class="card rating-setup">
+          <h2 class="settings-group-title">メロディの評価（開発用）</h2>
+          <p class="settings-desc">曲は <code>npm run quality</code> と同じ手順・同じシードで作ります。生成ルールを変える前に条件名を「変更前」にして聴き、変えたあと「変更後」にして同じ番号の曲を聴くと、同じ曲どうしで点数を比べられます。聴いている間、今の曲は変わりません（画面を離れると元に戻ります）。</p>
+          <div class="rating-fields">
+            <label class="rating-field">
+              <span class="settings-label">条件名</span>
+              <input class="text-input" id="rt-label" list="rt-labels" maxlength="40">
+              <datalist id="rt-labels"></datalist>
+            </label>
+            <label class="rating-field">
+              <span class="settings-label">シード</span>
+              <input class="text-input rating-seed" id="rt-seed" type="number" step="1">
+            </label>
+            <label class="rating-field">
+              <span class="settings-label">ジャンル</span>
+              <select class="select" id="rt-genre"></select>
+            </label>
+            <label class="rating-field">
+              <span class="settings-label">雰囲気</span>
+              <select class="select" id="rt-mood"></select>
+            </label>
+            <div class="rating-field">
+              <span class="settings-label">鳴らすパート</span>
+              <div class="chips" role="radiogroup" aria-label="鳴らすパート">
+                <button class="chip" role="radio" data-rt-parts="all">全パート</button>
+                <button class="chip" role="radio" data-rt-parts="accomp">メロディ＋コード＋ベース</button>
+                <button class="chip" role="radio" data-rt-parts="melody">メロディだけ</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card rating-song">
+          <div class="rating-head">
+            <div>
+              <div class="rating-no" id="rt-no"></div>
+              <div class="settings-desc" id="rt-info"></div>
+            </div>
+            <div class="rating-nav">
+              <button class="btn btn-small" id="rt-prev-song" title="前の曲（←）">◀ 前の曲</button>
+              <button class="btn btn-small" id="rt-next-song" title="次の曲（→）">次の曲 ▶</button>
+              <button class="btn btn-small" id="rt-next-unrated" title="まだ点数を付けていない曲へ">未評価へ</button>
+            </div>
+          </div>
+          <div class="rating-player">
+            <button class="btn btn-play" id="rt-play">▷ 再生</button>
+            <button class="btn btn-small" id="rt-play-chorus" title="サビから再生（C）">サビから</button>
+            <span class="rating-pos" id="rt-pos"></span>
+          </div>
+          <div class="rating-scores" role="radiogroup" aria-label="点数">
+            <button class="rating-score" role="radio" data-rt-score="1"><b>1</b><span>悪い</span></button>
+            <button class="rating-score" role="radio" data-rt-score="2"><b>2</b><span>いまいち</span></button>
+            <button class="rating-score" role="radio" data-rt-score="3"><b>3</b><span>ふつう</span></button>
+            <button class="rating-score" role="radio" data-rt-score="4"><b>4</b><span>良い</span></button>
+            <button class="rating-score" role="radio" data-rt-score="5"><b>5</b><span>とても良い</span></button>
+          </div>
+          <div class="chips rating-tags" id="rt-tags" aria-label="気になった点・よかった点（任意）"></div>
+          <input class="text-input rating-memo" id="rt-memo" placeholder="メモ（任意。点数を付ける前に書く）" maxlength="200">
+          <p class="hint" id="rt-result"></p>
+          <p class="hint">点数を押すと保存して次の曲へ進みます（再生中なら次の曲も続けて鳴らします）。タグ・メモは点数より先に選んでください。<kbd>1</kbd>〜<kbd>5</kbd> 点数、<kbd>Space</kbd> 再生／停止、<kbd>C</kbd> サビから、<kbd>←</kbd> <kbd>→</kbd> 前後の曲。</p>
+        </div>
+
+        <div class="card rating-summary">
+          <h2 class="settings-group-title">結果</h2>
+          <div class="rating-compare">
+            <span class="settings-label">同じ曲で比べる</span>
+            <select class="select" id="rt-cmp-a"></select>
+            <span>→</span>
+            <select class="select" id="rt-cmp-b"></select>
+            <span class="rating-compare-result" id="rt-compare"></span>
+          </div>
+          <div class="rating-table-wrap" id="rt-summary"></div>
+          <div class="rating-table-wrap" id="rt-genres"></div>
+          <div class="rating-actions">
+            <button class="btn btn-small" id="rt-export-csv">CSV に書き出す</button>
+            <button class="btn btn-small" id="rt-export-json">JSON に書き出す</button>
+            <button class="btn btn-small" id="rt-import">JSON を読み込む</button>
+            <input type="file" id="rt-import-file" accept=".json,application/json" hidden>
+            <button class="btn btn-small rating-danger" id="rt-delete-label">この条件の評価を消す</button>
+          </div>
+        </div>
       </div>
     </section>
   </main>

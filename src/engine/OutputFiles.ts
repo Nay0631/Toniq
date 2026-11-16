@@ -13,6 +13,7 @@ export function hasOutputFolder(): boolean {
 const KIND_LABELS: Record<OutputKind, string> = {
   audio:    "output/audio",
   midi:     "output/midi",
+  quality:  "output/quality",
 };
 
 // 書き出したファイル（WAV / MP3 / MIDI）を出力フォルダに保存する。保存したら場所を知らせ、フォルダを開くか聞く

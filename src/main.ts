@@ -18,6 +18,7 @@ import { initHistoryControls } from "./ui/HistoryControls";
 import { initGlossary } from "./ui/Glossary";
 import { initSettingsScreen } from "./ui/SettingsScreen";
 import { initPreferences } from "./ui/Preferences";
+import { initRatingScreen } from "./ui/RatingScreen";
 import "./ui/styles.css";
 
 
@@ -55,5 +56,6 @@ window.addEventListener("load", () => {
   initHistoryControls();
   initGlossary();
   initSettingsScreen();
+  initRatingScreen();
   initRouter();
 });

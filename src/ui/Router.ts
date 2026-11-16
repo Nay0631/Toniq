@@ -11,6 +11,7 @@ const SCREEN_TITLES: Record<Screen, string> = {
   musiclist: "ミュージックリスト",
   quiz:      "音楽クイズ",
   settings:  "設定",
+  rating:    "メロディの評価",
 };
 
 // 各画面モジュールが登録する描画関数
@@ -20,8 +21,17 @@ export function onRender(fn: () => void): void {
   renderers.push(fn);
 }
 
+// 画面が切り替わるときに呼ぶ関数（画面を離れるときの後片付けなど。切り替え前の画面と次の画面を渡す）
+const screenChangeHandlers: ((prev: Screen, next: Screen) => void)[] = [];
+
+export function onScreenChange(fn: (prev: Screen, next: Screen) => void): void {
+  screenChangeHandlers.push(fn);
+}
+
 // 画面を切り替える。表示状態は AppState.screen だけで管理する
 export function showScreen(screen: Screen): void {
+  const prev = getState().screen;
+  if (prev !== screen) screenChangeHandlers.forEach(fn => fn(prev, screen));
   stopMetronome();     // BPM のクリック音は画面を離れたら止める
   stopScalePreview();  // キー・スケールの試聴も止める
   stopSample();     // ジャンルのサンプルも止める（差し替えていたパターンを元に戻す）

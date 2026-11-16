@@ -23,7 +23,7 @@ npm run electron:build  # インストーラ作成（release/）
 - 古い形式の読み替え（`songFields` の `LEGACY_*`・`presetIdFromSaved`）を変えたり、AppState に曲の項目を足したりしたら `tests/SongLibrary.test.ts` に古い曲の例を足す。
 - `npm test` は `tools/test.mjs` から vitest を起動する。Windows で作業フォルダのドライブ文字が小文字（`c:\…`。VS Code のターミナルなど）だと vitest が自分を2回読み込んで「Cannot read properties of undefined (reading 'config')」で失敗するので、大文字にそろえてから起動している（`npx vitest` を直接使うときは `C:\…` で開いたターミナルから）。
 
-メロディ・コード進行・アレンジの生成ルールを変えたら、`npm run quality` で前後を比べる（`tools/quality-report.mjs`）。シンプルモードの「生成する」と同じ手順で全ジャンル×雰囲気を100曲ずつ作り、自動チェックの合格率・総合点と多様さ（進行・メロディのリズムの種類、同じメロディが出ないか）を出す。乱数はシードで決まるので、変更前に `--save before`、変更後に `--compare before` で差が出る（`--detail` でジャンル×雰囲気ごと、`--genre` で絞り込み、`--seed` / `--runs` / `--key`。結果は `output/quality/`）。コード進行DB・メロディのリズムDB に誤りがあると終了コード 1 で終わる（CI で気づける）。
+メロディ・コード進行・アレンジの生成ルールを変えたら、`npm run quality` で前後を比べる（`tools/quality-report.mjs`）。シンプルモードの「生成する」と同じ手順で全ジャンル×雰囲気を100曲ずつ作り、自動チェックの合格率・総合点と多様さ（進行・メロディのリズムの種類、同じメロディが出ないか）を出す。乱数はシードで決まるので、変更前に `--save before`、変更後に `--compare before` で差が出る。耳で確かめるときは、設定画面の「開発用」の「メロディの評価」で同じシードの曲を聴いて 1〜5 の点数を付け、条件名（変更前／変更後）ごとに比べる（docs/ui.md の「メロディの評価」）（`--detail` でジャンル×雰囲気ごと、`--genre` で絞り込み、`--seed` / `--runs` / `--key`。結果は `output/quality/`）。コード進行DB・メロディのリズムDB に誤りがあると終了コード 1 で終わる（CI で気づける）。
 
 grow（内部シンセ。C++）は2通りにビルドする（詳しくは `grow/README.md`）：
 
@@ -43,14 +43,14 @@ electron/main.ts        Electron メインプロセス（ウィンドウ生成�
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ grow（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   grow の wasm（npm run grow:wasm で作る。Grow.ts が読む）
-output/                 曲の出力フォルダ（audio = WAV / MP3、midi = MIDI、quality = 一括計測の結果。中身は Git 管理外）
+output/                 曲の出力フォルダ（audio = WAV / MP3、midi = MIDI、quality = 一括計測の結果・メロディの評価の書き出し。中身は Git 管理外）
 docs/                   詳しい仕様（generation / arrangement / sound / ui。下の「詳しい仕様」）
 .github/workflows/      CI（test.yml = Lint・型チェック・テスト・一括計測、grow-wasm.yml = grow の wasm のビルドと確認）
 biome.json              Lint（Biome）の設定
-tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
-index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings）
+index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings / rating）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
 src/ui/
   Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab
@@ -70,6 +70,7 @@ src/ui/
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   HistoryControls.ts      元に戻す／やり直すのボタン（両モードの情報バー）とショートカット（Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）、戻したあとの再生への反映
   Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS）
+  RatingScreen.ts         メロディの評価（開発用。設定画面の「開発用」から開く。一括計測と同じシードの曲を聴いて 1〜5 の点数・タグ・メモを付け、条件（変更前／変更後など）ごとの平均と同じ曲どうしの差を出す。聴いている間だけ曲の内容を差し替え、離れたら戻す）
   SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・用語のツールチップの ON/OFF）
   GrowPanel.ts            grow（テスト中）の音作りの暫定パネル（カスタムモードの設定タブの下 #c-grow。対象のパート、プリセット、コアの表から作るモジュールごとのつまみ）
   CustomMore.ts           カスタムモードの設定タブの「もっと調整」（標準のままでも鳴る項目を畳む欄。変更の数・変えた項目の印・欄ごとに標準に戻す・開閉の保存）
@@ -101,8 +102,9 @@ src/engine/
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
   LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、構成のプリセット ARRANGE_PRESETS、変えた所 ArrangeEdit の当て直し、以前のブロックの並びからの読み替え editsFromLegacy、各パートが鳴る小節の判定 arrangementGate、周回表示）
   SongForm.ts             曲の構成（セクション Aメロ／サビ、曲全体のコード進行 songProgression・メロディ songMelody、エンディング、ドラムのフィルの小節、Aメロ・サビのメロディ生成）
+  MelodyRatings.ts        メロディの評価（人が付けた点数）の保存（localStorage の toniq.ratings）・集計（summarize / comparePairs）・CSV / JSON の書き出しと読み込み
   QualityCheck.ts         自動チェック（強拍のコード構成音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。画面には出さず npm run quality だけで使う。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
-  QualityBatch.ts         自動チェックの一括計測（npm run quality が Node から呼ぶ。アプリからは使わない。シードを決めて全ジャンル×雰囲気の曲を生成し、合格率と多様さを集める）
+  QualityBatch.ts         自動チェックの一括計測（npm run quality が Node から呼ぶ。アプリからはメロディの評価画面が同じ曲を作るのに generateBatchSong だけを使う。シードを決めて全ジャンル×雰囲気の曲を生成し、合格率と多様さを集める）
   Groove.ts               グルーヴ（スウィング applySwing・MIDI書き出し用のずらし方 swungBeats・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain、単位は AppState.swingUnit）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
@@ -249,7 +251,7 @@ src/engine/
 - [docs/generation.md](docs/generation.md) — 自動生成とパート：メロディの生成規則（跳躍の直し方・音域）、コード進行の選び方、ベース・アルペジオ・サブベース、カウンターメロディ・パーカッション・シグネチャー・FX / SE、自動チェック
 - [docs/arrangement.md](docs/arrangement.md) — 曲の構成：アレンジ（構成のプリセット＋変えた所）、セクション（Aメロ／サビ）・転調・エンディング・フィル、アレンジャーの操作、再生（arrangementGate・再生し直す条件・ループ再生）
 - [docs/sound.md](docs/sound.md) — 音：grow（内部シンセ）の組み込み、ドラムの音源、音の流れ・ボイシング・音量（`gain` の測り方）、グルーヴ（スウィング・シャッフル・サイドチェイン）、書き出し（WAV / MP3 / MIDI）
-- [docs/ui.md](docs/ui.md) — 画面：シンプルモード・カスタムモード（スキン・「もっと調整」・ミキサー）、ピアノロール、ミュージックリスト・曲ファイル・出力フォルダ、元に戻す／やり直す、設定画面、試聴、音楽クイズ
+- [docs/ui.md](docs/ui.md) — 画面：シンプルモード・カスタムモード（スキン・「もっと調整」・ミキサー）、ピアノロール、ミュージックリスト・曲ファイル・出力フォルダ、元に戻す／やり直す、設定画面、メロディの評価（開発用）、試聴、音楽クイズ
 - [grow/README.md](grow/README.md) — grow（C++ のシンセ）の作り・ビルド・測定
 
 ## 既知の問題（修正時に注意）

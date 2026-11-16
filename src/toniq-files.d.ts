@@ -1,5 +1,5 @@
 // Electron の preload（electron/preload.ts）が用意するファイル操作。ブラウザで開いたときは undefined
-export type OutputKind = "audio" | "midi";
+export type OutputKind = "audio" | "midi" | "quality";
 
 export interface ToniqFilesApi {
   outputRoot():  Promise<string>;
