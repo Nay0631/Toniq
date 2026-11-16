@@ -348,7 +348,7 @@ def strip_num(t):
 FIG_INTRO = {
     'ロバストネス図': '機能ごとのロバストネス図を、システム（グループ）ごとに示す。',
     'シーケンス図': '機能ごとのシーケンス図を、システム（グループ）ごとに示す。',
-    'クラス図': 'システム全体のクラス図と、機能ごとのクラス図をシステム（グループ）ごとに示す。',
+    'クラス図': '機能ごとのクラス図を、システム（グループ）ごとに示す。',
 }
 SYS_HEAD = re.compile(r'[A-Z]\d\d_')   # 7〜9章のシステムの見出し（### B01_曲の基本設定システム）
 
@@ -356,18 +356,11 @@ def flush_fig():
     global fig_items
     if not fig_items:
         return
-    whole = [it for it in fig_items if it[0] == '全体のクラス図']
+    # 全体のクラス図は作らない（2026-11-16 決定）。仕様書に節が残っていても docx には入れない
     per = [it for it in fig_items if it[0] != '全体のクラス図']
     for kind in ['ロバストネス図', 'シーケンス図', 'クラス図']:
         out.append(heading(1, kind, page_break=True))
         out.append(para(FIG_INTRO[kind]))
-        if kind == 'クラス図':
-            for h, imgs, paras in whole:
-                out.append(heading(2, '全体のクラス図'))
-                for alt, p in imgs:
-                    out.append(image(p, '全体_クラス図'))
-                for p in paras:
-                    out.append(para(p))
         group = None   # まだ出していないシステムの見出し（その種類の図がある機能が来たら出す）
         for h, imgs, paras in per:
             if SYS_HEAD.match(h):
@@ -449,7 +442,7 @@ for b in blocks:
     if kind == 'p':
         t = b[1]
         if chapter and chapter.startswith('6.') and 'ファイル名の決まり' in t:
-            t = '全体と、グループ（システム）ごとのユースケース図を示す。'
+            t = 'グループ（システム）ごとのユースケース図を示す。'
         out.append(para(t))
     elif kind == 'b':
         out.append(bullet(b[1]))
@@ -491,6 +484,9 @@ if os.path.exists(REV_FILE):
         revs[v] = (d, note)
 assert '\t' not in args.rev_note, '改訂の概要にタブは使えません'
 revs[args.rev] = (f'{Y:04d}/{M:02d}/{D:02d}', args.rev_note)
+# 改訂の概要には何を変えたかだけを書き、仕様書.md や基準のコミットは書かない（2026-11-16 決定）。tsv の過去の行も確かめる
+for _v, (_d, _note) in revs.items():
+    assert not re.search(r'仕様書\.md|基準：main', _note), f'改訂履歴の {_v} の概要に「仕様書.md」「基準：main …」は書かない（何を変えたかだけを書く）'
 rev_list = sorted(revs.items(), key=lambda kv: int(kv[0]))
 with open(REV_FILE, 'w', encoding='utf-8', newline='\n') as f:
     f.write('\n'.join(rev_head + [f'{v}\t{d}\t{n}' for v, (d, n) in rev_list]) + '\n')
