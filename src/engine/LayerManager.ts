@@ -83,6 +83,8 @@ export function reloadLayer(layer: LayerName) {
       loadMelody(songMelody(), `${song.length_bars}m`);
       // カウンターメロディはメロディから作るので、メロディを読み込み直したら一緒に作り直す（ピアノロールの編集など）
       if (s.parts.counter) loadCounter(song, songMelody(), s.key);
+      // コードのボイシングはメロディを避けて決めるので、同じく作り直す
+      if (s.parts.chord) loadChordProgression(song, s.key);
       break;
     case "counter":
       loadCounter(song, songMelody(), s.key);

@@ -115,7 +115,7 @@ src/engine/
   Grow.ts                 grow（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット、AudioWorklet の登録、各パートの音色 GrowInstrument（同じタスクで作ったものを1つのノードにまとめるマルチティンバー）
   growWorklet.js          grow の AudioWorklet（1つのノードで最大16の音色を鳴らす。wasm を 128 サンプルずつ描く。音符・時刻を決めたパラメーターは AudioParam の合図で受ける）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。grow（GROW_DRUMS）・ワンショット音源で鳴らす音色もここ
-  DrumSamples.ts          ドラムのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
+  DrumSamples.ts          ドラム・パーカッションのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）。オーディオコンテキストごとに保持
   MixerEngine.ts          マスター（入口→EQ→コンプ→持ち上げ→リミッター）とリバーブ送り。オーディオコンテキストごとに保持
@@ -173,7 +173,7 @@ src/engine/
   - サビ（コードの `section` が B）はハモり：メロディの各音と同じ位置・長さで、3度下（なければ6度下・4度下）のスケール音。強拍（1・3拍目）はコード構成音を強く好む。G3 より下になる音は休む。
   - Aメロ（それ以外。試聴・サンプルも）は合いの手（オブリガート）：次の発音まで半小節以上空く所に、発音の1拍あとから8分音符2〜4音のフレーズを G4〜C6 のペンタトニックで入れる（最初と最後はコード構成音、鳴っているメロディと短2度・長7度でぶつけない、次のメロディの発音の前に終わる、サビに食い込まない）。1小節に1つまでで、続く小節には入れない。メロディが細かいジャンル（8bit・テクノ）では Aメロではほとんど鳴らないので、標準アレンジでは主にサビ（とメロディの間が空くジャンルの Aメロ）に置く。
   - 音は grow（`growSounds.counter`。ジャンルの標準は `Grow.ts` の `COUNTER_STANDARD`）。MIDI書き出しも同じ音。ジャンルを足すときは `COUNTER_STANDARD` にも足す（なければローファイの定義）。
-- パーカッション（`PercPlayer.ts`）はドラムに重ねる小さな打楽器（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）。ジャンルごとに Aメロ・サビ（`sectionAt(bar)`）の16ステップのパターン（`PERC_PATTERNS`。`X` = 強く、`x` = 普通、`o` = 弱く、`.` = 休み。ないジャンルはローファイ）で鳴らし、サビのほうをにぎやかにする。音はドラムの音源に合わせ、`"grow"` なら grow の「パーカッション …」のプリセット（`SynthFactory.ts` の `GROW_PERC`）、それ以外はシンセ（ワンショット音源はない）。ドラムのバスは通さず、150Hz から下を削ってジャンルのキットの高域カット（11kHz より下げない `PERC_LOWPASS_MIN`）だけ通し、全体を `PERC_TRIM_DB`（−6dB）下げる（`createPercKit`）。エンディングの小節では鳴らさず、揺らぎはドラムの揺らぎ（`drumHumanize`）に合わせる。サイドチェインでは沈めない。MIDI書き出しはチャンネル10の別トラック（GM の音の番号。シェイカーは Maracas）。ジャンルを足すときは `PERC_PATTERNS` にも足す。
+- パーカッション（`PercPlayer.ts`）はドラムに重ねる小さな打楽器（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）。ジャンルごとに Aメロ・サビ（`sectionAt(bar)`）の16ステップのパターン（`PERC_PATTERNS`。`X` = 強く、`x` = 普通、`o` = 弱く、`.` = 休み。ないジャンルはローファイ）で鳴らし、サビのほうをにぎやかにする。音はドラムの音源に合わせ、`"grow"` なら grow の「パーカッション …」のプリセット（`SynthFactory.ts` の `GROW_PERC`）、ワンショット音源（`"sample"`）ならドラムと同じフォルダの `<トラック名>.wav`（`DrumSamples.ts`。ジャンルのフォルダ → `default`。ないトラックは grow）、シンセならシンセ（grow を鳴らせないときもシンセ）。ドラムのバスは通さず、150Hz から下を削ってジャンルのキットの高域カット（11kHz より下げない `PERC_LOWPASS_MIN`）だけ通し、全体を `PERC_TRIM_DB`（−6dB）下げる（`createPercKit`）。エンディングの小節では鳴らさず、揺らぎはドラムの揺らぎ（`drumHumanize`）に合わせる。サイドチェインでは沈めない。MIDI書き出しはチャンネル10の別トラック（GM の音の番号。シェイカーは Maracas）。ジャンルを足すときは `PERC_PATTERNS` にも足す。
 - サブベース（`AppState.bassSub`。`null` = ジャンルの標準で `bass_params.json` の `sub`。EDM・トランス・テクノが ON。`SONG_FIELDS` に含む）：ベースの各音を E1〜D#2 にたたんだ高さ（`subMidi`。オクターブ上の `O` もルートになる）で、grow の「サブベース」（なければ Tone.js のサイン）を −6dB（`SUB_LEVEL_DB`）で重ね、本体のベースは 90Hz から下を削る（`BassPlayer.ts`）。カスタムモードの設定タブの「追加パート」欄で選ぶ。音色と同じく再生開始時に反映される（再生中に変えたら再生し直す）。MIDI書き出しはしない。ジャンルを足すときは `bass_params.json` に `sub` も入れる。
 - シグネチャー（`SignaturePlayer.ts`）はジャンルの特徴を出す追加パート。EDM = オフビートのコードスタブ、テクノ = アシッド（16ステップ表記 R/O/F、大文字はアクセント）、8bit = 32分音符の高速アルペジオ、ローファイ = レコードノイズ（ヒス＋ランダムなプチプチ音）、ゲームBGM = ブラス、ハウス = シンコペーションのピアノスタブ、トランス = スーパーソウのコードを16分で刻むトランスゲート、アンビエント = うねる風のノイズ。ジャンルごとに `label` / `create`（Synth とエフェクト）/ `events`（コードごとの発音）を定義する。音色はほかのパートと同じく再生開始時に反映される。MIDI書き出しは未対応。
 - FX / SE（`FxPlayer.ts`）はループの継ぎ目を演出する効果音。種類は `AppState.fxType`（`SONG_FIELDS` に含む）で、`"auto"` はジャンルの標準（`GENRE_FX`）。カスタムモードのドラム欄の下の「FX / SE」で選び、「▷ 試聴」はループの終わりの盛り上げから次のループの頭の1小節まで鳴らす（`Playback.preview("fx")`）。
@@ -259,7 +259,7 @@ src/engine/
 
 ## 既知の問題（修正時に注意）
 
-- ドラムのワンショット音源は `public/samples/drums/default/` にしかなく（`rim` もない）、ジャンルのフォルダは空、`trance/` フォルダはない。
+- ドラムのワンショット音源は `public/samples/drums/default/` にしかなく（`rim` もない）、ジャンルのフォルダは空、`trance/` フォルダはない。パーカッションの音源（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）はまだ1つもないので、ワンショット音源を選んでもパーカッションは grow で鳴る。
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
 - MIDI書き出し（`exportMidi()`。AppState を読む）は再生と同じ音の並びを使う：曲全体の並び（`songProgression()` / `songMelody()`。セクション・エンディング込み）から、メロディ・コード（`chordEvents()`。コードのリズム込み）・パッド（`padEvents()`）・アルペジオ（`arpNotes()`）・ベース（`bassNotes()`。ジャンル別パターン、強さは `bassVelocity()`）・カウンターメロディ（`counterNotes()`）・ドラム（チャンネル10、GM の音の番号。ブロックごとのパターン・フィル・エンディングも反映。`drumStepHits()`）・パーカッション（チャンネル10 の別トラック。`percStepHits()`）。曲全体（`AppState.bars` 小節）をループで埋め、アレンジのブロックの外・OFF のパートは書き出さない。シグネチャー・FX / SE は音色が特徴のパートなので書き出さない。サブベースはベースと同じ音なので書き出さない。音色（GM の番号）は目安。強さの揺らし・ストラムは入れない。
 - カスタムモードの「雰囲気」はコード進行の「カテゴリ」として選ぶ。スケールは `chordPattern.base_scale` から決まり（別に持たない）、スケールを選ぶとそのスケールのコード進行に切り替わる。

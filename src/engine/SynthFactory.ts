@@ -413,7 +413,11 @@ export function createDrumKit(genre: string, trackNames: string[], source: DrumS
 
 // ===== パーカッション（PercPlayer.ts。シェイカー・タンバリン・コンガ（高・低）・ライド） =====
 // ドラムのバス（歪み・コンプ）は通さず、低域を削ってジャンルの高域カットだけ通す（キックやベースの帯域を濁さない）。
-// 音源が grow ならコアの「パーカッション …」のプリセット（ID は drum_…）、それ以外（シンセ・ワンショット音源）はシンセで鳴らす
+// 音はドラムの音源に合わせる：
+//   grow         → コアの「パーカッション …」のプリセット（ID は drum_…）
+//   ワンショット音源 → public/samples/drums/<フォルダ>/<トラック名>.wav（DrumSamples.ts）。音源がないトラックは grow
+//   シンセ        → Tone.js のシンセ
+// grow を鳴らせない（準備ができていない・プリセットのない古い wasm）ときはシンセで鳴らす
 
 const GROW_PERC: Record<string, { id: string; note: Tone.Unit.Frequency }> = {
   shaker:     { id: "drum_shaker",     note: "C4" },
@@ -532,7 +536,10 @@ export function createPercKit(genre: string, source: DrumSource = "synth"): Drum
 
   const voices: Record<string, DrumVoice> = {};
   for (const [name, make] of Object.entries(factories)) {
-    const voice = (source === "grow" ? createGrowPercVoice(name) : null) ?? make();
+    const sample = source === "sample" ? getDrumSample(genre, name) : undefined;
+    const voice  = (sample ? createSampleVoice(sample) : null)
+      ?? (source !== "synth" ? createGrowPercVoice(name) : null)
+      ?? make();
     voice.output.connect(lowcut);
     voices[name] = voice;
   }

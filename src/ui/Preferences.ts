@@ -47,14 +47,18 @@ export function setLoopPlayback(on: boolean): void {
   applyLoopPlayback();  // 曲の再生中なら、今の再生の終わり方もすぐ切り替える
 }
 
-// ドラムの音源。キットは読み込み時に作るので、再生中ならドラムだけ読み込み直す（音源は先に読み込んでおく）
+// ドラムの音源（パーカッションも同じ音源で鳴らす）。キットは読み込み時に作るので、
+// 再生中ならドラムとパーカッションだけ読み込み直す（音源は先に読み込んでおく）
 export async function setDrumSource(drumSource: DrumSource): Promise<void> {
   setState({ drumSource });
   write(KEYS.drumSource, drumSource);
   const s = getState();
   if (drumSource === "sample") await prepareDrumSamples(s.genre);
   if (drumSource === "grow") await prepareGrowContext();
-  if (Tone.getTransport().state === "started" && getState().parts.drum) reloadLayer("drum");
+  if (Tone.getTransport().state === "started") {
+    if (getState().parts.drum) reloadLayer("drum");
+    if (getState().parts.perc) reloadLayer("perc");
+  }
 }
 
 // テスト中の機能の ON/OFF。フィル・揺らぎはドラムが1音ごとに AppState を読むので再生中もすぐ反映される。

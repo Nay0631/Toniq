@@ -1,6 +1,8 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
-import { voiceProgression, VOICING_RANGES } from "../data/degree_resolver";
+import { voiceProgression, VOICING_RANGES, VoicingMelodyNote } from "../data/degree_resolver";
+import { MelodyNote, noteToMidi, timeToUnits, durationToUnits } from "./MelodyGenerator";
+import { songMelody } from "./SongForm";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState, ChordRhythm } from "./AppState";
@@ -62,11 +64,23 @@ export interface ChordHit {
   strum:     number;  // 音をずらす間隔（秒）
 }
 
-// コード進行1周分の発音（コードのリズム AppState.chordRhythm とボイシング。MIDI書き出しも同じものを使う）
+// ボイシングで避けるメロディ（曲全体の並び。メロディが OFF・未作成なら空で、コードどうしの動きだけで決める）
+function melodyToAvoid(): VoicingMelodyNote[] {
+  if (!getState().parts.melody) return [];
+  return songMelody()
+    .filter((n): n is MelodyNote & { note: string } => n.note !== null)
+    .map(n => {
+      const start = timeToUnits(n.time);
+      return { midi: noteToMidi(n.note), start, end: start + durationToUnits(n.duration) };
+    });
+}
+
+// コード進行1周分の発音（コードのリズム AppState.chordRhythm とボイシング。MIDI書き出しも同じものを使う）。
+// ボイシングは、最高音がメロディより上に出ない・メロディと半音でぶつからない転回形を選ぶ
 export function chordEvents(progression: ChordProgression, key: string): ChordHit[] {
   const hits: ChordHit[] = [];
   const step = RHYTHM_STEPS[getState().chordRhythm];
-  const voiced = voiceProgression(progression, key, VOICING_RANGES.chord);
+  const voiced = voiceProgression(progression, key, VOICING_RANGES.chord, { melody: melodyToAvoid() });
 
   progression.progression.forEach((chord, i) => {
     const notes = voiced[i];
@@ -97,7 +111,7 @@ interface ChordEvent {
   strum:    number;  // 音をずらす間隔（秒）
 }
 
-// ボイシングは前のコードから一番近い転回形で決める（voiceProgression）
+// ボイシングは進行全体で動きが最小になり、メロディとぶつからない転回形で決める（voiceProgression）
 export function loadChordProgression(progression: ChordProgression, key: string = "A") {
   if (chordPart) { chordPart.dispose(); chordPart = null; }
   if (!padSynth) initChordSynth();
