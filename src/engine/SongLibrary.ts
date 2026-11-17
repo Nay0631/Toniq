@@ -5,6 +5,7 @@ import { editsFromLegacy } from "./LoopArranger";
 import type { Arrangement } from "./AppState";
 import { resetHistory } from "./History";
 import { presetIdFromSaved } from "./Grow";
+import { volumeFromLegacy } from "./VolumeCurve";
 
 export { SONG_FIELDS };
 export type { SongFields };
@@ -150,10 +151,17 @@ function songFields(song: Partial<SongFields>): SongFields {
   // 以前の形式のアレンジ（編集したときだけブロックの並びを保存していた。null = ジャンルの標準）
   const legacy = (song as { arrangement?: Partial<Arrangement> | null }).arrangement;
   const legacyArrangement = !song.arrangeEdits && legacy ? legacy : null;
+  // 定位（pans）のない曲は、フェーダーのカーブを変える前（値に比例。100 で 0dB）に保存した曲。
+  // 同じ大きさで鳴るよう、保存した音量を今のカーブ（75 で 0dB）の値に読み替える（定位は pans と同時に入れた）
+  const savedVolumes = (song.volumes ?? {}) as Record<string, number>;
+  const volumes = song.pans
+    ? savedVolumes
+    : Object.fromEntries(Object.entries(savedVolumes).map(([part, v]) => [part, volumeFromLegacy(v)]));
   return {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
-    volumes:     { ...defaultState.volumes, ...loaded.volumes },
+    volumes:     { ...defaultState.volumes, ...volumes },
+    pans:        { ...defaultState.pans,    ...song.pans },
     // grow のプリセットは以前は番号で保存していた（今は ID）。番号なら ID に読み替える
     growPreset:      presetIdFromSaved(loaded.growPreset, defaultState.growPreset),
     // コードの音色は grow だけ。以前の Tone.js の音色を選んでいた曲は、同じ音の grow のプリセットで鳴らす
@@ -194,7 +202,9 @@ const FILE_FORMAT  = "toniq-song";
 // 2：grow のプリセットを番号ではなく ID で保存する（1 の番号は読み込み時に ID へ読み替える）
 // 3：アレンジを構成のプリセット（arrangePreset）と変えた所（arrangeEdits）で保存する
 //    （2 までのブロックの並び arrangement は、読み込み時に songFields が変えた所に読み替える）
-const FILE_VERSION = 3;
+// 4：定位（pans）を足し、音量（volumes）をフェーダーの新しいカーブ（75 で 0dB）の値で保存する
+//    （3 までの pans のない曲は、読み込み時に songFields が音量を読み替える）
+const FILE_VERSION = 4;
 export const SONG_FILE_EXT = ".toniq.json";
 
 interface SongFile {

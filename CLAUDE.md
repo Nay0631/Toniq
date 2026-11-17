@@ -13,6 +13,8 @@ npm test                # テスト（Vitest。tests/*.test.ts）
 npm run lint            # Lint（Biome。biome.json）
 npm run typecheck       # 型チェック（アプリとテスト）
 npm run electron:build  # インストーラ作成（release/）
+npm run quality         # 自動チェックの一括計測（生成ルールの前後を比べる）
+npm run mix:measure     # ミックスの一括計測（全ジャンルのピーク・ラウドネスと gain の提案）
 ```
 
 変更後は `npm run lint`・`npm run typecheck`・`npm test` を通す。GitHub に push すると `.github/workflows/test.yml` が同じ3つと `npm run quality -- --runs 20` を動かす。
@@ -24,6 +26,8 @@ npm run electron:build  # インストーラ作成（release/）
 - `npm test` は `tools/test.mjs` から vitest を起動する。Windows で作業フォルダのドライブ文字が小文字（`c:\…`。VS Code のターミナルなど）だと vitest が自分を2回読み込んで「Cannot read properties of undefined (reading 'config')」で失敗するので、大文字にそろえてから起動している（`npx vitest` を直接使うときは `C:\…` で開いたターミナルから）。
 
 メロディ・コード進行・アレンジの生成ルールを変えたら、`npm run quality` で前後を比べる（`tools/quality-report.mjs`）。シンプルモードの「生成する」と同じ手順で全ジャンル×雰囲気を100曲ずつ作り、自動チェックの合格率・総合点と多様さ（進行・メロディのリズムの種類、同じメロディが出ないか）を出す。乱数はシードで決まるので、変更前に `--save before`、変更後に `--compare before` で差が出る。耳で確かめるときは、設定画面の「開発用」の「メロディの評価」で同じシードの曲を聴いて 1〜5 の点数を付け、条件名（変更前／変更後）ごとに比べる（docs/ui.md の「メロディの評価」）（`--detail` でジャンル×雰囲気ごと、`--genre` で絞り込み、`--seed` / `--runs` / `--key`。結果は `output/quality/`）。コード進行DB・メロディのリズムDB に誤りがあると終了コード 1 で終わる（CI で気づける）。
+
+ミックス（`mix_presets.json`・`MixerEngine.ts`・音源・パートの音量）を変えたら、`npm run mix:measure` で前後を比べる（`tools/mix-measure.mjs`。Chrome か Edge が要る。1曲 20〜40 秒、全ジャンルで 10 分ほど）。全ジャンル×雰囲気（激しい・落ち着いた）の曲を書き出し、ピークと統合ラウドネス（LUFS）を測って、聞こえる大きさを目標（−16.5 LUFS）にそろえる `gain` を提案する（`--save before` / `--compare before`、`--genre`・`--mood`・`--seed`・`--runs`・`--drum`・`--parts`（鳴らすパートを絞る）・`--target`）。`gain` はピークが −1dB を超えない範囲で決める（docs/sound.md の「音量」）。
 
 grow（内部シンセ。C++）は2通りにビルドする（詳しくは `grow/README.md`）：
 
@@ -50,6 +54,7 @@ biome.json              Lint（Biome）の設定
 tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
+tools/mix-measure.mjs   ミックスの一括計測（npm run mix:measure。Electron なしの Vite と画面なしの Chrome / Edge で全ジャンルの曲を書き出し、ピーク・統合ラウドネスを測って mix_presets.json の gain を提案する。測る式は tools/loudness.mjs）
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings / rating）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
 src/ui/
@@ -59,7 +64,7 @@ src/ui/
   CustomRender.ts         カスタムモード画面の表示（render。情報バー・設定タブの各欄、アレンジャー・ミキサーの描画を呼ぶ）
   CustomState.ts          カスタムモード画面の状態の更新（DOM を触らない。コード進行・サビの切り替えとメロディの作り直し、BPM、グルーヴ）と選択肢の元のデータ（APP_GENRES など）
   ArrangerTab.ts          アレンジャーのタイムライン（構成のプリセットの選択、セクションの行、セクションごとにパートを足す・抜く、変えた所の印、再生位置）
-  MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・音量のフェーダー・レベルメーター、マスターのメーター）
+  MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・定位（パン）のノブ・音量のフェーダー・レベルメーター、マスターの左右のピークのメーター・最大のピーク・クリップの印）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通。ツールバーの「メロディ／ドラム」で切り替える）
   DrumRoll.ts             ピアノロールのドラム（行 = キック・スネアなど、列 = 16分音符のマスでオリジナルのドラムパターンを作る。1・2・4小節）
   MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
@@ -117,8 +122,9 @@ src/engine/
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。grow（GROW_DRUMS）・ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラム・パーカッションのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
-  VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）。オーディオコンテキストごとに保持
-  MixerEngine.ts          マスター（入口→EQ→コンプ→持ち上げ→リミッター）とリバーブ送り。オーディオコンテキストごとに保持
+  VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）・サイドチェインのゲイン・定位（パン）・レベルメーター。オーディオコンテキストごとに保持
+  VolumeCurve.ts          フェーダーの値と dB の換算（75 で 0dB・100 で +5dB の2乗のカーブ）、以前のカーブで保存した値の読み替え、定位の表示。Tone.js を使わない
+  MixerEngine.ts          パートの EQ（低域カット PART_LOW_CUT・中域のへこみ PART_MID_DIP）と定位、マスター（入口→EQ→コンプ→持ち上げ→リミッター）、リバーブ送り（ジャンルごとの量。戻りはコンプを通さない）、マスターのピーク。オーディオコンテキストごとに保持
   TapTempo.ts             タップテンポ（AppState.bpm を更新する。再生中の反映は呼び出し側が Playback.applyBpm()）
   Metronome.ts            BPM 試聴用のクリック音（Web Audio API で直接鳴らす）
   ScalePreview.ts         キー・スケールの試聴（スケールを順に鳴らして主音の和音で終わる。Web Audio API で直接鳴らす）
@@ -168,7 +174,7 @@ src/engine/
 - 「小節数」は曲全体の最大の長さを表す（コード進行1周の長さではない）。コード進行・ドラムはその長さに達するまでループし、アレンジャーのタイムラインと書き出しの長さもこの値に合わせる。
 - パートは初期状態ですべて ON（シンプルモード・カスタムモードとも。`defaultState.parts`）。保存済みの曲は保存した ON/OFF のまま開く。
 - 曲の長さ（`defaultState.bars`）の初期値は 32 小節（カスタムモードの起動時・新規作成。シンプルモードは生成時に `SIMPLE_SONG_BARS` = 32 にする）。
-- パートを増やしたときは、保存済みの曲に新しいパートの項目がないので、`loadSong()`（`SongLibrary.ts`）で `parts` / `volumes` を初期値で補っている（アレンジは組み立て直すので補う必要はない）。
+- パートを増やしたときは、保存済みの曲に新しいパートの項目がないので、`loadSong()`（`SongLibrary.ts`）で `parts` / `volumes` / `pans` を初期値で補っている（アレンジは組み立て直すので補う必要はない）。ミックスは `MixerEngine.ts` の `REVERB_SENDS`（リバーブ送り）と、必要なら `PART_LOW_CUT`（低域カット）・`Groove.ts` の `SIDECHAIN_PARTS` にも足す。
 - カウンターメロディ（`CounterPlayer.ts`）はメロディに寄り添うもう1本の旋律。曲全体の並び（`songProgression()` / `songMelody()`）から `counterNotes()` で毎回同じ形に作る（AppState には持たない。メロディを編集すれば追従する。`reloadLayer("melody")` はカウンターメロディも読み込み直す）。
   - サビ（コードの `section` が B）はハモり：メロディの各音と同じ位置・長さで、3度下（なければ6度下・4度下）のスケール音。強拍（1・3拍目）はコード構成音を強く好む。G3 より下になる音は休む。
   - Aメロ（それ以外。試聴・サンプルも）は合いの手（オブリガート）：次の発音まで半小節以上空く所に、発音の1拍あとから8分音符2〜4音のフレーズを G4〜C6 のペンタトニックで入れる（最初と最後はコード構成音、鳴っているメロディと短2度・長7度でぶつけない、次のメロディの発音の前に終わる、サビに食い込まない）。1小節に1つまでで、続く小節には入れない。メロディが細かいジャンル（8bit・テクノ）では Aメロではほとんど鳴らないので、標準アレンジでは主にサビ（とメロディの間が空くジャンルの Aメロ）に置く。
@@ -219,7 +225,7 @@ src/engine/
 - ドロップダウン（`<select>`）は `appearance: base-select`（customizable select）でリストをページの中に描く（`styles.css` の末尾）。Electron（Windows）ではネイティブのリスト（OS の別ウィンドウ）が再生の有無に関係なく 30 秒ほど開かないことがあったため（Chrome では起きない）。各スキンの `.hw .select` などが `appearance` を上書きするので、そこだけ `!important`。▾ を背景で描いているセレクトはブラウザの ▾（`::picker-icon`）を消す。リストの色は `::picker(select)` と `option` にトークンで付ける。
 - `styles.css` では色を直書きせず、`:root` のトークン（`var(--…)`）を使う。トークンを足すときは `:root[data-theme="dark"]` にもダーク用の値を足す。例外はパートの識別色（`.arr-*` / `.dot-*` のパステル）とアクセント色の上の白文字・クイズの黒鍵で、どちらのテーマでも同じ色を使う。
 - カスタムモードの設定タブ・アレンジャータブ（`.hw`）と情報バー（`.hw-bar`）とタブ（`.hw-tabs`）はスキンで見た目が変わる。フラットスキンの形はシンセサイザーのプラグイン風（区切り線で仕切ったフラットなグレーの面、白いノブと細い色の弧、下線付きのドロップダウン、グレーの値の箱、情報バー・タブ・小節の目盛りは黒い帯、選択中はオレンジの枠）。色は `--hw-*` / `--knob-*` / `--slider-*` / `--track-*` のトークンを使う。BPM はノブ、コード進行・ドラムパターンは ◀▶ で切り替え（`Controls.ts`）。AppState から range の値を書き換えたら `syncControls()` で見た目をそろえる。
-- ミキサー（`MixerPanel.ts`、`#c-arr-mixer`）はアレンジャータブのタイムラインの下にだけ置く（設定タブには置かない）。左端に dB 目盛り、パートごとのチャンネル（色・名前、ON/OFF ボタン、縦フェーダー `attachFader`＋レベルメーター、値 0〜100）、右端にマスターのメーターと dB。フェーダーは `VolumeManager.setVolume` で `AppState.volumes`（初期値は `defaultState.volumes`。曲に保存され、元に戻す／やり直すの対象）を書き換え、Volume ノードにもすぐ当てる。メーターは再生中だけ `Tone.Meter`（パートはサイドチェインの Gain のあと、マスターはリミッターのあと。WAV / MP3 書き出しのコンテキストには作らない）を読む。パートの ON/OFF はミキサーの ON ボタン、アレンジャーのレーンの ON ボタン、設定タブの「追加パート」欄（パッド／アルペジオ／シグネチャー／カウンターメロディ／パーカッション）のボタンで切り替える。
+- ミキサー（`MixerPanel.ts`、`#c-arr-mixer`）はアレンジャータブのタイムラインの下にだけ置く（設定タブには置かない）。左端に dB 目盛り、パートごとのチャンネル（色・名前、ON/OFF ボタン、定位（パン）のノブ、縦フェーダー `attachFader`＋レベルメーター、値 0〜100）、右端にマスター（クリップの印・左右のピークのメーター・最大のピーク）。フェーダーは `VolumeManager.setVolume` で `AppState.volumes`（初期値は `defaultState.volumes`。曲に保存され、元に戻す／やり直すの対象）を書き換え、Volume ノードにもすぐ当てる。値と dB の換算は `VolumeCurve.ts`（75 で 0dB、100 で +5dB の2乗のカーブ。以前の値に比例のカーブで保存した曲＝`pans` のない曲は、`loadSong()` が同じ大きさの値に読み替える）。パンのノブは `VolumeManager.setPan` で `AppState.pans`（−100 = 左 〜 100 = 右。`SONG_FIELDS` に含む。ダブルクリックで中央）を書き換える。パートのメーターは再生中だけ `Tone.Meter`（音量・サイドチェイン・パートの EQ・定位のあと）を読み、マスターはリミッターのあとの波形からサンプルのピークを求める（`getMasterPeaks`。WAV / MP3 書き出しのコンテキストには作らない）。最大のピークと、−0.1dBFS に届くと点く「CLIP」は、次の再生の開始かクリックで消す。詳しくは docs/ui.md。パートの ON/OFF はミキサーの ON ボタン、アレンジャーのレーンの ON ボタン、設定タブの「追加パート」欄（パッド／アルペジオ／シグネチャー／カウンターメロディ／パーカッション）のボタンで切り替える。
 - メニューへの導線は、メニュー以外のすべての画面の上部に出るパンくずの「メニューに戻る」ボタン。ヘッダーの「⋯」メニューとシンプル／カスタムの切り替えボタンは廃止した。
 - カスタムモードには「生成する」ボタンを置かない（設定の変更はその場で反映され、メロディの作り直しはピアノロールの「自動生成」で行う）。情報バーの主ボタンは「▷ 再生」。
 - ミュージックリストの絞り込み・並び順（`musicListQuery` / `musicListGenre` / `musicListFavorites` / `musicListSort`）は AppState に置く。⋮ メニューを開いている曲・名前を変更中の曲は表示上の一時的な状態としてモジュール内に持つ。お気に入りは曲データ（`SavedSong.favorite`）に保存する。

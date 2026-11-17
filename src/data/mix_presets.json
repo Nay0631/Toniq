@@ -1,60 +1,61 @@
 {
   "EDM": {
-    "reverb":    { "decay": 1.5, "wet": 0.2 },
+    "reverb":    { "decay": 1.5, "wet": 0.2, "preDelay": 0.03 },
     "eq":        { "low": 3, "mid": -2, "high": 3 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.15 },
-    "limiter":   { "threshold": -1 },
-    "gain":      -4,
+    "limiter":   { "threshold": -2 },
+    "gain":      -4.5,
     "swing":     0,
     "sidechain": 55
   },
   "8bit": {
-    "reverb":    { "decay": 0.5, "wet": 0.1 },
+    "reverb":    { "decay": 0.5, "wet": 0.1, "preDelay": 0.01,
+                   "sends": { "melody": 0.25, "counter": 0.25, "chord": 0.3, "arp": 0.3, "signature": 0.2 } },
     "eq":        { "low": 2, "mid": 1, "high": 3 },
     "compressor":{ "threshold": -14, "ratio": 2.5, "attack": 0.01, "release": 0.1 },
-    "limiter":   { "threshold": -1 },
-    "gain":      -5,
+    "limiter":   { "threshold": -2 },
+    "gain":      -4.5,
     "swing":     0,
     "sidechain": 0
   },
   "ローファイ": {
-    "reverb":    { "decay": 3.0, "wet": 0.35 },
+    "reverb":    { "decay": 3.0, "wet": 0.35, "preDelay": 0.03, "sends": { "drum": 0.25 } },
     "eq":        { "low": 2, "mid": -3, "high": -4 },
     "compressor":{ "threshold": -18, "ratio": 2.5, "attack": 0.02, "release": 0.3 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4,
+    "gain":      -2,
     "swing":     45,
     "sidechain": 15
   },
   "ゲームBGM": {
-    "reverb":    { "decay": 2.0, "wet": 0.25 },
+    "reverb":    { "decay": 2.0, "wet": 0.25, "preDelay": 0.03 },
     "eq":        { "low": 2, "mid": 0, "high": 2 },
     "compressor":{ "threshold": -14, "ratio": 2.5, "attack": 0.01, "release": 0.2 },
-    "limiter":   { "threshold": -1 },
+    "limiter":   { "threshold": -2 },
     "gain":      -4,
     "swing":     0,
     "sidechain": 0
   },
   "テクノ": {
-    "reverb":    { "decay": 1.2, "wet": 0.15 },
+    "reverb":    { "decay": 1.2, "wet": 0.15, "preDelay": 0.02, "sends": { "perc": 0.35, "melody": 0.4 } },
     "eq":        { "low": 3, "mid": -1, "high": 2 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.12 },
     "limiter":   { "threshold": -1 },
-    "gain":      -3,
+    "gain":      -5,
     "swing":     10,
     "sidechain": 40
   },
   "ハウス": {
-    "reverb":    { "decay": 1.8, "wet": 0.2 },
+    "reverb":    { "decay": 1.8, "wet": 0.2, "preDelay": 0.025, "sends": { "perc": 0.3 } },
     "eq":        { "low": 3, "mid": -1, "high": 2 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.15 },
     "limiter":   { "threshold": -1 },
-    "gain":      -4,
+    "gain":      -5,
     "swing":     25,
     "sidechain": 45
   },
   "トランス": {
-    "reverb":    { "decay": 2.5, "wet": 0.25 },
+    "reverb":    { "decay": 2.5, "wet": 0.25, "preDelay": 0.04, "sends": { "melody": 0.6, "arp": 0.7 } },
     "eq":        { "low": 3, "mid": -2, "high": 3 },
     "compressor":{ "threshold": -16, "ratio": 3, "attack": 0.01, "release": 0.15 },
     "limiter":   { "threshold": -1 },
@@ -63,11 +64,12 @@
     "sidechain": 50
   },
   "アンビエント": {
-    "reverb":    { "decay": 6.0, "wet": 0.45 },
+    "reverb":    { "decay": 6.0, "wet": 0.45, "preDelay": 0.06,
+                   "sends": { "drum": 0.4, "perc": 0.5, "melody": 0.7, "counter": 0.7 } },
     "eq":        { "low": 0, "mid": -1, "high": 1 },
-    "compressor":{ "threshold": -20, "ratio": 2, "attack": 0.05, "release": 0.5 },
-    "limiter":   { "threshold": -1 },
-    "gain":      -1,
+    "compressor":{ "threshold": -24, "ratio": 2.5, "attack": 0.02, "release": 0.4 },
+    "limiter":   { "threshold": -2 },
+    "gain":      0,
     "swing":     0,
     "sidechain": 0
   }

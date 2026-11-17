@@ -10,6 +10,7 @@ import {
   SongStorageError, SavedSong,
 } from "../src/engine/SongLibrary";
 import { LEGACY_PRESET_IDS } from "../src/engine/Grow";
+import { volumeFromLegacy, volumeToDb } from "../src/engine/VolumeCurve";
 import { getArrangement } from "../src/engine/LoopArranger";
 import { customDrumPattern, withDrumHit } from "../src/engine/DrumEngine";
 import { chordById, drums, resetState, MemoryStorage } from "./helpers";
@@ -87,8 +88,13 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(s.parts).toEqual({ ...defaultState.parts, drum: true, chord: true, bass: false, arp: false, pad: true, melody: true });
     expect(s.volumes.signature).toBe(defaultState.volumes.signature);
     expect(s.volumes.fx).toBe(defaultState.volumes.fx);
-    expect(s.volumes.melody).toBe(80);
+    // 保存した音量は以前のカーブ（100 で 0dB）の値なので、同じ大きさで鳴る今のカーブ（75 で 0dB）の値に読み替える
+    expect(s.volumes.melody).toBe(volumeFromLegacy(80));
+    expect(s.volumes.melody).toBe(67);
+    expect(volumeToDb(s.volumes.melody)).toBeCloseTo(20 * Math.log10(80 / 100), 0);
     expect(s.volumes.counter).toBe(defaultState.volumes.counter);
+    // 定位（パン）は以前はなかった（初期値）
+    expect(s.pans).toEqual(defaultState.pans);
     expect(s.volumes.perc).toBe(defaultState.volumes.perc);
     expect(s.parts.counter).toBe(defaultState.parts.counter);
     expect(s.parts.perc).toBe(defaultState.parts.perc);
@@ -109,6 +115,16 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     for (const part of ["chord", "bass", "arp", "pad", "signature", "fx", "counter", "perc"] as const) {
       expect(a[part], part).toEqual([]);
     }
+  });
+
+  it("定位（pans）のある曲は今のカーブで保存した曲なので、音量を読み替えない。無いパートの定位は初期値", () => {
+    storeRaw([legacySong({ volumes: { drum: 70, melody: 80 }, pans: { melody: -20, arp: 40 } })]);
+    expect(loadSong("song_old")).toBe(true);
+    const s = getState();
+    expect(s.volumes.drum).toBe(70);
+    expect(s.volumes.melody).toBe(80);
+    expect(s.volumes.bass).toBe(defaultState.volumes.bass);
+    expect(s.pans).toEqual({ ...defaultState.pans, melody: -20, arp: 40 });
   });
 
   it("今の形式（arrangeEdits）で保存した曲は、そのまま読む", () => {

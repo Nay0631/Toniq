@@ -210,8 +210,9 @@ export interface AppState {
     fx:      boolean;
   };
 
+  // 音量（フェーダーの値 0〜100。75 で 0dB、100 で +5dB。換算は VolumeCurve.ts）
   volumes: {
-    drum:    number;  // 0〜100
+    drum:    number;
     chord:   number;
     bass:    number;
     arp:     number;
@@ -222,6 +223,9 @@ export interface AppState {
     perc:    number;
     fx:      number;
   };
+
+  // 定位（パン。−100 = 左いっぱい 〜 0 = 中央 〜 100 = 右いっぱい）
+  pans: Record<LayerName, number>;
 }
 
 // 初期状態
@@ -311,17 +315,32 @@ export const defaultState: AppState = {
     fx:     true,
   },
 
+  // 以前のカーブ（値に比例）の 80 / 65 / 70 / 60 / 50 / 60 / 75 / 65 / 55 / 55 と同じ大きさ（VolumeCurve.ts の volumeFromLegacy）
   volumes: {
-    drum:   80,
-    chord:  65,
-    bass:   70,
-    arp:    60,
-    pad:    50,
-    signature: 60,
-    melody: 75,
-    counter: 65,
-    perc:   55,
-    fx:     55,
+    drum:   67,
+    chord:  60,
+    bass:   63,
+    arp:    58,
+    pad:    53,
+    signature: 58,
+    melody: 65,
+    counter: 60,
+    perc:   56,
+    fx:     56,
+  },
+
+  // 低音・ドラム・メロディは中央。メロディに寄り添うアルペジオとカウンターメロディを左右に分けて、中央を空ける
+  pans: {
+    drum:   0,
+    chord:  0,
+    bass:   0,
+    arp:    -30,
+    pad:    0,
+    signature: 0,
+    melody: 0,
+    counter: 30,
+    perc:   0,
+    fx:     0,
   },
 };
 
@@ -334,13 +353,13 @@ export const SONG_FIELDS = [
   "melodyMethod", "melodyVersion",
   "melodyInstrument", "chordRhythm", "chordInstrument", "fxType", "swing", "swingUnit", "sidechain", "scaleLock", "drumCategory",
   "growPreset", "growParams", "growChordPreset", "growChordParams", "growSounds", "bassSub",
-  "arrangePreset", "arrangeEdits", "parts", "volumes",
+  "arrangePreset", "arrangeEdits", "parts", "volumes", "pans",
 ] as const;
 
 export type SongFields = Pick<AppState, typeof SONG_FIELDS[number]>;
 
 // 状態をシングルトンで保持
-let state: AppState = { ...defaultState, parts: { ...defaultState.parts } };
+let state: AppState = { ...defaultState, parts: { ...defaultState.parts }, pans: { ...defaultState.pans } };
 
 export function getState(): AppState {
   return state;

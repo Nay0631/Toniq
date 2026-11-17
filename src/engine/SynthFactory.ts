@@ -518,6 +518,15 @@ function createRide(): DrumVoice {
 const PERC_TRIM_DB = -6;
 // パーカッションの高域カットの下限（Hz）。キットの値のままだと、ローファイ・アンビエントではほとんど聞こえなかった（2026-11-12 に測定）
 const PERC_LOWPASS_MIN = 11000;
+// パーカッションの楽器ごとの定位（−1 = 左 〜 1 = 右）。鳴り続ける高い音のシェイカーとライドを左右に分け、
+// コンガは高いほうと低いほうを少し離す。中央（キック・スネア・ベース・メロディ）を空ける
+const PERC_PAN: Record<string, number> = {
+  shaker:     0.35,
+  ride:       -0.35,
+  tambourine: -0.2,
+  conga_high: 0.2,
+  conga_low:  -0.15,
+};
 
 export function createPercKit(genre: string, source: DrumSource = "synth"): DrumKit {
   const p = DRUM_KITS[genre] ?? DEFAULT_KIT;
@@ -535,12 +544,16 @@ export function createPercKit(genre: string, source: DrumSource = "synth"): Drum
   };
 
   const voices: Record<string, DrumVoice> = {};
+  const panners: Tone.Panner[] = [];
   for (const [name, make] of Object.entries(factories)) {
     const sample = source === "sample" ? getDrumSample(genre, name) : undefined;
     const voice  = (sample ? createSampleVoice(sample) : null)
       ?? (source !== "synth" ? createGrowPercVoice(name) : null)
       ?? make();
-    voice.output.connect(lowcut);
+    // 楽器ごとに左右へ振り分ける（パート全体の定位はミキサーのパンで、この上にかかる）
+    const panner = new Tone.Panner({ pan: PERC_PAN[name] ?? 0, channelCount: 2 }).connect(lowcut);
+    voice.output.connect(panner);
+    panners.push(panner);
     voices[name] = voice;
   }
 
@@ -549,7 +562,7 @@ export function createPercKit(genre: string, source: DrumSource = "synth"): Drum
     output,
     dispose: () => {
       Object.values(voices).forEach(v => v.dispose());
-      [lowcut, lowpass, output].forEach(n => n.dispose());
+      [...panners, lowcut, lowpass, output].forEach(n => n.dispose());
     },
   };
 }

@@ -1587,6 +1587,55 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .mixer-power-led { display: none; }
 .mixer-power[aria-pressed="true"] { color: var(--hw-sel-text); background: var(--hw-sel); }
 
+/* 定位（パン）：小さいノブと値（C / L30 / R30）。マスターは同じ高さにクリップの印を置く */
+.mixer-pan,
+.mixer-pan-space,
+.mixer-clip {
+  flex: none;
+  height: 24px;
+}
+
+.mixer-pan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.mixer-pan .knob { --size: 24px; }
+.mixer-pan .knob-track,
+.mixer-pan .knob-value { display: none; }  /* 中央が基準なので、左端からの弧は出さない（指示線の向きで読む） */
+.mixer-pan .knob-pointer { width: 2px; margin-left: -1px; }
+
+.mixer-pan-value {
+  width: 24px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--hw-label);
+}
+
+.mixer-ch.is-off .mixer-pan { opacity: 0.4; }
+
+/* クリップの印：マスターのピークが 0dB に届くと赤く点いたまま残る（クリックで消す） */
+.mixer-clip {
+  margin: 0 10px;
+  padding: 0;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--hw-faint);
+  background: var(--hw-box);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.mixer-clip:focus-visible,
+.mixer-master-db:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
+.mixer-master.is-clip .mixer-clip { color: #fff; background: var(--meter-high); }
+.mixer-master.is-clip .mixer-master-db { color: var(--meter-high); }
+
 /* フェーダーとメーター */
 .mixer-body {
   position: relative;
@@ -1648,6 +1697,14 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
   font-weight: 600;
   line-height: 22px;
   text-align: center;
+}
+
+/* マスターの値は最大のピーク（クリックで消すのでボタン） */
+button.mixer-value {
+  padding: 0;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
 }
 
 .mixer-master .meter { width: 9px; }
@@ -1821,7 +1878,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 [data-skin="studio"] .hw .btn,
 [data-skin="studio"] .hw .pill,
 [data-skin="studio"] .hw .stepper-btn,
-[data-skin="studio"] .mixer-power { border-radius: 3px; }
+[data-skin="studio"] .mixer-power,
+[data-skin="studio"] .mixer-clip { border-radius: 3px; }
 
 [data-skin="studio"] .hw .btn { background: var(--hw-bg-2); border-color: var(--hw-line); }
 [data-skin="studio"] .hw .btn:hover { background: var(--hw-box-hover); }
@@ -2061,7 +2119,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 [data-skin="pop"] .mixer-ch-head { background: transparent; color: var(--hw-text); }
 [data-skin="pop"] .mixer-scale .mixer-ch-name { color: var(--hw-faint); }
 [data-skin="pop"] .mixer-color { width: 10px; height: 10px; border-radius: 50%; background: var(--part); }
-[data-skin="pop"] .mixer-power { border-radius: 999px; }
+[data-skin="pop"] .mixer-power,
+[data-skin="pop"] .mixer-clip { border-radius: 999px; }
 [data-skin="pop"] .mixer-power[aria-pressed="true"] { color: #fff; background: var(--part); box-shadow: 0 2px 0 var(--pop-press); }
 [data-skin="pop"] .mixer-value { border-radius: 8px; }
 
@@ -2270,7 +2329,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 /* ミキサー：白い見出しに区切り線 */
 [data-skin="default"] .mixer-ch-head { border-bottom: 1px solid var(--border); }
 [data-skin="default"] .mixer-master .mixer-ch-name { color: var(--custom); }
-[data-skin="default"] .mixer-power { border-radius: 999px; }
+[data-skin="default"] .mixer-power,
+[data-skin="default"] .mixer-clip { border-radius: 999px; }
 [data-skin="default"] .mixer-value { border-radius: 6px; }
 
 /* アレンジャー：ほかの画面と同じ目盛りとブロック */
