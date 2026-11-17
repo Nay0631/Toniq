@@ -1,12 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
-  generateMelody, noteToMidi, timeToUnits, durationToUnits, unitsToDuration, unitsToTime, MelodyNote, JUMP_LIMIT,
+  generateMelody, noteToMidi, timeToUnits, durationToUnits, unitsToDuration, unitsToTime, MelodyNote, JUMP_LIMIT, accentsPerBar,
 } from "../src/engine/MelodyGenerator";
 import { resolveChord, NOTE_INDEX, SCALE_TONES } from "../src/data/degree_resolver";
 import melodyParams from "../src/data/melody_params.json";
 import { chords, chordById, seededRandom } from "./helpers";
 
-type Param = { rhythmPatterns: string[]; chorusRhythmPatterns?: string[]; octaveRange: number[] };
+type Param = { rhythmPatterns: string[]; chorusRhythmPatterns?: string[]; octaveRange: number[]; pitchLimit?: number };
 const params = melodyParams as unknown as Record<string, Param>;
 const GENRES = Object.keys(params);
 const random = Math.random;
@@ -107,6 +107,66 @@ describe("generateMelody", () => {
     for (let seed = 1; seed <= 20; seed++) {
       const first = sounding(withSeed(seed, () => generateMelody(prog, "C", "ゲームBGM", { section: "B", prevNote: 72 })))[0];
       expect(Math.abs(first.midi - 72)).toBeLessThanOrEqual(12);
+    }
+  });
+});
+
+describe("基本の5音と外す音", () => {
+  const degree = (midi: number, key: string) => ((midi - NOTE_INDEX[key]) % 12 + 12) % 12;
+  const free = GENRES.filter(g => !params[g].pitchLimit);
+
+  it.each(free)("%s：基本の5音で作り、音が3つ以上の小節はほぼ必ず外す音（accent）を1つ以上入れる", genre => {
+    let bars = 0, withAccent = 0;
+    let seed = 1;
+    for (const prog of chords.filter(c => c.genre.includes(genre))) {
+      for (const section of ["A", "B"] as const) {
+        const key = ["C", "F#", "A"][seed % 3];
+        const played = sounding(withSeed(seed++, () => generateMelody(prog, key, genre, { section })));
+        const tones = SCALE_TONES[prog.base_scale];
+        const accents = Object.keys(tones.accent).map(Number);
+        for (const n of played) expect([...tones.core, ...accents]).toContain(degree(n.midi, key));
+        if (accents.length === 0) continue;  // 外す音のないスケール（メジャーペンタトニック・全音音階）
+        // 終止のある最後の小節は数えない
+        for (let bar = 0; bar < prog.length_bars - 1; bar++) {
+          const inBar = played.filter(n => Math.floor(n.start / 16) === bar);
+          if (inBar.length < 3) continue;
+          bars++;
+          if (inBar.some(n => accents.includes(degree(n.midi, key)))) withAccent++;
+        }
+      }
+    }
+    if (bars > 0) expect(withAccent / bars, `${genre} ${withAccent}/${bars}`).toBeGreaterThan(0.95);
+  });
+
+  it("1小節で外す回数は小節の音の数で決める", () => {
+    expect([1, 2, 3, 4, 7, 8].map(accentsPerBar)).toEqual([0, 1, 1, 2, 2, 3]);
+  });
+
+  it("同じ音の連続も使う", () => {
+    let repeats = 0;
+    for (const genre of free) {
+      const played = sounding(withSeed(3, () => generateMelody(chordById("chord_001"), "C", genre)));
+      for (let i = 1; i < played.length; i++) if (played[i].midi === played[i - 1].midi) repeats++;
+    }
+    expect(repeats).toBeGreaterThan(0);
+  });
+});
+
+describe("使う音の数の上限（pitchLimit。テクノ）", () => {
+  it("Aメロは主音を含む2音だけで作り、サビは同じ音名でAメロより高く作る", () => {
+    const genre = GENRES.find(g => params[g].pitchLimit === 2)!;
+    for (const prog of chords.filter(c => c.genre.includes(genre))) {
+      for (let seed = 1; seed <= 3; seed++) {
+        const verse = sounding(withSeed(seed, () => generateMelody(prog, "D", genre, { section: "A" })));
+        const pcs = [...new Set(verse.map(n => n.midi % 12))];
+        expect(new Set(verse.map(n => n.midi)).size).toBeLessThanOrEqual(2);
+        expect(pcs).toContain(NOTE_INDEX.D);
+        const chorus = sounding(withSeed(seed, () => generateMelody(prog, "D", genre, { section: "B", pitchClasses: pcs })));
+        expect(new Set(chorus.map(n => n.midi % 12))).toEqual(new Set(pcs));
+        expect(new Set(chorus.map(n => n.midi)).size).toBeLessThanOrEqual(2);
+        const avg = (s: { midi: number }[]) => s.reduce((a, n) => a + n.midi, 0) / s.length;
+        if (pcs.length === 2) expect(avg(chorus)).toBeGreaterThan(avg(verse));
+      }
     }
   });
 });

@@ -6,6 +6,7 @@ import * as Playback from "../engine/Playback";
 import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
+import { SCALE_LABELS } from "./format";
 
 // カスタムモード画面の状態の更新（DOM は触らない）と、選択肢の元になるデータ。
 // 表示は CustomRender.ts、イベントの登録は CustomScreen.ts
@@ -18,7 +19,11 @@ export const chords = chordDB as unknown as ChordProgression[];
 export const drums  = drumDB  as unknown as DrumPattern[];
 
 // DB にあるスケール（スケール選択肢）
-export const SCALES = [...new Set(chords.map(c => c.base_scale))];
+// スケールの選択肢（表示名 SCALE_LABELS の順。コード進行DBにあるスケールだけ）
+export const SCALES = [
+  ...Object.keys(SCALE_LABELS).filter(sc => chords.some(c => c.base_scale === sc)),
+  ...new Set(chords.map(c => c.base_scale).filter(sc => !(sc in SCALE_LABELS))),
+];
 
 // ドラムのカテゴリ：アプリのジャンルを先に、それ以外の DB のタグを後ろに並べる
 export const DRUM_CATEGORIES = [

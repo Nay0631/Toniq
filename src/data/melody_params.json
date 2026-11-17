@@ -26,7 +26,6 @@
     "maxLeap": 7,
     "preferStepwise": false,
     "octaveRange": [4, 5],
-    "accentProbability": 0.15,
     "instrument": "supersaw"
   },
   "ローファイ": {
@@ -56,7 +55,6 @@
     "maxLeap": 3,
     "preferStepwise": true,
     "octaveRange": [4, 5],
-    "accentProbability": 0.2,
     "verseBand": [0, 0.5],
     "chorusBand": [0.5, 1],
     "instrument": "epiano"
@@ -88,7 +86,6 @@
     "maxLeap": 5,
     "preferStepwise": true,
     "octaveRange": [4, 5],
-    "accentProbability": 0.3,
     "instrument": "bell"
   },
   "8bit": {
@@ -118,7 +115,6 @@
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 6],
-    "accentProbability": 0.3,
     "instrument": "square"
   },
   "テクノ": {
@@ -148,7 +144,7 @@
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 5],
-    "accentProbability": 0.1,
+    "pitchLimit": 2,
     "instrument": "acid"
   },
   "ハウス": {
@@ -178,7 +174,6 @@
     "maxLeap": 5,
     "preferStepwise": false,
     "octaveRange": [4, 5],
-    "accentProbability": 0.15,
     "instrument": "pluck"
   },
   "トランス": {
@@ -208,7 +203,6 @@
     "maxLeap": 7,
     "preferStepwise": false,
     "octaveRange": [4, 5],
-    "accentProbability": 0.2,
     "instrument": "supersaw"
   },
   "アンビエント": {
@@ -237,7 +231,6 @@
     "maxLeap": 4,
     "preferStepwise": true,
     "octaveRange": [4, 5],
-    "accentProbability": 0.25,
     "verseBand": [0, 0.5],
     "chorusBand": [0.5, 1],
     "instrument": "soft"

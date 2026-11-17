@@ -1,6 +1,6 @@
 import { getState } from "../engine/AppState";
 import { fxLabel } from "../engine/FxPlayer";
-import { chorusCandidates } from "../engine/SimpleModeResolver";
+import { chorusCandidates, scalesForGenre } from "../engine/SimpleModeResolver";
 import { chorusProgression } from "../engine/SongForm";
 import type { LayerName } from "../engine/LayerManager";
 import { signatureLabel } from "../engine/SignaturePlayer";
@@ -138,6 +138,13 @@ export function render(): void {
     o.textContent = s.noteNames === "doremi" ? `${o.value}（${toDoremi(o.value)}）` : o.value;
   });
   $select("c-key").value   = s.key;
+  // ジャンルに合うスケール（genre_scales.json）には「おすすめ」を付ける（ほかのスケールも選べる）
+  const recommended = scalesForGenre(s.genre) ?? [];
+  for (const option of Array.from($select("c-scale").options)) {
+    const label = SCALE_LABELS[option.value] ?? option.value;
+    const text  = recommended.includes(option.value) ? `${label}（おすすめ）` : label;
+    if (option.textContent !== text) option.textContent = text;
+  }
   $select("c-scale").value = scale;
   const lock = $("c-scale-lock")!;
   lock.classList.toggle("is-on", s.scaleLock);

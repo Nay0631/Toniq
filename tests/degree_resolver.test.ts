@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  resolveChord, voiceProgression, VOICING_RANGES, noteToMidi, midiToNote, scaleSemitones,
+  resolveChord, voiceProgression, VOICING_RANGES, noteToMidi, midiToNote, scaleSemitones, SCALE_TONES,
 } from "../src/data/degree_resolver";
 import { chords, chordById } from "./helpers";
 
@@ -33,9 +33,9 @@ describe("resolveChord（ディグリー → 実音）", () => {
 
   it("未定義のキー・スケール・ディグリー・種類は例外", () => {
     expect(() => resolveChord("I", "major", 0, "H", "major", 4)).toThrow(/Unknown key/);
-    expect(() => resolveChord("I", "major", 0, "C", "lydian", 4)).toThrow(/Unknown scale/);
+    expect(() => resolveChord("I", "major", 0, "C", "locrian", 4)).toThrow(/Unknown scale/);
     expect(() => resolveChord("bII", "major", 0, "C", "major", 4)).toThrow(/Unknown degree/);
-    expect(() => resolveChord("I", "sus4", 0, "C", "major", 4)).toThrow(/Unknown chord type/);
+    expect(() => resolveChord("I", "add11", 0, "C", "major", 4)).toThrow(/Unknown chord type/);
   });
 
   it("コード進行DB の全進行が、12 のキーすべてで実音にできる", () => {
@@ -58,9 +58,30 @@ describe("noteToMidi / midiToNote", () => {
 });
 
 describe("scaleSemitones", () => {
+  it("メロディの基本の5音と外す2音：メジャー系は 4・7 番目、マイナー系は 2・6 番目を外す", () => {
+    const nth = (scale: string, ns: number[]) => ns.map(n => scaleSemitones(scale)[n - 1]).sort((a, b) => a - b);
+    for (const scale of ["major", "mixolydian", "lydian"]) {
+      expect([...SCALE_TONES[scale].core].sort((a, b) => a - b)).toEqual(nth(scale, [1, 2, 3, 5, 6]));
+      expect(Object.keys(SCALE_TONES[scale].accent).map(Number).sort((a, b) => a - b)).toEqual(nth(scale, [4, 7]));
+    }
+    for (const scale of ["minor", "harmonic_minor", "melodic_minor", "dorian", "phrygian"]) {
+      expect([...SCALE_TONES[scale].core].sort((a, b) => a - b)).toEqual(nth(scale, [1, 3, 4, 5, 7]));
+      expect(Object.keys(SCALE_TONES[scale].accent).map(Number).sort((a, b) => a - b)).toEqual(nth(scale, [2, 6]));
+    }
+  });
+
+  it("新しいスケールのコード進行も実音に変換できる", () => {
+    expect(resolveChord("V", "dom7", 0, "A", "harmonic_minor").notes).toEqual(["E4", "G#4", "B4", "D5"]);
+    expect(resolveChord("IV", "major", 0, "A", "melodic_minor").notes).toEqual(["D4", "F#4", "A4"]);
+    expect(resolveChord("bVII", "major", 0, "C", "mixolydian").notes).toEqual(["A#4", "D5", "F5"]);
+  });
+
   it("スケールの7音を低い順に返す（未定義はマイナー）", () => {
     expect(scaleSemitones("major")).toEqual([0, 2, 4, 5, 7, 9, 11]);
     expect(scaleSemitones("minor")).toEqual([0, 2, 3, 5, 7, 8, 10]);
+    expect(scaleSemitones("harmonic_minor")).toEqual([0, 2, 3, 5, 7, 8, 11]);
+    expect(scaleSemitones("melodic_minor")).toEqual([0, 2, 3, 5, 7, 9, 11]);
+    expect(scaleSemitones("mixolydian")).toEqual([0, 2, 4, 5, 7, 9, 10]);
     expect(scaleSemitones("unknown")).toEqual(scaleSemitones("minor"));
   });
 });

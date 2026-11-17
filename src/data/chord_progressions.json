@@ -3,7 +3,7 @@
     "id": "chord_001",
     "name": "エピック進行（1-6-3-7）",
     "mood": ["明るい"],
-    "genre": ["EDM", "ゲームBGM", "トランス"],
+    "genre": ["EDM", "ゲームBGM", "トランス", "テクノ"],
     "bpm_range": { "min": 100, "max": 160 },
     "base_scale": "minor",
     "length_bars": 4,
@@ -109,7 +109,7 @@
     "id": "chord_007",
     "name": "ローファイ下降進行",
     "mood": ["落ち着いた"],
-    "genre": ["ローファイ", "アンビエント"],
+    "genre": ["アンビエント"],
     "bpm_range": { "min": 70, "max": 100 },
     "base_scale": "major",
     "length_bars": 4,
@@ -320,7 +320,7 @@
     "id": "chord_020",
     "name": "ノスタルジア（2分刻み）",
     "mood": ["落ち着いた", "暗い", "切ない"],
-    "genre": ["EDM", "ローファイ", "トランス"],
+    "genre": ["EDM", "ローファイ", "トランス", "テクノ"],
     "bpm_range": { "min": 90, "max": 120 },
     "base_scale": "minor",
     "length_bars": 4,
@@ -469,7 +469,7 @@
     "id": "chord_029",
     "name": "トランス・アンセム進行",
     "mood": ["切ない", "明るい", "落ち着いた"],
-    "genre": ["トランス", "EDM"],
+    "genre": ["トランス", "EDM", "テクノ"],
     "bpm_range": { "min": 125, "max": 145 },
     "base_scale": "minor",
     "length_bars": 8,
@@ -663,7 +663,7 @@
     "id": "chord_040",
     "name": "サブドミナントマイナー",
     "mood": ["切ない", "明るい"],
-    "genre": ["ゲームBGM", "ローファイ", "EDM"],
+    "genre": ["ゲームBGM", "EDM"],
     "bpm_range": { "min": 80, "max": 140 },
     "base_scale": "major",
     "length_bars": 4,
@@ -680,7 +680,7 @@
     "id": "chord_041",
     "name": "マイナー・アンセム",
     "mood": ["明るい", "切ない"],
-    "genre": ["EDM", "トランス", "ハウス"],
+    "genre": ["EDM", "トランス", "ハウス", "テクノ"],
     "bpm_range": { "min": 120, "max": 140 },
     "base_scale": "minor",
     "length_bars": 4,
@@ -846,7 +846,7 @@
     "id": "chord_051",
     "name": "ドリアン・霧",
     "mood": ["暗い", "落ち着いた", "切ない"],
-    "genre": ["アンビエント", "ローファイ", "テクノ"],
+    "genre": ["アンビエント", "ローファイ", "テクノ", "ハウス"],
     "bpm_range": { "min": 65, "max": 125 },
     "base_scale": "dorian",
     "length_bars": 4,
@@ -963,7 +963,7 @@
     "id": "chord_058",
     "name": "トランス・ブレイクダウン",
     "mood": ["落ち着いた", "切ない"],
-    "genre": ["トランス", "EDM", "アンビエント"],
+    "genre": ["トランス", "EDM", "アンビエント", "テクノ"],
     "bpm_range": { "min": 70, "max": 140 },
     "base_scale": "minor",
     "length_bars": 8,
@@ -1116,7 +1116,7 @@
     "id": "chord_067",
     "name": "上昇する短調（Im-bVII-bIII-bVI）",
     "mood": ["明るい", "切ない"],
-    "genre": ["トランス", "EDM"],
+    "genre": ["トランス", "EDM", "テクノ"],
     "bpm_range": { "min": 126, "max": 140 },
     "base_scale": "minor",
     "length_bars": 4,
@@ -1204,7 +1204,7 @@
     "id": "chord_072",
     "name": "8小節のゆるやかな流れ（Im-bVI-bIII-bVII-IVm-bVI-bVII）",
     "mood": ["落ち着いた", "切ない"],
-    "genre": ["トランス", "アンビエント", "EDM"],
+    "genre": ["トランス", "アンビエント", "EDM", "テクノ"],
     "bpm_range": { "min": 110, "max": 138 },
     "base_scale": "minor",
     "length_bars": 8,
@@ -1253,5 +1253,326 @@
     ],
     "chord_rhythm": { "pattern": "whole", "description": "全音符" },
     "notes": "VIm で終わって次の周回へ流れる。落ち着いたイベントシーン向き。"
+  },
+  {
+    "id": "chord_075",
+    "name": "ハーモニックマイナーの王道（Im-IVm-V7-Im）",
+    "mood": ["暗い", "切ない", "激しい"],
+    "genre": ["ゲームBGM", "8bit", "トランス", "EDM"],
+    "bpm_range": { "min": 90, "max": 150 },
+    "base_scale": "harmonic_minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",    "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IVm",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "V",     "type": "dom7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "Im",    "type": "minor", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ハーモニックマイナー由来。V7 が主音へ強く引っぱる、クラシックや RPG のボス戦のようなドラマチックな響き。"
+  },
+  {
+    "id": "chord_076",
+    "name": "ドラマチック下降（Im-bVI-IVm-V7）",
+    "mood": ["切ない", "暗い"],
+    "genre": ["ゲームBGM", "トランス", "EDM", "アンビエント"],
+    "bpm_range": { "min": 80, "max": 140 },
+    "base_scale": "harmonic_minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",    "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVI",   "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IVm",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",     "type": "dom7", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ハーモニックマイナー由来。V7 で終わって次の周回の Im へ戻る、切なく緊張感のあるループ。"
+  },
+  {
+    "id": "chord_077",
+    "name": "メロディックマイナーの上昇（Im-IIm-IV-V）",
+    "mood": ["落ち着いた", "切ない"],
+    "genre": ["ローファイ", "ハウス", "アンビエント", "ゲームBGM"],
+    "bpm_range": { "min": 75, "max": 125 },
+    "base_scale": "melodic_minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",    "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IIm",   "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IV",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",     "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "メロディックマイナー由来。マイナーなのに IV・V が明るい長三和音で、暗さの中に光が差すような響き。"
+  },
+  {
+    "id": "chord_078",
+    "name": "メロディックマイナーの揺れ（Im-IV-Im-V）",
+    "mood": ["切ない", "落ち着いた", "暗い"],
+    "genre": ["ローファイ", "ハウス", "アンビエント"],
+    "bpm_range": { "min": 70, "max": 124 },
+    "base_scale": "melodic_minor",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",    "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IV",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "Im",    "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",     "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "メロディックマイナー由来。Im と明るい IV・V を行き来する、浮遊感のあるおしゃれなループ。"
+  },
+  {
+    "id": "chord_079",
+    "name": "ミクソリディアンロック（I-bVII-IV-I）",
+    "mood": ["明るい", "激しい"],
+    "genre": ["ハウス", "ゲームBGM"],
+    "bpm_range": { "min": 100, "max": 150 },
+    "base_scale": "mixolydian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bVII",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IV",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "I",     "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ミクソリディアン由来。bVII の長三和音が、明るいけれど少しワイルドなロック・ファンク風の響きを作る。"
+  },
+  {
+    "id": "chord_080",
+    "name": "ミクソリディアンのゆるい循環（I-Vm-bVII-IV）",
+    "mood": ["明るい", "落ち着いた"],
+    "genre": ["ハウス", "ゲームBGM"],
+    "bpm_range": { "min": 85, "max": 128 },
+    "base_scale": "mixolydian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "Vm",    "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "bVII",  "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "IV",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ミクソリディアン由来。V をマイナーにして終わりの引っぱりを弱めた、のんびり明るいループ。"
+  },
+  {
+    "id": "chord_081",
+    "name": "ディープハウスの循環（Im7-bIIImaj7-IV7-Im7）",
+    "mood": ["切ない", "暗い", "落ち着いた"],
+    "genre": ["ハウス", "ローファイ"],
+    "bpm_range": { "min": 115, "max": 126 },
+    "base_scale": "dorian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "Im",    "type": "min7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "bIII",  "type": "maj7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IV",    "type": "dom7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "Im",    "type": "min7", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ドリアン由来。明るい IV7 が混ざる、夜のディープハウスの定番の流れ。"
+  },
+  {
+    "id": "chord_082",
+    "name": "ミクソリディアンのハウスピアノ（I7-IV-I7-bVII）",
+    "mood": ["明るい", "激しい"],
+    "genre": ["ハウス", "ゲームBGM"],
+    "bpm_range": { "min": 118, "max": 128 },
+    "base_scale": "mixolydian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "dom7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IV",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "I",     "type": "dom7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "bVII",  "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ミクソリディアン由来。I7 と bVII の明るくゆるい響きで、ピアノハウス向き。"
+  },
+  {
+    "id": "chord_083",
+    "name": "ローファイの9th（IVmaj9-IIIm7-VIm9-Imaj9）",
+    "mood": ["落ち着いた", "切ない", "明るい"],
+    "genre": ["ローファイ"],
+    "bpm_range": { "min": 70, "max": 90 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "IV",    "type": "maj9", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "IIIm",  "type": "min7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "VIm",   "type": "min9", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "I",     "type": "maj9", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "メジャーに 7th・9th を足した、くもりガラスのようなやわらかい響き。"
+  },
+  {
+    "id": "chord_084",
+    "name": "ローファイの9th循環（Imaj9-VIm9-IIm9-V9）",
+    "mood": ["明るい", "落ち着いた"],
+    "genre": ["ローファイ"],
+    "bpm_range": { "min": 70, "max": 92 },
+    "base_scale": "major",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "maj9", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "VIm",   "type": "min9", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IIm",   "type": "min9", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",     "type": "dom9", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "1-6-2-5 の循環に 9th を足した、カフェの BGM のような響き。"
+  },
+  {
+    "id": "chord_085",
+    "name": "リディアンの浮遊（Imaj7-II）",
+    "mood": ["明るい", "落ち着いた"],
+    "genre": ["アンビエント", "ゲームBGM"],
+    "bpm_range": { "min": 60, "max": 120 },
+    "base_scale": "lydian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "maj7", "inversion": 0, "duration_bars": 2 },
+      { "bar": 3, "degree": "II",    "type": "major", "inversion": 0, "duration_bars": 2 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "リディアン由来。I と長三和音の II を行き来する、空に浮くような響き。"
+  },
+  {
+    "id": "chord_086",
+    "name": "リディアンの夜明け（Imaj7-II-IIIm7-II）",
+    "mood": ["落ち着いた", "切ない"],
+    "genre": ["アンビエント", "ゲームBGM"],
+    "bpm_range": { "min": 60, "max": 110 },
+    "base_scale": "lydian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "maj7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "II",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IIIm",  "type": "min7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "II",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "リディアン由来。#4 の音を含む II が、明るさの中に少しの切なさを足す。"
+  },
+  {
+    "id": "chord_087",
+    "name": "リディアンの影（VIm7-II-Imaj7-VIIm7）",
+    "mood": ["切ない", "暗い"],
+    "genre": ["アンビエント"],
+    "bpm_range": { "min": 60, "max": 100 },
+    "base_scale": "lydian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "VIm",   "type": "min7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "II",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "I",     "type": "maj7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "VIIm",  "type": "min7", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "リディアン由来。マイナーで始めて II で光が差す、映画のような響き。"
+  },
+  {
+    "id": "chord_088",
+    "name": "リディアンの高揚（I-II-IIIm-II）",
+    "mood": ["明るい", "激しい"],
+    "genre": ["アンビエント", "ゲームBGM"],
+    "bpm_range": { "min": 80, "max": 140 },
+    "base_scale": "lydian",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "II",    "type": "major", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "IIIm",  "type": "minor", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "II",    "type": "major", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "リディアン由来。冒険の始まりのような、まっすぐ明るい響き。"
+  },
+  {
+    "id": "chord_089",
+    "name": "ペンタトニックの風景（Iadd9-VIm7-IIsus4-Vsus2）",
+    "mood": ["落ち着いた", "明るい"],
+    "genre": ["アンビエント"],
+    "bpm_range": { "min": 60, "max": 100 },
+    "base_scale": "major_pentatonic",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "add9", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "VIm",   "type": "min7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "II",    "type": "sus4", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "V",     "type": "sus2", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "ペンタトニックの5音でできたコードだけを使う、ぶつかりのない穏やかな響き。"
+  },
+  {
+    "id": "chord_090",
+    "name": "ペンタトニックのたそがれ（VIm7-Isus2-Vsus2-Iadd9）",
+    "mood": ["切ない", "落ち着いた", "暗い"],
+    "genre": ["アンビエント"],
+    "bpm_range": { "min": 60, "max": 96 },
+    "base_scale": "major_pentatonic",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "VIm",   "type": "min7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "I",     "type": "sus2", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "V",     "type": "sus2", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "I",     "type": "add9", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "マイナーの VIm から始まる、懐かしく少し寂しいペンタトニックの響き。"
+  },
+  {
+    "id": "chord_091",
+    "name": "ペンタトニックの広がり（Isus2-Vsus2-VIm7-IIsus4）",
+    "mood": ["明るい", "激しい"],
+    "genre": ["アンビエント"],
+    "bpm_range": { "min": 70, "max": 120 },
+    "base_scale": "major_pentatonic",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "sus2", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "V",     "type": "sus2", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "VIm",   "type": "min7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "II",    "type": "sus4", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "sus のコードで3度をぼかした、開けた空間のような響き。"
+  },
+  {
+    "id": "chord_092",
+    "name": "全音音階のゆらぎ（Iaug-IIaug）",
+    "mood": ["暗い", "激しい", "切ない"],
+    "genre": ["アンビエント"],
+    "bpm_range": { "min": 60, "max": 110 },
+    "base_scale": "whole_tone",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "aug", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "II",    "type": "aug", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "I",     "type": "aug", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "II",    "type": "aug", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "全音音階の2つの増三和音を行き来する、夢の中のようなふしぎな響き。"
+  },
+  {
+    "id": "chord_093",
+    "name": "全音音階の階段（Iaug7-IIaug7-IIIaug7-IIaug7）",
+    "mood": ["暗い", "落ち着いた", "切ない"],
+    "genre": ["アンビエント"],
+    "bpm_range": { "min": 60, "max": 100 },
+    "base_scale": "whole_tone",
+    "length_bars": 4,
+    "progression": [
+      { "bar": 1, "degree": "I",     "type": "aug7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 2, "degree": "II",    "type": "aug7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 3, "degree": "III",   "type": "aug7", "inversion": 0, "duration_bars": 1 },
+      { "bar": 4, "degree": "II",    "type": "aug7", "inversion": 0, "duration_bars": 1 }
+    ],
+    "chord_rhythm": { "pattern": "whole", "description": "全音符" },
+    "notes": "全音ずつ上がる aug7 で、どこにも着地しない浮遊感を作る。"
   }
 ]
