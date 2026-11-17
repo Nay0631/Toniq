@@ -1,0 +1,10 @@
+{
+  "EDM": ["minor", "harmonic_minor"],
+  "8bit": ["major", "minor", "harmonic_minor"],
+  "ローファイ": ["dorian", "minor", "major"],
+  "ゲームBGM": ["major", "minor", "mixolydian", "dorian", "lydian"],
+  "テクノ": ["phrygian", "minor"],
+  "ハウス": ["dorian", "mixolydian"],
+  "トランス": ["harmonic_minor", "minor"],
+  "アンビエント": ["lydian", "major_pentatonic", "whole_tone"]
+}

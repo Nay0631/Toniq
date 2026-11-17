@@ -229,8 +229,11 @@ function chorusMelodyAfter(verse: MelodyNote[]): MelodyNote[] {
   if (!s.chordPattern) return [];
   const first = verse.find(n => n.note !== null)?.note;
   const last  = [...verse].reverse().find(n => n.note !== null)?.note;
-  // サビのあとは Aメロに戻るので、サビの最後の音は Aメロの最初の音からも大きく離さない
+  // サビのあとは Aメロに戻るので、サビの最後の音は Aメロの最初の音からも大きく離さない。
+  // 使う音の数を絞るジャンル（テクノ）は、サビも Aメロと同じ音名で作る
+  const pitchClasses = [...new Set(verse.filter(n => n.note !== null).map(n => noteToMidi(n.note!) % 12))];
   return generateMelody(chorusProgression() ?? s.chordPattern, s.key, s.genre, {
     section: "B", prevNote: last ? noteToMidi(last) : undefined, nextNote: first ? noteToMidi(first) : undefined,
+    pitchClasses,
   });
 }

@@ -3,6 +3,7 @@ import chordDB   from "../data/chord_progressions.json";
 import drumDB    from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
 import tempoPresets from "../data/tempo_presets.json";
+import genreScales from "../data/genre_scales.json";
 
 interface SimpleModeResult {
   bpm:          number;
@@ -27,6 +28,19 @@ function pickWeighted<T>(arr: T[], weight: (item: T) => number): T {
   return arr[arr.length - 1];
 }
 
+// ジャンルに合うスケール（genre_scales.json）。ないジャンルはどのスケールでもよい
+export function scalesForGenre(genre: string): string[] | null {
+  return (genreScales as Record<string, string[]>)[genre] ?? null;
+}
+
+// コード進行の候補を、ジャンルに合うスケールのものに絞る（原則。1つも残らなければ絞らない）
+export function preferGenreScales<T extends { base_scale: string }>(list: T[], genre: string): T[] {
+  const scales = scalesForGenre(genre);
+  if (!scales) return list;
+  const fit = list.filter(c => scales.includes(c.base_scale));
+  return fit.length > 0 ? fit : list;
+}
+
 // シンプルモードの生成で、表（easy_mode_table.json）の候補をタグが合うだけの進行より何倍選ばれやすくするか
 const TABLE_WEIGHT = 2;
 
@@ -48,8 +62,8 @@ export function resolveSimpleMode(
   const drums  = drumDB  as unknown as DrumPattern[];
 
   // コード進行は、シンプルモード表の候補に加え、DB でジャンル・雰囲気のタグが合う進行からも選ぶ（同じ進行ばかり出ないように）。
-  // 表の候補は選ばれやすくする（TABLE_WEIGHT 倍）
-  const chordPool = matchedPatterns(chords, entry.chord_ids, genre, mood);
+  // 表の候補は選ばれやすくする（TABLE_WEIGHT 倍）。ジャンルに合うスケールの進行だけにする（genre_scales.json）
+  const chordPool = preferGenreScales(matchedPatterns(chords, entry.chord_ids, genre, mood), genre);
   const chordPattern = chordPool.length > 0
     ? pickWeighted(chordPool, c => entry.chord_ids.includes(c.id) ? TABLE_WEIGHT : 1)
     : chords.find(c => c.id === pickRandom(entry.chord_ids)) ?? chords[0];
@@ -94,7 +108,7 @@ function lookupEntry(genre: string, mood: string) {
 export function rerollChord(genre: string, mood: string, currentId?: string): ChordProgression {
   const chords = chordDB as unknown as ChordProgression[];
   const candidates = rerollCandidates(chords, lookupEntry(genre, mood).chord_ids, genre, mood, currentId);
-  return pickRandom(candidates);
+  return pickRandom(preferGenreScales(candidates, genre));
 }
 
 // 現在とは別のドラムパターンを選ぶ
