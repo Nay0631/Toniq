@@ -1,6 +1,7 @@
 import * as Tone from "tone";
-import { getState, setState } from "./AppState";
+import { getState, setState, type AppState } from "./AppState";
 import { connectToMixer } from "./MixerEngine";
+import { volumeToDb } from "./VolumeCurve";
 
 // 各パートのVolumeノードをオーディオコンテキストごとに管理
 // （WAV書き出しの Tone.Offline は別コンテキストなので、再生用のノードとは分ける）
@@ -49,10 +50,25 @@ export function duckGains(): Record<string, Tone.Gain> {
   return currentDucks();
 }
 
-// 0〜100の値をdBに変換
-function toDb(value: number): number {
-  if (value <= 0) return -Infinity;
-  return 20 * Math.log10(value / 100);
+// 定位（パン）のノード。サイドチェインのゲインの後ろ（MixerEngine の connectToMixer が作る）。Volume と同じくコンテキストごと
+const pannersByContext = new WeakMap<Tone.BaseContext, Record<string, Tone.Panner>>();
+
+function currentPanners(): Record<string, Tone.Panner> {
+  const ctx = Tone.getContext();
+  let panners = pannersByContext.get(ctx);
+  if (!panners) {
+    panners = {};
+    pannersByContext.set(ctx, panners);
+  }
+  return panners;
+}
+
+// フェーダーの値（0〜100）を dB に（75 で 0dB。VolumeCurve.ts）
+const toDb = volumeToDb;
+
+// 定位（−100〜100）を Tone.Panner の値（−1〜1）に
+function toPan(value: number): number {
+  return Math.max(-1, Math.min(1, value / 100));
 }
 
 // 現在のコンテキストの Volume ノードを返す（なければ作成する）
@@ -62,21 +78,23 @@ export function createVolumeNode(part: string): Tone.Volume {
 
   const state   = getState();
   const volumes = state.volumes as Record<string, number>;
+  const pans    = state.pans as Record<string, number>;
   const db      = toDb(volumes[part] ?? 75);
   const node    = new Tone.Volume(db);
-  // Volume → サイドチェインのゲイン → マスター（EQ・コンプ・リミッター）とリバーブ送りへ
+  // Volume → サイドチェインのゲイン → パートの EQ（低域カット・中域のへこみ）→ 定位 → マスターとリバーブ送りへ
   // （リバーブにも沈んだ音を送るので、響きも一緒にうねる）
   const duck = new Tone.Gain(1);
   node.connect(duck);
-  connectToMixer(duck, part);
+  const panner = connectToMixer(duck, part, toPan(pans[part] ?? 0));
   nodes[part] = node;
   currentDucks()[part] = duck;
+  currentPanners()[part] = panner;
 
-  // 音量とサイドチェインを通ったあとのレベルを測る（メーターは音を出さない枝分かれ）
+  // 音量・サイドチェイン・EQ・定位を通ったあとのレベルを測る（メーターは音を出さない枝分かれ）
   const meters = currentMeters();
   if (meters && !meters[part]) {
     meters[part] = new Tone.Meter({ smoothing: 0.6 });
-    duck.connect(meters[part]);
+    panner.connect(meters[part]);
   }
   return node;
 }
@@ -105,7 +123,16 @@ export function setVolume(part: string, value: number): void {
   }
 }
 
-// 全パートの音量をStateから再適用
+// 定位（パン。−100〜100）を変更する
+export function setPan(part: string, value: number): void {
+  const pans = { ...getState().pans as Record<string, number>, [part]: value };
+  setState({ pans: pans as AppState["pans"] });
+
+  const panner = currentPanners()[part];
+  if (panner) panner.pan.value = toPan(value);
+}
+
+// 全パートの音量と定位を State から再適用（曲を開いた・新規作成・元に戻す／やり直す）
 export function applyAllVolumes(): void {
   const state   = getState();
   const volumes = state.volumes as Record<string, number>;
@@ -114,6 +141,10 @@ export function applyAllVolumes(): void {
     if (nodes[part]) {
       nodes[part].volume.value = toDb(value);
     }
+  });
+  const panners = currentPanners();
+  Object.entries(state.pans as Record<string, number>).forEach(([part, value]) => {
+    if (panners[part]) panners[part].pan.value = toPan(value);
   });
 }
 
@@ -130,4 +161,7 @@ export function disposeVolumeNodes(): void {
     Object.values(meters).forEach(meter => meter.dispose());
     Object.keys(meters).forEach(key => delete meters[key]);
   }
+  const panners = currentPanners();
+  Object.values(panners).forEach(panner => panner.dispose());
+  Object.keys(panners).forEach(key => delete panners[key]);
 }

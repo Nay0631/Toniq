@@ -7,7 +7,8 @@ import { createPercKit, DrumKit } from "./SynthFactory";
 
 // パーカッション：ドラムに重ねる細かい打楽器（シェイカー・タンバリン・コンガ（高・低）・ライド）。
 // ジャンルごと・セクション（Aメロ／サビ）ごとのパターンで鳴らす（サビのほうが細かく・にぎやか）。
-// 音はドラムの音源（AppState.drumSource）に合わせ、grow ならコアの「パーカッション …」のプリセット、それ以外はシンセ（SynthFactory.ts）。
+// 音はドラムの音源（AppState.drumSource）に合わせ、grow ならコアの「パーカッション …」のプリセット、ワンショット音源なら
+// samples/drums/ の WAV（ないトラックは grow）、シンセなら Tone.js のシンセ（SynthFactory.ts の createPercKit）。
 // エンディングの小節では鳴らさない。強さ・タイミングの揺らぎはドラムの揺らぎ（AppState.drumHumanize）に合わせる
 
 export type PercTrack = "shaker" | "tambourine" | "conga_high" | "conga_low" | "ride";

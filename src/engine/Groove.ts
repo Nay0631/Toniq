@@ -2,6 +2,7 @@ import * as Tone from "tone";
 import mixPresets from "../data/mix_presets.json";
 import { getState } from "./AppState";
 import { duckGains } from "./VolumeManager";
+import { reverbDuckGain, REVERB_DUCK_WEIGHT } from "./MixerEngine";
 
 // グルーヴ：スウィング（裏の16分音符を後ろへずらす）とサイドチェイン（キックに合わせて他のパートを沈める）。
 // 量は AppState.swing / sidechain（0〜100。null = ジャンルの標準 mix_presets.json の swing / sidechain）
@@ -69,19 +70,24 @@ const SIDECHAIN_PARTS: Record<string, number> = {
 const DUCK_MAX    = 0.8;    // 100 のときに下げる割合（0.8 = 音量 0.2 倍 ≒ −14dB）
 const DUCK_ATTACK = 0.004;  // 沈むまで（秒）。短いとプチッとなるので数ms
 
-// キックが鳴った時刻に呼ぶ（DrumEngine）。各パートの Volume の後ろのゲインを一瞬下げ、拍の6割ほどで戻す
+// キックが鳴った時刻に呼ぶ（DrumEngine）。各パートの Volume の後ろのゲインを一瞬下げ、拍の6割ほどで戻す。
+// 戻りは dB で見て一定の速さ（コンプレッサーのリリースと同じ形）：キックが鳴っている間は沈んだままで、あとから膨らむように戻る。
+// （以前は音量を直線で戻していた。直線だと dB では戻り始めが速く、最初の 1/4 で半分近く戻ってキックに重なっていた）
+// リバーブの戻りも軽く沈めて、キックの後ろに響きが残らないようにする
 export function sidechainHit(time: number, velocity = 1): void {
   const amount = sidechainAmount() / 100;
   if (amount <= 0) return;
   const gains   = duckGains();
   const release = (60 / Tone.getTransport().bpm.value) * 0.6;
 
-  for (const [part, weight] of Object.entries(SIDECHAIN_PARTS)) {
-    const gain = gains[part];
-    if (!gain) continue;
-    const low = 1 - DUCK_MAX * amount * weight * Math.min(1, velocity);
+  const duck = (gain: Tone.Gain | null | undefined, weight: number): void => {
+    if (!gain) return;
+    const low = 1 - DUCK_MAX * amount * weight * Math.min(1, velocity);  // 0.2 以上（0 にはならないので指数のカーブで戻せる）
     gain.gain.cancelAndHoldAtTime(time);
     gain.gain.linearRampToValueAtTime(low, time + DUCK_ATTACK);
-    gain.gain.linearRampToValueAtTime(1, time + DUCK_ATTACK + release);
-  }
+    gain.gain.exponentialRampToValueAtTime(1, time + DUCK_ATTACK + release);
+  };
+
+  for (const [part, weight] of Object.entries(SIDECHAIN_PARTS)) duck(gains[part], weight);
+  duck(reverbDuckGain(), REVERB_DUCK_WEIGHT);
 }

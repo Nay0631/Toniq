@@ -308,8 +308,9 @@ function isSilent(buffer: AudioBuffer): boolean {
   return true;
 }
 
-// 曲全体をオフラインでレンダリングして AudioBuffer を返す（onProgress で進み具合を知らせる）
-async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
+// 曲全体をオフラインでレンダリングして AudioBuffer を返す（onProgress で進み具合を知らせる）。
+// アプリでは renderWav / renderMp3 から使う。ミックスの計測（tools/mix-measure.mjs）は 16bit に丸める前の音を測るのに直接呼ぶ
+export async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) throw new Error("曲が生成されていません");
 

@@ -838,7 +838,7 @@
           <div class="settings-row">
             <div class="settings-text">
               <div class="settings-label">ドラムの音源（テスト中）</div>
-              <div class="settings-desc">ドラムを、Toniq のシンセ grow で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がないジャンルの音はシンセで鳴ります。</div>
+              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ grow で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は、ドラムはシンセ、パーカッションは grow で鳴ります。</div>
             </div>
             <div class="chips settings-options" role="radiogroup" aria-label="ドラムの音源">
               <button class="chip" role="radio" data-settings-drum-source="grow">grow</button>
@@ -932,6 +932,9 @@
               <li>ノブ・フェーダーはマウスホイールでも少しずつ動きます。</li>
               <li>クリックして選んだあと、矢印キーで1目盛り、<kbd>PageUp</kbd> / <kbd>PageDown</kbd> で大きく、<kbd>Home</kbd> / <kbd>End</kbd> で最小・最大にできます。</li>
               <li>グルーヴ（スウィング・サイドチェイン）の「標準」は、ジャンルに合った量に戻します。</li>
+              <li>ミキサーのフェーダーは <b>75 が元の大きさ（0dB）</b>で、それより上げると元より大きくなります（100 で +5dB）。</li>
+              <li>ミキサーのフェーダーの上の小さいノブは<b>パン</b>（音を左右のどこから鳴らすか。C = 中央、L = 左、R = 右）です。<b>ダブルクリック</b>で中央に戻ります。</li>
+              <li>ミキサーの右端の「マスター」は曲全体の大きさです。下の数字は再生を始めてからいちばん大きかった瞬間（ピーク）で、音が割れるほど大きくなると <b>CLIP</b> が赤く点いたまま残ります。点いたらフェーダーを少し下げてください。CLIP か数字をクリックすると消えます。</li>
             </ul>
           </details>
 

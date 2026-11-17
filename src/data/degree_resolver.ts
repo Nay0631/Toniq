@@ -199,37 +199,99 @@ function spreadVoicing(notes: number[]): number[] {
   return v.sort((a, b) => a - b);
 }
 
-// コード進行の各コードを、前のコードから一番近い転回形で並べる（ボイスリーディング）。
-// 進行に書かれた inversion は動きが同じくらいなら優先する。ループの継ぎ目もなめらかになるよう、
-// 1周目の最後のコードを起点にもう1周決め直す。戻り値は progression.progression と同じ並びの音名
+// ボイシングを決めるときに避けるメロディの音（位置は進行の頭からの16分音符の数）
+export interface VoicingMelodyNote { midi: number; start: number; end: number }
+
+// ボイシングの選び方の重み（単位は半音。movement と足し合わせる）
+const VOICE_COST = {
+  inversion: 2,    // 進行に書かれた転回形と違う
+  common:    0.5,  // 前のコードと同じ高さのまま保てる音1つごとに引く（共通音を保つ）
+  top:       0.5,  // 最高音の動き（半音ごと。いちばん耳に付く声部をなめらかにする）
+  cross:     4,    // 最高音がメロディより高い（メロディを隠す）
+  crossStep: 0.5,  // 　上に出た半音ごとに足す
+  clash:     6,    // メロディのすぐ隣（半音）にコードの音がある
+  ninth:     2,    // メロディの短9度下にコードの音がある
+};
+
+// メロディとのぶつかり：コードが鳴っている間のメロディの各音について、最高音がメロディより上に出る・
+// 半音でとなり合う・短9度下に入る分を、その音の長さ（コードの長さに対する割合）で重み付けして足す。
+// 同じ高さ（ユニゾン）はぶつからない
+function melodyConflict(notes: number[], melody: VoicingMelodyNote[], start: number, end: number): number {
+  const top = notes[notes.length - 1];
+  let cost = 0;
+  for (const m of melody) {
+    const overlap = Math.min(m.end, end) - Math.max(m.start, start);
+    if (overlap <= 0) continue;
+    let c = 0;
+    if (top > m.midi) c += VOICE_COST.cross + VOICE_COST.crossStep * (top - m.midi);
+    if (notes.some((n) => Math.abs(n - m.midi) === 1)) c += VOICE_COST.clash;
+    if (notes.some((n) => m.midi - n === 13)) c += VOICE_COST.ninth;
+    cost += c * (overlap / (end - start));
+  }
+  return cost;
+}
+
+// コード進行の各コードの転回形を、進行全体で動きが最小になるように選ぶ（ボイスリーディング）。
+// - コードの間は、各音の動きの合計（movement）が小さく、同じ高さのまま保てる共通音が多く、最高音の動きが小さい並べ方を選ぶ
+// - 進行に書かれた inversion は動きが同じくらいなら優先する
+// - melody を渡すと、最高音がメロディより上に出る・メロディと半音でぶつかる転回形を避ける
+// 1つずつ近いものを選ぶのではなく、ループの継ぎ目（最後 → 最初）も含めた1周の合計が最小の組み合わせを求める。
+// 戻り値は progression.progression と同じ並びの音名
 export function voiceProgression(
   progression: ChordProgression,
   key: string,
   range: VoicingRange,
-  options: { spread?: boolean } = {}
+  options: { spread?: boolean; melody?: VoicingMelodyNote[] } = {}
 ): string[][] {
-  const chords = progression.progression.map((c) => ({
-    notes:     resolveChord(c.degree, c.type, 0, chordKey(key, c), progression.base_scale, 4).notes.map(noteToMidi),
-    inversion: c.inversion,
-  }));
+  const melody = options.melody ?? [];
+  // コードごとの候補（転回形）と、その候補だけで決まるコスト
+  const cands = progression.progression.map((c) => {
+    const notes = resolveChord(c.degree, c.type, 0, chordKey(key, c), progression.base_scale, 4).notes.map(noteToMidi);
+    const start = (c.bar - 1) * 16;
+    return voicingCandidates(notes, range).map((v) => ({
+      notes: v.notes,
+      cost:  (v.inversion === c.inversion % notes.length ? 0 : VOICE_COST.inversion)
+           + (melody.length > 0 ? melodyConflict(v.notes, melody, start, start + c.duration_bars * 16) : 0),
+    }));
+  });
+  if (cands.length === 0) return [];
 
-  const pick = (prev: number[] | null, chord: { notes: number[]; inversion: number }) => {
-    const candidates = voicingCandidates(chord.notes, range);
-    let best = candidates[0];
-    let bestCost = Infinity;
-    for (const c of candidates) {
-      const preferred = c.inversion === chord.inversion % chord.notes.length ? 0 : 2;
-      const cost = (prev ? movement(prev, c.notes) : 0) + preferred;
-      if (cost < bestCost) { best = c; bestCost = cost; }
+  const step = (a: number[], b: number[]) =>
+    movement(a, b)
+    - VOICE_COST.common * a.filter((n) => b.includes(n)).length
+    + VOICE_COST.top * Math.abs(a[a.length - 1] - b[b.length - 1]);
+
+  // 最初のコードの候補を1つずつ固定して、残りを順に最小のコストでつなぐ（最後は最初のコードへ戻るコストも足す）
+  const n = cands.length;
+  let best: number[] = cands.map(() => 0);
+  let bestCost = Infinity;
+  for (let first = 0; first < cands[0].length; first++) {
+    let costs = cands[0].map((c, i) => (i === first ? c.cost : Infinity));
+    const from: number[][] = [];  // from[i][j] = i 番目のコードで候補 j を選んだときの、1つ前の候補
+    for (let i = 1; i < n; i++) {
+      const back: number[] = [];
+      costs = cands[i].map((c, j) => {
+        let min = Infinity;
+        cands[i - 1].forEach((p, k) => {
+          const total = costs[k] + step(p.notes, c.notes);
+          if (total < min) { min = total; back[j] = k; }
+        });
+        return min + c.cost;
+      });
+      from.push(back);
     }
-    return best.notes;
-  };
-
-  let prev: number[] | null = null;
-  let voiced: number[][] = [];
-  for (let pass = 0; pass < 2; pass++) {
-    voiced = chords.map((c) => (prev = pick(prev, c)));
+    costs.forEach((cost, j) => {
+      const total = cost + (n > 1 ? step(cands[n - 1][j].notes, cands[0][first].notes) : 0);
+      if (total >= bestCost) return;
+      bestCost = total;
+      const path = [j];
+      for (let i = n - 2; i >= 0; i--) path.unshift(from[i][path[0]]);
+      best = path;
+    });
   }
 
-  return voiced.map((v) => (options.spread ? spreadVoicing(v) : v).map(midiToNote));
+  return best.map((j, i) => {
+    const v = cands[i][j].notes;
+    return (options.spread ? spreadVoicing(v) : v).map(midiToNote);
+  });
 }

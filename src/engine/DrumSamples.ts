@@ -4,8 +4,9 @@ import * as Tone from "tone";
 //
 // 置き場所：public/samples/drums/<フォルダ>/<トラック名>.wav
 //   フォルダはジャンルごと（DRUM_SAMPLE_DIRS）。ジャンルのフォルダにない音は default フォルダの音を使い、
-//   どちらにもなければ、そのトラックだけ Tone.js のシンセで鳴らす（SynthFactory.ts）。
-//   トラック名は kick / snare / hihat_closed / hihat_open / clap / rim。
+//   どちらにもなければ、ドラムはそのトラックだけ Tone.js のシンセで、パーカッションは grow で鳴らす（SynthFactory.ts）。
+//   トラック名はドラムが kick / snare / hihat_closed / hihat_open / clap / rim、
+//   パーカッション（PercPlayer.ts）が shaker / tambourine / conga_high / conga_low / ride。
 //
 // 読み込んだ AudioBuffer はコンテキストに依存しないので、WAV書き出し（Tone.Offline）でもそのまま使う。
 
@@ -22,7 +23,9 @@ export const DRUM_SAMPLE_DIRS: Record<string, string> = {
 };
 
 const DEFAULT_DIR = "default";
-const TRACKS      = ["kick", "snare", "hihat_closed", "hihat_open", "clap", "rim"];
+const DRUM_TRACKS = ["kick", "snare", "hihat_closed", "hihat_open", "clap", "rim"];
+const PERC_TRACKS = ["shaker", "tambourine", "conga_high", "conga_low", "ride"];
+const TRACKS      = [...DRUM_TRACKS, ...PERC_TRACKS];
 const EXTENSIONS  = ["wav"];
 
 // URL → 読み込み結果（null = ファイルがない・読めない）。失敗も覚えて何度も読みに行かない
@@ -92,13 +95,18 @@ export async function prepareDrumSamples(genre: string): Promise<void> {
     if (buf) result[track] = buf;
     else missing.push(track);
   }));
-  if (missing.length > 0) {
-    console.info(`[ドラム音源] ${genre}: 音源がないので Tone.js のシンセで鳴らすトラック → ${missing.join(", ")}`);
+  const missingDrum = missing.filter(t => DRUM_TRACKS.includes(t));
+  const missingPerc = missing.filter(t => PERC_TRACKS.includes(t));
+  if (missingDrum.length > 0) {
+    console.info(`[ドラム音源] ${genre}: 音源がないので Tone.js のシンセで鳴らすトラック → ${missingDrum.join(", ")}`);
+  }
+  if (missingPerc.length > 0) {
+    console.info(`[ドラム音源] ${genre}: 音源がないので grow で鳴らすパーカッション → ${missingPerc.join(", ")}`);
   }
   loaded.set(genre, result);
 }
 
-// 読み込み済みの音源（なければ undefined。そのトラックはシンセで鳴らす）
+// 読み込み済みの音源（なければ undefined。ドラムのトラックはシンセ、パーカッションは grow で鳴らす）
 export function getDrumSample(genre: string, track: string): AudioBuffer | undefined {
   return loaded.get(genre)?.[track];
 }

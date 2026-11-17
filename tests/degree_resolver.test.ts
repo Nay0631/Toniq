@@ -124,6 +124,40 @@ describe("voiceProgression（ボイシング）", () => {
     }
   });
 
+  it("前のコードと共通の音は同じ高さのまま保つ", () => {
+    const c = chordById("chord_003");  // I IV V I
+    const voiced = voiceProgression(c, "C", VOICING_RANGES.chord).map(v => v.map(noteToMidi));
+    // I → IV は C、V → I は G が共通
+    expect(voiced[0].filter(n => voiced[1].includes(n)).map(n => n % 12)).toContain(0);
+    expect(voiced[2].filter(n => voiced[3].includes(n)).map(n => n % 12)).toContain(7);
+  });
+
+  it("melody を渡すと、最高音がメロディより上に出る転回形を避ける", () => {
+    const c = chordById("chord_003");
+    const top = (v: string[]) => Math.max(...v.map(noteToMidi));
+    const free = voiceProgression(c, "C", VOICING_RANGES.chord);
+    // どのコードでも、メロディなしで選んだ最高音のすぐ下でメロディが鳴り続ける
+    const melody = c.progression.map((d, i) => ({
+      midi: top(free[i]) - 2, start: (d.bar - 1) * 16, end: (d.bar - 1 + d.duration_bars) * 16,
+    }));
+    const voiced = voiceProgression(c, "C", VOICING_RANGES.chord, { melody });
+    const crossed = (list: string[][]) => list.filter((v, i) => top(v) > melody[i].midi).length;
+    expect(crossed(free)).toBe(c.progression.length);
+    expect(crossed(voiced)).toBeLessThan(crossed(free));
+    // 構成音は変わらない
+    voiced.forEach((v, i) => expect([...pcs(v)].sort()).toEqual([...pcs(free[i])].sort()));
+  });
+
+  it("メロディと同じ高さ（ユニゾン）はぶつかりとして扱わない", () => {
+    const c = chordById("chord_003");
+    const top = (v: string[]) => Math.max(...v.map(noteToMidi));
+    const free = voiceProgression(c, "C", VOICING_RANGES.chord);
+    const melody = c.progression.map((d, i) => ({
+      midi: top(free[i]), start: (d.bar - 1) * 16, end: (d.bar - 1 + d.duration_bars) * 16,
+    }));
+    expect(voiceProgression(c, "C", VOICING_RANGES.chord, { melody })).toEqual(free);
+  });
+
   it("spread（開離配置）は下から2番目の音を1オクターブ上げる", () => {
     const c = chordById("chord_003");  // I IV V I
     const close  = voiceProgression(c, "C", VOICING_RANGES.pad).map(v => v.map(noteToMidi));
