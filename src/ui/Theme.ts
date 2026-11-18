@@ -45,16 +45,9 @@ export function onAppearanceChange(fn: () => void): void {
   listeners.add(fn);
 }
 
-// AppState.theme を <html data-theme> とボタンの表示に反映する
+// AppState.theme を <html data-theme> に反映する（配色は設定画面で選ぶ）
 function applyTheme(): void {
-  const { theme } = getState();
-  document.documentElement.dataset.theme = theme;
-  const btn = document.getElementById("theme-toggle");
-  if (btn) {
-    const label = theme === "dark" ? "ライトモードにする" : "ダークモードにする";
-    btn.title = label;
-    btn.setAttribute("aria-label", label);
-  }
+  document.documentElement.dataset.theme = getState().theme;
   listeners.forEach(fn => fn());
 }
 
@@ -68,11 +61,6 @@ export function setThemeMode(themeMode: ThemeMode): void {
   setState({ themeMode, theme: resolveTheme(themeMode) });
   try { localStorage.setItem(STORAGE_KEY, themeMode); } catch { /* 保存できなくても表示は切り替える */ }
   applyTheme();
-}
-
-// ヘッダーのボタン：ライト／ダークを明示的に選ぶ
-export function setTheme(theme: Theme): void {
-  setThemeMode(theme);
 }
 
 export function setSkin(skin: Skin): void {
@@ -92,9 +80,5 @@ export function initTheme(): void {
     if (getState().themeMode !== "system") return;
     setState({ theme: systemTheme() });
     applyTheme();
-  });
-
-  document.getElementById("theme-toggle")?.addEventListener("click", () => {
-    setTheme(getState().theme === "dark" ? "light" : "dark");
   });
 }

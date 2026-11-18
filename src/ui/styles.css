@@ -252,27 +252,6 @@ button {
   margin: 0;
 }
 
-/* ライト／ダークの切り替えボタン（ヘッダー右端） */
-.theme-toggle {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  margin-left: auto;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text-muted);
-}
-
-.theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
-.theme-toggle svg { width: 18px; height: 18px; }
-
-/* ライトでは月（ダークへ）、ダークでは太陽（ライトへ）を出す */
-.theme-toggle .icon-sun { display: none; }
-:root[data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
-:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 
 /* ── パンくず ─────────────────────────── */
 .breadcrumb {

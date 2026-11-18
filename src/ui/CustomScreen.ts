@@ -18,6 +18,7 @@ import { initGrowPanel } from "./GrowPanel";
 import { initCustomMore, EXTRA_PARTS } from "./CustomMore";
 import { setTestFeature, type TestFeature } from "./Preferences";
 import { setGrowSound } from "../engine/Grow";
+import { previewGrowSound } from "../engine/GrowPreview";
 import { isCustomDrum } from "../engine/DrumEngine";
 import { bindSpaceToPlay } from "./SpaceKey";
 import { METERS, type Meter } from "../engine/Meter";
@@ -271,10 +272,11 @@ export function initCustomScreen(): void {
   });
 
   // コードの音色（grow のプリセット。選び直したら grow のパネルで変えた値は捨てる）。
-  // Synth は再生開始時に作り直されるので、再生中なら再生し直す
+  // Synth は再生開始時に作り直されるので、再生中なら再生し直す。止まっていれば選んだ音色を1音鳴らす
   $select("c-chord-instrument").addEventListener("change", async e => {
     setGrowSound("chord", (e.target as HTMLSelectElement).value || null, null);
     render();
+    void previewGrowSound("chord");
     await restartIfPlaying();
   });
 

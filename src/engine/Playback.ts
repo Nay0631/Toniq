@@ -7,6 +7,7 @@ import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./Loo
 import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
 import { stopScalePreview } from "./ScalePreview";
+import { stopGrowPreview } from "./GrowPreview";
 import { prepareDrumSamples } from "./DrumSamples";
 import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
@@ -92,6 +93,7 @@ export async function play(options: PlayOptions = {}): Promise<boolean> {
 
   stopMetronome();     // BPM のクリック音と重ねない
   stopScalePreview();  // キー・スケールの試聴とも重ねない
+  stopGrowPreview();   // lidless の音色の試聴の1音とも重ねない
   stop();
   const token = ++startToken;
   applyMixPreset(s.genre);
@@ -133,6 +135,7 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
 
   stopMetronome();     // BPM のクリック音と重ねない
   stopScalePreview();  // キー・スケールの試聴とも重ねない
+  stopGrowPreview();   // lidless の音色の試聴の1音とも重ねない
   stop();
   const token = ++startToken;
   applyMixPreset(s.genre);
@@ -184,6 +187,7 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
   await Tone.start();
   stopMetronome();     // BPM のクリック音と重ねない
   stopScalePreview();  // キー・スケールの試聴とも重ねない
+  stopGrowPreview();   // lidless の音色の試聴の1音とも重ねない
   stop();
   const token = ++startToken;
   applyMixPreset(getState().genre);

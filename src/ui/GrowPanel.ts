@@ -4,6 +4,7 @@ import {
   storedGrowSound, setGrowSound, standardGrowPreset, growPresetChoices, growCategoryName,
   formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta, type GrowPart,
 } from "../engine/Grow";
+import { previewGrowSound } from "../engine/GrowPreview";
 import { onRender, render as renderAll } from "./Router";
 import { renderCustomMore } from "./CustomMore";
 
@@ -107,6 +108,7 @@ function build(): void {
     setGrowSound(target, value === STANDARD_VALUE ? null : value, null);
     applyGrowLive();
     renderPanel();
+    void previewGrowSound(target);  // 選んだ音色を1音鳴らす（曲の再生中は鳴らさない）
   });
   $("c-grow-reset").addEventListener("click", () => {
     setGrowSound(target, storedGrowSound(target).preset, null);

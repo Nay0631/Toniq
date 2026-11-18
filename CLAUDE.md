@@ -80,7 +80,7 @@ src/ui/
   GrowPanel.ts            lidless（テスト中）の音作りの暫定パネル（カスタムモードの設定タブの下 #c-grow。対象のパート、プリセット、コアの表から作るモジュールごとのつまみ）
   CustomMore.ts           カスタムモードの設定タブの「もっと調整」（標準のままでも鳴る項目を畳む欄。変更の数・変えた項目の印・欄ごとに標準に戻す・開閉の保存）
   Preferences.ts          端末ごとの設定（音名の表記 toniq.noteNames・ループ再生 toniq.loop・ドラムの音源 toniq.drumSource・テスト中の機能 toniq.test.*）の保存・読み込み
-  Theme.ts                ライト／ダーク／OS に合わせるの切り替え（ヘッダー右端のボタンと設定画面、<html data-theme>、localStorage の toniq.theme）と、カスタムモードのスキン（デフォルト／フラット／スタジオ／ポップ。設定画面で選ぶ。<html data-skin>、toniq.skin）
+  Theme.ts                ライト／ダーク／OS に合わせるの切り替え（設定画面、<html data-theme>、localStorage の toniq.theme）と、カスタムモードのスキン（デフォルト／フラット／スタジオ／ポップ。設定画面で選ぶ。<html data-skin>、toniq.skin）
   styles.css              デザイントークン（ライト＋ダーク）と共通スタイル
 src/quiz/               音楽クイズ
   QuizModes.ts            カテゴリの並び（QUIZ_CATEGORIES）。画面が使う型・音名もここから再エクスポートする
@@ -130,6 +130,7 @@ src/engine/
   TapTempo.ts             タップテンポ（AppState.bpm を更新する。再生中の反映は呼び出し側が Playback.applyBpm()）
   Metronome.ts            BPM 試聴用のクリック音（Web Audio API で直接鳴らす）
   ScalePreview.ts         キー・スケールの試聴（スケールを順に鳴らして主音の和音で終わる。Web Audio API で直接鳴らす）
+  GrowPreview.ts          lidless の音色の試聴（コードの音色・音作りのパネルのプリセットを選び直したら、そのパートの音で主音を1音鳴らす。曲の再生中は鳴らさない）
   MidiExporter.ts         MIDI書き出し（今の曲を曲全体の長さで。アレンジ・パートの ON/OFF・スウィングを反映）
 ```
 
@@ -220,7 +221,7 @@ src/engine/
   - ブラウザで開いたとき（`window.toniqFiles` がない）は、書き出しはダウンロードになり、「出力フォルダ」ボタンは隠す。
 - `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（未保存の曲があれば確認する）。 ミュージックリストの曲の行には「編集」ボタン（`data-action="open"`。曲のモードで開く）を出す（以前は ⋮ メニューの中にあって気づきにくかったため。曲名のダブルクリックでも開く）。⋮ メニューは名前の変更・ファイルに書き出す・削除。
 - 両モードの情報バーの「＋ 新規作成」は、確認のうえ再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
-- 配色は選び方を `AppState.themeMode`（`light` / `dark` / `system` = OS に合わせる）、実際の配色を `AppState.theme` に置き、`Theme.ts` が `<html data-theme>` に反映して localStorage の `toniq.theme` に保存する（未保存か `system` なら OS の設定に合わせ、OS の配色が変わったら追従する。ヘッダーのボタンはライト／ダークを明示的に選ぶ。曲の内容ではないので `SONG_FIELDS` には入れない）。`index.html` の `<head>` でも同じキーを読んで描画前に `data-theme` を付ける。
+- 配色は選び方を `AppState.themeMode`（`light` / `dark` / `system` = OS に合わせる）、実際の配色を `AppState.theme` に置き、`Theme.ts` が `<html data-theme>` に反映して localStorage の `toniq.theme` に保存する（未保存か `system` なら OS の設定に合わせ、OS の配色が変わったら追従する。配色は設定画面だけで選ぶ（ヘッダーの切り替えボタンは廃止した）。曲の内容ではないので `SONG_FIELDS` には入れない）。`index.html` の `<head>` でも同じキーを読んで描画前に `data-theme` を付ける。
 - カスタムモードのスキン（`AppState.skin`。UI 表示名は デフォルト／フラット／スタジオ／ポップ）：
   - `"default"` = メニュー・シンプルモード・ミュージックリストと同じ見た目（初期値）、`"flat"` = フラットなプラグイン風、`"studio"` = 少し暗い制作スタジオ（DAW）風、`"pop"` = クリーム色の地に色分けしたグルーヴボックス風。
   - 選ぶのは設定画面だけ（カスタムモードの情報バーの切り替えボタンは廃止した）。`Theme.ts` が `<html data-skin>` に反映し、localStorage の `toniq.skin` に保存する（`SONG_FIELDS` には入れない。`<head>` でも描画前に付ける）。旧名の `plugin` / `daw` は `flat` / `studio` として読む。
