@@ -1,5 +1,5 @@
 // ミキサー（パート別音量）。カスタムモードのアレンジャータブに置く（設定タブには置かない）。
-// 1パート＝1チャンネルストリップ（パートの色・名前、ON/OFF の電源ボタン、ソロのボタン（Solo.ts。アレンジャー・ピアノロールと共通）、定位（パン）のノブ、フェーダー、レベルメーター、値）と、
+// 1パート＝1チャンネルストリップ（パートの色・名前、ON/OFF の電源ボタン（右クリックでソロ。Solo.ts。アレンジャー・ピアノロールと共通）、定位（パン）のノブ、フェーダー、レベルメーター、値）と、
 // 右端にマスターのメーター（左右のピーク）・クリップの印・再生を始めてからの最大のピーク。
 // メーターは再生中だけ実際の音量を表示する（パートは Tone.Meter の平均の大きさ、マスターはリミッターのあとのサンプルのピーク）。
 import { getState } from "../engine/AppState";
@@ -86,7 +86,6 @@ function build(list: HTMLElement): void {
   scale.innerHTML = `
     <span class="mixer-ch-head"><span class="mixer-ch-name">dB</span></span>
     <span class="mixer-power-space"></span>
-    <span class="mixer-solo-space"></span>
     <span class="mixer-pan-space"></span>
     <span class="mixer-body">${scaleHtml()}</span>
     <span class="mixer-value-space"></span>`;
@@ -99,7 +98,6 @@ function build(list: HTMLElement): void {
     ch.innerHTML = `
       <span class="mixer-ch-head"><span class="mixer-color mix-${p.name}"></span><span class="mixer-ch-name"></span></span>
       <button class="mixer-power" data-mixer-toggle="${p.name}"><span class="mixer-power-led"></span><span class="mixer-power-text"></span></button>
-      <button class="mixer-solo" data-mixer-solo="${p.name}" aria-pressed="false">SOLO</button>
       <span class="mixer-pan" title="定位（パン）。ダブルクリックで中央">
         <input type="range" class="range" data-mixer-pan min="-100" max="100" step="${PAN_STEP}">
         <span class="mixer-pan-value"></span>
@@ -124,7 +122,6 @@ function build(list: HTMLElement): void {
   master.innerHTML = `
     <span class="mixer-ch-head"><span class="mixer-ch-name">マスター</span></span>
     <span class="mixer-power-space"></span>
-    <span class="mixer-solo-space"></span>
     <button type="button" class="mixer-clip" data-mixer-clip aria-label="クリップの印を消す"
       title="音が大きすぎて割れる（クリップ）と赤く点きます。クリックで消えます">CLIP</button>
     <span class="mixer-body">${meterHtml()}${meterHtml()}</span>
@@ -162,17 +159,19 @@ function build(list: HTMLElement): void {
       resetPeakHold();
       return;
     }
-    // ソロのボタン：そのパートだけ ON にする。もう一度押すとソロにする前の ON/OFF に戻す
-    const solo = (e.target as HTMLElement).closest<HTMLElement>("[data-mixer-solo]");
-    if (solo) {
-      toggleSolo(solo.dataset.mixerSolo as LayerName);
-      onChangeCb();
-      return;
-    }
     const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-mixer-toggle]");
     if (!btn) return;
     const part = btn.dataset.mixerToggle as LayerName;
     setLayerEnabled(part, !getState().parts[part]);
+    onChangeCb();
+  });
+
+  // 電源ボタンを右クリック：そのパートだけ鳴らす（ソロ）／もう一度でソロにする前の ON/OFF に戻す（アレンジャーと同じ操作）
+  list.addEventListener("contextmenu", e => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-mixer-toggle]");
+    if (!btn) return;
+    e.preventDefault();
+    toggleSolo(btn.dataset.mixerToggle as LayerName);
     onChangeCb();
   });
 }
@@ -206,11 +205,11 @@ export function renderMixer(): void {
       power.setAttribute("aria-pressed", String(on));
       power.setAttribute("aria-label", `${p.label}を${on ? "OFF" : "ON"}にする`);
       power.querySelector(".mixer-power-text")!.textContent = on ? "ON" : "OFF";
-      const solo = ch.querySelector<HTMLElement>(".mixer-solo")!;
-      solo.setAttribute("aria-pressed", String(soloing === p.name));
-      solo.setAttribute("aria-label", soloing === p.name
-        ? `${p.label}のソロをやめる（元の ON/OFF に戻す）` : `${p.label}だけを鳴らす（ソロ）`);
-      solo.title = soloing === p.name ? "もう一度押すと元の ON/OFF に戻します" : "このパートだけを鳴らします（ほかのパートは OFF）";
+      // ソロ中のパートはボタンに枠を付ける（アレンジャーの ON/OFF ボタンと同じ）
+      power.classList.toggle("is-solo", soloing === p.name);
+      power.title = soloing === p.name
+        ? "クリックで ON/OFF・右クリックで元の ON/OFF に戻す（ソロをやめる）"
+        : "クリックで ON/OFF・右クリックでこのパートだけ鳴らす（ソロ。もう一度右クリックで元に戻す）";
     }
   }
   syncControls();

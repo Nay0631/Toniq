@@ -1567,29 +1567,9 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .mixer-power-led { display: none; }
 .mixer-power[aria-pressed="true"] { color: var(--hw-sel-text); background: var(--hw-sel); }
 
-/* ソロのボタン（そのパートだけ鳴らす）。電源ボタンと同じ形で、ソロ中はオレンジ（白文字）で点ける */
-.mixer-solo,
-.mixer-solo-space {
-  flex: none;
-  height: 20px;
-  margin: -4px 10px 0;
-}
-
-.mixer-solo {
-  padding: 0;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--hw-faint);
-  background: var(--hw-box);
-  border: none;
-  border-radius: 2px;
-}
-
-.mixer-solo:hover { background: var(--hw-box-hover); }
-.mixer-solo:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
-.mixer-solo[aria-pressed="true"] { color: #fff; background: var(--hw-orange); }
-/* アレンジャーのループ再生のボタン（ON はミキサーの SOLO と同じ色） */
+/* ソロ中（電源ボタンの右クリック）のパートは電源ボタンにオレンジの枠 */
+.mixer-power.is-solo { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
+/* アレンジャーのループ再生のボタン（ON はオレンジ） */
 .arr-loop[aria-pressed="true"] { color: #fff; background: var(--hw-orange); border-color: var(--hw-orange); }
 
 /* 定位（パン）：小さいノブと値（C / L30 / R30）。マスターは同じ高さにクリップの印を置く */
@@ -1884,7 +1864,6 @@ button.mixer-value {
 [data-skin="studio"] .hw .pill,
 [data-skin="studio"] .hw .stepper-btn,
 [data-skin="studio"] .mixer-power,
-[data-skin="studio"] .mixer-solo,
 [data-skin="studio"] .mixer-clip { border-radius: 3px; }
 
 [data-skin="studio"] .hw .btn { background: var(--hw-bg-2); border-color: var(--hw-line); }
@@ -2023,7 +2002,6 @@ button.mixer-value {
 [data-skin="pop"] .hw-bar .info,
 [data-skin="pop"] .mixer-ch-name,
 [data-skin="pop"] .mixer-power,
-[data-skin="pop"] .mixer-solo,
 [data-skin="pop"] .mixer-value,
 [data-skin="pop"] .hw .arr-ticks,
 [data-skin="pop"] .hw .bpm-number {
@@ -2127,7 +2105,6 @@ button.mixer-value {
 [data-skin="pop"] .mixer-scale .mixer-ch-name { color: var(--hw-faint); }
 [data-skin="pop"] .mixer-color { width: 10px; height: 10px; border-radius: 50%; background: var(--part); }
 [data-skin="pop"] .mixer-power,
-[data-skin="pop"] .mixer-solo,
 [data-skin="pop"] .mixer-clip { border-radius: 999px; }
 [data-skin="pop"] .mixer-power[aria-pressed="true"] { color: #fff; background: var(--part); box-shadow: 0 2px 0 var(--pop-press); }
 [data-skin="pop"] .mixer-value { border-radius: 8px; }
@@ -2338,7 +2315,6 @@ button.mixer-value {
 [data-skin="default"] .mixer-ch-head { border-bottom: 1px solid var(--border); }
 [data-skin="default"] .mixer-master .mixer-ch-name { color: var(--custom); }
 [data-skin="default"] .mixer-power,
-[data-skin="default"] .mixer-solo,
 [data-skin="default"] .mixer-clip { border-radius: 999px; }
 [data-skin="default"] .mixer-value { border-radius: 6px; }
 
