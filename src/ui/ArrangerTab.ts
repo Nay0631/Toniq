@@ -13,6 +13,7 @@ import drumDB from "../data/drum_patterns.json";
 import { CUSTOM_DRUM_ID, DrumPattern } from "../data/types";
 import { render } from "./Router";
 import { soloPart, toggleSolo } from "./Solo";
+import { setLoopPlayback } from "./Preferences";
 import { formatTimePrecise } from "./format";
 import { chorusProgression, getSections, loopBars } from "../engine/SongForm";
 
@@ -235,6 +236,9 @@ export function renderArranger(): void {
     : `${s.genre} の${arrangePresetLabel(s.arrangePreset)}の構成`;
   $("c-arr-mode")!.classList.toggle("is-edited", changed);
   ($("c-arr-reset") as HTMLButtonElement).disabled = !changed;
+  const loop = $("c-arr-loop");
+  loop?.classList.toggle("is-on", s.loopPlayback);
+  loop?.setAttribute("aria-pressed", String(s.loopPlayback));
   renderPresetSelect();
   renderPlayhead();
   // ほかの画面（シンプルモードなど）で始めた再生でも、表示したら再生位置の線を動かす
@@ -508,6 +512,12 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
   $("c-arr-to-start")?.addEventListener("click", () => {
     setState({ startBar: 0 });
     onSeek();
+  });
+
+  // ループ再生（設定画面と同じ設定。再生中に切り替えてもすぐ反映される）
+  $("c-arr-loop")?.addEventListener("click", () => {
+    setLoopPlayback(!getState().loopPlayback);
+    render();
   });
 
   // 構成のプリセット：セクションの並び（短く繰り返す）も変わるので、再生中なら再生し直す。変えた所はそのまま当て直す

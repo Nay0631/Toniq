@@ -1589,6 +1589,8 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .mixer-solo:hover { background: var(--hw-box-hover); }
 .mixer-solo:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
 .mixer-solo[aria-pressed="true"] { color: #fff; background: var(--hw-orange); }
+/* アレンジャーのループ再生のボタン（ON はミキサーの SOLO と同じ色） */
+.arr-loop[aria-pressed="true"] { color: #fff; background: var(--hw-orange); border-color: var(--hw-orange); }
 
 /* 定位（パン）：小さいノブと値（C / L30 / R30）。マスターは同じ高さにクリップの印を置く */
 .mixer-pan,

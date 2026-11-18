@@ -248,7 +248,7 @@ export const defaultState: AppState = {
   musicListSort:      "newest",
 
   quizMode:      "doremi_cde",
-  noteNames:     "cde",
+  noteNames:     "doremi",
   loopPlayback:  false,
 
   mode:      "simple",
@@ -283,7 +283,7 @@ export const defaultState: AppState = {
   sidechain:        null,
   scaleLock:        true,
   drumCategory:     "EDM",
-  drumSource:       "grow",
+  drumSource:       "sample",
   growPreset:       null,  // ジャンルの標準
   growParams:       null,
   growChordPreset:  null,  // ジャンルの標準
