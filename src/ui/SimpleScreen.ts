@@ -13,7 +13,7 @@ import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import { CUSTOM_DRUM_ID } from "../data/types";
 import { bindSpaceToPlay } from "./SpaceKey";
 import { beatsPerBar, unitsPerBeat } from "../engine/Meter";
-import { drumPatternIn } from "../engine/DrumEngine";
+import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -96,7 +96,8 @@ function generate(): void {
   setState({
     chordPattern:  result.chordPattern,
     chorusPattern: pickChorus(result.chordPattern, s.genre, s.mood),  // サビの進行（同じ長さ・スケールのもの）
-    drumPattern:   result.drumPattern,
+    // ピアノロールで作ったオリジナルのドラムは残す（別のパターンにするときはドラムの「↻ 再抽選」）
+    drumPattern:   isCustomDrum(s.drumPattern) ? s.drumPattern : result.drumPattern,
     melodyVersion: 0,
     generated:     true,
     songId:        null,  // 新しい曲としてミュージックリストに保存する
@@ -105,8 +106,19 @@ function generate(): void {
     sections:      null,  // セクションもジャンルの標準に戻す
   });
   setState({ bars: songBars() });
-  makeMelody();
+  // 自分で入力したメロディ（生成前にピアノロールで入れた音・前回の曲で入れた音）は残し、自動生成のときだけ作る
+  if (s.melodyMethod === "auto") makeMelody();
   console.log("シンプルモード：生成", getState());
+}
+
+// 生成し直しても残す、ピアノロールで作った内容の名前（「入力したメロディと作ったドラム」など。なければ null）
+function keptContent(): string | null {
+  const s = getState();
+  const kept = [
+    s.melodyMethod === "manual" && (s.melodyNotes.length > 0 || s.chorusMelodyNotes.length > 0) ? "入力したメロディ" : "",
+    isCustomDrum(s.drumPattern) ? "作ったドラム" : "",
+  ].filter(Boolean);
+  return kept.length > 0 ? kept.join("と") : null;
 }
 
 // 再生中に曲の内容が変わったら先頭から再生し直す
@@ -255,6 +267,15 @@ function render(): void {
   $$("[data-melody-method]").forEach(el =>
     el.classList.toggle("is-active", el.dataset.melodyMethod === s.melodyMethod));
 
+  // ピアノロールで作った内容は生成しても残すことを知らせる
+  const kept = keptContent();
+  const keepHint = $("s-keep-hint")!;
+  keepHint.hidden = !kept;
+  keepHint.textContent = kept ? `ピアノロールで${kept}は、そのまま使います` : "";
+  $("s-regenerate")!.title = kept
+    ? `選び直して新しい曲にします（${kept}はそのまま）`
+    : "コード進行・ドラム・メロディを選び直して、新しい曲にします";
+
   $("s-setup")!.hidden  = s.generated;
   $("s-result")!.hidden = !s.generated;
   if (!s.generated) return;
@@ -401,6 +422,8 @@ export function initSimpleScreen(): void {
 
   $("s-drum-reroll")?.addEventListener("click", async () => {
     const s = getState();
+    if (isCustomDrum(s.drumPattern)
+        && !confirm("ピアノロールで作ったドラムを、別のドラムパターンに置き換えますか？")) return;
     setState({ drumPattern: rerollDrum(s.genre, s.mood, s.drumPattern?.id) });
     render();
     await restartIfPlaying();

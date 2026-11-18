@@ -8,6 +8,7 @@ import { initFxSynth }                              from "./engine/FxPlayer";
 import { setState }                                 from "./engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./engine/SimpleModeResolver";
 import { onPlaybackError }                          from "./engine/Playback";
+import { markSongClean }                            from "./engine/SongLibrary";
 import { initRouter, render as renderAll } from "./ui/Router";
 import { initSimpleScreen } from "./ui/SimpleScreen";
 import { initCustomScreen } from "./ui/CustomScreen";
@@ -35,6 +36,7 @@ setState({
   chorusPattern: pickChorus(initialResult.chordPattern, "EDM", "明るい"),
   drumPattern:  initialResult.drumPattern,
 });
+markSongClean();  // 起動したままの曲は、閉じても失うものがない
 
 window.addEventListener("load", () => {
   initChordSynth();

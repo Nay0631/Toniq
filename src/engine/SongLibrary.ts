@@ -7,6 +7,7 @@ import { resetHistory } from "./History";
 import { presetIdFromSaved } from "./Grow";
 import { volumeFromLegacy } from "./VolumeCurve";
 import { validateImportedSong } from "./SongValidate";
+import { CUSTOM_DRUM_ID } from "../data/types";
 
 export { SONG_FIELDS };
 export type { SongFields };
@@ -108,6 +109,7 @@ export function saveCurrentSong(): SavedSong {
   }
   writeSongs(songs);
   setState({ songId: saved.id });
+  markSongClean();
   console.log("ミュージックリストに保存:", saved.name);
   return saved;
 }
@@ -124,7 +126,56 @@ export function toggleFavorite(id: string): void {
 
 export function deleteSong(id: string): void {
   writeSongs(listSongs().filter(song => song.id !== id));
-  if (getState().songId === id) setState({ songId: null });
+  if (getState().songId === id) {
+    setState({ songId: null });
+    cleanSnapshot = null;  // リストから消したので、今の曲はどこにも保存されていない
+  }
+}
+
+// ===== 保存していない変更 =====
+
+// 最後に保存・読み込み・新規作成したときの曲の内容（比べるための JSON。AppState の値のコピーではない）。
+// null = 基準がない（今の曲はどこにも保存されていない）
+let cleanSnapshot: string | null = null;
+
+// オブジェクトのキーを並べ替えた JSON（同じ内容ならキーの順が違っても同じ文字列にする）
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === "object" && !Array.isArray(v)
+      ? Object.fromEntries(Object.keys(v).sort().map(k => [k, (v as Record<string, unknown>)[k]]))
+      : v);
+}
+
+// 比べる内容（モードは除く。シンプルモードからカスタムモードへ移っただけでは変更にしない）
+function comparable(fields: SongFields): string {
+  const { mode: _mode, ...rest } = fields;
+  return stableJson(rest);
+}
+
+// 今の曲の内容（保存するときと同じ項目）
+export function currentSongFields(): SongFields {
+  return snapshot();
+}
+
+// 今の曲の内容を「保存済み」の基準にする（保存・読み込み・新規作成・起動のとき）
+export function markSongClean(): void {
+  cleanSnapshot = comparable(snapshot());
+}
+
+// ピアノロールで自分で作った内容（手入力のメロディ・オリジナルのドラム）があるか
+export function hasHandmadeContent(fields: SongFields = snapshot()): boolean {
+  const melody = fields.melodyMethod === "manual"
+    && (fields.melodyNotes.length > 0 || fields.chorusMelodyNotes.length > 0);
+  return melody || fields.drumPattern?.id === CUSTOM_DRUM_ID;
+}
+
+// 保存していない変更があるか（曲を読み込む・新規作成する・ウィンドウを閉じる前の確認に使う）。
+// fields は比べる曲の内容（サンプルの試聴などで一時的に差し替えているときは元の内容を渡す）。
+// シンプルモードの生成前は、選んだ雰囲気・ジャンルなどは失っても困らないので、ピアノロールで作った内容だけを守る
+export function hasUnsavedChanges(fields: SongFields = snapshot()): boolean {
+  const s = getState();
+  if (s.mode === "simple" && !s.generated && !hasHandmadeContent(fields)) return false;
+  return cleanSnapshot === null || comparable(fields) !== cleanSnapshot;
 }
 
 // 以前の Tone.js のコードの音色 → 同じ音の grow のプリセットの ID
@@ -193,6 +244,7 @@ export function loadSong(id: string): boolean {
   });
   applyAllVolumes();
   resetHistory();  // 別の曲の編集は元に戻せないようにする
+  markSongClean();
   return true;
 }
 
@@ -315,4 +367,5 @@ export function newSong(): void {
   // メロディは空のまま（自動生成ボタンを押したときに初めて作る）
   applyAllVolumes();
   resetHistory();
+  markSongClean();
 }

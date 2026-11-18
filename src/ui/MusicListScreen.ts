@@ -1,8 +1,9 @@
 import { getState, setState, MusicListSort } from "../engine/AppState";
 import {
   listSongs, findSong, saveCurrentSong, renameSong, deleteSong, loadSong, newSong, toggleFavorite, SavedSong,
-  songsToFile, songFileName, importSongFile, SongStorageError,
+  songsToFile, songFileName, importSongFile, SongStorageError, currentSongFields, hasUnsavedChanges,
 } from "../engine/SongLibrary";
+import { songBeforeRating } from "./RatingScreen";
 import { hasOutputFolder, openOutputFolder } from "../engine/OutputFiles";
 import * as Playback from "../engine/Playback";
 import { onRender, render as renderAll, showScreen } from "./Router";
@@ -26,13 +27,23 @@ let renameSongId: string | null = null;
 
 // ===== 状態の更新 =====
 
-// リストに保存していない曲を読み込みで上書きしてよいか確かめる
+// 保存していない変更があるか。サンプルの試聴・メロディの評価で一時的に差し替えているときは、差し替える前の内容で比べる
+function unsaved(): boolean {
+  const fields = { ...(songBeforeRating() ?? currentSongFields()), ...Playback.sampleOriginal() };
+  return hasUnsavedChanges(fields);
+}
+
+// 失われる変更の説明（リストにある曲なら保存したあとの変更、ない曲なら曲そのもの）
+function lossMessage(): string {
+  return findSong(getState().songId)
+    ? "最後に保存したあとの変更は失われます。"
+    : "この曲はミュージックリストに保存されていないため失われます。";
+}
+
+// 保存していない変更を、別の曲の読み込みで捨ててよいか確かめる
 function confirmDiscard(nextId: string): boolean {
-  const s = getState();
-  if (s.songId === nextId || findSong(s.songId)) return true;
-  // シンプルモードは生成前なら捨てるものがない
-  if (s.mode === "simple" && !s.generated) return true;
-  return confirm("編集中の曲はミュージックリストに保存されていません。読み込むと失われますが、よろしいですか？");
+  if (getState().songId === nextId || !unsaved()) return true;
+  return confirm(`別の曲を開きますか？\n編集中の曲の${lossMessage()}`);
 }
 
 // 今の曲がその曲でなければ読み込む
@@ -271,6 +282,14 @@ function render(): void {
 export function initMusicListScreen(): void {
   onRender(render);
 
+  // 保存していない変更があれば、ウィンドウを閉じる・読み込み直す前に確かめる。
+  // ブラウザは標準の確認を出し、Electron はメインプロセス（will-prevent-unload）が確認のダイアログを出す
+  window.addEventListener("beforeunload", e => {
+    if (!unsaved()) return;
+    e.preventDefault();
+    e.returnValue = "";  // 古いブラウザ・Electron は returnValue で止める
+  });
+
   document.querySelectorAll<HTMLButtonElement>("[data-save-song]").forEach(btn =>
     btn.addEventListener("click", () => {
       if (!saveToList()) return;
@@ -286,11 +305,8 @@ export function initMusicListScreen(): void {
   // 新規作成（シンプルモード・カスタムモードの情報バー）：曲の内容を初期状態に戻す
   document.querySelectorAll<HTMLButtonElement>("[data-new-song]").forEach(btn =>
     btn.addEventListener("click", () => {
-      const s = getState();
-      const message = findSong(s.songId)
-        ? "設定をリセットして新しい曲をつくりますか？\n最後に保存したあとの変更は失われます。"
-        : "設定をリセットして新しい曲をつくりますか？\nこの曲はミュージックリストに保存されていないため失われます。";
-      if (!confirm(message)) return;
+      // 保存していない変更がなければ、失うものがないので確かめない
+      if (unsaved() && !confirm(`設定をリセットして新しい曲をつくりますか？\n${lossMessage()}`)) return;
       Playback.stop();
       newSong();
       setState({ tab: "settings" });

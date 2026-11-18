@@ -224,6 +224,11 @@ export function isSamplePlaying(): boolean {
   return sampleRestore !== null;
 }
 
+// サンプルのために差し替える前の曲の内容（サンプルを鳴らしていなければ null）。保存していない変更の確認に使う
+export function sampleOriginal(): Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"> | null {
+  return sampleRestore;
+}
+
 // サンプルを鳴らしているときだけ止める（画面の切り替えなど）
 export function stopSample(): void {
   if (isSamplePlaying()) stop();

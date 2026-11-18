@@ -6,8 +6,8 @@ vi.mock("../src/engine/History", () => ({ resetHistory: vi.fn() }));
 
 import { getState, setState, defaultState, SONG_FIELDS } from "../src/engine/AppState";
 import {
-  listSongs, loadSong, saveCurrentSong, renameSong, importSongFile,
-  SongStorageError, SavedSong,
+  listSongs, loadSong, saveCurrentSong, renameSong, importSongFile, deleteSong, newSong,
+  SongStorageError, SavedSong, markSongClean, hasUnsavedChanges, hasHandmadeContent, currentSongFields,
 } from "../src/engine/SongLibrary";
 import { LEGACY_PRESET_IDS } from "../src/engine/Grow";
 import { volumeFromLegacy, volumeToDb } from "../src/engine/VolumeCurve";
@@ -400,5 +400,64 @@ describe("ミュージックリストに書き込めないとき", () => {
     storage.quotaAfter = 10;
     expect(() => importSongFile(JSON.stringify(legacySong()))).toThrow(SongStorageError);
     expect(listSongs()).toEqual([]);
+  });
+});
+
+describe("保存していない変更（hasUnsavedChanges）", () => {
+  beforeEach(() => {
+    setState({ mode: "custom", chordPattern: chordById("chord_007"), drumPattern: drums[0] });
+    markSongClean();
+  });
+
+  it("保存したあとに変えると変更あり、元の値に戻すと変更なし", () => {
+    saveCurrentSong();
+    expect(hasUnsavedChanges()).toBe(false);
+    const bpm = getState().bpm;
+    setState({ bpm: bpm + 1 });
+    expect(hasUnsavedChanges()).toBe(true);
+    setState({ bpm });
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("古い形式の曲は、開いたときの読み替えだけでは変更にしない", () => {
+    storage.setItem(STORAGE_KEY, JSON.stringify([legacySong()]));
+    loadSong("song_old");
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("モードを移っただけ・キーの順が違うだけでは変更にしない", () => {
+    saveCurrentSong();
+    const parts = getState().parts;
+    const reversed = Object.fromEntries(Object.entries(parts).reverse()) as typeof parts;
+    setState({ mode: "simple", generated: true, parts: reversed });
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("今の曲をリストから消すと、変えていなくても変更あり", () => {
+    const saved = saveCurrentSong();
+    deleteSong(saved.id);
+    expect(hasUnsavedChanges()).toBe(true);
+  });
+
+  it("新規作成した直後は変更なし", () => {
+    setState({ bpm: 200 });
+    newSong();
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("シンプルモードの生成前は、ピアノロールで作った内容だけを守る", () => {
+    setState({ mode: "simple", generated: false, genre: "テクノ", mood: "暗い" });
+    expect(hasUnsavedChanges()).toBe(false);
+    setState({ melodyMethod: "manual", melodyNotes: [{ note: "C5", duration: "4n", time: "0:0:0" }] });
+    expect(hasHandmadeContent()).toBe(true);
+    expect(hasUnsavedChanges()).toBe(true);
+  });
+
+  it("差し替える前の内容を渡すと、その内容で比べる", () => {
+    saveCurrentSong();
+    const original = currentSongFields();
+    setState({ melodyNotes: [{ note: "C5", duration: "4n", time: "0:0:0" }] });  // サンプルの試聴などの一時的な差し替え
+    expect(hasUnsavedChanges()).toBe(true);
+    expect(hasUnsavedChanges(original)).toBe(false);
   });
 });

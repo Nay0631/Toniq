@@ -221,8 +221,8 @@ src/engine/
   - Electron では WAV / MP3 / MIDI を、書き出す前に `askFileName()`（`FileNameDialog.ts`。Electron では `prompt()` が使えないので自前のダイアログ）でファイル名を決め、`saveOutput()`（`OutputFiles.ts`）で `output/audio` / `output/midi` に直接保存し（同名なら「 (2)」を付けて上書きしない）、保存後にフォルダを開くか聞く。
   - 出力フォルダの場所は開発時が toniq フォルダの `output/`、インストール版は Toniq.exe と同じ場所の `output/`（書き込めなければ「ドキュメント/Toniq/output」）。起動時に作る。 ミュージックリストのツールバーの「出力フォルダ」ボタン（`MusicListScreen.ts`）で開く。
   - ブラウザで開いたとき（`window.toniqFiles` がない）は、書き出しはダウンロードになり、「出力フォルダ」ボタンは隠す。
-- `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（未保存の曲があれば確認する）。 ミュージックリストの曲の行には「編集」ボタン（`data-action="open"`。曲のモードで開く）を出す（以前は ⋮ メニューの中にあって気づきにくかったため。曲名のダブルクリックでも開く）。⋮ メニューは名前の変更・ファイルに書き出す・削除。
-- 両モードの情報バーの「＋ 新規作成」は、確認のうえ再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
+- `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（保存していない変更があれば確認する。変更の判定は `hasUnsavedChanges`（`SongLibrary.ts`）で、保存・読み込み・新規作成・起動のときの内容と比べる。ウィンドウを閉じるときも `beforeunload`＋Electron の `will-prevent-unload` で確かめる。docs/ui.md）。 ミュージックリストの曲の行には「編集」ボタン（`data-action="open"`。曲のモードで開く）を出す（以前は ⋮ メニューの中にあって気づきにくかったため。曲名のダブルクリックでも開く）。⋮ メニューは名前の変更・ファイルに書き出す・削除。
+- 両モードの情報バーの「＋ 新規作成」は、（保存していない変更があれば）確認のうえ再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
 - 配色は選び方を `AppState.themeMode`（`light` / `dark` / `system` = OS に合わせる）、実際の配色を `AppState.theme` に置き、`Theme.ts` が `<html data-theme>` に反映して localStorage の `toniq.theme` に保存する（未保存か `system` なら OS の設定に合わせ、OS の配色が変わったら追従する。配色は設定画面だけで選ぶ（ヘッダーの切り替えボタンは廃止した）。曲の内容ではないので `SONG_FIELDS` には入れない）。`index.html` の `<head>` でも同じキーを読んで描画前に `data-theme` を付ける。
 - カスタムモードのスキン（`AppState.skin`。UI 表示名は デフォルト／フラット／スタジオ／ポップ）：
   - `"default"` = メニュー・シンプルモード・ミュージックリストと同じ見た目（初期値）、`"flat"` = フラットなプラグイン風、`"studio"` = 少し暗い制作スタジオ（DAW）風、`"pop"` = クリーム色の地に色分けしたグルーヴボックス風。
@@ -286,6 +286,7 @@ src/engine/
 - コードのリズム（`chordRhythm`）・コードの音色（`growChordPreset`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。コードの音色は lidless のプリセット（ChordPlayer の Tone.js の音色は wasm がないときの `FALLBACK` だけ）。メロディの音色の定義は MelodyPlayer の `INSTRUMENTS`。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
 - シンプルモードの曲の長さは 32 小節（`SimpleScreen.ts` の `SIMPLE_SONG_BARS`。生成時・コード進行の差し替え時に設定する）。
+- シンプルモードの「生成する」「もう一度生成する」は、ピアノロールで作った内容（「自分で入力」のメロディ・オリジナルのドラム）を消さずに残す（docs/ui.md）。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
 - 各パートの Synth はモジュールに1つずつ。WAV書き出しは再生を止めて Synth を作り直し、終わったら破棄する。曲のあとに付ける余韻は `renderTailSeconds()`（2 秒。エンディングを使うときは1小節以上。遅い曲で最後の和音が切れないように）。再生中に書き出すと再生は止まる。
 - WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。
