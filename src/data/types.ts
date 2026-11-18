@@ -13,7 +13,10 @@ export interface DrumPattern {
   steps:     number;
   step_unit: string;
   tracks:    Record<string, DrumTrack>;
-  notes?:    string;  
+  notes?:    string;
+  // このパターンのマスの数え方（拍子。src/engine/Meter.ts）。なし = 4/4 の 16 ステップ（DB のパターンはすべてこれ）。
+  // 3/4・3連符の拍子で作ったオリジナルのパターンは、その拍子のマス（1小節 12）で持つ
+  meter?:    "4/4" | "3/4" | "4/4t";
 }
 
 export interface ChordDegree {

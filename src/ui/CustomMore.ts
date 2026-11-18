@@ -3,6 +3,7 @@ import { setLayerEnabled, LayerName } from "../engine/LayerManager";
 import { applySwing } from "../engine/Groove";
 import { applyGrowLive, setGrowSound, storedGrowSound, type GrowPart } from "../engine/Grow";
 import { setTestFeature, TEST_FEATURES } from "./Preferences";
+import { setMeter } from "./CustomState";
 
 // カスタムモードの設定タブの「もっと調整」（<details class="panel-more" data-more="…">）。
 // 標準（ジャンルに合わせる・初期値）のままでも曲として鳴る項目を畳んでおき、ふだんは目に入らないようにする。
@@ -27,6 +28,7 @@ function growChanged(part: GrowPart): boolean {
 const CHANGED: Record<string, () => boolean> = {
   // メロディの音色は grow（初期値）とジャンルに合わせる（auto）が標準
   melodySound: () => !["grow", "auto"].includes(getState().melodyInstrument),
+  meter:       () => getState().meter !== defaultState.meter,
   swing:       () => getState().swing !== null,
   swingUnit:   () => getState().swingUnit !== defaultState.swingUnit,
   sidechain:   () => getState().sidechain !== null,
@@ -54,6 +56,7 @@ function resetGroup(group: MoreGroup): boolean {
   switch (group) {
     case "basic":
       if (CHANGED.melodySound()) setState({ melodyInstrument: defaultState.melodyInstrument });
+      setMeter(defaultState.meter);  // メロディ・オリジナルのドラムも 4/4 のマスに置き直す
       setState({ swing: null, sidechain: null, swingUnit: defaultState.swingUnit });
       applySwing();
       return true;

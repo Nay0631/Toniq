@@ -6,6 +6,7 @@ import type { Arrangement } from "./AppState";
 import { resetHistory } from "./History";
 import { presetIdFromSaved } from "./Grow";
 import { volumeFromLegacy } from "./VolumeCurve";
+import { validateImportedSong } from "./SongValidate";
 
 export { SONG_FIELDS };
 export type { SongFields };
@@ -264,7 +265,15 @@ export function importSongFile(text: string): ImportResult {
   let added = 0;
   items.forEach((item, i) => {
     if (!isSongLike(item)) return;
-    const fields = songFields(item);
+    // 鳴らすときに例外になる値（知らないキー・ディグリー、形の違うメロディなど）がないか確かめる。鳴らせない曲は飛ばす
+    let fields: SongFields | null;
+    try {
+      fields = validateImportedSong(songFields(item));
+    } catch (e) {
+      console.warn("曲ファイルの曲を読み込めませんでした:", e);
+      fields = null;
+    }
+    if (!fields) return;
     songs.unshift({
       ...fields,
       mode:      fields.mode === "simple" ? "simple" : "custom",

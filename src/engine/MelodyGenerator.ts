@@ -2,6 +2,10 @@ import { ChordProgression } from "../data/types";
 import { NOTE_INDEX, SCALE_TONES } from "../data/degree_resolver";
 import melodyParams from "../data/melody_params.json";
 import type { Section } from "./AppState";
+import {
+  fitPattern, unitsPerBar, unitsPerBeat,
+  unitsToDuration, unitsToTime, timeToUnits, durationToUnits,
+} from "./Meter";
 
 // ===== 型定義 =====
 export interface MelodyNote {
@@ -56,16 +60,18 @@ function getScaleNotes(
 }
 
 // ===== リズムテンプレート =====
+// 位置と長さは「マス」の数で持つ（4/4・3/4 は16分音符、3連符は8分3連符。1小節のマスの数は Meter.ts の unitsPerBar）
 interface RhythmEvent {
-  start: number; // 曲頭からの16分音符単位
-  units: number; // 長さ（16分音符単位）
+  start: number; // 曲頭からのマスの数
+  units: number; // 長さ（マスの数）
 }
 
-// 16ステップの文字列を発音イベントに変換する（先頭の "-" は休符扱い）
-function parseRhythm(pattern: string, barOffset: number): RhythmEvent[] {
+// 16ステップの文字列を、今の拍子のマスに直してから発音イベントに変換する（先頭の "-" は休符扱い）
+function parseRhythm(pattern16: string, barOffset: number): RhythmEvent[] {
+  const pattern = fitPattern(pattern16);
   const events: RhythmEvent[] = [];
   let current: RhythmEvent | null = null;
-  for (let step = 0; step < 16; step++) {
+  for (let step = 0; step < unitsPerBar(); step++) {
     const c = pattern[step] ?? ".";
     if (c === "x") {
       current = { start: barOffset + step, units: 1 };
@@ -79,32 +85,8 @@ function parseRhythm(pattern: string, barOffset: number): RhythmEvent[] {
   return events;
 }
 
-// 16分音符単位の長さを Tone.js の音価表記に変換する
-const UNITS_TO_DURATION: Record<number, string> = {
-  1: "16n", 2: "8n", 3: "8n.", 4: "4n", 6: "4n.", 8: "2n", 12: "2n.", 16: "1n",
-};
-
-export function unitsToDuration(units: number): string {
-  return UNITS_TO_DURATION[units]
-      ?? `0:${Math.floor(units / 4)}:${units % 4}`; // 半端な長さは 小節:拍:16分 表記
-}
-
-export function unitsToTime(units: number): string {
-  return `${Math.floor(units / 16)}:${Math.floor((units % 16) / 4)}:${units % 4}`;
-}
-
-// 小節:拍:16分 表記を16分音符単位に戻す
-export function timeToUnits(time: string): number {
-  const [bar = 0, beat = 0, sixteenth = 0] = time.split(":").map(Number);
-  return bar * 16 + beat * 4 + sixteenth;
-}
-
-// 音価表記（"4n" など）か 小節:拍:16分 表記の長さを16分音符単位に戻す
-export function durationToUnits(duration: string): number {
-  const entry = Object.entries(UNITS_TO_DURATION).find(([, d]) => d === duration);
-  if (entry) return Number(entry[0]);
-  return duration.includes(":") ? timeToUnits(duration) : 4;
-}
+// マスの数と Tone.js の時刻・音価の表記（小節:拍:16分、"4n" など）の変換は拍子で変わるので Meter.ts に置く
+export { unitsToDuration, unitsToTime, timeToUnits, durationToUnits };
 
 function pickRandom<T>(list: T[]): T {
   return list[Math.floor(Math.random() * list.length)];
@@ -239,7 +221,9 @@ export function generateMelody(
   const isAccent   = (midi: number) => accentDegs.includes(degreeOf(midi, root));
 
   const totalBars  = progression.length_bars;
-  const totalUnits = totalBars * 16; // 1小節 = 16ステップ（16分音符基準）
+  const BAR        = unitsPerBar();   // 1小節のマスの数（4/4 = 16、3/4・3連符 = 12）
+  const BEAT       = unitsPerBeat();  // 1拍のマスの数
+  const totalUnits = totalBars * BAR;
 
   // フレーズ形式（例: "AAAB"）。同じ記号の小節は同じモチーフ（リズム＋音の動き）を使う。
   // 小文字（例: "AABa" の a）は大文字と同じモチーフで、終わりの音を必ず変える（A'）。
@@ -248,7 +232,10 @@ export function generateMelody(
   const letterOf   = (bar: number) => form[bar % form.length].toUpperCase();
   const isVariant  = (bar: number) => form[bar % form.length] !== letterOf(bar);
   // サビは専用のリズムがあればそちらから選ぶ（Aメロとリズムの感じを変える）
-  const rhythmPool = section === "B" && param.chorusRhythmPatterns?.length ? param.chorusRhythmPatterns : param.rhythmPatterns;
+  const sectionPool = section === "B" && param.chorusRhythmPatterns?.length ? param.chorusRhythmPatterns : param.rhythmPatterns;
+  // 3/4 では4拍目を使わないので、頭の3拍に音がないリズムは選ばない（4/4 では全部残る）
+  const audible    = sectionPool.filter(r => fitPattern(r).includes("x"));
+  const rhythmPool = audible.length > 0 ? audible : sectionPool;
   const rhythmOf: Record<string, string> = {};
   for (let bar = 0; bar < totalBars; bar++) {
     rhythmOf[letterOf(bar)] ??= pickRandom(rhythmPool);
@@ -257,10 +244,10 @@ export function generateMelody(
   // 小節ごとの発音イベントを先に決める
   const barEvents: RhythmEvent[][] = [];
   for (let bar = 0; bar < totalBars; bar++) {
-    barEvents.push(parseRhythm(rhythmOf[letterOf(bar)], bar * 16));
+    barEvents.push(parseRhythm(rhythmOf[letterOf(bar)], bar * BAR));
   }
   const events = barEvents.flat();
-  const barOf  = (i: number) => Math.floor(events[i].start / 16);
+  const barOf  = (i: number) => Math.floor(events[i].start / BAR);
 
   // 輪郭：フレーズ形式1回分を1つの形で動く。音域のうちセクションの範囲を使う
   const bandParam   = section === "B" ? param.chorusBand : param.verseBand;
@@ -270,7 +257,7 @@ export function generateMelody(
   const contour     = CONTOURS[pickRandom(shape.contours)];
   const lowMidi     = scaleNotes[0];
   const highMidi    = scaleNotes[scaleNotes.length - 1];
-  const phraseUnits = Math.min(totalUnits, form.length * 16);
+  const phraseUnits = Math.min(totalUnits, form.length * BAR);
   function targetAt(unit: number): number {
     const t = (unit % phraseUnits) / phraseUnits;
     const [lo, hi] = shape.band;
@@ -420,9 +407,9 @@ export function generateMelody(
   if (totalBars >= 2) {
     const halfBar   = Math.max(0, Math.floor(totalBars / 2) - 1);
     const halfIndex = lastIndexInBar(halfBar);
-    if (halfIndex >= 0 && halfIndex !== finalIndex) land(halfIndex, [[7], [2], [3, 4]], true, 4);
+    if (halfIndex >= 0 && halfIndex !== finalIndex) land(halfIndex, [[7], [2], [3, 4]], true, BEAT);
   }
-  land(finalIndex, [[0], [7], [3, 4]], false, 6,
+  land(finalIndex, [[0], [7], [3, 4]], false, Math.round(BEAT * 1.5),
        options.nextNote === undefined ? [midis[0]] : [midis[0], options.nextNote]);
 
   // ===== 外す：1小節に数回、基本の5音以外の音（accent）を使う =====
@@ -490,10 +477,10 @@ export function generateMelody(
     const n = midis.length;
     if (n === 0) return;
     const endOf     = (i: number) => events[i].start + events[i].units;
-    const connected = (i: number) => events[i].start - endOf(i - 1) < 4;
-    const wraps     = totalUnits - endOf(n - 1) + events[0].start < 4;
-    const opensNear = events[0].start < 4;
-    const endsNear  = totalUnits - endOf(n - 1) < 4;
+    const connected = (i: number) => events[i].start - endOf(i - 1) < BEAT;
+    const wraps     = totalUnits - endOf(n - 1) + events[0].start < BEAT;
+    const opensNear = events[0].start < BEAT;
+    const endsNear  = totalUnits - endOf(n - 1) < BEAT;
     const excess    = (a: number, b: number) => Math.max(0, Math.abs(a - b) - JUMP_LIMIT);
     const cost = (m: number[]): number => {
       let c = 0;

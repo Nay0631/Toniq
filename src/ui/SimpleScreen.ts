@@ -12,6 +12,8 @@ import { startPianoRollPlayhead } from "./PianoRollTab";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import { CUSTOM_DRUM_ID } from "../data/types";
 import { bindSpaceToPlay } from "./SpaceKey";
+import { beatsPerBar, unitsPerBeat } from "../engine/Meter";
+import { drumPatternIn } from "../engine/DrumEngine";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -135,10 +137,11 @@ function renderWave(): void {
   const wave = $("s-wave");
   if (!wave || !s.chordPattern || !s.drumPattern) return;
 
-  const beats    = s.bars * 4;
-  const drum     = s.drumPattern;
-  // パターンは16分音符のステップ（オリジナルは複数小節あるので、曲の拍からパターンの位置を決める）
-  const stepsPerBeat = 4;
+  const perBar   = beatsPerBar();  // 拍子（カスタムモードで 3/4 にした曲を開いたとき）
+  const beats    = s.bars * perBar;
+  // パターンは今の拍子のマス（オリジナルは複数小節あるので、曲の拍からパターンの位置を決める）
+  const drum     = drumPatternIn(s.drumPattern);
+  const stepsPerBeat = unitsPerBeat();
   const energies: number[] = [];
   for (let i = 0; i < beats; i++) {
     let e = 0;
@@ -154,7 +157,7 @@ function renderWave(): void {
 
   wave.innerHTML = "";
   for (let i = 0; i < beats; i++) {
-    const bar   = Math.floor(i / 4);
+    const bar   = Math.floor(i / perBar);
     const parts = LAYERS.filter(p => s.parts[p] && isArrangedAt(p, bar)).length;
     const jitter = ((i * 37) % 11) / 55;
     const h = Math.min(1, 0.2 + (parts / LAYERS.length) * (0.45 + 0.45 * energies[i] / maxEnergy) + jitter);

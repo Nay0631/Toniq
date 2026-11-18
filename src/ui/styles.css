@@ -2525,8 +2525,8 @@ button.mixer-value {
     linear-gradient(to right, var(--grid-16) 1px, transparent 1px);
   background-size:
     calc(100% / var(--bars)) 100%,
-    calc(100% / var(--bars) / 4) 100%,
-    calc(100% / var(--bars) / 16) 100%;
+    calc(100% / var(--bars) / var(--beats, 4)) 100%,
+    calc(100% / var(--bars) / var(--steps, 16)) 100%;  /* 拍・マスの数は拍子で変わる（PianoRollTab / DrumRoll が --beats / --steps を入れる） */
 }
 
 .pr-row {

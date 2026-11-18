@@ -3,6 +3,7 @@ import mixPresets from "../data/mix_presets.json";
 import { getState } from "./AppState";
 import { duckGains } from "./VolumeManager";
 import { reverbDuckGain, REVERB_DUCK_WEIGHT } from "./MixerEngine";
+import { beatsPerBar, isTriplet } from "./Meter";
 
 // グルーヴ：スウィング（裏の16分音符を後ろへずらす）とサイドチェイン（キックに合わせて他のパートを沈める）。
 // 量は AppState.swing / sidechain（0〜100。null = ジャンルの標準 mix_presets.json の swing / sidechain）
@@ -41,6 +42,7 @@ export function swingUnitBeats(): number {
 // 拍（曲の頭から）を、Tone.js の Transport の swing と同じ形でずらした位置（MIDI書き出しで使う）。
 // Tone.js は単位の2倍（16n なら8分音符）の中の位置に応じて sin の形でずらし、いちばん大きい所で「単位の2倍 ÷ 3 × 量」ずれる
 export function swungBeats(beats: number): number {
+  if (isTriplet()) return beats;  // 3連符の拍子はマスそのものが跳ねているので、スウィングはかけない
   const swing  = (swingAmount() / 100) * SWING_MAX;
   const period = swingUnitBeats() * 2;
   const pos    = beats % period;
@@ -48,12 +50,20 @@ export function swungBeats(beats: number): number {
   return beats + Math.sin((pos / period) * Math.PI) * swing * (period / 3);
 }
 
-// 現在のコンテキストの Transport に当てる（再生・試聴・WAV書き出しの開始時と、量・単位を変えたとき）。
-// 判定は Transport の16分音符（シャッフルなら8分音符）の裏拍なので、各パートの Part / Sequence のイベントがまとめてずれる
+// 現在のコンテキストの Transport に拍子（1小節の拍の数）を当てる。「1m」「小節:拍:16分」の長さがこれで決まるので、
+// 各パートを読み込む前に呼ぶ（applySwing が呼ぶ）
+export function applyMeter(): void {
+  Tone.getTransport().timeSignature = beatsPerBar();
+}
+
+// 現在のコンテキストの Transport に当てる（再生・試聴・WAV書き出しの開始時と、量・単位を変えたとき）。拍子も一緒に当てる。
+// 判定は Transport の16分音符（シャッフルなら8分音符）の裏拍なので、各パートの Part / Sequence のイベントがまとめてずれる。
+// 3連符の拍子ではかけない（マスそのものが跳ねている）
 export function applySwing(): void {
+  applyMeter();
   const transport = Tone.getTransport();
   transport.swingSubdivision = getState().swingUnit;
-  transport.swing = (swingAmount() / 100) * SWING_MAX;
+  transport.swing = isTriplet() ? 0 : (swingAmount() / 100) * SWING_MAX;
 }
 
 // ===== サイドチェイン =====

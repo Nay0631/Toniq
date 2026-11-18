@@ -6,6 +6,7 @@ import {
 } from "./MelodyGenerator";
 import { defaultSections, isArrangementBypassed, isArrangedAt, LAYERS } from "./LoopArranger";
 import { NOTE_INDEX } from "../data/degree_resolver";
+import { unitsPerBar } from "./Meter";
 
 // 曲の構成：セクション（Aメロ／サビ）・エンディング・ドラムのフィルの位置。
 // 各パートには、コード進行1周ではなく曲全体の並び（songProgression / songMelody）を渡す。
@@ -143,7 +144,8 @@ export function songMelody(): MelodyNote[] {
   const s = getState();
   if (!s.chordPattern || isArrangementBypassed()) return s.melodyNotes;
 
-  const loopUnits = loopBars() * 16;
+  const BAR       = unitsPerBar();  // 1小節のマスの数（拍子で変わる。Meter.ts）
+  const loopUnits = loopBars() * BAR;
   const chorus    = s.chorusMelodyNotes.length > 0 ? s.chorusMelodyNotes : s.melodyNotes;
   let placed: PlacedNote[] = [];
   const sections = getSections();
@@ -156,7 +158,7 @@ export function songMelody(): MelodyNote[] {
 
   const end = endingBar();
   if (end !== null && placed.length > 0) {
-    const endUnit = end * 16;
+    const endUnit = end * BAR;
     placed = placed
       .filter(n => n.start < endUnit)
       .map(n => ({ ...n, units: Math.min(n.units, endUnit - n.start) }));
@@ -164,7 +166,7 @@ export function songMelody(): MelodyNote[] {
     const tonic = ((NOTE_INDEX[s.key] ?? 0) + (shifts[Math.floor(end / loopBars())] ?? 0)) % 12;
     // 直前の音の 6 半音下〜5 半音上の 12 音のうち、主音のもの（ちょうど1つある）
     const midi  = Array.from({ length: 12 }, (_, k) => last - 6 + k).find(m => m % 12 === tonic) ?? last;
-    placed.push({ midi, start: endUnit, units: 16 });
+    placed.push({ midi, start: endUnit, units: BAR });  // 1小節いっぱいに伸ばす
   }
 
   return placed.map(n => ({ note: midiToNote(n.midi), duration: unitsToDuration(n.units), time: unitsToTime(n.start) }));

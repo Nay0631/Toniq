@@ -5,6 +5,7 @@ import { songMetrics, chordDBIssues, melodyParamIssues, QUALITY_RULES, SongMetri
 import { noteToMidi, timeToUnits, MelodyNote } from "./MelodyGenerator";
 import { NOTE_INDEX } from "../data/degree_resolver";
 import easyTable from "../data/easy_mode_table.json";
+import { unitsPerBar } from "./Meter";
 
 // 自動チェックをまとめて測る（npm run quality。tools/quality-report.mjs が Node から呼ぶ）。
 // アプリからは、メロディの評価画面（RatingScreen.ts）が同じ曲を作るのに generateBatchSong だけを使う。
@@ -29,7 +30,8 @@ export interface ComboResult {
   runs:  number;
   pass:  Record<RuleName, { ok: number; judged: number }>;  // 合格の数・判定した数
   avg: {
-    strongFit:  number;  // 強拍のコード構成音の割合（0〜1）
+    strongFit:  number;  // 強拍のコード構成音の割合（0〜1。参考）
+    strongClash: number; // 強拍でコードとぶつかる音の割合（0〜1。合否の基準 QUALITY_RULES.strongFit はこれで決まる）
     stepRatio:  number;  // 順次進行の割合（0〜1）
     maxLeap:    number;  // 最大の跳躍（半音）
     range:      number;  // 音域（半音）
@@ -73,15 +75,16 @@ function hash(text: string): number {
   return h >>> 0;
 }
 
-// 小節ごとのリズム（16ステップ。x = 発音、- = 伸ばす、. = 休符）
+// 小節ごとのリズム（1小節のマスの数ぶん。4/4 なら16ステップ。x = 発音、. = それ以外）
 function barRhythms(notes: MelodyNote[]): string[] {
+  const BAR = unitsPerBar();
   const bars = new Map<number, string[]>();
   for (const n of notes) {
     if (n.note === null) continue;
     const start = timeToUnits(n.time);
-    const bar = Math.floor(start / 16);
-    const steps = bars.get(bar) ?? Array(16).fill(".");
-    steps[start % 16] = "x";
+    const bar = Math.floor(start / BAR);
+    const steps = bars.get(bar) ?? Array(BAR).fill(".");
+    steps[start % BAR] = "x";
     bars.set(bar, steps);
   }
   return [...bars.values()].map(s => s.join(""));
@@ -146,7 +149,7 @@ export function runBatch(options: BatchOptions): BatchResult {
   for (const genre of genres) {
     for (const mood of Object.keys(table[genre])) {
       const pass = Object.fromEntries(RULE_NAMES.map(r => [r, { ok: 0, judged: 0 }])) as ComboResult["pass"];
-      const sum = { strongFit: 0, stepRatio: 0, maxLeap: 0, range: 0, chorusLift: 0, notesPerBar: 0, drops: 0 };
+      const sum = { strongFit: 0, strongClash: 0, stepRatio: 0, maxLeap: 0, range: 0, chorusLift: 0, notesPerBar: 0, drops: 0 };
       let melodyCount = 0, liftCount = 0;
       const chords = new Set<string>(), drums = new Set<string>(), rhythms = new Set<string>(), melodies = new Set<string>();
 
@@ -166,6 +169,7 @@ export function runBatch(options: BatchOptions): BatchResult {
         if (m) {
           melodyCount++;
           sum.strongFit += m.strongTotal === 0 ? 0 : m.strongFit / m.strongTotal;
+          sum.strongClash += m.strongTotal === 0 ? 0 : m.strongClash / m.strongTotal;
           sum.stepRatio += m.stepRatio;
           sum.maxLeap += m.maxLeap;
           sum.range += m.range;
@@ -184,6 +188,7 @@ export function runBatch(options: BatchOptions): BatchResult {
         genre, mood, runs: options.runs, pass,
         avg: {
           strongFit:   per(sum.strongFit, melodyCount),
+          strongClash: per(sum.strongClash, melodyCount),
           stepRatio:   per(sum.stepRatio, melodyCount),
           maxLeap:     per(sum.maxLeap, melodyCount),
           range:       per(sum.range, melodyCount),

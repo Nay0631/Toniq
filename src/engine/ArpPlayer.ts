@@ -6,6 +6,7 @@ import { arrangementGate } from "./LoopArranger";
 import { getState } from "./AppState";
 import arpParams from "../data/arp_params.json";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
+import { barUnits, unitTime, unitsPerBar, unitsPerBeat } from "./Meter";
 
 // ===== ジャンル別のアルペジオ設定（arp_params.json） =====
 type ArpInstrument = "pluck" | "square" | "keys" | "bell" | "blip";
@@ -82,10 +83,8 @@ const PATTERNS: Record<ArpPatternName, (n: number) => number[]> = {
   pedal:  (n) => n < 2 ? [0] : [...Array(n - 1).keys()].flatMap((i) => [0, i + 1]),
 };
 
-const SIXTEENTHS: Record<ArpParam["step"], number> = { "16n": 1, "8n": 2, "4n": 4 };
-
 export interface ArpNote {
-  sixteenth: number;  // ループの頭からの位置（16分音符の数）
+  sixteenth: number;  // ループの頭からの位置（マスの数。4/4・3/4 は16分音符、3連符は8分3連符。Meter.ts）
   note:      string;
   velocity:  number;  // 基準の強さ（再生時は少し揺らす）
 }
@@ -95,7 +94,9 @@ export interface ArpNote {
 export function arpNotes(progression: ChordProgression, key: string, param: ArpParam = arpParam()): ArpNote[] {
   const range  = param.octaves === 2 ? VOICING_RANGES.arpWide : VOICING_RANGES.arp;
   const voiced = voiceProgression(progression, key, range);
-  const stepLen = SIXTEENTHS[param.step] ?? 2;
+  // 刻みで鳴らす小節の中のマス（3連符の拍子では 16分 = 3連符、8分 = シャッフル）
+  const BAR = unitsPerBar(), BEAT = unitsPerBeat();
+  const inBar = barUnits((["16n", "8n", "4n"] as const).includes(param.step) ? param.step : "8n");
   const out: ArpNote[] = [];
 
   progression.progression.forEach((chord, c) => {
@@ -104,12 +105,15 @@ export function arpNotes(progression: ChordProgression, key: string, param: ArpP
       ? [...voiced[c], ...voiced[c].map((n) => midiToNote(noteToMidi(n) + 12))]
       : voiced[c];
     const order = PATTERNS[param.pattern]?.(notes.length) ?? PATTERNS.up(notes.length);
-    const start = (chord.bar - 1) * 16;
+    const start = (chord.bar - 1) * BAR;
 
-    for (let i = 0, six = 0; six < chord.duration_bars * 16; i++, six += stepLen) {
-      // 小節の頭を一番強く、拍の頭を中くらい、裏を弱く
-      const velocity = six % 16 === 0 ? 0.85 : six % 4 === 0 ? 0.7 : 0.55;
-      out.push({ sixteenth: start + six, note: notes[order[i % order.length]], velocity });
+    let i = 0;
+    for (let b = 0; b < chord.duration_bars; b++) {
+      for (const unit of inBar) {
+        // 小節の頭を一番強く、拍の頭を中くらい、裏を弱く
+        const velocity = unit === 0 ? 0.85 : unit % BEAT === 0 ? 0.7 : 0.55;
+        out.push({ sixteenth: start + b * BAR + unit, note: notes[order[i++ % order.length]], velocity });
+      }
     }
   });
   return out;
@@ -149,7 +153,7 @@ export function loadArpPattern(progression: ChordProgression, key: string = "A")
   if (!arpSynth) initArpSynth();
 
   const param  = arpParam();
-  const events = arpNotes(progression, key, param).map((n) => ({ ...n, time: `0:0:${n.sixteenth}` }));
+  const events = arpNotes(progression, key, param).map((n) => ({ ...n, time: unitTime(n.sixteenth) }));
 
   const arranged = arrangementGate("arp");
   arpPart = new Tone.Part((time, event: ArpNote) => {

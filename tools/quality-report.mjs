@@ -15,6 +15,8 @@
 //
 // DB の誤り（コード進行DB・メロディのリズムDB）があれば終了コード 1 で終わる（CI の .github/workflows/test.yml）。
 // 総合点 = 合否のある項目（強拍・フレーズの終わり・跳躍・サビの高さ・セクション・抜き差し）の合格率の平均（0〜100）。
+// 「強拍」の基準は 2026-11-17 に「コード構成音が 75% 以上」から「コードとぶつかる音が 20% 以下」に変えた
+// （それより前に --save した結果と比べると、強拍と総合点は基準の違いのぶん大きく動く）。
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -82,6 +84,7 @@ function summarize(combos, label) {
     score: rates.length === 0 ? 0 : (rates.reduce((a, b) => a + b, 0) / rates.length) * 100,
     pass,
     strongFit:  mean(c => c.avg.strongFit),
+    strongClash: mean(c => c.avg.strongClash ?? 0),
     stepRatio:  mean(c => c.avg.stepRatio),
     maxLeap:    mean(c => c.avg.maxLeap),
     range:      mean(c => c.avg.range),
@@ -111,6 +114,8 @@ const COLUMNS = [
   { head: "",           w: 22, get: r => r.label, left: true },
   { head: "総合点",     w: 6,  get: r => r.score.toFixed(1) },
   ...Object.entries(RULE_LABELS).map(([k, head]) => ({ head, w: Math.max(6, width(head)), get: r => pctText(r.pass[k]) })),
+  { head: "強拍衝突",   w: 8,  get: r => pctText(r.strongClash) },
+  { head: "強拍構成音", w: 10, get: r => pctText(r.strongFit) },
   { head: "順次進行",   w: 8,  get: r => pctText(r.stepRatio) },
   { head: "平均跳躍max", w: 11, get: r => r.maxLeap.toFixed(1) },
   { head: "音域",       w: 5,  get: r => r.range.toFixed(1) },
@@ -176,7 +181,7 @@ if (flag("--json")) {
   const ids = list => list.length ? `（${list.join(", ")}）` : "";
   console.log(`\nコード進行DB：${db.total} 件・変換できない進行 ${db.broken.length} 件${ids(db.broken)}・サビの相方がない進行 ${db.alone.length} 件${ids(db.alone)}・8小節のセクションに長さが合わない進行 ${db.misfit.length} 件${ids(db.misfit)}`);
   console.log(`メロディのリズムDB：書式が違うもの ${result.melodyParams.length} 件${ids(result.melodyParams)}`);
-  console.log("合格率の基準：強拍 = 1・3拍目の頭のコード構成音が 75% 以上／終わり = 各周の最後が主音か構成音（主音が1回以上）／跳躍 = 9 半音以内／サビ高 = サビの平均がAメロより高い／セクション = サビの進行がある／抜き差し = パートが抜ける所がある");
+  console.log("合格率の基準：強拍 = 1・3拍目の頭でコードとぶつかる音（構成音の半音上）が 20% 以下（強拍衝突・強拍構成音は平均の割合。参考）／終わり = 各周の最後が主音か構成音（主音が1回以上）／跳躍 = 9 半音以内／サビ高 = サビの平均がAメロより高い／セクション = サビの進行がある／抜き差し = パートが抜ける所がある");
   console.log("多様さ：進行の種類 = 1 組で使われたコード進行の数（平均）／リズムの種類 = メロディの小節のリズムの数（ジャンル内）／メロ重複なし = 同じ Aメロが出なかった割合");
 }
 

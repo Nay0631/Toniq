@@ -12,6 +12,7 @@ import { SCALE_LABELS, chordSpans, displayNote } from "./format";
 import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import type { ChordProgression } from "../data/types";
 import { buildDrumRoll, initDrumRoll, renderDrumPlayhead, renderDrumRoll } from "./DrumRoll";
+import { beatsPerBar, isTriplet, unitsPerBar, unitsPerBeat } from "../engine/Meter";
 
 // 表示する音域（MIDI ノート番号。C3〜C7）
 const LOW  = 48;
@@ -21,13 +22,22 @@ const ROWS = HIGH - LOW + 1;
 const OCTAVE_MIN = 3;
 const OCTAVE_MAX = 6;
 
-// 入力する音符の長さ（units は16分音符単位）
-const LENGTHS: { value: PianoRollLength; label: string; name: string; units: number }[] = [
+// 入力する音符の長さ（units はマスの数。4/4・3/4 は 1 マス = 16分音符）
+interface LengthDef { value: PianoRollLength; label: string; name: string; units: number }
+const STRAIGHT_LENGTHS: LengthDef[] = [
   { value: "2n",  label: "2分",  name: "2分音符",  units: 8 },
   { value: "4n",  label: "4分",  name: "4分音符",  units: 4 },
   { value: "8n",  label: "8分",  name: "8分音符",  units: 2 },
   { value: "16n", label: "16分", name: "16分音符", units: 1 },
 ];
+// 3連符の拍子（1 マス = 8分3連符。1拍 = 3 マス）では、8分・16分の代わりに3連符の長さを選ぶ（AppState の値は同じものを使い回す）
+const TRIPLET_LENGTHS: LengthDef[] = [
+  { value: "2n",  label: "2分",    name: "2分音符",   units: 6 },
+  { value: "4n",  label: "4分",    name: "4分音符",   units: 3 },
+  { value: "8n",  label: "4分3連", name: "4分3連符",  units: 2 },
+  { value: "16n", label: "8分3連", name: "8分3連符",  units: 1 },
+];
+const lengths = (): LengthDef[] => isTriplet() ? TRIPLET_LENGTHS : STRAIGHT_LENGTHS;
 
 // 鍵盤入力：A〜K の段を白鍵、W E T Y U を黒鍵として、オクターブの C からの半音数に割り当てる
 const KEYMAP: Record<string, number> = {
@@ -37,7 +47,7 @@ const KEYMAP: Record<string, number> = {
 
 const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
 
-// ピアノロール上の音（start / units は16分音符単位。メロディは単音なので start は重ならない）
+// ピアノロール上の音（start / units はマスの数。Meter.ts。メロディは単音なので start は重ならない）
 interface RollNote {
   midi:  number;
   start: number;
@@ -76,16 +86,16 @@ function sectionNotes(): MelodyNote[] {
 // ===== メロディ（AppState.melodyNotes）との変換 =====
 
 function loopUnits(): number {
-  return (getState().chordPattern?.length_bars ?? 4) * 16;
+  return (getState().chordPattern?.length_bars ?? 4) * unitsPerBar();
 }
 
 function lengthUnits(): number {
-  return LENGTHS.find(l => l.value === getState().pianoRollLength)?.units ?? 4;
+  return lengths().find(l => l.value === getState().pianoRollLength)?.units ?? unitsPerBeat();
 }
 
 // 配置・移動の刻み（2分音符を選んでいても4分音符単位で置ける）
 function snapUnits(): number {
-  return Math.min(lengthUnits(), 4);
+  return Math.min(lengthUnits(), unitsPerBeat());
 }
 
 // 休符は持たず、鳴る音だけを扱う。コード進行1周より後ろの音は表示しない
@@ -183,7 +193,7 @@ function buildSkeleton(root: HTMLElement): void {
       </div>
       <span class="pr-sep"></span>
       <div class="pr-seg" role="group" aria-label="入力する音符の長さ" data-term="noteLength">
-        ${LENGTHS.map(l => `<button data-pr-length="${l.value}">${l.label}</button>`).join("")}
+        ${STRAIGHT_LENGTHS.map(l => `<button data-pr-length="${l.value}">${l.label}</button>`).join("")}
       </div>
       <span class="pr-sep"></span>
       <button class="btn btn-small pr-lock" data-pr-lock data-term="scaleLock">${LOCK_ICON}スケールロック</button>
@@ -252,12 +262,17 @@ export function renderPianoRoll(): void {
   if (cursor >= total) cursor = 0;
   if (selected !== null && !notes.some(n => n.start === selected)) selected = null;
 
+  const BAR = unitsPerBar();
   root.style.setProperty("--bars", String(bars));
+  root.style.setProperty("--beats", String(beatsPerBar()));
+  root.style.setProperty("--steps", String(BAR));
   root.classList.toggle("is-locked", s.pianoRollScaleLock);
 
-  // ツールバー
-  root.querySelectorAll<HTMLElement>("[data-pr-length]").forEach(btn =>
-    btn.classList.toggle("is-active", btn.dataset.prLength === s.pianoRollLength));
+  // ツールバー（音符の長さのボタンの名前は拍子で変わる：3連符の拍子では 4分3連・8分3連）
+  root.querySelectorAll<HTMLElement>("[data-pr-length]").forEach(btn => {
+    btn.classList.toggle("is-active", btn.dataset.prLength === s.pianoRollLength);
+    btn.textContent = lengths().find(l => l.value === btn.dataset.prLength)?.label ?? btn.textContent;
+  });
   root.querySelectorAll<HTMLElement>("[data-pr-section]").forEach(btn =>
     btn.classList.toggle("is-active", btn.dataset.prSection === section));
   const lock = q(root, "[data-pr-lock]");
@@ -276,9 +291,9 @@ export function renderPianoRoll(): void {
   }
   q(root, ".pr-ticks").innerHTML =
     Array.from({ length: bars }, (_, bar) =>
-      `<span class="pr-bar-no" style="left:${pct(bar * 16)}">${bar + 1}</span>`).join("") +
+      `<span class="pr-bar-no" style="left:${pct(bar * BAR)}">${bar + 1}</span>`).join("") +
     chords.map(c =>
-      `<span class="pr-chord" style="left:${pct(c.bar * 16)};width:${pct(c.bars * 16)}">${c.name}</span>`).join("") +
+      `<span class="pr-chord" style="left:${pct(c.bar * BAR)};width:${pct(c.bars * BAR)}">${c.name}</span>`).join("") +
     `<span class="pr-cursor-marker" style="left:${pct(cursor)}"></span>`;
 
   // 鍵盤と行
@@ -309,7 +324,7 @@ export function renderPianoRoll(): void {
      <div class="pr-playhead" hidden></div>`;
 
   // ステータスバー
-  const length = LENGTHS.find(l => l.value === s.pianoRollLength);
+  const length = lengths().find(l => l.value === s.pianoRollLength);
   q(root, "[data-pr-status-lock]").innerHTML = `${LOCK_ICON}スケールロック${s.pianoRollScaleLock ? "有効" : "無効"}`;
   q(root, "[data-pr-status-key]").textContent    = `${s.key}${SCALE_LABELS[scaleName()] ?? ""}`;
   q(root, "[data-pr-status-length]").textContent = length?.name ?? "";

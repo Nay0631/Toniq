@@ -1,14 +1,15 @@
 import { getState, setState } from "../engine/AppState";
 import {
   CUSTOM_DRUM_BARS, DRUM_ROLL_TRACKS, DRUM_TRACK_LABELS,
-  customDrumPattern, drumPatternBars, isCustomDrum, previewDrumHit, withDrumHit,
+  customDrumPattern, drumPatternBars, drumPatternIn, isCustomDrum, previewDrumHit, withDrumHit,
 } from "../engine/DrumEngine";
 import * as Playback from "../engine/Playback";
 import type { DrumPattern } from "../data/types";
 import drumDB from "../data/drum_patterns.json";
 import { render } from "./Router";
+import { METER_LABELS, beatsPerBar, currentMeter, unitsPerBar } from "../engine/Meter";
 
-// ピアノロールのドラム：行 = ドラムのトラック（キック・スネアなど）、列 = 16分音符のマス。
+// ピアノロールのドラム：行 = ドラムのトラック（キック・スネアなど）、列 = 1マス（4/4・3/4 は16分音符、3連符の拍子は8分3連符）。
 // 編集すると AppState.drumPattern がオリジナルのパターン（id = CUSTOM_DRUM_ID）になり、曲と一緒に保存される
 
 const DRUM_PATTERNS = drumDB as unknown as DrumPattern[];
@@ -78,9 +79,13 @@ export function buildDrumRoll(pane: HTMLElement, target: string): void {
 export function renderDrumRoll(pane: HTMLElement): void {
   const s = getState();
   if (!s.drumPattern || paint) return;
-  const pattern = s.drumPattern;
-  const bars = drumPatternBars(pattern);
+  // DB のパターン（4/4 の 16 ステップ）も、今の拍子で鳴らすときのマスに直して見せる
+  const pattern = drumPatternIn(s.drumPattern);
+  const bars  = drumPatternBars(pattern);
+  const beats = beatsPerBar();
   pane.style.setProperty("--bars", String(bars));
+  pane.style.setProperty("--beats", String(beats));
+  pane.style.setProperty("--steps", String(unitsPerBar()));
 
   // ツールバー
   pane.querySelectorAll<HTMLElement>("[data-dr-bars]").forEach(btn =>
@@ -90,11 +95,11 @@ export function renderDrumRoll(pane: HTMLElement): void {
   renderLoadSelect(q<HTMLSelectElement>(pane, "[data-dr-load]"));
 
   // 目盛り：小節番号と拍
-  q(pane, ".dr-ticks").innerHTML = Array.from({ length: bars * 4 }, (_, beat) => {
-    const left = `${(beat / (bars * 4)) * 100}%`;
-    return beat % 4 === 0
-      ? `<span class="pr-bar-no" style="left:${left}">${beat / 4 + 1}</span>`
-      : `<span class="dr-beat-no" style="left:${left}">${Math.floor(beat / 4) + 1}.${(beat % 4) + 1}</span>`;
+  q(pane, ".dr-ticks").innerHTML = Array.from({ length: bars * beats }, (_, beat) => {
+    const left = `${(beat / (bars * beats)) * 100}%`;
+    return beat % beats === 0
+      ? `<span class="pr-bar-no" style="left:${left}">${beat / beats + 1}</span>`
+      : `<span class="dr-beat-no" style="left:${left}">${Math.floor(beat / beats) + 1}.${(beat % beats) + 1}</span>`;
   }).join("");
 
   // 行の見出し（クリックで試聴）
@@ -106,7 +111,8 @@ export function renderDrumRoll(pane: HTMLElement): void {
   // ステータスバー
   q(pane, "[data-dr-status-pattern]").textContent = isCustomDrum(pattern)
     ? `ドラム：オリジナル${pattern.notes ? `（${pattern.notes}）` : ""}`
-    : `ドラム：${patternLabel(pattern)}（編集するとオリジナルのパターンになります）`;
+    : `ドラム：${patternLabel(pattern)}（編集するとオリジナルのパターンになります）${
+        currentMeter() === "4/4" ? "" : `・${METER_LABELS[currentMeter()]} に合わせて直して鳴らしています`}`;
   const overridden = s.arrangeEdits.some(e => e.part === "drum" && e.drum);
   q(pane, "[data-dr-status-note]").textContent = overridden
     ? "アレンジャーで別のパターンを選んだセクションでは、そちらが鳴ります"
@@ -124,6 +130,7 @@ export function renderDrumRoll(pane: HTMLElement): void {
 
 function renderGrid(pane: HTMLElement, pattern: DrumPattern): void {
   const steps = pattern.steps;
+  const BAR   = unitsPerBar(pattern.meter ?? "4/4");
   const pct = (n: number) => `${(n / steps) * 100}%`;
   const hits: string[] = [];
   DRUM_ROLL_TRACKS.forEach((name, row) => {
@@ -133,7 +140,7 @@ function renderGrid(pane: HTMLElement, pattern: DrumPattern): void {
       if (!track.pattern[i]) continue;
       const v = track.velocity?.[i] ?? 1;
       hits.push(`<div class="dr-hit" style="left:${pct(i)};width:${pct(1)};top:calc(${row} * var(--row-h));--vel:${v}"
-                      title="${DRUM_TRACK_LABELS[name]}（${Math.floor(i / 16) + 1}小節 ${i % 16 + 1}マス目・強さ ${Math.round(v * 100)}）"></div>`);
+                      title="${DRUM_TRACK_LABELS[name]}（${Math.floor(i / BAR) + 1}小節 ${i % BAR + 1}マス目・強さ ${Math.round(v * 100)}）"></div>`);
     }
   });
   q(pane, ".dr-grid").innerHTML =
@@ -175,11 +182,11 @@ function commit(pattern: DrumPattern): void {
   render();
 }
 
-// 編集するパターン（DB のパターンなら、同じ長さのオリジナルにしてから編集する）
+// 編集するパターン（DB のパターン・別の拍子で作ったオリジナルなら、同じ長さで今の拍子のマスのオリジナルにしてから編集する）
 function editable(): DrumPattern | null {
   const p = getState().drumPattern;
   if (!p) return null;
-  return isCustomDrum(p) ? p : customDrumPattern(p, drumPatternBars(p));
+  return isCustomDrum(p) && (p.meter ?? "4/4") === currentMeter() ? p : customDrumPattern(p, drumPatternBars(p));
 }
 
 // ドラッグ中の塗り（add = 置く、erase = 消す）。離したときにまとめて1回だけ setState する（元に戻すも1回で戻る）

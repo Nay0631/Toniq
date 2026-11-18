@@ -282,7 +282,7 @@
         <div class="info">
           <span class="info-item"><span data-term="bpm">BPM</span> <b id="c-info-bpm"></b></span>
           <span class="info-item"><span data-term="key">キー</span> <b id="c-info-key"></b></span>
-          <span class="info-item"><span data-term="meter">拍子</span> <b>4/4</b></span>
+          <span class="info-item"><span data-term="meter">拍子</span> <b id="c-info-meter">4/4</b></span>
           <span class="info-item"><span data-term="bar">小節</span> <b id="c-info-bars"></b></span>
           <span class="info-item" id="c-info-loop" data-term="loop"></span>
         </div>
@@ -353,10 +353,11 @@
             <div class="panel-more-body">
 
             <label class="form-row">
-              <span class="form-label" data-term="meter">拍子</span>
+              <span class="form-label" data-term="meter" data-std="meter">拍子</span>
               <select class="select" id="c-meter">
-                <option value="4/4">4/4</option>
-                <option value="3/4" disabled>3/4（準備中）</option>
+                <option value="4/4" data-term="meter.4/4">4/4</option>
+                <option value="3/4" data-term="meter.3/4">3/4</option>
+                <option value="4/4t" data-term="meter.4/4t">4/4（3連符）</option>
               </select>
             </label>
 
@@ -932,6 +933,7 @@
               <li>ノブ・フェーダーはマウスホイールでも少しずつ動きます。</li>
               <li>クリックして選んだあと、矢印キーで1目盛り、<kbd>PageUp</kbd> / <kbd>PageDown</kbd> で大きく、<kbd>Home</kbd> / <kbd>End</kbd> で最小・最大にできます。</li>
               <li>グルーヴ（スウィング・サイドチェイン）の「標準」は、ジャンルに合った量に戻します。</li>
+              <li>カスタムモードの「もっと調整」の<b>拍子</b>で 3/4（ワルツ）と 4/4 の3連符（1拍を3つに分ける跳ねたノリ）を選べます。変えると、入力したメロディと作ったドラムは拍の位置を保って置き直され（3/4 では4拍目の音がなくなります）、自動生成のメロディは作り直されます。3連符の拍子ではスウィングは効きません。</li>
               <li>ミキサーのフェーダーは <b>75 が元の大きさ（0dB）</b>で、それより上げると元より大きくなります（100 で +5dB）。</li>
               <li>ミキサーのフェーダーの上の小さいノブは<b>パン</b>（音を左右のどこから鳴らすか。C = 中央、L = 左、R = 右）です。<b>ダブルクリック</b>で中央に戻ります。</li>
               <li>ミキサーの右端の「マスター」は曲全体の大きさです。下の数字は再生を始めてからいちばん大きかった瞬間（ピーク）で、音が割れるほど大きくなると <b>CLIP</b> が赤く点いたまま残ります。点いたらフェーダーを少し下げてください。CLIP か数字をクリックすると消えます。</li>

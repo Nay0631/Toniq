@@ -20,6 +20,8 @@ import { setTestFeature, type TestFeature } from "./Preferences";
 import { setGrowSound } from "../engine/Grow";
 import { isCustomDrum } from "../engine/DrumEngine";
 import { bindSpaceToPlay } from "./SpaceKey";
+import { METERS, type Meter } from "../engine/Meter";
+import { setMeter } from "./CustomState";
 import {
   KEYS, SCALES, DRUM_CATEGORIES, chords, drums, makeMelody, hasAutoMelody, setChordPattern, setChorusPattern,
   GROOVE, setGroove, playFromBar, setBpm, chordCandidates, drumCandidates,
@@ -108,6 +110,14 @@ export function initCustomScreen(): void {
       render();
     });
   }
+
+  // 拍子（4/4・3/4・4/4 の3連符）。各パートの並びが変わるので再生し直す
+  $select("c-meter").addEventListener("change", async e => {
+    const value = (e.target as HTMLSelectElement).value as Meter;
+    setMeter(METERS.includes(value) ? value : "4/4");
+    renderAll();
+    await restartIfPlaying();
+  });
 
   // 跳ねる単位（16分／8分のシャッフル）。Transport に当て直すだけなので再生中もすぐ反映される
   $select("c-swing-unit").addEventListener("change", e => {

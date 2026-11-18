@@ -7,7 +7,8 @@ import { initMelodySynth }                          from "./engine/MelodyPlayer"
 import { initFxSynth }                              from "./engine/FxPlayer";
 import { setState }                                 from "./engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./engine/SimpleModeResolver";
-import { initRouter } from "./ui/Router";
+import { onPlaybackError }                          from "./engine/Playback";
+import { initRouter, render as renderAll } from "./ui/Router";
 import { initSimpleScreen } from "./ui/SimpleScreen";
 import { initCustomScreen } from "./ui/CustomScreen";
 import { initPianoRoll } from "./ui/PianoRollTab";
@@ -58,4 +59,11 @@ window.addEventListener("load", () => {
   initSettingsScreen();
   initRatingScreen();
   initRouter();
+
+  // 再生を始められなかったとき（読み込んだ曲ファイルの内容が壊れているなど）は、無反応にせず知らせて画面を戻す
+  onPlaybackError(error => {
+    renderAll();
+    alert("この曲を再生できませんでした。曲の内容（コード進行・キーなど）が正しくない可能性があります。\n"
+        + `（${error instanceof Error ? error.message : String(error)}）`);
+  });
 });

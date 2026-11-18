@@ -2,6 +2,7 @@ import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import type { LayerName } from "./LayerManager";
 import type { DrumSource } from "./SynthFactory";
+import type { Meter } from "./Meter";
 
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings" | "rating";
@@ -132,6 +133,8 @@ export interface AppState {
   bpm:    number;
   tempoPreset: "ゆっくり" | "普通" | "速い" | "custom";
   bars:   number;  // 曲全体の最大の長さ（小節）
+  // 拍子（4/4・3/4・4/4 の3連符。1小節のマスの数え方は Meter.ts。カスタムモードの「もっと調整」で選ぶ）
+  meter:  Meter;
 
   // 選択中のパターン
   chordPattern:  ChordProgression | null;
@@ -255,6 +258,7 @@ export const defaultState: AppState = {
   bpm:         128,
   tempoPreset: "普通",
   bars:        32,
+  meter:       "4/4",
 
   chordPattern: null,
   drumPattern:  null,
@@ -347,7 +351,7 @@ export const defaultState: AppState = {
 // 曲として保存する AppState の項目（画面・タブ・ピアノロールの入力設定などの表示上の状態は含めない）。
 // ミュージックリスト（SongLibrary.ts）・曲ファイル・元に戻す／やり直す（History.ts）で使う
 export const SONG_FIELDS = [
-  "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
+  "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars", "meter",
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
   "modulation", "modulationScope",
   "melodyMethod", "melodyVersion",

@@ -20,6 +20,7 @@ import {
   CHORD_PRESET_CHOICES, growPresetIds, growPresetNames, isGrowLoaded, standardGrowPreset,
 } from "../engine/Grow";
 import { BAR_OPTIONS, GROOVE, chordCandidates, drumCandidates, playFromBar } from "./CustomState";
+import { METER_LABELS, currentMeter } from "../engine/Meter";
 
 // カスタムモード画面の表示（設定タブ・情報バー。アレンジャー・ミキサーはそれぞれのモジュールを呼ぶ）。
 // 状態の更新は CustomState.ts、イベントの登録は CustomScreen.ts
@@ -115,6 +116,8 @@ export function render(): void {
     $(`${g.id}-auto`)!.classList.toggle("is-active", s[g.key] === null);
   }
   $select("c-swing-unit").value = s.swingUnit;
+  $select("c-meter").value = currentMeter();
+  $("c-info-meter")!.textContent = METER_LABELS[currentMeter()];
   syncControls();
   $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   const metronomeOn = isMetronomeOn();

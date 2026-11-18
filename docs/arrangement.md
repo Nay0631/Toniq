@@ -42,6 +42,8 @@
 ## 再生
 
 - 再生時は ON のパートを先頭ですべて読み込み、各パートの Part / Sequence のコールバック先頭で `arrangementGate(part)` を呼んで、ブロックの外の小節では鳴らさない。新しいパートを足すときも同じ形にする。判定は再生中も AppState を見るので、アレンジの編集は再生し直さなくてもすぐ反映される。試聴（`Playback.preview`）は判定を外す。
+- 再生の開始（`play` / `preview` / `playSample`）は音源の準備を待つ間にほかの再生・停止が入ったら取りやめる（`startToken`）。読み込みで例外が出たら止めて `onPlaybackError` で知らせる。
+- 拍子（`AppState.meter`）を変えると各パートの並びが変わるので再生し直す。小節の判定は `barAt()`（1小節の拍の数は拍子で変わる。CLAUDE.md の「拍子」）。
 - `Playback.play()` は開始時点の AppState で各パートを読み込むので、再生中に曲の内容（コード進行・ドラム・メロディ・キーなど）を変えたら先頭から再生し直す（アレンジの編集だけは再生し直さなくてよい）。
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートの行をクリックすると ON になる。
 - ループ再生（`AppState.loopPlayback`、設定画面、`toniq.loop`）：ON なら `Playback.play()` が自動停止の代わりに Transport を曲全体（先頭〜`AppState.bars` 小節）でループさせる（`applyLoopPlayback`。再生中に切り替えてもすぐ反映）。周回の表示は発音時刻の小節から求めるので、先頭へ戻ると1周目から数え直す。試聴・サンプル・WAV書き出しはループしない。

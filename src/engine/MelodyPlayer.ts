@@ -5,6 +5,7 @@ import { arrangementGate } from "./LoopArranger";
 import { getState, MelodyInstrument } from "./AppState";
 import melodyParams from "../data/melody_params.json";
 import { GrowInstrument, growValues, isGrowReady, prepareGrowContext } from "./Grow";
+import { beatsPerBar } from "./Meter";
 
 
 let melodyPart:  Tone.Part | null = null;
@@ -182,7 +183,7 @@ export function initMelodySynth() {
 function velocityAt(time: string): number {
   const ticks = Tone.Time(time).toTicks();
   const ppq   = Tone.getTransport().PPQ;
-  if (ticks % (ppq * 4) === 0) return 0.95;
+  if (ticks % (ppq * beatsPerBar()) === 0) return 0.95;
   if (ticks % ppq === 0)       return 0.85;
   return 0.72;
 }

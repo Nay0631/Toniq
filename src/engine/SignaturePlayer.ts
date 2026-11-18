@@ -5,6 +5,7 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState } from "./AppState";
 import { GrowInstrument, growValues, isGrowReady, findGrowPreset, growPresetValues } from "./Grow";
+import { barTime, fitPattern, gridSteps, unitsPerBar } from "./Meter";
 
 // シグネチャー：ジャンルの特徴を出す追加パート（パッド・アルペジオと同じく任意で ON/OFF）
 // 鳴り方はジャンルごとに SIGNATURES で定義する。音色・鳴り方は Synth を作り直したとき（再生開始時）に反映される。
@@ -42,7 +43,9 @@ function growTrigger(grow: GrowInstrument, e: SignatureEvent, time: number): voi
   (e.notes ?? [NOISE_NOTE]).forEach(note => grow.triggerAttackRelease(note, e.dur ?? "16n", time, velocity));
 }
 
-const t = (bar: number, step: number) => `${bar}:${Math.floor(step / 4)}:${step % 4}`;
+// 小節 bar のマス unit（今の拍子のマス。Meter.ts）の時刻
+const t = (bar: number, unit: number) => barTime(bar, unit);
+// 各定義の鳴らす位置は 4/4 の 16 ステップで書いてあるので、gridSteps（位置の並び）・fitPattern（文字のパターン）で今の拍子のマスに直す
 
 // 音名のオクターブをずらす（"C#4" → "C#5"）
 function shiftOctave(note: string, by: number): string {
@@ -71,7 +74,7 @@ const edmStab: SignatureDef = {
   events: (notes, bar, bars) => {
     const ev: SignatureEvent[] = [];
     for (let b = 0; b < bars; b++) {
-      for (const step of [2, 6, 10, 14]) ev.push({ time: t(bar + b, step), notes, dur: "16n" });
+      for (const step of gridSteps([2, 6, 10, 14])) ev.push({ time: t(bar + b, step), notes, dur: "16n" });
     }
     return ev;
   },
@@ -105,7 +108,7 @@ const technoAcid: SignatureDef = {
     const fifth = shiftOctave(notes[Math.min(2, notes.length - 1)], -1);
     const ev: SignatureEvent[] = [];
     for (let b = 0; b < bars; b++) {
-      const pattern = ACID_PATTERNS[(bar + b) % ACID_PATTERNS.length];
+      const pattern = fitPattern(ACID_PATTERNS[(bar + b) % ACID_PATTERNS.length]);
       [...pattern].forEach((c, step) => {
         if (c === ".") return;
         const note = c.toUpperCase() === "O" ? shiftOctave(root, 1) : c.toUpperCase() === "F" ? fifth : root;
@@ -134,7 +137,7 @@ const chipArp: SignatureDef = {
     const tones = [...notes, shiftOctave(notes[0], 1)].map(n => shiftOctave(n, 1));
     const ev: SignatureEvent[] = [];
     for (let b = 0; b < bars; b++) {
-      // 1拍目と3拍目から1拍ずつ、32分音符で構成音を回す
+      // 1拍目と3拍目から1拍ずつ、32分音符で構成音を回す（拍で数えるので 3/4 でもそのまま）
       for (const beat of [0, 2]) {
         for (let i = 0; i < 8; i++) {
           const sixteenth = Math.floor(i / 2);
@@ -201,7 +204,7 @@ const vinylNoise: SignatureDef = {
     const ev: SignatureEvent[] = [];
     for (let b = 0; b < bars; b++) {
       ev.push({ time: t(bar + b, 0), dur: "1m" });
-      for (let step = 0; step < 16; step++) ev.push({ time: t(bar + b, step) });
+      for (let step = 0; step < unitsPerBar(); step++) ev.push({ time: t(bar + b, step) });
     }
     return ev;
   },
@@ -228,7 +231,7 @@ const gameBrass: SignatureDef = {
     const high = [...notes].reverse().map(n => shiftOctave(n, 1));
     const ev: SignatureEvent[] = [];
     for (let b = 0; b < bars; b++) {
-      [0, 6, 12].forEach((step, i) =>
+      gridSteps([0, 6, 12]).forEach((step, i) =>
         ev.push({ time: t(bar + b, step), notes: [high[i % high.length]], dur: "4n" }));
     }
     return ev;
@@ -257,7 +260,7 @@ const housePiano: SignatureDef = {
   events: (notes, bar, bars) => {
     const ev: SignatureEvent[] = [];
     for (let b = 0; b < bars; b++) {
-      for (const step of [0, 3, 6, 10, 12]) ev.push({ time: t(bar + b, step), notes, dur: "16n" });
+      for (const step of gridSteps([0, 3, 6, 10, 12])) ev.push({ time: t(bar + b, step), notes, dur: "16n" });
     }
     return ev;
   },
@@ -285,7 +288,7 @@ const tranceGate: SignatureDef = {
     const chord = [...notes, shiftOctave(notes[0], 1)];
     const ev: SignatureEvent[] = [];
     for (let b = 0; b < bars; b++) {
-      const pattern = GATE_PATTERNS[(bar + b) % GATE_PATTERNS.length];
+      const pattern = fitPattern(GATE_PATTERNS[(bar + b) % GATE_PATTERNS.length]);
       [...pattern].forEach((c, step) => {
         if (c === "x") ev.push({ time: t(bar + b, step), notes: chord, dur: "32n" });
       });
