@@ -22,7 +22,7 @@ import { previewGrowSound } from "../engine/GrowPreview";
 import { isCustomDrum } from "../engine/DrumEngine";
 import { bindSpaceToPlay } from "./SpaceKey";
 import { METERS, type Meter } from "../engine/Meter";
-import { setMeter } from "./CustomState";
+import { followGenreMeter, setMeter } from "./CustomState";
 import {
   KEYS, SCALES, DRUM_CATEGORIES, chords, drums, makeMelody, hasAutoMelody, setChordPattern, setChorusPattern,
   GROOVE, setGroove, playFromBar, setBpm, chordCandidates, drumCandidates,
@@ -154,7 +154,9 @@ export function initCustomScreen(): void {
     const bpm = s.tempoPreset === "custom" ? s.bpm : resolveTempoPreset(genre, s.tempoPreset);
     const drumCategory = DRUM_CATEGORIES.includes(genre) ? genre : s.drumCategory;
     setState({ genre, bpm, drumCategory });
-    render();
+    // 拍子がジャンルの標準のままなら、新しいジャンルの標準に合わせる（ワルツ = 3/4、6/8バラード = 3連符）
+    if (followGenreMeter(s.genre, genre)) renderAll();
+    else render();
     // ミックスとアレンジがジャンルで変わるので再生し直す
     await restartIfPlaying();
   });

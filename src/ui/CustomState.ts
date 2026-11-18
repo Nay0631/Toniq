@@ -7,7 +7,7 @@ import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
 import { SCALE_LABELS } from "./format";
-import { Meter, convertNotes, currentMeter } from "../engine/Meter";
+import { Meter, convertNotes, currentMeter, genreMeter } from "../engine/Meter";
 import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
 
 // カスタムモード画面の状態の更新（DOM は触らない）と、選択肢の元になるデータ。
@@ -15,7 +15,7 @@ import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
 
 export const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 export const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
-export const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント"];
+export const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント", "ワルツ", "6/8バラード"];
 
 export const chords = chordDB as unknown as ChordProgression[];
 export const drums  = drumDB  as unknown as DrumPattern[];
@@ -66,12 +66,13 @@ export function setChordPattern(next: ChordProgression): void {
 
 // 拍子を変える。メロディとオリジナルのドラムは小節と拍の位置を保って新しい拍子のマスに置き直し（Meter.ts の convertNotes・
 // DrumEngine.ts の drumPatternIn。3/4 にない4拍目の音は落ちる）、自動生成のメロディは新しい拍子で作り直す。
-// DB のパターン（コード進行・ドラム・ベースなど）は鳴らすときに拍子に合わせて直すので、そのまま
-export function setMeter(next: Meter): void {
+// DB のパターン（コード進行・ドラム・ベースなど）は鳴らすときに拍子に合わせて直すので、そのまま。
+// remake = false なら自動生成のメロディも置き直すだけにする（呼び出し側がすぐ作り直すとき。シンプルモードの生成）
+export function setMeter(next: Meter, remake = true): void {
   const s = getState();
   const from = currentMeter();
   if (next === from) return;
-  const regenerate = hasAutoMelody();
+  const regenerate = remake && hasAutoMelody();
   setState({
     meter: next,
     melodyNotes:       convertNotes(s.melodyNotes, from, next),
@@ -82,6 +83,15 @@ export function setMeter(next: Meter): void {
     setState({ melodyVersion: s.melodyVersion + 1 });
     makeMelody();
   }
+}
+
+// ジャンルを選び直したときの拍子：今の拍子が前のジャンルの標準のままなら、新しいジャンルの標準の拍子にする
+// （ワルツ → EDM なら 3/4 → 4/4。自分で選び直した拍子は残す）。変えたら true
+export function followGenreMeter(prevGenre: string, genre: string): boolean {
+  const next = genreMeter(genre);
+  if (currentMeter() !== genreMeter(prevGenre) || currentMeter() === next) return false;
+  setMeter(next);
+  return true;
 }
 
 // サビの進行を変える。メロディがあればサビのメロディだけ作り直す（Aメロのメロディはそのまま）

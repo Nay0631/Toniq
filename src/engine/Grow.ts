@@ -39,6 +39,7 @@ const ARP_STANDARD: Record<string, string[]> = {
 // アルペジオの標準をジャンルで上書きする（instrument の音色がメロディなどと重なるジャンル）
 const ARP_GENRE_STANDARD: Record<string, string[]> = {
   "ローファイ": ["lofi_keys", "keys"],   // キーズはメロディの標準なので、こもったローファイキーズ
+  "ワルツ":     ["music_box", "kalimba"],  // オルゴールのアルペジオ
 };
 const SIGNATURE_STANDARD: Record<string, string[]> = {
   "EDM":       ["stab", "supersaw"],
@@ -49,6 +50,8 @@ const SIGNATURE_STANDARD: Record<string, string[]> = {
   "ハウス":     ["epiano", "keys"],      // ピアノスタブ（オルガンはコードの標準なので使わない）
   "トランス":   ["gate_saw", "supersaw"],
   "アンビエント": ["wind", "noise_sweep"],
+  "ワルツ":     ["pluck", "keys"],       // 後打ちの和音（弦をはじいたような短い音）
+  "6/8バラード": ["epiano", "keys"],     // 3連符で刻むピアノ（メロディはキーズなので、エレピ）
 };
 // メロディはジャンルの雰囲気に合うリード（コード・シグネチャーの標準と重ならないもの）。どれもなければシンセリード
 const MELODY_STANDARD: Record<string, string[]> = {
@@ -60,6 +63,8 @@ const MELODY_STANDARD: Record<string, string[]> = {
   "ハウス":     ["pluck", "lead"],
   "トランス":   ["trance_lead", "lead"],
   "アンビエント": ["soft_pad", "lead"],
+  "ワルツ":     ["flute", "lead"],
+  "6/8バラード": ["keys", "lead"],
 };
 // パッドはジャンルに合わせる（コードの標準と重ならないもの）。どれもなければソフトパッド
 const PAD_STANDARD: Record<string, string[]> = {
@@ -71,6 +76,8 @@ const PAD_STANDARD: Record<string, string[]> = {
   "ハウス":     ["soft_pad"],
   "トランス":   ["wide_pad", "soft_pad"],
   "アンビエント": ["wide_pad", "soft_pad"],  // メロディがソフトパッドなので、ワイドパッド
+  "ワルツ":     ["warm_pad", "soft_pad"],
+  "6/8バラード": ["warm_pad", "soft_pad"],
 };
 // コードはジャンルに合った和音の音（パッドのパートのパッド系の音と重ならないもの）。どれもなければワイドパッド
 const CHORD_STANDARD: Record<string, string[]> = {
@@ -82,6 +89,8 @@ const CHORD_STANDARD: Record<string, string[]> = {
   "ハウス":     ["organ", "wide_pad"],
   "トランス":   ["supersaw", "wide_pad"],
   "アンビエント": ["strings", "wide_pad"],
+  "ワルツ":     ["strings", "wide_pad"],
+  "6/8バラード": ["strings", "wide_pad"],
 };
 // プリセットのカテゴリ（コアの GrowPresets.h の PresetCategory の ID）
 export type GrowCategory = "init" | "lead" | "chord" | "pad" | "bass" | "pluck" | "texture" | "fx" | "drum" | "perc";
@@ -130,6 +139,8 @@ const BASS_STANDARD: Record<string, string[]> = {
   "ハウス":     ["square_bass", "sub_bass"],
   "トランス":   ["rolling_bass", "sub_bass"],
   "アンビエント": ["soft_bass", "sub_bass"],
+  "ワルツ":     ["sub_bass"],
+  "6/8バラード": ["soft_bass", "sub_bass"],
 };
 // カウンターメロディ（ハモり・合いの手）はメロディと聞き分けられる、粒の立った音（ほかのパートの標準と重ならないもの）。
 // どれもなければシンセリード
@@ -142,6 +153,8 @@ const COUNTER_STANDARD: Record<string, string[]> = {
   "ハウス":     ["house_pluck", "bell"],   // プラックはメロディの標準なので、柔らかいハウスプラック
   "トランス":   ["keys", "bell"],
   "アンビエント": ["keys", "lead"],
+  "ワルツ":     ["marimba", "bell"],
+  "6/8バラード": ["flute", "pluck"],
 };
 // どのパートもジャンルの標準を持つ（プリセットの null = ジャンルの標準）
 const GROW_STANDARD: Record<GrowPart, (genre: string) => string[]> = {

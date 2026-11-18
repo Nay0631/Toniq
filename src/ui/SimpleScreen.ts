@@ -12,7 +12,8 @@ import { startPianoRollPlayhead } from "./PianoRollTab";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import { CUSTOM_DRUM_ID } from "../data/types";
 import { bindSpaceToPlay } from "./SpaceKey";
-import { beatsPerBar, unitsPerBeat } from "../engine/Meter";
+import { beatsPerBar, genreMeter, unitsPerBeat } from "../engine/Meter";
+import { setMeter } from "./CustomState";
 import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
 
 const $ = (id: string) => document.getElementById(id);
@@ -32,16 +33,18 @@ const GENRE_DESCRIPTIONS: Record<string, string> = {
   "ハウス":       "{fourOnFloor:4つ打ち}の{kick:キック}とピアノが気持ちよい、明るいダンス音楽",
   "トランス":     "うねる{synth:シンセ}が盛り上がっていく、高揚感のある疾走系ダンス音楽",
   "アンビエント": "{rhythm:リズム}が控えめで、空間に広がるような癒やしの音",
+  "ワルツ":       "{waltz:3拍子}の「ズン・チャッ・チャッ」で踊る、弦とオルゴールの優雅な舞踏会の曲",
+  "6/8バラード":  "ピアノが{triplet:3連符}で和音を刻む、ゆったり歌い上げるバラード",
 };
 
 // 雰囲気ごとに選べるジャンル（シンプルモードのジャンルのチップをこの順で絞り込む）。
 // ジャンルを足すときは、どれか1つ以上の雰囲気に入れる
 const MOOD_GENRES: Record<string, string[]> = {
-  "明るい":     ["EDM", "8bit", "ゲームBGM", "ハウス", "トランス"],
-  "暗い":       ["EDM", "8bit", "テクノ", "トランス", "アンビエント"],
-  "切ない":     ["EDM", "ローファイ", "ゲームBGM", "トランス", "アンビエント"],
-  "激しい":     ["EDM", "8bit", "テクノ", "トランス"],
-  "落ち着いた": ["ローファイ", "ゲームBGM", "ハウス", "アンビエント"],
+  "明るい":     ["EDM", "8bit", "ゲームBGM", "ハウス", "トランス", "ワルツ", "6/8バラード"],
+  "暗い":       ["EDM", "8bit", "テクノ", "トランス", "アンビエント", "ワルツ"],
+  "切ない":     ["EDM", "ローファイ", "ゲームBGM", "トランス", "アンビエント", "ワルツ", "6/8バラード"],
+  "激しい":     ["EDM", "8bit", "テクノ", "トランス", "ワルツ"],
+  "落ち着いた": ["ローファイ", "ゲームBGM", "ハウス", "アンビエント", "ワルツ", "6/8バラード"],
 };
 
 function genresForMood(mood: string): string[] {
@@ -91,6 +94,9 @@ function makeMelody(): void {
 function generate(): void {
   Playback.stop();
   stopMetronome();  // 設定画面が隠れるので BPM のクリック音も止める
+  // 拍子はジャンルの標準（ワルツ = 3/4、6/8バラード = 3連符、ほかは 4/4）。
+  // 残すメロディ・オリジナルのドラムは新しい拍子のマスに置き直す（自動生成のメロディはこのあと作り直す）
+  setMeter(genreMeter(getState().genre), false);
   const s = getState();
   const result = resolveSimpleMode(s.genre, s.mood);
   setState({
@@ -150,8 +156,8 @@ export async function restartIfPlaying(): Promise<void> {
 async function playGenreSample(): Promise<void> {
   const s = getState();
   const { chordPattern, drumPattern } = resolveSimpleMode(s.genre, s.mood);
-  const melodyNotes = generateMelody(chordPattern, s.key, s.genre);
-  await Playback.playSample({ chordPattern, drumPattern, melodyNotes }, render);
+  const melody = () => generateMelody(chordPattern, s.key, s.genre);
+  await Playback.playSample({ chordPattern, drumPattern, meter: genreMeter(s.genre), melody }, render);
   render();
 }
 

@@ -423,6 +423,8 @@ const GENRE_FX: Record<string, Exclude<FxType, "auto">> = {
   "ゲームBGM":  "chip",
   "ローファイ": "reverse",
   "アンビエント": "downlifter",
+  "ワルツ":     "reverse",   // 弦・オルゴールの曲に、シンバルを逆回しにした「フワーッ」
+  "6/8バラード": "reverse",
 };
 
 type FxKind = Exclude<FxType, "auto">;

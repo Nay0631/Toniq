@@ -54,5 +54,19 @@
     "落ち着いた":{ "bpm": 75,  "chord_ids": ["chord_013","chord_023","chord_018"], "drum_ids": ["drum_019","drum_016","drum_037"] },
     "切ない":    { "bpm": 72,  "chord_ids": ["chord_024","chord_011","chord_015","chord_050"], "drum_ids": ["drum_019","drum_020"] },
     "激しい":    { "bpm": 90,  "chord_ids": ["chord_024","chord_008","chord_048","chord_049"],             "drum_ids": ["drum_020"] }
+  },
+  "ワルツ": {
+    "明るい": { "bpm": 144, "chord_ids": ["chord_094","chord_002","chord_056"], "drum_ids": ["drum_043","drum_044"] },
+    "暗い": { "bpm": 132, "chord_ids": ["chord_095","chord_096","chord_076"], "drum_ids": ["drum_045","drum_046"] },
+    "落ち着いた": { "bpm": 112, "chord_ids": ["chord_094","chord_069","chord_097"], "drum_ids": ["drum_043","drum_046"] },
+    "切ない": { "bpm": 120, "chord_ids": ["chord_097","chord_028","chord_011","chord_096"], "drum_ids": ["drum_043","drum_046"] },
+    "激しい": { "bpm": 168, "chord_ids": ["chord_095","chord_075","chord_096"], "drum_ids": ["drum_045","drum_044"] }
+  },
+  "6/8バラード": {
+    "明るい": { "bpm": 72, "chord_ids": ["chord_098","chord_042","chord_099"], "drum_ids": ["drum_047","drum_049"] },
+    "暗い": { "bpm": 60, "chord_ids": ["chord_100","chord_004","chord_011"], "drum_ids": ["drum_048","drum_047"] },
+    "落ち着いた": { "bpm": 60, "chord_ids": ["chord_098","chord_099","chord_097"], "drum_ids": ["drum_048","drum_047"] },
+    "切ない": { "bpm": 64, "chord_ids": ["chord_099","chord_097","chord_100","chord_033"], "drum_ids": ["drum_047","drum_048"] },
+    "激しい": { "bpm": 76, "chord_ids": ["chord_100","chord_033","chord_010"], "drum_ids": ["drum_049","drum_047"] }
   }
 }

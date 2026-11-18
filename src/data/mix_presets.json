@@ -72,5 +72,23 @@
     "gain":      0,
     "swing":     0,
     "sidechain": 0
+  },
+  "ワルツ": {
+    "reverb":    { "decay": 2.8, "wet": 0.3, "preDelay": 0.03 },
+    "eq":        { "low": 1, "mid": 0, "high": 1 },
+    "compressor":{ "threshold": -20, "ratio": 2.5, "attack": 0.02, "release": 0.25 },
+    "limiter":   { "threshold": -2 },
+    "gain":      -1,
+    "swing":     0,
+    "sidechain": 0
+  },
+  "6/8バラード": {
+    "reverb":    { "decay": 3.2, "wet": 0.32, "preDelay": 0.03 },
+    "eq":        { "low": 2, "mid": -1, "high": 0 },
+    "compressor":{ "threshold": -20, "ratio": 2.5, "attack": 0.02, "release": 0.3 },
+    "limiter":   { "threshold": -2 },
+    "gain":      0,
+    "swing":     0,
+    "sidechain": 0
   }
 }

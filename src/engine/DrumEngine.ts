@@ -231,6 +231,18 @@ export const FILLS: Record<string, Record<FillSize, FillDef>> = {
     normal: { from: 12, tracks: { rim: "x.x.", hihat_open: "..x." }, keep: [] },
     big:    { from: 8,  tracks: { rim: "x...x.x.", hihat_open: "......x.", kick: "x......." }, keep: [] },
   },
+  // ワルツ（3/4）：小節の終わりの3拍（ステップ 4〜15）に寄せて鳴らすので、終わりの拍に向けて細かくする
+  "ワルツ": {
+    small:  { from: 12, tracks: { snare: "x.x." }, keep: ["hihat_closed"] },
+    normal: { from: 8,  tracks: { snare: "x.x.x.xx", kick: "x......." }, keep: [] },
+    big:    { from: 4,  tracks: { snare: "x.x.x.x.xxxx", kick: "x.......x..." }, keep: [] },
+  },
+  // 6/8バラード（4/4 の3連符）：拍ごとに「x x x .」と書くと3連符3つになる
+  "6/8バラード": {
+    small:  { from: 12, tracks: { snare: "xxx." }, keep: ["hihat_closed"] },
+    normal: { from: 8,  tracks: { snare: "x.x.xxx.", kick: "x......." }, keep: [] },
+    big:    { from: 0,  tracks: { snare: "x...x.x.xxx.xxx.", kick: "x.......x......." }, keep: [] },
+  },
 };
 
 // フィルの理由ごとの大きさ（0 = 小・1 = 中・2 = 大）。次がサビ・エンディングは大きく、同じセクションの中の区切りは小さく

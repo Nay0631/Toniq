@@ -126,5 +126,37 @@
       "filterEnvelope": { "attack": 0.3, "decay": 1.0, "sustain": 0.8, "release": 1.5, "baseFrequency": 300, "octaves": 0.5 },
       "volume": -6
     }
+  },
+  "ワルツ": {
+    "patterns": [
+      "R---............",
+      "F---............"
+    ],
+    "fill": "R---....F---....",
+    "octaveShift": 1,
+    "sub": false,
+    "synth": {
+      "oscillator": "sine",
+      "envelope": { "attack": 0.01, "decay": 0.3, "sustain": 0.4, "release": 0.3 },
+      "filterQ": 0.5,
+      "filterEnvelope": { "attack": 0.01, "decay": 0.25, "sustain": 0.4, "release": 0.3, "baseFrequency": 400, "octaves": 1 },
+      "volume": -4
+    }
+  },
+  "6/8バラード": {
+    "patterns": [
+      "R-------F-----.O",
+      "R-----------F---"
+    ],
+    "fill": "R---F---O---F---",
+    "octaveShift": 1,
+    "sub": false,
+    "synth": {
+      "oscillator": "sine",
+      "envelope": { "attack": 0.02, "decay": 0.5, "sustain": 0.6, "release": 0.5 },
+      "filterQ": 0.5,
+      "filterEnvelope": { "attack": 0.02, "decay": 0.4, "sustain": 0.5, "release": 0.5, "baseFrequency": 350, "octaves": 1 },
+      "volume": -4
+    }
   }
 }

@@ -14,7 +14,7 @@ import { withoutHistory } from "./History";
 import { applySwing } from "./Groove";
 import { endingBar, songMelody, songProgression } from "./SongForm";
 import { prepareGrowContext, applyGrowLive } from "./Grow";
-import { beatsPerBar } from "./Meter";
+import { beatsPerBar, type Meter } from "./Meter";
 
 // 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込み、grow（wasm と AudioWorklet）の準備を待つ
 // （パッド・アルペジオ・シグネチャーはいつも grow で鳴らすので、grow の準備は毎回待つ。2回目からはすぐ終わる）
@@ -172,14 +172,15 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
 export interface SampleSong {
   chordPattern: ChordProgression;
   drumPattern:  DrumPattern;
-  melodyNotes:  MelodyNote[];
+  meter:        Meter;                // ジャンルの標準の拍子（ワルツ = 3/4 など）
+  melody:       () => MelodyNote[];   // メロディ。拍子を差し替えたあとに作る（マスの数え方が拍子で変わるため）
 }
 
 // サンプルで鳴らすパート（ジャンルの特徴が出るようシグネチャー・パーカッションも鳴らす。FX・カウンターメロディは除く）
 const SAMPLE_LAYERS: LayerName[] = ["drum", "perc", "chord", "bass", "pad", "signature", "melody"];
 
 // サンプル中だけ差し替えている曲の内容。stop() で AppState に戻す（null = サンプルを鳴らしていない）
-let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"> | null = null;
+let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes" | "meter"> | null = null;
 
 // ジャンルのサンプルを1周（4小節未満の進行は4小節）だけ鳴らす。全パートをアレンジに関係なく同時に鳴らす。
 // 各パートは AppState から読むので、鳴らしている間だけパターンとメロディを差し替え、止めたら元に戻す
@@ -195,8 +196,12 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
   if (token !== startToken) return false;  // 待っている間に別の再生・停止が入った
 
   const s = getState();
-  sampleRestore = { chordPattern: s.chordPattern, drumPattern: s.drumPattern, melodyNotes: s.melodyNotes };
-  withoutHistory(() => setState({ ...sample }));  // 一時的な差し替えなので元に戻す履歴には残さない
+  sampleRestore = { chordPattern: s.chordPattern, drumPattern: s.drumPattern, melodyNotes: s.melodyNotes, meter: s.meter };
+  // 一時的な差し替えなので元に戻す履歴には残さない。メロディは拍子を差し替えてから作る
+  withoutHistory(() => {
+    setState({ chordPattern: sample.chordPattern, drumPattern: sample.drumPattern, meter: sample.meter });
+    setState({ melodyNotes: sample.melody() });
+  });
 
   try {
     const transport = Tone.getTransport();
@@ -225,7 +230,7 @@ export function isSamplePlaying(): boolean {
 }
 
 // サンプルのために差し替える前の曲の内容（サンプルを鳴らしていなければ null）。保存していない変更の確認に使う
-export function sampleOriginal(): Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"> | null {
+export function sampleOriginal(): Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes" | "meter"> | null {
   return sampleRestore;
 }
 

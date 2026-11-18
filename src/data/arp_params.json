@@ -70,5 +70,23 @@
     "gate": 1.0,
     "cutoff": 3000,
     "delay": { "time": "4n.", "feedback": 0.45, "wet": 0.35 }
+  },
+  "ワルツ": {
+    "instrument": "bell",
+    "step": "8n",
+    "pattern": "up",
+    "octaves": 2,
+    "gate": 0.6,
+    "cutoff": 5000,
+    "delay": { "time": "4n", "feedback": 0.15, "wet": 0.12 }
+  },
+  "6/8バラード": {
+    "instrument": "bell",
+    "step": "8n",
+    "pattern": "updown",
+    "octaves": 1,
+    "gate": 0.7,
+    "cutoff": 4000,
+    "delay": { "time": "4n", "feedback": 0.2, "wet": 0.18 }
   }
 }

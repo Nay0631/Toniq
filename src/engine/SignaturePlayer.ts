@@ -321,6 +321,55 @@ const ambientWind: SignatureDef = {
   events: (_notes, bar, bars) => [{ time: t(bar, 0), dur: `${bars}m` }],
 };
 
+// ワルツ・6/8バラードの予備（grow を鳴らせないとき）のピアノ風の音：短く減衰する FM
+function pianoVoice(out: Tone.ToneAudioNode, decay: number, volume: number): SignatureVoice {
+  const reverb = new Tone.Reverb({ decay: 2, wet: 0.25 }).connect(out);
+  const synth  = new Tone.PolySynth(Tone.FMSynth, {
+    harmonicity:     2,
+    modulationIndex: 2.5,
+    oscillator:      { type: "sine" },
+    envelope:        { attack: 0.003, decay, sustain: 0.05, release: 0.25 },
+    modulation:      { type: "triangle" },
+    modulationEnvelope: { attack: 0.003, decay: 0.2, sustain: 0, release: 0.2 },
+    volume,
+  }).connect(reverb);
+  return {
+    trigger: (e, time) => synth.triggerAttackRelease(e.notes!, e.dur!, time, e.accent ? 0.9 : 0.6),
+    nodes:   [synth, reverb],
+  };
+}
+
+// ワルツ：後打ちの和音（「ズン・チャッ・チャッ」の「チャッ・チャッ」。「ズン」はベース）。
+// 2・3拍目に短く鳴らす（4/4 の拍子にした曲では 2・3・4拍目）
+const waltzAfterbeat: SignatureDef = {
+  label: "後打ち（ズン・チャッ・チャッ）",
+  create: out => pianoVoice(out, 0.3, -20),
+  events: (notes, bar, bars) => {
+    const ev: SignatureEvent[] = [];
+    for (let b = 0; b < bars; b++) {
+      gridSteps([4, 8, 12]).forEach((step, i) =>
+        ev.push({ time: t(bar + b, step), notes, dur: "8n", accent: i === 0 }));
+    }
+    return ev;
+  },
+};
+
+// 6/8バラード：和音を3連符で刻むピアノ（1拍を3つに分けて「タタタ タタタ」）。拍の頭を強く。
+// 4/4 の3連符の拍子で鳴らす前提（4/4 の拍子にした曲では、拍ごとに16分音符3つになる）
+const balladTriplets: SignatureDef = {
+  label: "3連符のピアノ",
+  create: out => pianoVoice(out, 0.5, -22),
+  events: (notes, bar, bars) => {
+    const ev: SignatureEvent[] = [];
+    for (let b = 0; b < bars; b++) {
+      gridSteps([0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]).forEach((step, i) =>
+        // 拍の頭は和音全体、残りの2つは上の2音だけにして軽くする
+        ev.push({ time: t(bar + b, step), notes: i % 3 === 0 ? notes : notes.slice(-2), dur: "16n", accent: i % 3 === 0 }));
+    }
+    return ev;
+  },
+};
+
 const SIGNATURES: Record<string, SignatureDef> = {
   "EDM":      edmStab,
   "8bit":     chipArp,
@@ -330,6 +379,8 @@ const SIGNATURES: Record<string, SignatureDef> = {
   "ハウス":    housePiano,
   "トランス":  tranceGate,
   "アンビエント": ambientWind,
+  "ワルツ":    waltzAfterbeat,
+  "6/8バラード": balladTriplets,
 };
 
 export function signatureDef(genre: string = getState().genre): SignatureDef {
