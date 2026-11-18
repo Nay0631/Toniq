@@ -121,6 +121,15 @@ function keptContent(): string | null {
   return kept.length > 0 ? kept.join("と") : null;
 }
 
+// 「自分で入力」なのにメロディの音がないときは、メロディなしで生成してよいか確かめる（false = やめる）
+function confirmEmptyMelody(): boolean {
+  const s = getState();
+  if (s.melodyMethod !== "manual") return true;
+  const hasNotes = [...s.melodyNotes, ...s.chorusMelodyNotes].some(n => n.note);
+  if (hasNotes) return true;
+  return confirm("メロディがまだ入力されていません。\nメロディなしで生成しますか？\n\n（メロディは生成したあとピアノロールで入力できます。メロディの作り方を「自動生成」にすると自動で作ります）");
+}
+
 // メロディの音の数（「Aメロ 24音・サビ 26音」など。サビのメロディがなければ Aメロと同じものが鳴る）
 function melodySummary(): string {
   const s = getState();
@@ -377,11 +386,13 @@ export function initSimpleScreen(): void {
     }));
 
   $("s-generate")?.addEventListener("click", () => {
+    if (!confirmEmptyMelody()) return;
     generate();
     render();
   });
 
   $("s-regenerate")?.addEventListener("click", async () => {
+    if (!confirmEmptyMelody()) return;
     const wasPlaying = Playback.isPlaying();
     generate();
     render();
