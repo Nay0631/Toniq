@@ -13,10 +13,9 @@ export type Tab = "settings" | "arranger" | "pianoroll";
 // コードを鳴らすリズム（whole = コードの長さいっぱいに伸ばす）
 export type ChordRhythm = "whole" | "half" | "quarter" | "eighth";
 
-// メロディの音色（auto = ジャンルの標準。melody_params.json の instrument。
-// grow = 内部シンセ grow（初期値。Grow.ts。wasm がないときはジャンルの標準で鳴る））
-export type MelodyInstrument =
-  "auto" | "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid" | "grow";
+// メロディの音色。いつも grow（growPreset / growParams で鳴らす。wasm がないときは MelodyPlayer の Tone.js の音色でジャンルの標準）。
+// 以前の Tone.js の音色（auto / soft / lead / square / pluck / supersaw / epiano / bell / acid）は、近い grow のプリセットに読み替える（SongLibrary.ts）
+export type MelodyInstrument = "grow";
 
 // コードの音色。いつも grow（growChordPreset / growChordParams で鳴らす。wasm がないときは Tone.js のソフトパッド）。
 // 以前の Tone.js の音色（soft / epiano / strings / organ / square / supersaw）は、同じ音の grow のプリセットに読み替える（SongLibrary.ts）
@@ -94,6 +93,8 @@ export interface AppState {
   // 表示中の画面とタブ
   screen: Screen;
   tab:    Tab;
+  // タブのある画面（シンプルモード・カスタムモード）を離れたときに開いていたタブ。戻ったときに同じタブを開く（保存しない）
+  screenTabs: Partial<Record<Screen, Tab>>;
 
   // 画面の配色（曲の内容ではないので SONG_FIELDS には入れない。端末ごとに Theme.ts が保存する）
   theme: Theme;
@@ -172,8 +173,8 @@ export interface AppState {
   sidechain:        number | null;  // キックに合わせてベース・コードなどを沈める量（ポンピング）
   scaleLock:        boolean;  // ON のときはコード進行を選択中のスケールのものに絞る
   drumCategory:     string;   // ドラムパターンの絞り込み（drum_patterns.json の genre タグ）
-  // ドラムの音源（grow = grow（初期値）、synth = Tone.js のシンセ、sample = ワンショット音源）。テスト中の切り替え。
-  // 設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
+  // ドラムの音源（grow = grow、sample = ワンショット音源（初期値）、synth = Tone.js のシンセ（画面では選べない。測定用））。
+  // テスト中の切り替え。設定画面で選び、Preferences.ts が端末ごとに保存する（曲には保存しない）
   drumSource:       DrumSource;
   // grow の音作り（曲に保存する）。プリセットの ID（grow のコアの GrowPresets.cpp の id）と、
   // そこから変えた値（パラメーターの ID → 実際の値。null = プリセットのまま）
@@ -235,7 +236,8 @@ export interface AppState {
 export const defaultState: AppState = {
   screen:      "menu",
   tab:         "settings",
-  theme:       "light",
+  screenTabs:  {},
+  theme:      "light",
   themeMode:   "system",
   skin:        "default",
   tooltips:    true,

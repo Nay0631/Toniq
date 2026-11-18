@@ -131,8 +131,7 @@ export function render(): void {
   }
   barsSelect.value = String(s.bars);
 
-  $select("c-genre").value      = s.genre;
-  $select("c-instrument").value = s.melodyInstrument;
+  $select("c-genre").value = s.genre;
 
   // スケール・キー
   // ルート音は単音なので、ドレミ表記なら読みを添える（値・キー名は CDE 表記のまま）

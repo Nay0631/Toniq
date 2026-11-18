@@ -54,7 +54,7 @@ export async function setDrumSource(drumSource: DrumSource): Promise<void> {
   write(KEYS.drumSource, drumSource);
   const s = getState();
   if (drumSource === "sample") await prepareDrumSamples(s.genre);
-  if (drumSource === "grow") await prepareGrowContext();
+  await prepareGrowContext();  // サンプル音源でもファイルのない音は lidless で鳴らす
   if (Tone.getTransport().state === "started") {
     if (getState().parts.drum) reloadLayer("drum");
     if (getState().parts.perc) reloadLayer("perc");
@@ -75,8 +75,9 @@ export function initPreferences(): void {
     // 保存がなければドレミ表記（CDE 表記を選んで保存した端末はそのまま）
     noteNames:    noteNames === "cde" ? "cde" : "doremi",
     loopPlayback: read(KEYS.loopPlayback) === "on",
-    // 保存がなければサンプル音源（lidless・シンセを選んで保存した端末はそのまま）
-    drumSource:   drumSource === "grow" || drumSource === "synth" ? drumSource : "sample",
+    // 保存がなければサンプル音源（lidless を選んで保存した端末はそのまま）。
+    // シンセ（Tone.js）は選べなくしたので、選んで保存した端末もサンプル音源にする
+    drumSource:   drumSource === "grow" ? "grow" : "sample",
   });
   // テスト中の機能は、保存がなければ初期値（ON）のまま
   for (const feature of TEST_FEATURES) {

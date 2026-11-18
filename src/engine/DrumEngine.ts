@@ -155,7 +155,7 @@ let previewContext: Tone.BaseContext | null = null;
 export async function previewDrumHit(name: string, velocity = 1): Promise<void> {
   await Tone.start();
   const { genre, drumSource } = getState();
-  if (drumSource === "grow") await prepareGrowContext();
+  if (drumSource !== "synth") await prepareGrowContext();  // サンプル音源でもファイルのない音は lidless
   // ジャンル・音源・オーディオコンテキストが変わったら作り直す
   const key = `${genre}/${drumSource}`;
   if (!previewKit || previewKey !== key || previewContext !== Tone.getContext()) {

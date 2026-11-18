@@ -183,6 +183,14 @@ const LEGACY_CHORD_PRESETS: Record<string, string> = {
   soft: "soft_pad", epiano: "epiano", strings: "strings", organ: "organ", square: "square", supersaw: "supersaw",
 };
 
+// 以前の Tone.js のメロディの音色 → 近い grow のプリセット（null = ジャンルの標準。MELODY_STANDARD）。
+// auto（ジャンルに合わせる）と旧 grow（Tone.js 版の Toniq シンセ。"toniq"）はジャンルの標準にする。
+// アシッドの grow のプリセットはベースのカテゴリでメロディには選べないので、ジャンルの標準にする
+const LEGACY_MELODY_PRESETS: Record<string, string | null> = {
+  auto: null, toniq: null, acid: null,
+  soft: "soft_pad", lead: "lead", square: "chip_lead", pluck: "pluck", supersaw: "supersaw", epiano: "epiano", bell: "bell",
+};
+
 // 保存した grow の音作り（ベースなど）。足りないパートは初期値で補い、番号のプリセットは ID に読み替える
 function growSoundsFromSaved(saved: unknown): SongFields["growSounds"] {
   const sounds = structuredClone(defaultState.growSounds);
@@ -209,21 +217,26 @@ function songFields(song: Partial<SongFields>): SongFields {
   const volumes = song.pans
     ? savedVolumes
     : Object.fromEntries(Object.entries(savedVolumes).map(([part, v]) => [part, volumeFromLegacy(v)]));
+  // メロディを以前の Tone.js の音色で鳴らしていた曲（そのときの growPreset / growParams は鳴っていなかったので使わない）
+  const legacyMelody = (loaded.melodyInstrument as string) in LEGACY_MELODY_PRESETS;
   return {
     ...loaded,
     parts:       { ...defaultState.parts,   ...loaded.parts },
     volumes:     { ...defaultState.volumes, ...volumes },
     pans:        { ...defaultState.pans,    ...song.pans },
-    // grow のプリセットは以前は番号で保存していた（今は ID）。番号なら ID に読み替える
-    growPreset:      presetIdFromSaved(loaded.growPreset, defaultState.growPreset),
+    // grow のプリセットは以前は番号で保存していた（今は ID）。番号なら ID に読み替える。
+    // メロディの音色は grow だけ。以前の Tone.js の音色を選んでいた曲は、近い grow のプリセットで鳴らす
+    melodyInstrument: "grow",
+    growPreset:      legacyMelody
+                     ? LEGACY_MELODY_PRESETS[loaded.melodyInstrument as string]
+                     : presetIdFromSaved(loaded.growPreset, defaultState.growPreset),
+    growParams:      legacyMelody ? null : loaded.growParams,
     // コードの音色は grow だけ。以前の Tone.js の音色を選んでいた曲は、同じ音の grow のプリセットで鳴らす
     chordInstrument: "grow",
     growChordPreset: LEGACY_CHORD_PRESETS[loaded.chordInstrument as string]
                      ?? presetIdFromSaved(loaded.growChordPreset, defaultState.growChordPreset),
     growSounds:      growSoundsFromSaved(loaded.growSounds),
-    // 旧 grow（Tone.js 版の Toniq シンセ）を選んでいた曲はジャンルの標準の音色にする（音作りの値 toniqSynth は読み捨てる）。
-    // 今の grow は "grow"（growPreset / growParams）
-    melodyInstrument: (loaded.melodyInstrument as string) === "toniq" ? "auto" : loaded.melodyInstrument,
+    // 旧 grow（Tone.js 版の Toniq シンセ）の音作りの値 toniqSynth は読み捨てる（SONG_FIELDS にないので取り出さない）
     // 以前はアレンジをブロックの並び（arrangement）で保存していた。ジャンルの標準と比べて「変えた所」に読み替える
     arrangeEdits: legacyArrangement && loaded.chordPattern
       ? editsFromLegacy(legacyArrangement, loaded.genre, loaded.chordPattern.length_bars, loaded.bars, loaded.sections)

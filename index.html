@@ -227,7 +227,7 @@
             <div class="wave-ticks" id="s-ticks"></div>
           </div>
 
-          <div class="field-label">↻ <span data-term="layer">レイヤー</span>差し替え</div>
+          <div class="field-label">↻ <span data-term="layer">レイヤー</span>差し替え <span class="field-hint">押したパートだけを選び直します（Aメロ・サビの両方が変わります）</span></div>
           <div class="layer-cards">
             <div class="card layer-card">
               <div class="layer-name"><span class="dot dot-melody"></span><span data-term="melody">メロディ</span></div>
@@ -237,12 +237,12 @@
             <div class="card layer-card">
               <div class="layer-name"><span class="dot dot-chord"></span><span data-term="chord">コード</span></div>
               <div class="layer-desc" id="s-chord-desc"></div>
-              <button class="btn btn-small" id="s-chord-reroll">↻ 再抽選</button>
+              <button class="btn btn-small" id="s-chord-reroll" title="Aメロ・サビのコード進行を選び直します（自動生成のメロディも作り直します）">↻ 再抽選</button>
             </div>
             <div class="card layer-card">
               <div class="layer-name"><span class="dot dot-drum"></span><span data-term="drum">ドラム</span></div>
               <div class="layer-desc" id="s-drum-desc"></div>
-              <button class="btn btn-small" id="s-drum-reroll">↻ 再抽選</button>
+              <button class="btn btn-small" id="s-drum-reroll" title="曲全体（Aメロ・サビ）のドラムパターンを選び直します">↻ 再抽選</button>
             </div>
           </div>
 
@@ -254,7 +254,7 @@
               <button class="btn" id="s-export-wav" data-term="wav">WAVで書き出す</button>
               <button class="btn" id="s-export-mp3" data-term="mp3">MP3で書き出す</button>
             </div>
-            <button class="btn" id="s-regenerate">✦ もう一度生成する</button>
+            <button class="btn" id="s-regenerate">✦ 別の曲を生成する</button>
             <button class="btn btn-custom" data-goto="custom">☰ カスタムモードで編集する</button>
           </div>
           <p class="hint">音量バランスを調整したい場合はカスタムモードで編集できます</p>
@@ -340,7 +340,7 @@
 
             <!-- もっと調整：標準（ジャンルに合わせる）のままでも鳴る項目は畳んでおく（CustomMore.ts） -->
             <details class="panel-more" data-more="basic">
-            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">拍子・インスト・グルーヴ</span><span class="panel-more-badge"></span></summary>
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">拍子・グルーヴ</span><span class="panel-more-badge"></span></summary>
             <div class="panel-more-body">
 
             <label class="form-row">
@@ -349,23 +349,6 @@
                 <option value="4/4" data-term="meter.4/4">4/4</option>
                 <option value="3/4" data-term="meter.3/4">3/4</option>
                 <option value="4/4t" data-term="meter.4/4t">4/4（3連符）</option>
-              </select>
-            </label>
-
-            <label class="form-row">
-              <span class="form-label" data-term="instrument" data-std="melodySound">インスト</span>
-              <select class="select" id="c-instrument">
-                <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow" data-term="melodySound.grow">lidless（Toniq専用シンセ）</option>
-                <option value="auto" data-term="melodySound.auto">ジャンルに合わせる</option>
-                <option value="supersaw" data-term="melodySound.supersaw">SuperSaw リード（EDM）</option>
-                <option value="epiano" data-term="melodySound.epiano">エレピ（ローファイ）</option>
-                <option value="bell" data-term="melodySound.bell">ベル（ゲームBGM）</option>
-                <option value="square" data-term="melodySound.square">スクエア（8bit）</option>
-                <option value="acid" data-term="melodySound.acid">アシッド（テクノ）</option>
-                <option value="lead" data-term="melodySound.lead">シンセリード</option>
-                <option value="pluck" data-term="melodySound.pluck">プラック（ハウス）</option>
-                <option value="soft" data-term="melodySound.soft">ソフトサイン（アンビエント）</option>
               </select>
             </label>
 
@@ -832,11 +815,10 @@
           <div class="settings-row">
             <div class="settings-text">
               <div class="settings-label">ドラムの音源（テスト中）</div>
-              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ lidless で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は、ドラムはシンセ、パーカッションは lidless で鳴ります。</div>
+              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ lidless で鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は lidless で鳴ります。</div>
             </div>
             <div class="chips settings-options" role="radiogroup" aria-label="ドラムの音源">
               <button class="chip" role="radio" data-settings-drum-source="grow">lidless</button>
-              <button class="chip" role="radio" data-settings-drum-source="synth">シンセ</button>
               <button class="chip" role="radio" data-settings-drum-source="sample">サンプル音源</button>
             </div>
           </div>
@@ -899,6 +881,8 @@
             <summary>シンプルモード</summary>
             <ul>
               <li>雰囲気を選ぶと、その雰囲気に合うジャンルだけが並びます。今のジャンルが合わないときは、合うジャンルの先頭に切り替わります。</li>
+              <li>生成した曲の「レイヤー差し替え」の「↻ 再抽選」は、押したパート（メロディ・コード・ドラム）だけを選び直します（Aメロ・サビの両方が変わります）。「✦ 別の曲を生成する」は全部を選び直して新しい曲にします（ピアノロールで入力したメロディ・作ったドラムは残ります）。</li>
+              <li>生成した曲では、どのタブでもスペースキーで再生／停止できます。</li>
               <li>曲はジャンルに合うスケールのコード進行から作られます（スケールを自分で選ぶときはカスタムモードを使います）。</li>
             </ul>
           </details>
@@ -912,7 +896,7 @@
               <li>ドラム・FX のブロックは、ラベルの文字をクリックするとセクションごとにパターン・種類を選べます。</li>
               <li>いちばん上の「セクション」の行をクリックすると、その周回を Aメロ／サビ で切り替えます。</li>
               <li>小節番号の目盛りをクリックすると、そこが再生の開始位置になります（アレンジャータブで再生したとき。「⏮ 先頭へ」で戻ります）。</li>
-              <li>スペースキーで再生／停止できます（再生は開始位置から）。</li>
+              <li>スペースキーで再生／停止できます（再生は開始位置から）。カスタムモードでは設定タブ・ピアノロールでも使えます（そちらは曲の先頭から）。</li>
               <li>「⟲ ループ」で、曲の終わりで止めずに先頭へ戻って繰り返すかを切り替えます（設定画面の「ループ再生」と同じ設定です。再生中に切り替えてもすぐ反映されます）。</li>
               <li>OFF のパートの行をクリックすると、そのパートは ON になります。「↺ 変えた所を消す」で、選んだ構成のままに戻ります。</li>
               <li>パートの ON/OFF ボタンを<b>右クリック</b>すると、そのパートだけを鳴らします（ほかのパートは OFF。ソロ）。もう一度右クリックすると、ソロにする前の ON/OFF に戻ります。</li>
@@ -922,7 +906,7 @@
           <details class="help-item">
             <summary>カスタムモードの「もっと調整」</summary>
             <ul>
-              <li>各欄の下の「もっと調整」には、触らなくてもジャンルに合った音で鳴る項目（インスト・グルーヴ・コードのリズムと音色・追加パート・FX など）が入っています。クリックで開閉します。</li>
+              <li>各欄の下の「もっと調整」には、触らなくてもジャンルに合った音で鳴る項目（グルーヴ・コードのリズムと音色・追加パート・FX など）が入っています。クリックで開閉します。</li>
               <li>見出しの「○件変更」は、その中で標準から変えている項目の数です。変えた項目の名前の左には印（●）が付きます。</li>
               <li>「この欄を標準に戻す」で、その欄の項目をまとめてジャンルの標準・初期値に戻します（<kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻せます）。</li>
               <li>「追加パートを使う」は、パッド・アルペジオなどの追加パートをまとめて ON/OFF します。1つずつ切り替えるときはアレンジャー（レーンの ON ボタンやミキサー）を使います。</li>
@@ -990,7 +974,7 @@
             <summary>試聴できるもの</summary>
             <ul>
               <li>シンプルモード：ジャンルの下の「▷ ○○ のサンプルを聴く」で、そのジャンルの雰囲気を確かめられます（今の曲は変わりません）。</li>
-              <li>カスタムモード：「スケール・キー」の「▷ 試聴」でスケールの響き、「FX / SE」の「▷ 試聴」で効果音を確かめられます。コードの音色や lidless の音作りのプリセットを選び直すと、その音が1音鳴ります（曲の再生中は鳴りません）。</li>
+              <li>カスタムモード：「スケール・キー」の「▷ 試聴」でスケールの響き、「FX / SE」の「▷ 試聴」で効果音を確かめられます。コードの音色や lidless の音作りのプリセットを選び直すと、その音が1音鳴ります（曲の再生中は鳴らさず、鳴っている曲の音がすぐ変わります）。lidless のプリセットの一覧は、選んでいるプリセットをもう一度押すと聴き直せ、<kbd>←</kbd><kbd>→</kbd> で前後のプリセットへ送れます。</li>
               <li>カスタムモードの設定タブ・アレンジャータブでは、ピアノロールと同じキー（<kbd>Z</kbd>〜<kbd>/</kbd>・<kbd>Q</kbd>〜<kbd>]</kbd> の段が白鍵、その上の段が黒鍵）で、lidless の音作りの「対象」のパートの音色を試し弾きできます。押している間だけ鳴り、<kbd>↓</kbd> / <kbd>↑</kbd> でオクターブを変えられます（曲の再生中も鳴ります）。</li>
             </ul>
           </details>

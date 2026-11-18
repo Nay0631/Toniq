@@ -361,7 +361,8 @@ function createGrowVoice(name: string, p: DrumKitParams): DrumVoice | null {
   };
 }
 
-// ドラムの音源：grow = grow（内部シンセ）、synth = Tone.js のシンセで合成、sample = ワンショット音源（ないトラックはシンセ）。
+// ドラムの音源：grow = grow（内部シンセ）、sample = ワンショット音源（ないトラックは grow）、
+// synth = Tone.js のシンセで合成（画面では選べない。npm run mix:measure -- --drum synth で測るときだけ）。
 // grow を鳴らせないとき（wasm がない・準備ができていない）はシンセで鳴る
 export type DrumSource = "grow" | "synth" | "sample";
 
@@ -395,7 +396,7 @@ export function createDrumKit(genre: string, trackNames: string[], source: DrumS
   for (const name of trackNames) {
     const sample = source === "sample" ? getDrumSample(genre, name) : undefined;
     const voice  = (sample ? createSampleVoice(sample) : null)
-      ?? (source === "grow" ? createGrowVoice(name, p) : null)
+      ?? (source !== "synth" ? createGrowVoice(name, p) : null)
       ?? (factories[name] ?? createClap)();
     voice.output.connect(lowpass);
     voices[name] = voice;

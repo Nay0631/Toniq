@@ -1,4 +1,4 @@
-import { getState, setState, ChordRhythm, MelodyInstrument, FxType, ModulationScope, SwingUnit } from "../engine/AppState";
+import { getState, setState, ChordRhythm, FxType, ModulationScope, SwingUnit } from "../engine/AppState";
 import { applySwing } from "../engine/Groove";
 import { resolveTempoPreset } from "../engine/SimpleModeResolver";
 import { setLayerEnabled } from "../engine/LayerManager";
@@ -85,10 +85,8 @@ export function initCustomScreen(): void {
   });
 
   // アレンジャー・ピアノロールのタブではスペースキーで再生／停止する（アレンジャーは開始位置から、ピアノロールは先頭から）
-  bindSpaceToPlay(() => {
-    const s = getState();
-    return s.screen === "custom" && (s.tab === "arranger" || s.tab === "pianoroll");
-  }, startPlayback);
+  // どのタブでもスペースキーで再生／停止する（設定タブ・ピアノロールは曲の先頭から、アレンジャーは開始位置から）
+  bindSpaceToPlay(() => getState().screen === "custom", startPlayback);
 
   // ===== 基本設定 =====
   const bpmRange = $("c-bpm-range") as HTMLInputElement;
@@ -169,13 +167,6 @@ export function initCustomScreen(): void {
   initCustomMore(async restart => {
     renderAll();
     if (restart) await restartIfPlaying();
-  });
-
-  // インスト：メロディの Synth は再生開始時に作り直されるので、再生中なら再生し直す
-  $select("c-instrument").addEventListener("change", async e => {
-    setState({ melodyInstrument: (e.target as HTMLSelectElement).value as MelodyInstrument });
-    render();
-    await restartIfPlaying();
   });
 
   // ===== スケール・キー =====
