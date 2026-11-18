@@ -15,7 +15,8 @@ import { isTyping, modalOpen } from "./SpaceKey";
 // パラメーターの並び・名前・範囲・表示は grow のコアの表（wasm）から作るので、ここでは持たない。
 // 値はメロディが AppState.growPreset（プリセット）と growParams（変えた値。null = プリセットのまま）、
 // コードが growChordPreset / growChordParams、ベース・パッド・アルペジオ・シグネチャー・カウンターメロディが growSounds（どのパートもプリセットの null = ジャンルの標準）。
-// どのパートを編集するかはパネル上部の「対象」で切り替える（メロディは音色が grow のときだけ選べる）
+// どのパートを編集するかはパネル上部の「対象」で切り替える。プリセットはカテゴリごとのチップの一覧で選ぶ
+// （押すと選んで1音鳴らす。マウスを乗せると説明（Glossary.ts の sound.<ID>）。←→ で前後のプリセットへ送る）
 
 const RANGE_STEPS = 1000;  // 連続値のつまみの細かさ（0〜1 の位置をこの数で刻む）
 
@@ -91,8 +92,10 @@ function renderKeyHint(): void {
   hint.innerHTML = `⌨ キーボードで試し弾き：<kbd>Z</kbd>〜<kbd>/</kbd> が C${o}〜、<kbd>Q</kbd>〜<kbd>]</kbd> が C${o + 1}〜（<kbd>↓</kbd><kbd>↑</kbd> オクターブ）`;
 }
 
-// プリセットのセレクトの「ジャンルの標準」の値
+// プリセットの一覧の「ジャンルの標準」の値
 const STANDARD_VALUE = "";  // ID は空にならないので、空を「ジャンルの標準」に使う
+// 今のプリセットの一覧の中身（作り直すかの判定用。innerHTML の文字列はブラウザが書き直すので比べない）
+let presetsHtml = "";
 
 function $(id: string): HTMLElement {
   return document.getElementById(id)!;
@@ -145,13 +148,12 @@ function build(): void {
 
   panel.querySelector(".grow-body")!.innerHTML = `
     <div class="grow-toolbar">
-      <label class="grow-control grow-preset"><span class="grow-name">対象</span>
+      <label class="grow-control grow-target"><span class="grow-name">対象</span>
         <select class="select" id="c-grow-target"></select></label>
-      <label class="grow-control grow-preset"><span class="grow-name">プリセット</span>
-        <select class="select" id="c-grow-preset"></select></label>
       <button class="btn btn-small" id="c-grow-reset">プリセットに戻す</button>
       <span class="grow-edited" id="c-grow-edited"></span>
     </div>
+    <div class="grow-presets" id="c-grow-presets" role="radiogroup" aria-label="プリセット"></div>
     <p class="grow-keys" id="c-grow-keys"></p>
     <div class="grow-grid">${modules}</div>`;
 
@@ -160,12 +162,19 @@ function build(): void {
     releaseAllKeys();
     renderPanel();
   });
-  ($("c-grow-preset") as HTMLSelectElement).addEventListener("change", e => {
-    const value = (e.target as HTMLSelectElement).value;
-    setGrowSound(target, value === STANDARD_VALUE ? null : value, null);
-    applyGrowLive();
-    renderPanel();
-    void previewGrowSound(target);  // 選んだ音色を1音鳴らす（曲の再生中は鳴らさない）
+  const presets = $("c-grow-presets");
+  presets.addEventListener("click", e => {
+    const chip = (e.target as HTMLElement).closest<HTMLElement>("[data-grow-preset]");
+    if (chip) choosePreset(chip.dataset.growPreset!);
+  });
+  // ←→ で前後のプリセットへ送る（聴き比べ。↑↓ は試し弾きのオクターブのまま）
+  presets.addEventListener("keydown", e => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const chips = Array.from(presets.querySelectorAll<HTMLElement>("[data-grow-preset]"));
+    const now = chips.findIndex(c => c.classList.contains("is-active"));
+    const next = chips[Math.max(0, Math.min(chips.length - 1, now + (e.key === "ArrowLeft" ? -1 : 1)))];
+    e.preventDefault();
+    if (next && next !== chips[now]) choosePreset(next.dataset.growPreset!);
   });
   $("c-grow-reset").addEventListener("click", () => {
     setGrowSound(target, storedGrowSound(target).preset, null);
@@ -186,19 +195,43 @@ function build(): void {
   built = true;
 }
 
-// プリセットのセレクトの中身：「ジャンルの標準」（今のジャンルの標準のプリセット名を添える）と、
-// 対象のパートで選べるカテゴリ（Grow.ts の PART_CATEGORIES）＋初期化のプリセットをカテゴリの見出しごとに。
+// プリセットを選ぶ（チップを押す・←→）。選んだ音色を1音鳴らす（曲の再生中は鳴らさず、鳴っている音にすぐ当てる）。
+// 今のプリセットをもう一度押したときは鳴らすだけ（つまみで変えた値は消さない）
+function choosePreset(value: string): void {
+  if (value !== activePresetValue()) {
+    setGrowSound(target, value === STANDARD_VALUE ? null : value, null);
+    applyGrowLive();
+    renderPanel();
+    // 一覧を作り直したとき（「その他」がなくなったなど）も、選んだチップにフォーカスを戻す（続けて ←→ で送れるように）
+    $("c-grow-presets").querySelector<HTMLElement>(`[data-grow-preset="${value}"]`)?.focus();
+  }
+  void previewGrowSound(target);
+}
+
+// 今選んでいるプリセットの一覧の値（ジャンルの標準なら STANDARD_VALUE）
+function activePresetValue(): string {
+  const stored = storedGrowSound(target);
+  return stored.preset === null ? STANDARD_VALUE : growPresetIds()[growSettings(target).preset] ?? "";
+}
+
+// プリセットの一覧の中身：「ジャンルの標準」（今のジャンルの標準のプリセット名を添える）と、
+// 対象のパートで選べるカテゴリ（Grow.ts の PART_CATEGORIES）＋初期化のプリセットをカテゴリの行ごとにチップで並べる。
 // ほかのカテゴリのプリセットを選んでいる曲（以前はどのプリセットでも選べた）は、その音を「その他」に足す
-function presetOptionsHtml(selected: string | null): string {
+function presetChipsHtml(selected: string | null): string {
   const ids = growPresetIds(), names = growPresetNames();
-  const option = (i: number) => `<option value="${escapeHtml(ids[i])}" data-term="sound.${escapeHtml(ids[i])}">${escapeHtml(names[i])}</option>`;
+  const chip = (value: string, label: string, term = "") =>
+    `<button type="button" class="grow-chip" role="radio" aria-checked="false" data-grow-preset="${escapeHtml(value)}"${term}>${escapeHtml(label)}</button>`;
+  const preset = (i: number) => chip(ids[i], names[i], ` data-term="sound.${escapeHtml(ids[i])}"`);
+  // 行の名前には用語の説明（Glossary.ts の growCategory.<カテゴリ>）を付ける
+  const row = (name: string, term: string, chips: string) =>
+    `<div class="grow-preset-group"><span class="grow-preset-group-name" data-term="growCategory.${term}">${escapeHtml(name)}</span><div class="grow-chips">${chips}</div></div>`;
   const groups = growPresetChoices(target, true);
   const listed = new Set(groups.flatMap(g => g.presets));
   const selectedIndex = selected === null ? -1 : ids.indexOf(selected);
   const others = selectedIndex >= 0 && !listed.has(selectedIndex) ? [selectedIndex] : [];
-  return `<option value="${STANDARD_VALUE}">ジャンルの標準（${escapeHtml(names[standardGrowPreset(target)] ?? "")}）</option>`
-    + groups.map(g => `<optgroup label="${escapeHtml(growCategoryName(g.category))}">${g.presets.map(option).join("")}</optgroup>`).join("")
-    + (others.length ? `<optgroup label="その他">${others.map(option).join("")}</optgroup>` : "");
+  return row("標準", "standard", chip(STANDARD_VALUE, `ジャンルの標準（${names[standardGrowPreset(target)] ?? ""}）`, ` data-term="sound.auto"`))
+    + groups.map(g => row(growCategoryName(g.category), g.category, g.presets.map(preset).join(""))).join("")
+    + (others.length ? row("その他", "other", others.map(preset).join("")) : "");
 }
 
 // 値の表示を AppState にそろえる（曲の内容は書き換えない）
@@ -214,10 +247,18 @@ function renderPanel(): void {
   targetSelect.innerHTML = targets.map(t => `<option value="${t}">${TARGET_LABELS[t]}</option>`).join("");
   targetSelect.value = target;
 
-  const presetSelect = $("c-grow-preset") as HTMLSelectElement;
-  const html = presetOptionsHtml(stored.preset);
-  if (presetSelect.innerHTML !== html) presetSelect.innerHTML = html;
-  presetSelect.value = stored.preset === null ? STANDARD_VALUE : growPresetIds()[settings.preset] ?? "";
+  const presets = $("c-grow-presets");
+  const html = presetChipsHtml(stored.preset);
+  if (presetsHtml !== html) {
+    presets.innerHTML = html;
+    presetsHtml = html;
+  }
+  const active = activePresetValue();
+  presets.querySelectorAll<HTMLElement>("[data-grow-preset]").forEach(chip => {
+    const on = chip.dataset.growPreset === active;
+    chip.classList.toggle("is-active", on);
+    chip.setAttribute("aria-checked", String(on));
+  });
   ($("c-grow-reset") as HTMLButtonElement).disabled = settings.params === null;
   $("c-grow-edited").textContent = settings.params === null ? "" : "プリセットから変更しています";
 

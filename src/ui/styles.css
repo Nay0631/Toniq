@@ -3638,8 +3638,31 @@ span[data-term],
 }
 .grow-control .grow-select { grid-column: 2 / 4; width: 100%; font-size: 12px; }
 .grow-toggle input { justify-self: start; }
-.grow-preset { grid-template-columns: auto minmax(160px, 1fr); }
-.grow-preset .select { width: 100%; }
+.grow-target { grid-template-columns: auto minmax(160px, 1fr); }
+.grow-target .select { width: 100%; }
+/* プリセットの一覧（カテゴリの行ごとにチップ。押すと選んで1音鳴らす） */
+.grow-presets { display: grid; gap: 6px; margin-bottom: 14px; }
+.grow-preset-group { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: start; gap: 8px; }
+.grow-preset-group-name { padding-top: 5px; color: var(--text-sub); font-size: 12px; font-weight: 600; }
+.grow-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.grow-chip {
+  padding: 4px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+}
+.grow-chip:hover { border-color: var(--border-strong); }
+.grow-chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
+.grow-chip:focus-visible { outline: 2px solid var(--custom); outline-offset: 1px; }
+@media (max-width: 600px) {
+  .grow-preset-group { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .grow-preset-group-name { padding-top: 0; }
+}
 .grow-name { color: var(--text-sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .grow-value { color: var(--text-sub); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .grow-control input[type="range"] { width: 100%; accent-color: var(--custom); }

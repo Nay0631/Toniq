@@ -15,6 +15,7 @@ import {
   GROW_CATEGORIES, PART_CATEGORIES, FALLBACK_CATEGORIES, LEGACY_PRESET_IDS, type GrowPart,
 } from "../src/engine/Grow";
 import melodyParams from "../src/data/melody_params.json";
+import { TERMS } from "../src/ui/Glossary";
 
 const PARTS = Object.keys(PART_CATEGORIES) as GrowPart[];
 const GENRES = Object.keys(melodyParams);
@@ -93,5 +94,20 @@ describe("パートごとのカテゴリ", () => {
     const chord = growPresetChoices("chord").flatMap(g => g.presets.map(i => ids[i]));
     ["soft_pad", "wide_pad", "epiano", "strings", "organ", "square", "supersaw", "hard_pad"].forEach(id => expect(chord).toContain(id));
     expect(chord).not.toContain("saw_bass");
+  });
+});
+
+describe("用語の説明（音作りのパネルのツールチップ）", () => {
+  it("パネルの一覧に出るプリセットには、すべて説明（sound.<ID>）がある", () => {
+    const ids = growPresetIds();
+    const shown = new Set(PARTS.flatMap(part => growPresetChoices(part, true).flatMap(g => g.presets.map(i => ids[i]))));
+    const missing = [...shown].filter(id => !TERMS[`sound.${id}`]);
+    expect(missing).toEqual([]);
+  });
+
+  it("一覧の行の名前（カテゴリ・標準・その他）には、すべて説明（growCategory.<カテゴリ>）がある", () => {
+    const rows = new Set(PARTS.flatMap(part => growPresetChoices(part, true).map(g => g.category as string)));
+    const missing = [...rows, "standard", "other"].filter(c => !TERMS[`growCategory.${c}`]);
+    expect(missing).toEqual([]);
   });
 });
