@@ -26,8 +26,6 @@ function growChanged(part: GrowPart): boolean {
 }
 
 const CHANGED: Record<string, () => boolean> = {
-  // メロディの音色は grow（初期値）とジャンルに合わせる（auto）が標準
-  melodySound: () => !["grow", "auto"].includes(getState().melodyInstrument),
   meter:       () => getState().meter !== defaultState.meter,
   swing:       () => getState().swing !== null,
   swingUnit:   () => getState().swingUnit !== defaultState.swingUnit,
@@ -55,7 +53,6 @@ function resetGroup(group: MoreGroup): boolean {
   const s = getState();
   switch (group) {
     case "basic":
-      if (CHANGED.melodySound()) setState({ melodyInstrument: defaultState.melodyInstrument });
       setMeter(defaultState.meter);  // メロディ・オリジナルのドラムも 4/4 のマスに置き直す
       setState({ swing: null, sidechain: null, swingUnit: defaultState.swingUnit });
       applySwing();

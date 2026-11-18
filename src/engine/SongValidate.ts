@@ -133,7 +133,7 @@ function growParams(v: unknown): Record<string, number> | null {
 }
 
 const TEMPO_PRESETS = ["ゆっくり", "普通", "速い", "custom"] as const;
-const MELODY_INSTRUMENTS = ["auto", "soft", "lead", "square", "pluck", "supersaw", "epiano", "bell", "acid", "grow"] as const;
+const MELODY_INSTRUMENTS = ["grow"] as const;
 const CHORD_RHYTHMS = ["whole", "half", "quarter", "eighth"] as const;
 const FX_TYPES = ["auto", "riser", "build", "impact", "downlifter", "reverse", "chip"] as const;
 

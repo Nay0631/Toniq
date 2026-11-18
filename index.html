@@ -340,7 +340,7 @@
 
             <!-- もっと調整：標準（ジャンルに合わせる）のままでも鳴る項目は畳んでおく（CustomMore.ts） -->
             <details class="panel-more" data-more="basic">
-            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">拍子・インスト・グルーヴ</span><span class="panel-more-badge"></span></summary>
+            <summary class="panel-more-summary"><span class="panel-more-label">もっと調整</span><span class="panel-more-items">拍子・グルーヴ</span><span class="panel-more-badge"></span></summary>
             <div class="panel-more-body">
 
             <label class="form-row">
@@ -349,23 +349,6 @@
                 <option value="4/4" data-term="meter.4/4">4/4</option>
                 <option value="3/4" data-term="meter.3/4">3/4</option>
                 <option value="4/4t" data-term="meter.4/4t">4/4（3連符）</option>
-              </select>
-            </label>
-
-            <label class="form-row">
-              <span class="form-label" data-term="instrument" data-std="melodySound">インスト</span>
-              <select class="select" id="c-instrument">
-                <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow" data-term="melodySound.grow">lidless（Toniq専用シンセ）</option>
-                <option value="auto" data-term="melodySound.auto">ジャンルに合わせる</option>
-                <option value="supersaw" data-term="melodySound.supersaw">SuperSaw リード（EDM）</option>
-                <option value="epiano" data-term="melodySound.epiano">エレピ（ローファイ）</option>
-                <option value="bell" data-term="melodySound.bell">ベル（ゲームBGM）</option>
-                <option value="square" data-term="melodySound.square">スクエア（8bit）</option>
-                <option value="acid" data-term="melodySound.acid">アシッド（テクノ）</option>
-                <option value="lead" data-term="melodySound.lead">シンセリード</option>
-                <option value="pluck" data-term="melodySound.pluck">プラック（ハウス）</option>
-                <option value="soft" data-term="melodySound.soft">ソフトサイン（アンビエント）</option>
               </select>
             </label>
 
@@ -832,11 +815,10 @@
           <div class="settings-row">
             <div class="settings-text">
               <div class="settings-label">ドラムの音源（テスト中）</div>
-              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ lidless で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は、ドラムはシンセ、パーカッションは lidless で鳴ります。</div>
+              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ lidless で鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は lidless で鳴ります。</div>
             </div>
             <div class="chips settings-options" role="radiogroup" aria-label="ドラムの音源">
               <button class="chip" role="radio" data-settings-drum-source="grow">lidless</button>
-              <button class="chip" role="radio" data-settings-drum-source="synth">シンセ</button>
               <button class="chip" role="radio" data-settings-drum-source="sample">サンプル音源</button>
             </div>
           </div>
@@ -924,7 +906,7 @@
           <details class="help-item">
             <summary>カスタムモードの「もっと調整」</summary>
             <ul>
-              <li>各欄の下の「もっと調整」には、触らなくてもジャンルに合った音で鳴る項目（インスト・グルーヴ・コードのリズムと音色・追加パート・FX など）が入っています。クリックで開閉します。</li>
+              <li>各欄の下の「もっと調整」には、触らなくてもジャンルに合った音で鳴る項目（グルーヴ・コードのリズムと音色・追加パート・FX など）が入っています。クリックで開閉します。</li>
               <li>見出しの「○件変更」は、その中で標準から変えている項目の数です。変えた項目の名前の左には印（●）が付きます。</li>
               <li>「この欄を標準に戻す」で、その欄の項目をまとめてジャンルの標準・初期値に戻します（<kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻せます）。</li>
               <li>「追加パートを使う」は、パッド・アルペジオなどの追加パートをまとめて ON/OFF します。1つずつ切り替えるときはアレンジャー（レーンの ON ボタンやミキサー）を使います。</li>

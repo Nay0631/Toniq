@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { MelodyNote } from "./MelodyGenerator";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
-import { getState, MelodyInstrument } from "./AppState";
+import { getState } from "./AppState";
 import melodyParams from "../data/melody_params.json";
 import { GrowInstrument, growValues, isGrowReady, prepareGrowContext } from "./Grow";
 import { beatsPerBar } from "./Meter";
@@ -14,8 +14,9 @@ let melodyFx:    Tone.ToneAudioNode[] = [];  // Synth の後ろにつなぐエ�
 let melodyVol:   Tone.Volume | null = null;
 let melodySound: SoundName | "grow" | null = null;  // 今の melodySynth を作ったときの音色（試聴で作り直すかの判定用）
 
-// ジャンルごとの音色（grow は INSTRUMENTS ではなく Grow.ts で鳴らす）
-type SoundName = Exclude<MelodyInstrument, "auto" | "grow">;
+// grow を鳴らせないとき（wasm がない・準備ができていない）の予備の Tone.js の音色。画面では選べない。
+// どれを使うかはジャンルで決める（melody_params.json の instrument）
+type SoundName = "soft" | "lead" | "square" | "pluck" | "supersaw" | "epiano" | "bell" | "acid";
 
 // メロディは単音なので、単音の Synth のどれか
 type MelodySynth = Tone.Synth | Tone.MonoSynth | Tone.FMSynth;
@@ -146,21 +147,17 @@ const INSTRUMENTS: Record<SoundName, MelodySound> = {
   },
 };
 
-// 実際に鳴らす音色。"auto" はジャンルの標準（melody_params.json の instrument）。
-// "grow" は今のオーディオコンテキストで grow の準備ができていれば grow、できていなければジャンルの標準
+// 実際に鳴らす音色。今のオーディオコンテキストで grow の準備ができていれば grow、
+// できていなければ予備の Tone.js の音色のうちジャンルの標準（melody_params.json の instrument）
 export function resolveMelodySound(): SoundName | "grow" {
   const s = getState();
-  if (s.melodyInstrument === "grow") {
-    if (isGrowReady()) return "grow";
-  } else if (s.melodyInstrument !== "auto" && s.melodyInstrument in INSTRUMENTS) {
-    return s.melodyInstrument;
-  }
+  if (isGrowReady()) return "grow";
   const params = melodyParams as unknown as Record<string, { instrument?: SoundName }>;
   const name = (params[s.genre] ?? params["ローファイ"]).instrument;
   return name && name in INSTRUMENTS ? name : "soft";
 }
 
-// 音色は AppState.melodyInstrument（"auto" ならジャンル）から決める。変更は次に Synth を作り直したとき（再生開始時）に反映される
+// 音色は grow（growPreset / growParams）。変更は次に Synth を作り直したとき（再生開始時）に反映される
 export function initMelodySynth() {
   disposeMelodySynth();
   melodyVol = createVolumeNode("melody");  // 現在のオーディオコンテキスト用のノード
@@ -210,7 +207,7 @@ export function loadMelody(notes: MelodyNote[], loopEnd: string) {
 // ピアノロールで置いた音を試聴する（Synth がなければ作る。再生中は鳴っているメロディの Synth で鳴らす）
 export async function previewMelodyNote(note: string) {
   await Tone.start();
-  if (getState().melodyInstrument === "grow") await prepareGrowContext();
+  await prepareGrowContext();
   // 起動時（grow の準備前）に作った Synth や、音色・ジャンルを変える前の Synth なら今の設定で作り直す
   if (!melodySynth || melodySound !== resolveMelodySound()) initMelodySynth();
   melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);

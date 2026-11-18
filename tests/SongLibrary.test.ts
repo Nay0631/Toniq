@@ -58,6 +58,9 @@ describe("loadSong：古い形式の曲の読み替え", () => {
   });
 
   it("番号で保存した grow のプリセットを ID に読み替える（LEGACY_PRESET_IDS）", () => {
+    // メロディを grow で鳴らしていた曲（toniq の曲はメロディのプリセットを使わない）
+    storeRaw([legacySong({ melodyInstrument: "grow" })]);
+    loadSong("song_old");
     const s = getState();
     expect(s.growPreset).toBe(LEGACY_PRESET_IDS[4]);
     expect(s.growPreset).toBe("acid");
@@ -78,8 +81,9 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(getState().growChordPreset).toBe("epiano");
   });
 
-  it("旧 grow（melodyInstrument: toniq）はジャンルの標準（auto）にし、toniqSynth は読み捨てる", () => {
-    expect(getState().melodyInstrument).toBe("auto");
+  it("旧 grow（melodyInstrument: toniq）は grow のジャンルの標準にし、toniqSynth は読み捨てる", () => {
+    expect(getState().melodyInstrument).toBe("grow");
+    expect(getState().growPreset).toBeNull();  // 保存していた growPreset（鳴っていなかった）は使わない
     expect("toniqSynth" in getState()).toBe(false);
   });
 
@@ -162,6 +166,24 @@ describe("loadSong：そのほかの読み替え", () => {
     expect(getState().melodyInstrument).toBe("grow");
   });
 
+  it.each([
+    ["supersaw", "supersaw"], ["epiano", "epiano"], ["bell", "bell"], ["square", "chip_lead"],
+    ["lead", "lead"], ["pluck", "pluck"], ["soft", "soft_pad"], ["acid", null], ["auto", null],
+  ])("以前の Tone.js のメロディの音色 %s は grow のプリセット %s にし、音作りの値は捨てる", (instrument, preset) => {
+    storeRaw([legacySong({ melodyInstrument: instrument, growPreset: "pluck", growParams: { 3: 0.5 } })]);
+    loadSong("song_old");
+    expect(getState().melodyInstrument).toBe("grow");
+    expect(getState().growPreset).toBe(preset);
+    expect(getState().growParams).toBeNull();
+  });
+
+  it("grow で鳴らしていた曲のメロディの音作りの値はそのまま", () => {
+    storeRaw([legacySong({ melodyInstrument: "grow", growPreset: "pluck", growParams: { 3: 0.5 } })]);
+    loadSong("song_old");
+    expect(getState().growPreset).toBe("pluck");
+    expect(getState().growParams).toEqual({ 3: 0.5 });
+  });
+
   it("範囲外の番号のプリセットは初期値（ジャンルの標準）にする", () => {
     storeRaw([legacySong({ growPreset: 9999 })]);
     loadSong("song_old");
@@ -170,16 +192,16 @@ describe("loadSong：そのほかの読み替え", () => {
   });
 
   it("メロディのプリセットが無い・null の曲はジャンルの標準（null）、以前の初期値の lead はそのまま", () => {
-    storeRaw([legacySong({ growPreset: undefined })]);
+    storeRaw([legacySong({ melodyInstrument: "grow", growPreset: undefined })]);
     loadSong("song_old");
     expect(getState().growPreset).toBeNull();
 
-    storeRaw([legacySong({ growPreset: null })]);
+    storeRaw([legacySong({ melodyInstrument: "grow", growPreset: null })]);
     loadSong("song_old");
     expect(getState().growPreset).toBeNull();
 
     // メロディの標準がまだ無かった頃の曲（初期値の "lead" を保存している）は、保存した音のまま鳴らす
-    storeRaw([legacySong({ growPreset: "lead" })]);
+    storeRaw([legacySong({ melodyInstrument: "grow", growPreset: "lead" })]);
     loadSong("song_old");
     expect(getState().growPreset).toBe("lead");
   });
@@ -222,9 +244,9 @@ describe("曲ファイル", () => {
     const [song] = listSongs();
     expect(song.name).toBe("古い曲");
     expect(song.id).not.toBe("song_old");  // 新しい ID で追加する
-    expect(song.growPreset).toBe("acid");
+    expect(song.growPreset).toBeNull();  // 旧 grow（toniq）のメロディは grow のジャンルの標準
     expect(song.growChordPreset).toBe("epiano");
-    expect(song.melodyInstrument).toBe("auto");
+    expect(song.melodyInstrument).toBe("grow");
     expect(song.parts.fx).toBe(defaultState.parts.fx);
   });
 
@@ -297,7 +319,7 @@ describe("曲ファイル：中身の確認（鳴らすときに例外になる�
       parts: { drum: "yes", bass: false }, swing: 250, sidechain: "強", modulation: 40,
       fxType: "explosion", chordRhythm: "triplet", arrangePreset: "wild", swingUnit: "4n", melodyMethod: "ai",
       sections: ["A", "C"], arrangeEdits: [{ section: "B", nth: 0, part: "pad", on: false }, { section: "Z", nth: 0, part: "pad" }, "x"],
-      growParams: { 1: 0.5, 2: "x" }, bassSub: "on", meter: "7/8",
+      melodyInstrument: "grow", growParams: { 1: 0.5, 2: "x" }, bassSub: "on", meter: "7/8",
     });
     expect(song.pans.melody).toBe(100);
     expect(song.pans.arp).toBe(defaultState.pans.arp);

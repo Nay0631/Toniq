@@ -30,12 +30,9 @@ const TARGET_LABELS: Record<GrowPart, string> = {
   counter: "カウンターメロディ",
 };
 
-// grow で鳴らしているパート（メロディ以外はいつも grow）
+// grow で鳴らしているパート（すべていつも grow）
 function growTargets(): GrowPart[] {
-  const list: GrowPart[] = [];
-  if (getState().melodyInstrument === "grow") list.push("melody");
-  list.push("counter", "chord", "bass", "pad", "arp", "signature");
-  return list;
+  return ["melody", "counter", "chord", "bass", "pad", "arp", "signature"];
 }
 
 // ===== キーボードでの試し弾き（タイピングピアノ。TypingKeys.ts） =====

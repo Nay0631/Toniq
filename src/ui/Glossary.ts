@@ -138,16 +138,6 @@ export const TERMS: Record<string, Term> = {
   "sound.rain":         { title: "雨音", desc: "パラパラと降る雨のような音です。曲の後ろにうっすら流すと、落ち着いた空気や情景が出ます。" },
 
   // メロディの音色（「インスト」）
-  "melodySound.grow":     { title: "lidless（Toniq専用シンセ）", desc: "Toniq の内部シンセサイザーで鳴らします。下の音作りのパネルでプリセットを選んだり、音を細かく変えたりできます。" },
-  "melodySound.auto":     { title: "ジャンルに合わせる", desc: "ジャンルに合った音色を自動で選びます。" },
-  "melodySound.supersaw": { title: "SuperSaw リード", desc: "ギザギザの波を重ねた、分厚く派手なリードの音色です。EDM のメロディの定番です。" },
-  "melodySound.epiano":   { title: "エレピ", desc: "エレクトリックピアノの、丸くて温かい音色です。ローファイによく合います。" },
-  "melodySound.bell":     { title: "ベル", desc: "「キラーン」と澄んだ、鐘のような音色です。ゲームBGM やかわいい曲に合います。" },
-  "melodySound.square":   { title: "スクエア", desc: "四角い形の波（矩形波）の、ピコピコした音色です。昔のゲーム機のような 8bit の音になります。" },
-  "melodySound.acid":     { title: "アシッド", desc: "「ビュンビュン」とクセのある、うねるような電子音です。テクノでよく使われます。" },
-  "melodySound.lead":     { title: "シンセリード", desc: "メロディを目立たせるための、くっきりしたシンセの音色です。どのジャンルでも使いやすい音です。" },
-  "melodySound.pluck":    { title: "プラック", desc: "弦をはじいたように、鳴ってすぐ消える短い音色です。ハウスなどで軽やかなメロディになります。" },
-  "melodySound.soft":     { title: "ソフトサイン", desc: "丸くやさしい、笛のような音色です。アンビエントなど静かな曲に合います。" },
 };
 
 const SHOW_DELAY_MS = 350;  // すぐ出すと操作のじゃまになるので少し待つ
