@@ -20,6 +20,8 @@ export function bindSpaceToPlay(active: () => boolean, start: () => Promise<void
     if (!active()) return;
     if (e.code !== "Space" || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
     if (isTyping(e.target) || modalOpen()) return;
+    // 「もっと調整」などの開閉（<summary>）はスペースで開け閉めできるように残す
+    if (e.target instanceof HTMLElement && e.target.closest("summary")) return;
     e.preventDefault();
     if (e.repeat) return;
     if (Playback.isPlaying()) {

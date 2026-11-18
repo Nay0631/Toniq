@@ -28,9 +28,12 @@ export function onScreenChange(fn: (prev: Screen, next: Screen) => void): void {
   screenChangeHandlers.push(fn);
 }
 
+// タブのある画面（離れたときのタブを覚えておき、戻ったときに同じタブを開く）
+const SCREENS_WITH_TABS: Screen[] = ["simple", "custom"];
+
 // 画面を切り替える。表示状態は AppState.screen だけで管理する
 export function showScreen(screen: Screen): void {
-  const prev = getState().screen;
+  const { screen: prev, tab, screenTabs } = getState();
   if (prev !== screen) screenChangeHandlers.forEach(fn => fn(prev, screen));
   stopMetronome();     // BPM のクリック音は画面を離れたら止める
   stopScalePreview();  // キー・スケールの試聴も止める
@@ -41,7 +44,10 @@ export function showScreen(screen: Screen): void {
   } else if (screen === "simple") {
     setState({ mode: "simple" });
   }
-  setState({ screen, tab: "settings" });
+  // 離れる画面のタブを覚え、行き先の画面は前に開いていたタブで開く（初めてなら設定タブ）
+  const tabs = prev !== screen && SCREENS_WITH_TABS.includes(prev) ? { ...screenTabs, [prev]: tab } : screenTabs;
+  const nextTab = prev === screen ? tab : (tabs[screen] ?? "settings");
+  setState({ screen, tab: nextTab, screenTabs: tabs });
   render();
 }
 

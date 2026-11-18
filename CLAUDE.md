@@ -58,7 +58,7 @@ tools/mix-measure.mjs   ミックスの一括計測（npm run mix:measure。Elec
 index.html              UI。ヘッダー＋画面ごとの <section data-screen="…">（menu / simple / custom / musiclist / quiz / settings / rating）
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
 src/ui/
-  Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab
+  Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab。シンプルモード・カスタムモードは離れたときのタブを AppState.screenTabs に覚え、戻ると同じタブを開く
   SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、書き出し、ジャンルのサンプル試聴）
   CustomScreen.ts         カスタムモード画面のイベントの登録と再生の操作（設定タブ：基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオの3列＋書き出し、アレンジャータブ下部の書き出し、スペースキーの再生）
   CustomRender.ts         カスタムモード画面の表示（render。情報バー・設定タブの各欄、アレンジャー・ミキサーの描画を呼ぶ）
@@ -201,7 +201,7 @@ src/engine/
   - 音は lidless で出す（`GROW_FX`。コアの「FX …」のプリセット（ID は `fx_…`）を ID で探し、長さで変わる EG の時間などは、鳴らすたびに `GrowInstrument.setParamAtTime` で発音の少し前（`PARAM_LEAD`）に当てる。AudioParam の合図なので書き出しでもサンプル単位で合う）。lidless の準備ができていない・プリセットがない（wasm が古い）ときは `FX_DEFS`（Tone.js）で鳴らす。ライザー・ダウンリフターの音程は、ピッチ EG を直線のカーブにし、時間を長さいっぱいにして一定の速さで動かす（2オクターブ下から上がる／3オクターブ上から下がる）。
   - 種類を足すときは `FxType`（`AppState.ts`）・`FX_DEFS`・`GROW_FX`・`index.html` の `#c-fx-type` にそろえて足す。音色は再生開始時に反映される。
 - ピアノロール（`PianoRollTab.ts`）はコード進行1周分（メロディのループの長さ）を表示し、`AppState.melodyNotes`（サビを選んでいるときは `chorusMelodyNotes`）を直接編集する（鳴る音だけを持ち、休符は持たない）。編集中のセクションは表示上の一時的な状態としてモジュール内に持つ。「自動生成」は Aメロとサビの両方を作り直す。編集すると `melodyMethod` は `"manual"` になり、「自動生成」で `"auto"` に戻る。メロディは単音なので、重なる音は手前で切るか消す。再生中の編集はメロディだけ読み込み直して（`reloadLayer("melody")`）すぐ反映する。
-- メロディは起動時・「＋ 新規作成」では作らず空のまま。自動生成ボタン（ピアノロールの「自動生成」、シンプルモードで「自動生成」を選んで「生成する」／「↻ 再生成」）を押したときに初めて作る。`melodyMethod === "auto"` でも `melodyNotes` が空なら未作成として扱い、コード進行・キーを変えても自動では作らない（作成済みなら作り直す）。
+- メロディは起動時・「＋ 新規作成」では作らず空のまま。自動生成ボタン（ピアノロールの「自動生成」、シンプルモードで「自動生成」を選んで「生成する」／メロディの「↻ 再抽選」）を押したときに初めて作る。`melodyMethod === "auto"` でも `melodyNotes` が空なら未作成として扱い、コード進行・キーを変えても自動では作らない（作成済みなら作り直す）。
 - ピアノロールの入力設定（音符長 `pianoRollLength`・スケールロック `pianoRollScaleLock`・オクターブ `pianoRollOctave`）は AppState に置く。スケールロックはコード進行の `scaleLock` とは別。スケールの7音は `SCALE_TONES`（core＋accent）から作る。選択中の音と鍵盤入力の位置は表示上の一時的な状態としてモジュール内に持つ。
 - ピアノロールの操作：クリックで配置（そのままドラッグで長さ）、音をドラッグで移動、右端で長さ変更、右クリック／Delete で削除、目盛りクリックで鍵盤入力の位置、タイピングピアノで鍵盤入力（Z〜/ の段が C4〜E5、Q〜] の段が C5〜G6、それぞれ上の段が黒鍵。オクターブ 4 のとき。`TypingKeys.ts` の `TYPING_KEYMAP`）、↓ / ↑ でオクターブ切替。
 - ミュージックリスト（`SongLibrary.ts`）は曲の内容（`SONG_FIELDS`：モード・ジャンル・キー・BPM・小節数・パターン・メロディ・音色・アレンジ・パートON/OFF・音量）を localStorage に保存する。画面・タブ・ピアノロールの入力設定は保存しない。曲の内容に関わる項目を AppState に足したら `SONG_FIELDS`（`AppState.ts` に定義）にも足す。`SONG_FIELDS` は曲ファイルと元に戻す／やり直すの対象にもなる。
@@ -286,7 +286,7 @@ src/engine/
 - コードのリズム（`chordRhythm`）・コードの音色（`growChordPreset`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。コードの音色は lidless のプリセット（ChordPlayer の Tone.js の音色は wasm がないときの `FALLBACK` だけ）。メロディの音色の定義は MelodyPlayer の `INSTRUMENTS`。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
 - シンプルモードの曲の長さは 32 小節（`SimpleScreen.ts` の `SIMPLE_SONG_BARS`。生成時・コード進行の差し替え時に設定する）。
-- シンプルモードの「生成する」「もう一度生成する」は、ピアノロールで作った内容（「自分で入力」のメロディ・オリジナルのドラム）を消さずに残す（docs/ui.md）。
+- シンプルモードの「生成する」「別の曲を生成する」は、ピアノロールで作った内容（「自分で入力」のメロディ・オリジナルのドラム）を消さずに残す（docs/ui.md）。
 - シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
 - 各パートの Synth はモジュールに1つずつ。WAV書き出しは再生を止めて Synth を作り直し、終わったら破棄する。曲のあとに付ける余韻は `renderTailSeconds()`（2 秒。エンディングを使うときは1小節以上。遅い曲で最後の和音が切れないように）。再生中に書き出すと再生は止まる。
 - WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。

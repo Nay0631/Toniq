@@ -85,10 +85,8 @@ export function initCustomScreen(): void {
   });
 
   // アレンジャー・ピアノロールのタブではスペースキーで再生／停止する（アレンジャーは開始位置から、ピアノロールは先頭から）
-  bindSpaceToPlay(() => {
-    const s = getState();
-    return s.screen === "custom" && (s.tab === "arranger" || s.tab === "pianoroll");
-  }, startPlayback);
+  // どのタブでもスペースキーで再生／停止する（設定タブ・ピアノロールは曲の先頭から、アレンジャーは開始位置から）
+  bindSpaceToPlay(() => getState().screen === "custom", startPlayback);
 
   // ===== 基本設定 =====
   const bpmRange = $("c-bpm-range") as HTMLInputElement;

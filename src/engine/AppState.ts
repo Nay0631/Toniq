@@ -94,6 +94,8 @@ export interface AppState {
   // 表示中の画面とタブ
   screen: Screen;
   tab:    Tab;
+  // タブのある画面（シンプルモード・カスタムモード）を離れたときに開いていたタブ。戻ったときに同じタブを開く（保存しない）
+  screenTabs: Partial<Record<Screen, Tab>>;
 
   // 画面の配色（曲の内容ではないので SONG_FIELDS には入れない。端末ごとに Theme.ts が保存する）
   theme: Theme;
@@ -235,7 +237,8 @@ export interface AppState {
 export const defaultState: AppState = {
   screen:      "menu",
   tab:         "settings",
-  theme:       "light",
+  screenTabs:  {},
+  theme:      "light",
   themeMode:   "system",
   skin:        "default",
   tooltips:    true,

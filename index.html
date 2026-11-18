@@ -227,7 +227,7 @@
             <div class="wave-ticks" id="s-ticks"></div>
           </div>
 
-          <div class="field-label">↻ <span data-term="layer">レイヤー</span>差し替え</div>
+          <div class="field-label">↻ <span data-term="layer">レイヤー</span>差し替え <span class="field-hint">押したパートだけを選び直します（Aメロ・サビの両方が変わります）</span></div>
           <div class="layer-cards">
             <div class="card layer-card">
               <div class="layer-name"><span class="dot dot-melody"></span><span data-term="melody">メロディ</span></div>
@@ -237,12 +237,12 @@
             <div class="card layer-card">
               <div class="layer-name"><span class="dot dot-chord"></span><span data-term="chord">コード</span></div>
               <div class="layer-desc" id="s-chord-desc"></div>
-              <button class="btn btn-small" id="s-chord-reroll">↻ 再抽選</button>
+              <button class="btn btn-small" id="s-chord-reroll" title="Aメロ・サビのコード進行を選び直します（自動生成のメロディも作り直します）">↻ 再抽選</button>
             </div>
             <div class="card layer-card">
               <div class="layer-name"><span class="dot dot-drum"></span><span data-term="drum">ドラム</span></div>
               <div class="layer-desc" id="s-drum-desc"></div>
-              <button class="btn btn-small" id="s-drum-reroll">↻ 再抽選</button>
+              <button class="btn btn-small" id="s-drum-reroll" title="曲全体（Aメロ・サビ）のドラムパターンを選び直します">↻ 再抽選</button>
             </div>
           </div>
 
@@ -254,7 +254,7 @@
               <button class="btn" id="s-export-wav" data-term="wav">WAVで書き出す</button>
               <button class="btn" id="s-export-mp3" data-term="mp3">MP3で書き出す</button>
             </div>
-            <button class="btn" id="s-regenerate">✦ もう一度生成する</button>
+            <button class="btn" id="s-regenerate">✦ 別の曲を生成する</button>
             <button class="btn btn-custom" data-goto="custom">☰ カスタムモードで編集する</button>
           </div>
           <p class="hint">音量バランスを調整したい場合はカスタムモードで編集できます</p>
@@ -899,6 +899,8 @@
             <summary>シンプルモード</summary>
             <ul>
               <li>雰囲気を選ぶと、その雰囲気に合うジャンルだけが並びます。今のジャンルが合わないときは、合うジャンルの先頭に切り替わります。</li>
+              <li>生成した曲の「レイヤー差し替え」の「↻ 再抽選」は、押したパート（メロディ・コード・ドラム）だけを選び直します（Aメロ・サビの両方が変わります）。「✦ 別の曲を生成する」は全部を選び直して新しい曲にします（ピアノロールで入力したメロディ・作ったドラムは残ります）。</li>
+              <li>生成した曲では、どのタブでもスペースキーで再生／停止できます。</li>
               <li>曲はジャンルに合うスケールのコード進行から作られます（スケールを自分で選ぶときはカスタムモードを使います）。</li>
             </ul>
           </details>
@@ -912,7 +914,7 @@
               <li>ドラム・FX のブロックは、ラベルの文字をクリックするとセクションごとにパターン・種類を選べます。</li>
               <li>いちばん上の「セクション」の行をクリックすると、その周回を Aメロ／サビ で切り替えます。</li>
               <li>小節番号の目盛りをクリックすると、そこが再生の開始位置になります（アレンジャータブで再生したとき。「⏮ 先頭へ」で戻ります）。</li>
-              <li>スペースキーで再生／停止できます（再生は開始位置から）。</li>
+              <li>スペースキーで再生／停止できます（再生は開始位置から）。カスタムモードでは設定タブ・ピアノロールでも使えます（そちらは曲の先頭から）。</li>
               <li>「⟲ ループ」で、曲の終わりで止めずに先頭へ戻って繰り返すかを切り替えます（設定画面の「ループ再生」と同じ設定です。再生中に切り替えてもすぐ反映されます）。</li>
               <li>OFF のパートの行をクリックすると、そのパートは ON になります。「↺ 変えた所を消す」で、選んだ構成のままに戻ります。</li>
               <li>パートの ON/OFF ボタンを<b>右クリック</b>すると、そのパートだけを鳴らします（ほかのパートは OFF。ソロ）。もう一度右クリックすると、ソロにする前の ON/OFF に戻ります。</li>

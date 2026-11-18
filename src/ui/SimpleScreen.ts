@@ -121,6 +121,17 @@ function keptContent(): string | null {
   return kept.length > 0 ? kept.join("と") : null;
 }
 
+// メロディの音の数（「Aメロ 24音・サビ 26音」など。サビのメロディがなければ Aメロと同じものが鳴る）
+function melodySummary(): string {
+  const s = getState();
+  const count = (notes: typeof s.melodyNotes) => notes.filter(n => n.note).length;
+  const verse = count(s.melodyNotes);
+  if (verse === 0 && s.chorusMelodyNotes.length === 0) return "まだ音がありません";
+  return s.chorusMelodyNotes.length > 0
+    ? `Aメロ ${verse}音・サビ ${count(s.chorusMelodyNotes)}音`
+    : `${verse}音。サビも同じメロディ`;
+}
+
 // 再生中に曲の内容が変わったら先頭から再生し直す
 export async function restartIfPlaying(): Promise<void> {
   if (Playback.isPlaying()) await startPlayback();
@@ -280,16 +291,16 @@ function render(): void {
   $("s-result")!.hidden = !s.generated;
   if (!s.generated) return;
 
-  // 生成結果
-  const phrase = String.fromCharCode(65 + (s.melodyVersion % 26));
-  $("s-melody-desc")!.textContent = s.melodyMethod === "auto"
-    ? `自動生成 フレーズ${phrase}`
-    : `ピアノロールで入力（${s.melodyNotes.filter(n => n.note).length}音）`;
-  $("s-melody-action")!.textContent = s.melodyMethod === "auto" ? "↻ 再生成" : "ピアノロールを開く";
+  // 生成結果（Aメロ・サビのどちらに何があるかを書く。差し替えは両方に効く）
+  $("s-melody-desc")!.textContent = `${s.melodyMethod === "auto" ? "自動生成" : "ピアノロールで入力"}（${melodySummary()}）`;
+  $("s-melody-action")!.textContent = s.melodyMethod === "auto" ? "↻ 再抽選" : "ピアノロールを開く";
+  $("s-melody-action")!.title = s.melodyMethod === "auto"
+    ? "Aメロ・サビのメロディを作り直します（コード進行・ドラムはそのまま）"
+    : "ピアノロールのタブでメロディを編集します";
   const chorus = chorusProgression();
   $("s-chord-desc")!.textContent = !s.chordPattern ? ""
-    : chorus ? `${chordNames(s.chordPattern, s.key)}（サビ：${chordNames(chorus, s.key)}）`
-    : chordNames(s.chordPattern, s.key);
+    : chorus ? `Aメロ：${chordNames(s.chordPattern, s.key)} ／ サビ：${chordNames(chorus, s.key)}`
+    : `${chordNames(s.chordPattern, s.key)}（Aメロ・サビ共通）`;
   if (s.drumPattern) {
     $("s-drum-desc")!.textContent = s.drumPattern.id === CUSTOM_DRUM_ID
       ? `${s.drumPattern.name}（ピアノロールで作成）`
@@ -384,10 +395,10 @@ export function initSimpleScreen(): void {
   });
 
   $("s-play")?.addEventListener("click", startPlayback);
-  // ピアノロールのタブではスペースキーで再生／停止する
+  // 生成した曲は、どのタブでもスペースキーで再生／停止する（生成前は鳴らす曲がない）
   bindSpaceToPlay(() => {
     const s = getState();
-    return s.screen === "simple" && s.tab === "pianoroll" && s.generated;
+    return s.screen === "simple" && s.generated;
   }, startPlayback);
   $("s-stop")?.addEventListener("click", () => {
     Playback.stop();
