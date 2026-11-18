@@ -2,6 +2,7 @@ import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import type { LayerName } from "./LayerManager";
 import type { DrumSource } from "./SynthFactory";
+import type { Meter } from "./Meter";
 
 // 表示中の画面
 export type Screen = "menu" | "simple" | "custom" | "musiclist" | "quiz" | "settings" | "rating";
@@ -132,6 +133,8 @@ export interface AppState {
   bpm:    number;
   tempoPreset: "ゆっくり" | "普通" | "速い" | "custom";
   bars:   number;  // 曲全体の最大の長さ（小節）
+  // 拍子（4/4・3/4・4/4 の3連符。1小節のマスの数え方は Meter.ts。カスタムモードの「もっと調整」で選ぶ）
+  meter:  Meter;
 
   // 選択中のパターン
   chordPattern:  ChordProgression | null;
@@ -193,7 +196,7 @@ export interface AppState {
   // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
   pianoRollLength:    PianoRollLength;
   pianoRollScaleLock: boolean;  // ON のときはスケール外の音を置けない
-  pianoRollOctave:    number;   // 鍵盤入力（A〜K）のオクターブ
+  pianoRollOctave:    number;   // 鍵盤入力（タイピングピアノ）の基準のオクターブ（下の段の C。3〜5）
   drumRollVelocity:   number;   // ピアノロールのドラムで置く音の強さ（0〜1。強・中・弱）
 
   // パートのON/OFF
@@ -245,7 +248,7 @@ export const defaultState: AppState = {
   musicListSort:      "newest",
 
   quizMode:      "doremi_cde",
-  noteNames:     "cde",
+  noteNames:     "doremi",
   loopPlayback:  false,
 
   mode:      "simple",
@@ -255,6 +258,7 @@ export const defaultState: AppState = {
   bpm:         128,
   tempoPreset: "普通",
   bars:        32,
+  meter:       "4/4",
 
   chordPattern: null,
   drumPattern:  null,
@@ -279,7 +283,7 @@ export const defaultState: AppState = {
   sidechain:        null,
   scaleLock:        true,
   drumCategory:     "EDM",
-  drumSource:       "grow",
+  drumSource:       "sample",
   growPreset:       null,  // ジャンルの標準
   growParams:       null,
   growChordPreset:  null,  // ジャンルの標準
@@ -347,7 +351,7 @@ export const defaultState: AppState = {
 // 曲として保存する AppState の項目（画面・タブ・ピアノロールの入力設定などの表示上の状態は含めない）。
 // ミュージックリスト（SongLibrary.ts）・曲ファイル・元に戻す／やり直す（History.ts）で使う
 export const SONG_FIELDS = [
-  "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars",
+  "mode", "genre", "mood", "key", "bpm", "tempoPreset", "bars", "meter",
   "chordPattern", "drumPattern", "melodyNotes", "chorusPattern", "chorusMelodyNotes", "sections",
   "modulation", "modulationScope",
   "melodyMethod", "melodyVersion",

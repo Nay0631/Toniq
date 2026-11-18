@@ -30,10 +30,6 @@
   <!-- アプリヘッダー -->
   <header class="app-header">
     <h1 class="app-title">Toniq</h1>
-    <button class="theme-toggle" id="theme-toggle" type="button" title="ダークモードにする" aria-label="ダークモードにする">
-      <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
-      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
-    </button>
   </header>
 
   <!-- パンくず（メニュー以外の画面で表示） -->
@@ -195,12 +191,6 @@
           </div>
 
           <div class="field">
-            <div class="field-label">▤ 構成 <span class="field-hint" id="s-arrange-hint"></span></div>
-            <!-- 構成のプリセット（AppState.arrangePreset。LoopArranger.ts の ARRANGE_PRESETS から SimpleScreen.ts が作る） -->
-            <div class="chips chips-arrange" id="s-arrange-preset"></div>
-          </div>
-
-          <div class="field">
             <div class="field-label">メロディの入力方法</div>
             <div class="method-cards">
               <button class="method-card" data-melody-method="auto">
@@ -221,6 +211,7 @@
           <div class="setup-actions">
             <button class="btn btn-large" id="s-generate">✦ 生成する</button>
           </div>
+          <p class="hint" id="s-keep-hint" hidden></p>
         </div>
 
         <!-- 生成後：結果 -->
@@ -282,7 +273,7 @@
         <div class="info">
           <span class="info-item"><span data-term="bpm">BPM</span> <b id="c-info-bpm"></b></span>
           <span class="info-item"><span data-term="key">キー</span> <b id="c-info-key"></b></span>
-          <span class="info-item"><span data-term="meter">拍子</span> <b>4/4</b></span>
+          <span class="info-item"><span data-term="meter">拍子</span> <b id="c-info-meter">4/4</b></span>
           <span class="info-item"><span data-term="bar">小節</span> <b id="c-info-bars"></b></span>
           <span class="info-item" id="c-info-loop" data-term="loop"></span>
         </div>
@@ -353,10 +344,11 @@
             <div class="panel-more-body">
 
             <label class="form-row">
-              <span class="form-label" data-term="meter">拍子</span>
+              <span class="form-label" data-term="meter" data-std="meter">拍子</span>
               <select class="select" id="c-meter">
-                <option value="4/4">4/4</option>
-                <option value="3/4" disabled>3/4（準備中）</option>
+                <option value="4/4" data-term="meter.4/4">4/4</option>
+                <option value="3/4" data-term="meter.3/4">3/4</option>
+                <option value="4/4t" data-term="meter.4/4t">4/4（3連符）</option>
               </select>
             </label>
 
@@ -364,7 +356,7 @@
               <span class="form-label" data-term="instrument" data-std="melodySound">インスト</span>
               <select class="select" id="c-instrument">
                 <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow" data-term="melodySound.grow">grow（Toniq専用シンセ）</option>
+                <option value="grow" data-term="melodySound.grow">lidless（Toniq専用シンセ）</option>
                 <option value="auto" data-term="melodySound.auto">ジャンルに合わせる</option>
                 <option value="supersaw" data-term="melodySound.supersaw">SuperSaw リード（EDM）</option>
                 <option value="epiano" data-term="melodySound.epiano">エレピ（ローファイ）</option>
@@ -659,6 +651,8 @@
             <span class="arranger-time" id="c-arr-time" title="再生位置 / 曲全体の長さ">0:00.00 / 0:00.00</span>
             <span class="arranger-hint">ドラッグで移動・端で長さを変更・× で削除・空いた所をクリックで配置／小節番号をクリックで再生開始位置</span>
             <button class="btn btn-small" id="c-arr-to-start">⏮ 先頭へ</button>
+            <!-- ループ再生（AppState.loopPlayback。設定画面の「ループ再生」と同じ設定） -->
+            <button class="btn btn-small arr-loop" id="c-arr-loop" aria-pressed="false" title="曲の終わりで止めずに、先頭へ戻って繰り返し再生します（設定画面の「ループ再生」と同じ設定）">⟲ ループ</button>
             <button class="btn btn-small" id="c-arr-reset" title="足した・抜いたセクションとセクションの切り替えを消して、選んだ構成に戻します">↺ 変えた所を消す</button>
           </div>
           <div class="arranger" id="c-arranger"></div>
@@ -838,10 +832,10 @@
           <div class="settings-row">
             <div class="settings-text">
               <div class="settings-label">ドラムの音源（テスト中）</div>
-              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ grow で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は、ドラムはシンセ、パーカッションは grow で鳴ります。</div>
+              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ lidless で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は、ドラムはシンセ、パーカッションは lidless で鳴ります。</div>
             </div>
             <div class="chips settings-options" role="radiogroup" aria-label="ドラムの音源">
-              <button class="chip" role="radio" data-settings-drum-source="grow">grow</button>
+              <button class="chip" role="radio" data-settings-drum-source="grow">lidless</button>
               <button class="chip" role="radio" data-settings-drum-source="synth">シンセ</button>
               <button class="chip" role="radio" data-settings-drum-source="sample">サンプル音源</button>
             </div>
@@ -882,9 +876,10 @@
               <li>音をドラッグで移動、音の右端をドラッグで長さを変えます。</li>
               <li>音を<b>右クリック</b>、または選んで <kbd>Delete</kbd> で消します。</li>
               <li>上の目盛りをクリックすると、キーボード入力の位置が決まります。</li>
-              <li>パソコンのキーボードで入力できます：<kbd>A</kbd>〜<kbd>K</kbd> が白鍵、<kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Y</kbd> <kbd>U</kbd> が黒鍵、<kbd>Z</kbd> / <kbd>X</kbd> でオクターブを下げる／上げる。</li>
+              <li>パソコンのキーボードをピアノの鍵盤のように使って入力できます：<kbd>Z</kbd>〜<kbd>/</kbd> の段が白鍵（C4〜E5）、その上の <kbd>S</kbd> <kbd>D</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> <kbd>L</kbd> <kbd>;</kbd> が黒鍵。<kbd>Q</kbd>〜<kbd>]</kbd> の段が1オクターブ上の白鍵（C5〜G6）、その上の数字の段（<kbd>2</kbd> <kbd>3</kbd> <kbd>5</kbd> <kbd>6</kbd> <kbd>7</kbd> <kbd>9</kbd> <kbd>0</kbd> <kbd>=</kbd>）が黒鍵。<kbd>↓</kbd> / <kbd>↑</kbd> でオクターブを下げる／上げる（音の高さはオクターブ 4 のとき）。</li>
               <li>左の鍵盤をクリックすると、その音を試聴できます。</li>
               <li>ツールバーの「Aメロ／サビ」で、編集するメロディを切り替えます。「自動生成」は両方を作り直します。</li>
+              <li>ツールバーの「ソロ」を押すと、編集中のパート（メロディ／ドラム）だけを鳴らします。もう一度押すと、元の ON/OFF に戻ります（アレンジャーの ON/OFF ボタンの右クリックと同じソロです）。</li>
               <li>スペースキーで再生／停止できます（再生は曲の先頭から）。</li>
             </ul>
           </details>
@@ -896,21 +891,31 @@
               <li>「強さ」で置く音の強さ、「長さ」でパターンの長さ（1・2・4小節）を選びます。パターンは曲の間くり返して鳴ります。</li>
               <li>左の見出しをクリックすると、その音を試聴できます。「パターンを読み込む…」で用意されたパターンから始められます。</li>
               <li>編集したドラムは「オリジナル」として曲と一緒に保存されます。</li>
+              <li>ドラムの「もっと調整」でフィル・エンディングを ON にしている小節や、アレンジャーでセクションに別のパターンを選んだ所では、作ったドラムの代わりにそちらが鳴ります（下のステータスバーに注意が出ます）。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>シンプルモード</summary>
+            <ul>
+              <li>雰囲気を選ぶと、その雰囲気に合うジャンルだけが並びます。今のジャンルが合わないときは、合うジャンルの先頭に切り替わります。</li>
+              <li>曲はジャンルに合うスケールのコード進行から作られます（スケールを自分で選ぶときはカスタムモードを使います）。</li>
             </ul>
           </details>
 
           <details class="help-item">
             <summary>アレンジャー（曲の構成）</summary>
             <ul>
-              <li>上の「構成」で、曲の流れ（標準・静かに始まる・サビを強く・短く繰り返す・だんだん盛り上がる）を選べます。たいていはこれだけで十分です。</li>
+              <li>上の「構成」で、曲の流れ（標準・静かに始まる・サビを強く・短く繰り返す・だんだん盛り上がる）を選べます。</li>
               <li>パートの行をクリックすると、そのセクション（8小節ごと。縦の線で区切っています）でそのパートを<b>足す／抜く</b>を切り替えます。もう一度クリックすると元に戻ります。</li>
-              <li>変えた所は枠で囲んで「＋ 足した」「− 抜いた」と出ます。「何回目の Aメロ／サビ」で覚えるので、ジャンルや小節数を変えてもそのまま当てはまります。</li>
               <li>ブロックを<b>右クリック</b>・<kbd>Delete</kbd>（選んだ状態で）でも、そのセクションから抜けます。</li>
               <li>ドラム・FX のブロックは、ラベルの文字をクリックするとセクションごとにパターン・種類を選べます。</li>
               <li>いちばん上の「セクション」の行をクリックすると、その周回を Aメロ／サビ で切り替えます。</li>
               <li>小節番号の目盛りをクリックすると、そこが再生の開始位置になります（アレンジャータブで再生したとき。「⏮ 先頭へ」で戻ります）。</li>
               <li>スペースキーで再生／停止できます（再生は開始位置から）。</li>
+              <li>「⟲ ループ」で、曲の終わりで止めずに先頭へ戻って繰り返すかを切り替えます（設定画面の「ループ再生」と同じ設定です。再生中に切り替えてもすぐ反映されます）。</li>
               <li>OFF のパートの行をクリックすると、そのパートは ON になります。「↺ 変えた所を消す」で、選んだ構成のままに戻ります。</li>
+              <li>パートの ON/OFF ボタンを<b>右クリック</b>すると、そのパートだけを鳴らします（ほかのパートは OFF。ソロ）。もう一度右クリックすると、ソロにする前の ON/OFF に戻ります。</li>
             </ul>
           </details>
 
@@ -921,7 +926,12 @@
               <li>見出しの「○件変更」は、その中で標準から変えている項目の数です。変えた項目の名前の左には印（●）が付きます。</li>
               <li>「この欄を標準に戻す」で、その欄の項目をまとめてジャンルの標準・初期値に戻します（<kbd>Ctrl</kbd>+<kbd>Z</kbd> で戻せます）。</li>
               <li>「追加パートを使う」は、パッド・アルペジオなどの追加パートをまとめて ON/OFF します。1つずつ切り替えるときはアレンジャー（レーンの ON ボタンやミキサー）を使います。</li>
-              <li>スケールを変えると、そのスケールのコード進行に切り替わります（切り替わった進行はスケールの下に少しの間表示されます）。</li>
+              <li>スケールを変えると、そのスケールのコード進行に切り替わります（切り替わった進行はスケールの下に少しの間表示されます）。ジャンルに合うスケールには「（おすすめ）」が付きます（ほかのスケールも選べます）。</li>
+              <li>サビのコード進行も ◀ ▶ で順に切り替えられます。</li>
+              <li>コード進行の「もっと調整」の<b>転調</b>で、曲の途中でキーを上げられます（「転調する所」で最後のサビから／サビだけを選びます）。</li>
+              <li>グルーヴの<b>跳ねる単位</b>を「8分音符（シャッフル）」にすると、8分の裏が跳ねたノリになります。</li>
+              <li>「追加パート」欄では、カウンターメロディ・パーカッションの ON/OFF と、ベースに低い音を重ねる<b>サブベース</b>（ジャンルに合わせる／ON／OFF）を選べます。</li>
+              <li>コードの音色や lidless のプリセットの一覧は、種類（カテゴリ）の見出しごとに並び、そのパートに合う種類だけが出ます。</li>
             </ul>
           </details>
 
@@ -932,8 +942,10 @@
               <li>ノブ・フェーダーはマウスホイールでも少しずつ動きます。</li>
               <li>クリックして選んだあと、矢印キーで1目盛り、<kbd>PageUp</kbd> / <kbd>PageDown</kbd> で大きく、<kbd>Home</kbd> / <kbd>End</kbd> で最小・最大にできます。</li>
               <li>グルーヴ（スウィング・サイドチェイン）の「標準」は、ジャンルに合った量に戻します。</li>
+              <li>カスタムモードの「もっと調整」の<b>拍子</b>で 3/4（ワルツ）と 4/4 の3連符（1拍を3つに分ける跳ねたノリ）を選べます。変えると、入力したメロディと作ったドラムは拍の位置を保って置き直され（3/4 では4拍目の音がなくなります）、自動生成のメロディは作り直されます。3連符の拍子ではスウィングは効きません。</li>
               <li>ミキサーのフェーダーは <b>75 が元の大きさ（0dB）</b>で、それより上げると元より大きくなります（100 で +5dB）。</li>
               <li>ミキサーのフェーダーの上の小さいノブは<b>パン</b>（音を左右のどこから鳴らすか。C = 中央、L = 左、R = 右）です。<b>ダブルクリック</b>で中央に戻ります。</li>
+              <li>ミキサーの ON/OFF ボタンを<b>右クリック</b>すると、そのパートだけを鳴らします（ソロ）。もう一度右クリックすると、元の ON/OFF に戻ります（アレンジャーの右クリック・ピアノロールの「ソロ」と同じソロです）。</li>
               <li>ミキサーの右端の「マスター」は曲全体の大きさです。下の数字は再生を始めてからいちばん大きかった瞬間（ピーク）で、音が割れるほど大きくなると <b>CLIP</b> が赤く点いたまま残ります。点いたらフェーダーを少し下げてください。CLIP か数字をクリックすると消えます。</li>
             </ul>
           </details>
@@ -961,7 +973,16 @@
               <li><b>♪ 保存</b>：アプリの中のミュージックリストに保存します。リストから開いた曲は上書き保存になります。</li>
               <li>保存した曲の続きを編集するには、ミュージックリストで曲の「編集」ボタンを押します（曲名のダブルクリックでも開けます）。</li>
               <li><b>WAV / MP3 / MIDI</b>：できた曲を音声・MIDI のファイルにします。保存先は「出力フォルダ」ボタンで開けます。</li>
-              <li>ミュージックリストの「すべて書き出す」「ファイルを読み込む」で、曲をまとめて移せます。</li>
+              <li>ミュージックリストの「すべて書き出す」「ファイルを読み込む」で、曲をまとめて移せます。読み込むとき、鳴らせない内容の曲は飛ばされ、範囲外の値（音量など）は使える値に直されます。</li>
+            </ul>
+          </details>
+
+          <details class="help-item">
+            <summary>用語の説明（ツールチップ）</summary>
+            <ul>
+              <li>点線の下線が付いた言葉にカーソルを乗せる（キーボードならフォーカスする）と、少しして短い説明が出ます。</li>
+              <li>スケール・コードのリズム・音色・FX の種類などのドロップダウンでは、リストの項目にカーソルを乗せると、リストの横に説明が出ます。</li>
+              <li>説明がじゃまなときは、この設定画面の「用語の説明（ツールチップ）」で OFF にできます。</li>
             </ul>
           </details>
 
@@ -969,7 +990,8 @@
             <summary>試聴できるもの</summary>
             <ul>
               <li>シンプルモード：ジャンルの下の「▷ ○○ のサンプルを聴く」で、そのジャンルの雰囲気を確かめられます（今の曲は変わりません）。</li>
-              <li>カスタムモード：「スケール・キー」の「▷ 試聴」でスケールの響き、「FX / SE」の「▷ 試聴」で効果音を確かめられます。</li>
+              <li>カスタムモード：「スケール・キー」の「▷ 試聴」でスケールの響き、「FX / SE」の「▷ 試聴」で効果音を確かめられます。コードの音色や lidless の音作りのプリセットを選び直すと、その音が1音鳴ります（曲の再生中は鳴りません）。</li>
+              <li>カスタムモードの設定タブ・アレンジャータブでは、ピアノロールと同じキー（<kbd>Z</kbd>〜<kbd>/</kbd>・<kbd>Q</kbd>〜<kbd>]</kbd> の段が白鍵、その上の段が黒鍵）で、lidless の音作りの「対象」のパートの音色を試し弾きできます。押している間だけ鳴り、<kbd>↓</kbd> / <kbd>↑</kbd> でオクターブを変えられます（曲の再生中も鳴ります）。</li>
             </ul>
           </details>
 
@@ -977,7 +999,7 @@
             <summary>テスト中の機能</summary>
             <ul>
               <li>カスタムモードの設定タブで、ドラムの「もっと調整」の「ドラムの演奏」から、フィル・揺らぎ・エンディングを ON/OFF できます（端末ごとに保存）。</li>
-              <li>カスタムモードの設定タブの下にある grow のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
+              <li>カスタムモードの設定タブの下にある lidless のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
               <li>設定画面の「開発用」の「メロディの評価」で、生成した曲を聴いて 1〜5 の点数を付けられます。<kbd>1</kbd>〜<kbd>5</kbd> で点数、<kbd>Space</kbd> で再生／停止、<kbd>C</kbd> でサビから再生、<kbd>←</kbd> / <kbd>→</kbd> で前後の曲です。</li>
             </ul>
           </details>

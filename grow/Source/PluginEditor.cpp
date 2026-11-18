@@ -142,10 +142,20 @@ GrowEditor::GrowEditor (GrowProcessor& p)
     title.setColour (juce::Label::textColourId, colours::text);
     addAndMakeVisible (title);
 
-    for (int i = 0; i < numPresets(); ++i)
-        presets.addItem (jp (presetName (i)), i + 1);
-    presets.setSelectedItemIndex (growProcessor.getCurrentProgram(), juce::dontSendNotification);
-    presets.onChange = [this] { selectPreset (presets.getSelectedItemIndex()); };
+    // カテゴリの見出しごとに並べる（項目の ID = プログラム番号 + 1。並びがプログラム番号と違うので、ID で選ぶ）
+    for (int c = 0; c < numPresetCategories; ++c)
+    {
+        auto first = true;
+        for (int i = 0; i < numPresets(); ++i)
+        {
+            if (presetCategory (i) != c) continue;
+            if (first) presets.addSectionHeading (jp (categoryName (c)));
+            first = false;
+            presets.addItem (jp (presetName (i)), i + 1);
+        }
+    }
+    presets.setSelectedId (growProcessor.getCurrentProgram() + 1, juce::dontSendNotification);
+    presets.onChange = [this] { selectPreset (presets.getSelectedId() - 1); };
     addAndMakeVisible (presets);
 
     previousPreset.setTitle (jp ("前のプリセット"));
@@ -203,7 +213,7 @@ void GrowEditor::selectPreset (int index)
 {
     if (! juce::isPositiveAndBelow (index, numPresets())) return;
     growProcessor.setCurrentProgram (index);
-    presets.setSelectedItemIndex (index, juce::dontSendNotification);
+    presets.setSelectedId (index + 1, juce::dontSendNotification);
 }
 
 void GrowEditor::paint (juce::Graphics& g)

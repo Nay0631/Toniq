@@ -7,14 +7,15 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { getState, ChordRhythm } from "./AppState";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
+import { barUnits, beatsPerBar, unitTime, unitsPerBar, unitsPerBeat } from "./Meter";
 
-// リズムごとの刻みの長さ（16分音符の数）。whole はコードの長さいっぱいに伸ばす
-const RHYTHM_STEPS: Record<ChordRhythm, number | null> = {
-  whole:   null,
-  half:    8,
-  quarter: 4,
-  eighth:  2,
-};
+// リズムごとの、1小節の中で鳴らすマス（Meter.ts。4/4 なら half = [0, 8]、quarter = 拍の頭、eighth = 8分ごと）。
+// whole（null）はコードの長さいっぱいに伸ばす。3/4 の half は小節の頭に1回、3連符の拍子の eighth はシャッフル（3連符の1つ目と3つ目）
+function rhythmUnits(rhythm: ChordRhythm): number[] | null {
+  if (rhythm === "whole") return null;
+  if (rhythm === "half") return beatsPerBar() === 4 ? [0, unitsPerBar() / 2] : [0];
+  return barUnits(rhythm === "quarter" ? "4n" : "8n");
+}
 
 // ===== grow の準備ができていない（wasm がない）ときの音色 =====
 // コードの音色はすべて grow のプリセット（AppState.growChordPreset）。Tone.js ではソフトパッドだけを持つ。
@@ -55,7 +56,7 @@ export function initChordSynth() {
   padSynth = synth;
 }
 
-// コードの1回の発音（位置と長さは16分音符の数。ループの頭から）
+// コードの1回の発音（位置と長さはマスの数。ループの頭から。4/4・3/4 は16分音符、3連符は8分3連符。Meter.ts）
 export interface ChordHit {
   sixteenth: number;
   length:    number;
@@ -79,24 +80,28 @@ function melodyToAvoid(): VoicingMelodyNote[] {
 // ボイシングは、最高音がメロディより上に出ない・メロディと半音でぶつからない転回形を選ぶ
 export function chordEvents(progression: ChordProgression, key: string): ChordHit[] {
   const hits: ChordHit[] = [];
-  const step = RHYTHM_STEPS[getState().chordRhythm];
+  const inBar = rhythmUnits(getState().chordRhythm);
+  const BAR = unitsPerBar(), BEAT = unitsPerBeat();
   const voiced = voiceProgression(progression, key, VOICING_RANGES.chord, { melody: melodyToAvoid() });
 
   progression.progression.forEach((chord, i) => {
     const notes = voiced[i];
-    const start = (chord.bar - 1) * 16;
+    const start = (chord.bar - 1) * BAR;
     // 全音符、またはエンディングの主和音はコードの長さいっぱいに1回だけ鳴らす
-    if (step === null || chord.ending) {
-      hits.push({ sixteenth: start, length: chord.duration_bars * 16, notes, velocity: 0.75, strum: STRUM_SEC.long });
+    if (inBar === null || chord.ending) {
+      hits.push({ sixteenth: start, length: chord.duration_bars * BAR, notes, velocity: 0.75, strum: STRUM_SEC.long });
       return;
     }
-    for (let six = 0; six < chord.duration_bars * 16; six += step) {
-      hits.push({
-        sixteenth: start + six,
-        length:    step,
-        notes,
-        velocity:  six === 0 ? 0.8 : six % 4 === 0 ? 0.68 : 0.56,
-        strum:     step >= 8 ? STRUM_SEC.long : STRUM_SEC.short,
+    for (let b = 0; b < chord.duration_bars; b++) {
+      inBar.forEach((unit, k) => {
+        const length = (inBar[k + 1] ?? BAR) - unit;  // 次に鳴らす所（なければ小節の終わり）まで
+        hits.push({
+          sixteenth: start + b * BAR + unit,
+          length,
+          notes,
+          velocity:  b === 0 && unit === 0 ? 0.8 : unit % BEAT === 0 ? 0.68 : 0.56,
+          strum:     length >= BEAT * 2 ? STRUM_SEC.long : STRUM_SEC.short,
+        });
       });
     }
   });
@@ -116,12 +121,12 @@ export function loadChordProgression(progression: ChordProgression, key: string 
   if (chordPart) { chordPart.dispose(); chordPart = null; }
   if (!padSynth) initChordSynth();
 
-  // 全音符は小節表記の長さ（`2m` など）、刻むときは音価（`8n` など）で鳴らす
-  const step   = RHYTHM_STEPS[getState().chordRhythm];
+  // 小節ちょうどの長さは小節表記（`2m` など）、刻むときはマスの数の長さで鳴らす
+  const BAR = unitsPerBar();
   const events: ChordEvent[] = chordEvents(progression, key).map(h => ({
-    time:     `0:0:${h.sixteenth}`,
+    time:     unitTime(h.sixteenth),
     notes:    h.notes,
-    dur:      step === null || h.length !== step ? `${h.length / 16}m` : `${16 / step}n`,
+    dur:      h.length % BAR === 0 ? `${h.length / BAR}m` : unitTime(h.length),
     velocity: h.velocity,
     strum:    h.strum,
   }));

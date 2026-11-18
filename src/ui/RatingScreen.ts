@@ -133,6 +133,11 @@ function enter(): void {
   loadSong();
 }
 
+// 評価画面に入る前の曲の内容（評価画面にいなければ null）。保存していない変更の確認に使う
+export function songBeforeRating(): SongFields | null {
+  return restore;
+}
+
 function leave(): void {
   Playback.stop();
   cancelAnimationFrame(playheadFrame);

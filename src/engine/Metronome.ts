@@ -2,8 +2,8 @@
 // 曲の再生（Tone.js の Transport）とは別のオーディオコンテキストで Web Audio API から直接鳴らす。
 // テンポは鳴らすたびに AppState.bpm を読むので、鳴らしたまま BPM を変えるとすぐ反映される。
 import { getState } from "./AppState";
+import { beatsPerBar } from "./Meter";
 
-const BEATS_PER_BAR = 4;     // 4/4 前提。1拍目だけ高い音で鳴らす
 const LOOKAHEAD_MS  = 25;    // スケジューラを呼ぶ間隔
 const SCHEDULE_SEC  = 0.1;   // どれだけ先まで予約するか
 
@@ -46,7 +46,7 @@ function schedule(): void {
   if (!ctx || !bus) return;
   while (nextBeatTime < ctx.currentTime + SCHEDULE_SEC) {
     click(ctx, bus, nextBeatTime, beat === 0);
-    beat = (beat + 1) % BEATS_PER_BAR;
+    beat = (beat + 1) % beatsPerBar();  // 1拍目だけ高い音（拍子は鳴らすたびに読むので、変えるとすぐ反映される）
     nextBeatTime += 60 / getState().bpm;
   }
 }

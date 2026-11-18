@@ -7,6 +7,7 @@ import { kickAt } from "./DrumEngine";
 import { getState } from "./AppState";
 import bassParams from "../data/bass_params.json";
 import { GrowInstrument, growValues, isGrowReady, findGrowPreset, growPresetValuesWith } from "./Grow";
+import { fitPattern, unitTime, unitsPerBar, unitsPerBeat } from "./Meter";
 
 // ジャンル別のベース設定（bass_params.json）
 // パターンは16ステップ表記：R = ルート、F = 5度、O = 1オクターブ上、- = 伸ばす、. = 休符
@@ -103,7 +104,7 @@ export function subMidi(note: string): number {
   return SUB_LOW + ((midi - SUB_LOW) % 12 + 12) % 12;
 }
 
-// ベースの1音（位置と長さは16分音符の数。ループの頭から）
+// ベースの1音（位置と長さはマスの数。ループの頭から。4/4・3/4 は16分音符、3連符は8分3連符。Meter.ts）
 export interface BassNote {
   sixteenth: number;
   note:      string;
@@ -116,6 +117,7 @@ export function bassNotes(progression: ChordProgression, key: string, octave: nu
   const param = bassParam();
   const notes: BassNote[] = [];
   const loopBars = progression.section_bars ?? progression.length_bars;
+  const BAR = unitsPerBar();  // 1小節のマスの数（拍子で変わる。Meter.ts）
 
   progression.progression.forEach((chord) => {
     const resolved = resolveChord(
@@ -139,23 +141,24 @@ export function bassNotes(progression: ChordProgression, key: string, octave: nu
     };
 
     if (chord.ending) {
-      notes.push({ sixteenth: (chord.bar - 1) * 16, note: roles.R, length: chord.duration_bars * 16 });
+      notes.push({ sixteenth: (chord.bar - 1) * BAR, note: roles.R, length: chord.duration_bars * BAR });
       return;
     }
 
     for (let b = 0; b < chord.duration_bars; b++) {
       const bar = chord.bar - 1 + b;
-      const pattern = bar % loopBars === loopBars - 1
+      // パターンは 16 ステップで書いてあるので、今の拍子のマスに直す
+      const pattern = fitPattern(bar % loopBars === loopBars - 1
         ? param.fill
-        : param.patterns[bar % param.patterns.length];
+        : param.patterns[bar % param.patterns.length]);
 
-      for (let step = 0; step < 16; step++) {
+      for (let step = 0; step < BAR; step++) {
         const note = roles[pattern[step]];
         if (!note) continue;
         // 続く "-" の数だけ伸ばす
         let len = 1;
-        while (step + len < 16 && pattern[step + len] === "-") len++;
-        notes.push({ sixteenth: bar * 16 + step, note, length: len });
+        while (step + len < BAR && pattern[step + len] === "-") len++;
+        notes.push({ sixteenth: bar * BAR + step, note, length: len });
       }
     }
   });
@@ -165,7 +168,7 @@ export function bassNotes(progression: ChordProgression, key: string, octave: nu
 // ベースの強さ：キックと同時に鳴る音を強く、それ以外は拍の頭 > 裏の順に少し弱くして、低音のアタックをキックにそろえる
 export function bassVelocity(bar: number, step: number): number {
   if (kickAt(bar, step)) return 1;
-  return step % 4 === 0 ? 0.88 : 0.76;
+  return step % unitsPerBeat() === 0 ? 0.88 : 0.76;
 }
 
 export function loadBassLine(
@@ -177,9 +180,9 @@ export function loadBassLine(
   if (!bassSynth) initBassSynth();
 
   const events = bassNotes(progression, key, octave).map(n => ({
-    time: `0:0:${n.sixteenth}`,
+    time: unitTime(n.sixteenth),
     note: n.note,
-    dur:  `0:0:${n.length}`,
+    dur:  unitTime(n.length),
   }));
 
   const arranged = arrangementGate("bass");

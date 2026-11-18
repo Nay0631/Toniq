@@ -1,6 +1,7 @@
 import * as Tone from "tone";
 import { getState, ArrangeBlock, Arrangement, ArrangeEdit, ArrangePreset, FxType, Section } from "./AppState";
 import type { LayerName } from "./LayerManager";
+import { beatsPerBar, unitsPerBar, unitsPerBeat } from "./Meter";
 
 // すべてのパート（読み込み・破棄・アレンジの順）
 export const LAYERS: LayerName[] = ["drum", "perc", "chord", "bass", "arp", "pad", "signature", "melody", "counter", "fx"];
@@ -447,35 +448,37 @@ export function isArrangementBypassed(): boolean {
   return bypass;
 }
 
-// 発音時刻（秒）が曲の何小節目・小節の何ステップ目（16分音符）か。読み込んだ時点の Transport で調べる
+// 発音時刻（秒）が曲の何小節目か。読み込んだ時点の Transport と拍子（1小節の拍の数）で調べる
+export function barAt(): (time: number) => number {
+  const transport = Tone.getTransport();
+  const barTicks  = transport.PPQ * beatsPerBar();
+  return time => Math.floor(transport.getTicksAtTime(time) / barTicks + 1e-6);
+}
+
+// 発音時刻（秒）が曲の何小節目・小節の何マス目（4/4・3/4 は16分音符、3連符は8分3連符。Meter.ts）か。
+// 読み込んだ時点の Transport で調べる
 export function positionAt(): (time: number) => { bar: number; step: number } {
   const transport = Tone.getTransport();
+  const unitTicks = transport.PPQ / unitsPerBeat();
+  const perBar    = unitsPerBar();
   return time => {
-    const sixteenths = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ / 4) + 1e-6);
-    return { bar: Math.floor(sixteenths / 16), step: sixteenths % 16 };
+    const units = Math.floor(transport.getTicksAtTime(time) / unitTicks + 1e-6);
+    return { bar: Math.floor(units / perBar), step: units % perBar };
   };
 }
 
 // 各パートの Part / Sequence のコールバックで使う判定。
 // 読み込んだ時点の Transport（WAV書き出しではオフライン用）で、発音時刻が何小節目かを調べる
 export function arrangementGate(part: LayerName): (time: number) => boolean {
-  const transport = Tone.getTransport();
-  return time => {
-    if (bypass) return true;
-    const bar = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
-    return isArrangedAt(part, bar);
-  };
+  const bar = barAt();
+  return time => bypass || isArrangedAt(part, bar(time));
 }
 
 // arrangementGate と同じ判定で、発音時刻にあるブロックを返す（ブロックごとに鳴らし分けるパート用。FX の種類など）
 // ブロックの外なら undefined、試聴中（判定を外しているとき）は null
 export function arrangementBlockAt(part: LayerName): (time: number) => ArrangeBlock | null | undefined {
-  const transport = Tone.getTransport();
-  return time => {
-    if (bypass) return null;
-    const bar = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
-    return findBlock(getArrangement()[part], bar);
-  };
+  const bar = barAt();
+  return time => bypass ? null : findBlock(getArrangement()[part], bar(time));
 }
 
 // ===== 周回の表示 =====
@@ -507,9 +510,9 @@ export function startLoopArranger(params: LoopArrangerParams) {
 
   // 周回は発音時刻の小節から求める（ループ再生で曲の先頭に戻ったときも 1 周目から数え直す）
   const transport = Tone.getTransport();
+  const barOf = barAt();
   repeatId = transport.scheduleRepeat(time => {
-    const bar  = Math.floor(transport.getTicksAtTime(time) / (transport.PPQ * 4) + 1e-6);
-    const next = Math.floor(bar / loopBars) + 1;
+    const next = Math.floor(barOf(time) / loopBars) + 1;
     Tone.getDraw().schedule(() => notifyLoop(next, loopBars, onLoopChange), time);
   }, `${loopBars}m`, 0);  // 0 から刻む（途中から再生しても、ループで戻った先頭の周回を知らせる）
 }

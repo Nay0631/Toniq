@@ -18,8 +18,11 @@ import { initGrowPanel } from "./GrowPanel";
 import { initCustomMore, EXTRA_PARTS } from "./CustomMore";
 import { setTestFeature, type TestFeature } from "./Preferences";
 import { setGrowSound } from "../engine/Grow";
+import { previewGrowSound } from "../engine/GrowPreview";
 import { isCustomDrum } from "../engine/DrumEngine";
 import { bindSpaceToPlay } from "./SpaceKey";
+import { METERS, type Meter } from "../engine/Meter";
+import { setMeter } from "./CustomState";
 import {
   KEYS, SCALES, DRUM_CATEGORIES, chords, drums, makeMelody, hasAutoMelody, setChordPattern, setChorusPattern,
   GROOVE, setGroove, playFromBar, setBpm, chordCandidates, drumCandidates,
@@ -108,6 +111,14 @@ export function initCustomScreen(): void {
       render();
     });
   }
+
+  // 拍子（4/4・3/4・4/4 の3連符）。各パートの並びが変わるので再生し直す
+  $select("c-meter").addEventListener("change", async e => {
+    const value = (e.target as HTMLSelectElement).value as Meter;
+    setMeter(METERS.includes(value) ? value : "4/4");
+    renderAll();
+    await restartIfPlaying();
+  });
 
   // 跳ねる単位（16分／8分のシャッフル）。Transport に当て直すだけなので再生中もすぐ反映される
   $select("c-swing-unit").addEventListener("change", e => {
@@ -261,10 +272,11 @@ export function initCustomScreen(): void {
   });
 
   // コードの音色（grow のプリセット。選び直したら grow のパネルで変えた値は捨てる）。
-  // Synth は再生開始時に作り直されるので、再生中なら再生し直す
+  // Synth は再生開始時に作り直されるので、再生中なら再生し直す。止まっていれば選んだ音色を1音鳴らす
   $select("c-chord-instrument").addEventListener("change", async e => {
     setGrowSound("chord", (e.target as HTMLSelectElement).value || null, null);
     render();
+    void previewGrowSound("chord");
     await restartIfPlaying();
   });
 

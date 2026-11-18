@@ -13,6 +13,7 @@ import { getArrangement, findBlock } from "./LoopArranger";
 import { swungBeats } from "./Groove";
 import type { LayerName } from "./LayerManager";
 import { saveOutput } from "./OutputFiles";
+import { beatsPerBar, durationToBeats, timeToBeats, unitsPerBar, unitsPerBeat } from "./Meter";
 
 // MIDI書き出し。今の曲（AppState）を再生と同じ内容で書き出す：
 // - 長さは曲全体（AppState.bars 小節）。コード進行・メロディは曲全体の並び（セクションごとの進行・エンディング）で書き出す
@@ -36,21 +37,8 @@ function noteToMidi(note: string): number {
   return NOTE_INDEX[m[1]] + (parseInt(m[2], 10) + 1) * 12;
 }
 
-const DURATION_TO_BEATS: Record<string, number> = {
-  "1n": 4, "2n": 2, "4n": 1, "8n": 0.5, "16n": 0.25, "32n": 0.125,
-  "1n.": 6, "2n.": 3, "4n.": 1.5, "8n.": 0.75, "16n.": 0.375,
-};
-
-function timeStrToBeats(time: string): number {
-  const [bar, beat, sixteenth] = time.split(":").map(Number);
-  return (bar || 0) * 4 + (beat || 0) + (sixteenth || 0) * 0.25;
-}
-
-// 音価表記（"4n" など）か 小節:拍:16分 表記の長さを拍数に変換する
-export function durationToBeats(duration: string): number {
-  return DURATION_TO_BEATS[duration]
-      ?? (duration.includes(":") ? timeStrToBeats(duration) : 1);
-}
+// 位置（小節:拍:16分）・長さ（"4n" など）と拍の変換は拍子で変わるので Meter.ts に置く
+export { durationToBeats };
 
 // General MIDI のドラムの音の番号（チャンネル 10）
 const GM_DRUMS: Record<string, number> = {
@@ -88,12 +76,16 @@ export async function exportMidi(filename?: string): Promise<void> {
 
   const midi = new Midi();
   midi.header.setTempo(s.bpm);
-  midi.header.timeSignatures.push({ ticks: 0, timeSignature: [4, 4] });
+  // 各パートの位置はマスの数（4/4・3/4 は16分音符、3連符は8分3連符）。拍子（1小節の拍の数）とあわせて Meter.ts
+  const BEATS = beatsPerBar();   // 1小節の拍の数
+  const BAR   = unitsPerBar();   // 1小節のマスの数
+  const UNIT  = unitsPerBeat();  // 1拍のマスの数
+  midi.header.timeSignatures.push({ ticks: 0, timeSignature: [BEATS, 4] });
   midi.header.name = `Toniq ${s.genre} ${s.key}`;
 
   const ppq         = midi.header.ppq;  // デフォルト 480
-  const totalBeats  = s.bars * 4;
-  const loopBeats   = progression.length_bars * 4;
+  const totalBeats  = s.bars * BEATS;
+  const loopBeats   = progression.length_bars * BEATS;
   const arrangement = getArrangement();
   // Tone.js の swing と同じずらし方（Groove.ts の swungBeats。シャッフルなら8分音符の裏）
   const swung = swungBeats;
@@ -101,7 +93,7 @@ export async function exportMidi(filename?: string): Promise<void> {
 
   // アレンジ上、その拍（曲の頭から）でパートが鳴るか
   const arranged = (part: LayerName, beats: number) =>
-    s.parts[part] && findBlock(arrangement[part], Math.floor(beats / 4 + 1e-6)) !== undefined;
+    s.parts[part] && findBlock(arrangement[part], Math.floor(beats / BEATS + 1e-6)) !== undefined;
 
   // ループの頭からの位置で並んだ音を、曲の長さまで周回させて置く（鳴らない小節・曲の終わりより後は除く）
   function addLooped(
@@ -141,9 +133,9 @@ export async function exportMidi(filename?: string): Promise<void> {
     addLooped(melTrack, "melody", songMelody()
       .filter((n): n is MelodyNote & { note: string } => !!n.note)
       .map(n => {
-        const beats = timeStrToBeats(n.time);
+        const beats = timeToBeats(n.time);
         // 強拍ほど強く（MelodyPlayer と同じ：小節頭 > 拍頭 > それ以外）
-        const velocity = beats % 4 === 0 ? 0.95 : beats % 1 === 0 ? 0.85 : 0.72;
+        const velocity = beats % BEATS === 0 ? 0.95 : beats % 1 === 0 ? 0.85 : 0.72;
         return { beats, length: durationToBeats(n.duration), midi: noteToMidi(n.note), velocity };
       }));
   }
@@ -152,47 +144,47 @@ export async function exportMidi(filename?: string): Promise<void> {
   const chordTrack = addTrack("chord");
   if (chordTrack) {
     addLooped(chordTrack, "chord", chordEvents(progression, key).flatMap(h =>
-      h.notes.map(note => ({ beats: h.sixteenth / 4, length: h.length / 4, midi: noteToMidi(note), velocity: h.velocity }))));
+      h.notes.map(note => ({ beats: h.sixteenth / UNIT, length: h.length / UNIT, midi: noteToMidi(note), velocity: h.velocity }))));
   }
 
   // ===== パッド（開離配置。PadPlayer と共通） =====
   const padTrack = addTrack("pad");
   if (padTrack) {
     addLooped(padTrack, "pad", padEvents(progression, key).flatMap(h =>
-      h.notes.map(note => ({ beats: h.sixteenth / 4, length: h.length / 4, midi: noteToMidi(note), velocity: 0.7 }))));
+      h.notes.map(note => ({ beats: h.sixteenth / UNIT, length: h.length / UNIT, midi: noteToMidi(note), velocity: 0.7 }))));
   }
 
   // ===== アルペジオ（ジャンル別の刻み・パターン・音の長さ。ArpPlayer と共通） =====
   const arpTrack = addTrack("arp");
   if (arpTrack) {
     const param  = arpParam();
-    const length = DURATION_TO_BEATS[param.step] * param.gate;
+    const length = durationToBeats(param.step) * param.gate;
     addLooped(arpTrack, "arp", arpNotes(progression, key, param).map(n =>
-      ({ beats: n.sixteenth / 4, length, midi: noteToMidi(n.note), velocity: n.velocity })));
+      ({ beats: n.sixteenth / UNIT, length, midi: noteToMidi(n.note), velocity: n.velocity })));
   }
 
   // ===== ベース（ジャンル別のパターン。BassPlayer と共通。基準オクターブは再生と同じ 2） =====
   const bassTrack = addTrack("bass");
   if (bassTrack) {
     addLooped(bassTrack, "bass", bassNotes(progression, key, 2).map(n =>
-      ({ beats: n.sixteenth / 4, length: n.length / 4, midi: noteToMidi(n.note),
-         velocity: 0.8 * bassVelocity(Math.floor(n.sixteenth / 16), n.sixteenth % 16) })));
+      ({ beats: n.sixteenth / UNIT, length: n.length / UNIT, midi: noteToMidi(n.note),
+         velocity: 0.8 * bassVelocity(Math.floor(n.sixteenth / BAR), n.sixteenth % BAR) })));
   }
 
-  // ===== ドラム（16分ごとに、その小節のブロックのパターンで鳴らす。フィル・エンディングも DrumEngine と共通） =====
+  // ===== ドラム（1マスごとに、その小節のブロックのパターンで鳴らす。フィル・エンディングも DrumEngine と共通） =====
   const drumTrack = addTrack("drum");
   if (drumTrack) {
-    for (let step = 0; step < s.bars * 16; step++) {
-      const bar   = Math.floor(step / 16);
+    for (let step = 0; step < s.bars * BAR; step++) {
+      const bar   = Math.floor(step / BAR);
       const block = findBlock(arrangement.drum, bar);
       if (!block) continue;
       const pattern = blockDrumPattern(block);
       if (!pattern) continue;
-      for (const { name, velocity } of drumStepHits(pattern, bar, step % 16)) {
+      for (const { name, velocity } of drumStepHits(pattern, bar, step % BAR)) {
         if (GM_DRUMS[name] === undefined) continue;
         drumTrack.addNote({
           midi:          GM_DRUMS[name],
-          ticks:         toTicks(swung(step / 4)),
+          ticks:         toTicks(swung(step / UNIT)),
           durationTicks: toTicks(0.25),
           velocity,
         });
@@ -204,18 +196,18 @@ export async function exportMidi(filename?: string): Promise<void> {
   const counterTrack = addTrack("counter");
   if (counterTrack) {
     addLooped(counterTrack, "counter", counterNotes(progression, songMelody(), key).map(n =>
-      ({ beats: n.sixteenth / 4, length: n.length / 4, midi: n.midi, velocity: n.velocity })));
+      ({ beats: n.sixteenth / UNIT, length: n.length / UNIT, midi: n.midi, velocity: n.velocity })));
   }
 
   // ===== パーカッション（ドラムと同じチャンネル 10。PercPlayer と共通） =====
   const percTrack = addTrack("perc");
   if (percTrack) {
-    for (let step = 0; step < s.bars * 16; step++) {
-      if (!arranged("perc", step / 4)) continue;
-      for (const { name, velocity } of percStepHits(Math.floor(step / 16), step % 16)) {
+    for (let step = 0; step < s.bars * BAR; step++) {
+      if (!arranged("perc", step / UNIT)) continue;
+      for (const { name, velocity } of percStepHits(Math.floor(step / BAR), step % BAR)) {
         percTrack.addNote({
           midi:          GM_DRUMS[name],
-          ticks:         toTicks(swung(step / 4)),
+          ticks:         toTicks(swung(step / UNIT)),
           durationTicks: toTicks(0.25),
           velocity,
         });

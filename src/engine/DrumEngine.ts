@@ -8,6 +8,9 @@ import { prepareGrowContext } from "./Grow";
 import { arrangementBlockAt, findBlock, getArrangement, isArrangementBypassed, positionAt } from "./LoopArranger";
 import { endingBar, fillKind, FillKind, isFillBar } from "./SongForm";
 import { sidechainHit } from "./Groove";
+import {
+  Meter, currentMeter, fitPattern, gridStep, gridSteps, isTriplet, sourceSteps, stepSubdivision, unitsPerBar,
+} from "./Meter";
 
 const DRUM_PATTERNS = drumDB as unknown as DrumPattern[];
 
@@ -47,20 +50,66 @@ export function isCustomDrum(pattern: DrumPattern | null | undefined): boolean {
   return pattern?.id === CUSTOM_DRUM_ID;
 }
 
-// パターンの長さ（小節。16分音符 16 ステップで 1 小節）
+// パターンの長さ（小節。1小節のマスの数はパターンの拍子で決まる。DB のパターンは 16 ステップで 1 小節）
 export function drumPatternBars(pattern: DrumPattern): number {
-  return Math.max(1, Math.round(pattern.steps / 16));
+  return Math.max(1, Math.round(pattern.steps / unitsPerBar(pattern.meter ?? "4/4")));
 }
 
-// source をもとに、bars 小節のオリジナルのパターンを作る（長くするときは source を繰り返し、短くするときは切る。
+// ===== 拍子に合わせたパターン =====
+
+// 拍子 from のマスで持ったトラックの並びを、4/4 の 16 ステップの並びに広げる（3/4 は4拍目を空に、3連符は拍ごとに4つ目を空にする）
+function toSixteen(values: number[], from: Meter): number[] {
+  if (from === "4/4") return values;
+  const out: number[] = [];
+  const size = from === "3/4" ? 12 : 3;  // 3/4 は小節ごと、3連符は拍ごとに空きを足す
+  const pad  = from === "3/4" ? 4 : 1;
+  for (let i = 0; i < values.length; i += size) {
+    out.push(...values.slice(i, i + size), ...new Array(pad).fill(0));
+  }
+  return out;
+}
+
+// 拍子ごとに直したパターン（パターンは編集のたびに新しいオブジェクトになるので、オブジェクトごとに覚えておけばよい）
+const patternsIn = new WeakMap<DrumPattern, Partial<Record<Meter, DrumPattern>>>();
+
+// パターンを拍子 to のマスに直したもの（同じ拍子ならそのまま）。DB のパターン（4/4 の 16 ステップ）を
+// 3/4・3連符の拍子で鳴らすとき、オリジナルのパターンを別の拍子に持っていくときに使う（直し方は Meter.ts の sourceSteps）
+export function drumPatternIn(pattern: DrumPattern, to: Meter = currentMeter()): DrumPattern {
+  const from = pattern.meter ?? "4/4";
+  if (from === to) return pattern;
+  const cache = patternsIn.get(pattern) ?? {};
+  patternsIn.set(pattern, cache);
+  if (cache[to]) return cache[to];
+
+  const tracks: Record<string, DrumTrack> = {};
+  let steps = 0;
+  for (const [name, track] of Object.entries(pattern.tracks)) {
+    const on  = toSixteen(track.pattern, from);
+    const vel = toSixteen(track.velocity ?? track.pattern, from);
+    const src = sourceSteps(on, v => (v ? 1 : 0), to);
+    tracks[name] = { ...track, pattern: src.map(i => (on[i] ? 1 : 0)), velocity: src.map(i => (on[i] ? vel[i] ?? 1 : 0)) };
+    steps = src.length;
+  }
+  const bars = drumPatternBars(pattern);
+  const { meter: _from, ...rest } = pattern;
+  const result: DrumPattern = {
+    ...rest, steps: steps || bars * unitsPerBar(to), tracks, ...(to === "4/4" ? {} : { meter: to }),
+  };
+  cache[to] = result;
+  return result;
+}
+
+// source をもとに、bars 小節のオリジナルのパターンを今の拍子のマスで作る（長くするときは source を繰り返し、短くするときは切る。
 // source がオリジナルなら説明 notes を引き継ぐ。source が null なら空のパターン）
 export function customDrumPattern(source: DrumPattern | null, bars: number): DrumPattern {
-  const steps = bars * 16;
+  const meter = currentMeter();
+  const steps = bars * unitsPerBar(meter);
   const s = getState();
+  const fitted = source ? drumPatternIn(source, meter) : null;
   const tracks: Record<string, DrumTrack> = {};
   for (const name of DRUM_ROLL_TRACKS) {
-    const src = source?.tracks[name];
-    const at  = (i: number) => (src ? i % source!.steps : 0);
+    const src = fitted?.tracks[name];
+    const at  = (i: number) => (src ? i % fitted!.steps : 0);
     tracks[name] = {
       pattern:  Array.from({ length: steps }, (_, i) => (src?.pattern[at(i)] ? 1 : 0)),
       velocity: Array.from({ length: steps }, (_, i) => (src?.pattern[at(i)] ? src.velocity?.[at(i)] ?? 1 : 0)),
@@ -77,9 +126,10 @@ export function customDrumPattern(source: DrumPattern | null, bars: number): Dru
     mood:      [s.mood],
     bpm_range: source?.bpm_range ?? { min: 60, max: 200 },
     steps,
-    step_unit: "16n",
+    step_unit: stepSubdivision(meter),
     tracks,
     ...(based ? { notes: based } : {}),
+    ...(meter === "4/4" ? {} : { meter }),
   };
 }
 
@@ -202,6 +252,25 @@ export function fillAt(bar: number): FillDef | null {
   return (FILLS[genre] ?? FILLS["ローファイ"])[fillSize(kind, mood)];
 }
 
+// フィルを今の拍子のマスに直したもの（tracks は小節の頭からの文字列。from より前は休み）。
+// 3/4 では小節の終わりの3拍を使う（フィルは小節の終わりに置くので、頭の3拍を取ると短いフィルが消えてしまう）
+interface GridFill { from: number; tracks: Record<string, string>; keep: string[] }
+const gridFills = new WeakMap<FillDef, Partial<Record<Meter, GridFill>>>();
+
+function gridFill(fill: FillDef): GridFill {
+  const meter = currentMeter();
+  const cache = gridFills.get(fill) ?? {};
+  gridFills.set(fill, cache);
+  const found = cache[meter];
+  if (found) return found;
+  const tracks: Record<string, string> = {};
+  for (const [name, steps] of Object.entries(fill.tracks)) {
+    tracks[name] = fitPattern((".".repeat(fill.from) + steps).padEnd(16, "."), meter, true);
+  }
+  const from = meter === "3/4" ? Math.max(0, fill.from - 4) : gridStep(fill.from, meter) ?? 0;
+  return (cache[meter] = { from, tracks, keep: fill.keep });
+}
+
 // エンディングの小節の頭で鳴らす音（このあとは鳴らさない）
 const ENDING_HITS: Record<string, number> = { kick: 1, snare: 0.85, hihat_open: 1 };
 
@@ -210,29 +279,33 @@ export interface DrumHit {
   velocity: number;
 }
 
-// 曲の小節 bar・小節のステップ step（0〜15）でパターン pattern を鳴らすときの音（フィル・エンディングを含む。
-// パターンは 16 ステップの倍数（DB は 1 小節、オリジナルは 1・2・4 小節）。
+// 曲の小節 bar・小節のマス step（Meter.ts。4/4 なら 0〜15）でパターン pattern を鳴らすときの音（フィル・エンディングを含む。
+// パターンは 1 小節のマスの倍数（DB は 1 小節、オリジナルは 1・2・4 小節）。今の拍子と違う拍子のパターン
+// （DB の 16 ステップを 3/4 で鳴らすなど）は、今の拍子のマスに直して鳴らす。
 // 揺らぎは含まない。再生と MIDI 書き出しで共通）
-export function drumStepHits(pattern: DrumPattern, bar: number, step: number): DrumHit[] {
+export function drumStepHits(source: DrumPattern, bar: number, step: number): DrumHit[] {
   if (bar === endingBar()) {
     return step === 0 ? Object.entries(ENDING_HITS).map(([name, velocity]) => ({ name, velocity })) : [];
   }
 
   // 複数小節のパターン（オリジナル）は、曲の小節からパターンの何小節目かを決める
-  const i    = (bar * 16 + step) % pattern.steps;
+  const BAR     = unitsPerBar();
+  const pattern = drumPatternIn(source);
+  const i    = (bar * BAR + step) % pattern.steps;
   const hits = Object.entries(pattern.tracks)
     .filter(([, track]) => track.pattern[i])
     .map(([name, track]) => ({ name, velocity: track.velocity?.[i] ?? 1 }));
 
-  const fill = fillAt(bar);
-  if (!fill || step < fill.from) return hits;
+  const def = fillAt(bar);
+  if (!def) return hits;
+  const fill = gridFill(def);
+  if (step < fill.from) return hits;
 
   // フィルの間：keep 以外の元の音を止め、フィルの音を鳴らす（小節の終わりへ向けて強くする）
-  const pos      = step - fill.from;
-  const progress = pos / Math.max(1, 15 - fill.from);
+  const progress = (step - fill.from) / Math.max(1, BAR - 1 - fill.from);
   const filled   = hits.filter(h => fill.keep.includes(h.name));
   for (const [name, steps] of Object.entries(fill.tracks)) {
-    if (steps[pos] !== "x") continue;
+    if (steps[step] !== "x") continue;
     filled.push({ name, velocity: name === "kick" ? 0.9 : 0.45 + 0.55 * progress });
   }
   return filled;
@@ -260,7 +333,9 @@ const HATS = new Set(["hihat_closed", "hihat_open"]);
 function humanize(name: string, velocity: number, step: number): { velocity: number; delay: number } {
   const jitter = (amount: number) => 1 + (Math.random() - 0.5) * amount;
   if (HATS.has(name)) {
-    return { velocity: velocity * (step % 2 === 1 ? 0.8 : 1) * jitter(0.2), delay: Math.random() * 0.006 };
+    // 裏の16分（3連符の拍子では3連符の2つ目）を弱くする
+    const weak = isTriplet() ? step % 3 === 1 : step % 2 === 1;
+    return { velocity: velocity * (weak ? 0.8 : 1) * jitter(0.2), delay: Math.random() * 0.006 };
   }
   if (name === "kick") return { velocity: velocity * jitter(0.06), delay: 0 };
   return { velocity: velocity * jitter(0.12), delay: Math.random() * 0.004 };
@@ -300,6 +375,7 @@ export function loadDrumPattern(pattern: DrumPattern) {
   // 鳴らすかどうかとパターンは、発音時刻にあるブロックで決める（再生中のアレンジの編集もすぐ反映される）
   const blockAt  = arrangementBlockAt("drum");
   const position = positionAt();
+  const ghostSteps = gridSteps(GHOST_STEPS);  // 16 ステップでの位置を今の拍子のマスに直す
 
   currentSeq = new Tone.Sequence(
     (time, step) => {
@@ -312,7 +388,7 @@ export function loadDrumPattern(pattern: DrumPattern) {
 
       // 揺らぎ：ゴーストノートを足す（フィル・エンディングの小節と、スネアが鳴る位置は除く）
       const s = getState();
-      if (s.drumHumanize && current.tracks.snare && GHOST_STEPS.includes(step)
+      if (s.drumHumanize && current.tracks.snare && ghostSteps.includes(step)
           && !hits.some(h => h.name === "snare") && !isFillBar(bar) && bar !== endingBar()
           && Math.random() < (GHOST_RATE[s.genre] ?? 0)) {
         hits.push({ name: "snare", velocity: 0.16 + Math.random() * 0.1 });
@@ -332,9 +408,9 @@ export function loadDrumPattern(pattern: DrumPattern) {
         }
       });
     },
-    // 1小節 16 ステップで回す（複数小節のパターンは drumStepHits が小節から位置を決める）
-    [...Array(16).keys()],
-    "16n"
+    // 1小節のマス（4/4 は 16、3/4・3連符は 12）を1つずつ回す（複数小節のパターンは drumStepHits が小節から位置を決める）
+    [...Array(unitsPerBar()).keys()],
+    stepSubdivision()
   );
 
   currentSeq.start(0);

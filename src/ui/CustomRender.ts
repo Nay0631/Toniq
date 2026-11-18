@@ -17,9 +17,10 @@ import { syncControls } from "./Controls";
 import { renderCustomMore, EXTRA_PARTS } from "./CustomMore";
 import type { TestFeature } from "./Preferences";
 import {
-  CHORD_PRESET_CHOICES, growPresetIds, growPresetNames, isGrowLoaded, standardGrowPreset,
+  growCategoryName, growPresetChoices, growPresetIds, growPresetNames, isGrowLoaded, standardGrowPreset,
 } from "../engine/Grow";
 import { BAR_OPTIONS, GROOVE, chordCandidates, drumCandidates, playFromBar } from "./CustomState";
+import { METER_LABELS, currentMeter } from "../engine/Meter";
 
 // カスタムモード画面の表示（設定タブ・情報バー。アレンジャー・ミキサーはそれぞれのモジュールを呼ぶ）。
 // 状態の更新は CustomState.ts、イベントの登録は CustomScreen.ts
@@ -27,24 +28,23 @@ import { BAR_OPTIONS, GROOVE, chordCandidates, drumCandidates, playFromBar } fro
 const $ = (id: string) => document.getElementById(id);
 const $select = (id: string) => document.getElementById(id) as HTMLSelectElement;
 
-// コードの音色の選択肢の表示名（grow の wasm を読み込むまでの仮の名前。読み込んだらコアのプリセット名を使う）
-const CHORD_PRESET_LABELS: Record<string, string> = {
-  soft_pad: "ソフトパッド", wide_pad: "ワイドパッド", epiano: "エレピ", strings: "ストリングス",
-  organ: "オルガン", square: "スクエア（8bit）", supersaw: "スーパーソウ",
-};
-
-// コードの音色のセレクト（grow のプリセット。空 = ジャンルに合わせる）。
-// grow のパネルで選択肢にないプリセットを選んでいたら、その音も選択肢に足す
+// コードの音色のセレクト（lidless のプリセット。空 = ジャンルに合わせる）。
+// 選択肢はコードのパートで選べるカテゴリ（Grow.ts の PART_CATEGORIES）のプリセットを、カテゴリの見出しごとに並べる。
+// lidless の音作りのパネルでほかのカテゴリのプリセットを選んでいたら、その音も「その他」に足す
 function renderChordInstrument(): void {
   const s = getState();
   const select = $select("c-chord-instrument");
   const ids = growPresetIds(), names = growPresetNames();
-  const label = (id: string) => (isGrowLoaded() ? names[ids.indexOf(id)] : undefined) ?? CHORD_PRESET_LABELS[id] ?? id;
-  const standard = isGrowLoaded() ? label(ids[standardGrowPreset("chord")]) : "";
-  const choices = [...CHORD_PRESET_CHOICES];
-  if (s.growChordPreset && !choices.includes(s.growChordPreset)) choices.push(s.growChordPreset);
+  const loaded = isGrowLoaded();
+  const label = (id: string) => (loaded ? names[ids.indexOf(id)] : undefined) ?? id;
+  const option = (id: string) => `<option value="${id}" data-term="sound.${id}">${label(id)}</option>`;
+  const standard = loaded ? label(ids[standardGrowPreset("chord")]) : "";
+  const groups = loaded ? growPresetChoices("chord") : [];
+  const listed = groups.flatMap(g => g.presets.map(i => ids[i]));
+  const others = s.growChordPreset && !listed.includes(s.growChordPreset) ? [s.growChordPreset] : [];
   const html = `<option value="" data-term="sound.auto">ジャンルに合わせる${standard ? `（${standard}）` : ""}</option>`
-    + choices.map(id => `<option value="${id}" data-term="sound.${id}">${label(id)}</option>`).join("");
+    + groups.map(g => `<optgroup label="${growCategoryName(g.category)}">${g.presets.map(i => option(ids[i])).join("")}</optgroup>`).join("")
+    + (others.length ? `<optgroup label="その他">${others.map(option).join("")}</optgroup>` : "");
   if (select.innerHTML !== html) select.innerHTML = html;
   select.value = s.growChordPreset ?? "";
 }
@@ -115,6 +115,8 @@ export function render(): void {
     $(`${g.id}-auto`)!.classList.toggle("is-active", s[g.key] === null);
   }
   $select("c-swing-unit").value = s.swingUnit;
+  $select("c-meter").value = currentMeter();
+  $("c-info-meter")!.textContent = METER_LABELS[currentMeter()];
   syncControls();
   $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   const metronomeOn = isMetronomeOn();

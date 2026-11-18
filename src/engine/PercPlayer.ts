@@ -4,6 +4,7 @@ import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate, positionAt } from "./LoopArranger";
 import { endingBar, sectionAt } from "./SongForm";
 import { createPercKit, DrumKit } from "./SynthFactory";
+import { fitPattern, stepSubdivision, unitsPerBar } from "./Meter";
 
 // パーカッション：ドラムに重ねる細かい打楽器（シェイカー・タンバリン・コンガ（高・低）・ライド）。
 // ジャンルごと・セクション（Aメロ／サビ）ごとのパターンで鳴らす（サビのほうが細かく・にぎやか）。
@@ -91,13 +92,15 @@ export interface PercHit {
   velocity: number;
 }
 
-// 曲の小節 bar・ステップ step（0〜15）で鳴らす音（揺らぎは含まない。再生と MIDI 書き出しで共通）
+// 曲の小節 bar・小節のマス step（Meter.ts。4/4 なら 0〜15）で鳴らす音（揺らぎは含まない。再生と MIDI 書き出しで共通）。
+// パターンは 16 ステップで書いてあるので、今の拍子のマスに直して使う
 export function percStepHits(bar: number, step: number): PercHit[] {
   if (bar === endingBar()) return [];
   const pattern = percDef(getState().genre)[sectionAt(bar)];
   const hits: PercHit[] = [];
   for (const name of PERC_TRACKS) {
-    const v = VELOCITY[pattern[name]?.[step] ?? "."];
+    const steps = pattern[name];
+    const v = VELOCITY[(steps ? fitPattern(steps)[step] : undefined) ?? "."];
     if (v) hits.push({ name, velocity: v });
   }
   return hits;
@@ -129,7 +132,7 @@ export function loadPerc() {
       const h = humanizeOn ? humanize(velocity) : { velocity, delay: 0 };
       voices[name]?.trigger(time + h.delay, Math.min(1, Math.max(0.05, h.velocity)));
     }
-  }, [...Array(16).keys()], "16n");
+  }, [...Array(unitsPerBar()).keys()], stepSubdivision());  // 1小節のマスを1つずつ回す（拍子で数と刻みが変わる）
   percSeq.start(0);
 }
 

@@ -1,5 +1,5 @@
 // ミキサー（パート別音量）。カスタムモードのアレンジャータブに置く（設定タブには置かない）。
-// 1パート＝1チャンネルストリップ（パートの色・名前、ON/OFF の電源ボタン、定位（パン）のノブ、フェーダー、レベルメーター、値）と、
+// 1パート＝1チャンネルストリップ（パートの色・名前、ON/OFF の電源ボタン（右クリックでソロ。Solo.ts。アレンジャー・ピアノロールと共通）、定位（パン）のノブ、フェーダー、レベルメーター、値）と、
 // 右端にマスターのメーター（左右のピーク）・クリップの印・再生を始めてからの最大のピーク。
 // メーターは再生中だけ実際の音量を表示する（パートは Tone.Meter の平均の大きさ、マスターはリミッターのあとのサンプルのピーク）。
 import { getState } from "../engine/AppState";
@@ -9,6 +9,7 @@ import { getMasterPeaks } from "../engine/MixerEngine";
 import { dbToVolume, panLabel } from "../engine/VolumeCurve";
 import * as Playback from "../engine/Playback";
 import { attachFader, attachKnob, syncControls } from "./Controls";
+import { soloPart, toggleSolo } from "./Solo";
 
 // パートの並び（UI 表示名）
 const MIXER_PARTS: { name: LayerName; label: string }[] = [
@@ -164,6 +165,15 @@ function build(list: HTMLElement): void {
     setLayerEnabled(part, !getState().parts[part]);
     onChangeCb();
   });
+
+  // 電源ボタンを右クリック：そのパートだけ鳴らす（ソロ）／もう一度でソロにする前の ON/OFF に戻す（アレンジャーと同じ操作）
+  list.addEventListener("contextmenu", e => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-mixer-toggle]");
+    if (!btn) return;
+    e.preventDefault();
+    toggleSolo(btn.dataset.mixerToggle as LayerName);
+    onChangeCb();
+  });
 }
 
 /** ミキサーを作る。listIds はミキサーを置く要素の id、onChange はパートの ON/OFF を変えたあとの再描画 */
@@ -179,6 +189,7 @@ export function initMixer(listIds: string[], onChange: () => void): void {
 /** AppState（音量・パートの ON/OFF）に合わせて表示を更新する */
 export function renderMixer(): void {
   const s = getState();
+  const soloing = soloPart();
   for (const list of lists) {
     for (const p of MIXER_PARTS) {
       const ch    = list.querySelector<HTMLElement>(`[data-part="${p.name}"]`)!;
@@ -194,6 +205,11 @@ export function renderMixer(): void {
       power.setAttribute("aria-pressed", String(on));
       power.setAttribute("aria-label", `${p.label}を${on ? "OFF" : "ON"}にする`);
       power.querySelector(".mixer-power-text")!.textContent = on ? "ON" : "OFF";
+      // ソロ中のパートはボタンに枠を付ける（アレンジャーの ON/OFF ボタンと同じ）
+      power.classList.toggle("is-solo", soloing === p.name);
+      power.title = soloing === p.name
+        ? "クリックで ON/OFF・右クリックで元の ON/OFF に戻す（ソロをやめる）"
+        : "クリックで ON/OFF・右クリックでこのパートだけ鳴らす（ソロ。もう一度右クリックで元に戻す）";
     }
   }
   syncControls();

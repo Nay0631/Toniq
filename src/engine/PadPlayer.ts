@@ -4,6 +4,7 @@ import { voiceProgression, VOICING_RANGES } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
+import { unitTime, unitsPerBar } from "./Meter";
 
 // ストラム：音を下から少しずつずらして鳴らす間隔（秒）。立ち上がりの遅いパッドなのでゆったりめ
 const STRUM_SEC = 0.025;
@@ -40,9 +41,10 @@ export interface PadHit {
 
 export function padEvents(progression: ChordProgression, key: string): PadHit[] {
   const voiced = voiceProgression(progression, key, VOICING_RANGES.pad, { spread: true });
+  const BAR = unitsPerBar();  // 1小節のマスの数（拍子で変わる。Meter.ts）
   return progression.progression.map((chord, i) => ({
-    sixteenth: (chord.bar - 1) * 16,
-    length:    chord.duration_bars * 16,
+    sixteenth: (chord.bar - 1) * BAR,
+    length:    chord.duration_bars * BAR,
     notes:     voiced[i],
   }));
 }
@@ -59,9 +61,9 @@ export function loadPadPattern(progression: ChordProgression, key: string = "A")
   if (!padSynth) initPadSynth();
 
   const events: PadEvent[] = padEvents(progression, key).map(h => ({
-    time:  `0:0:${h.sixteenth}`,
+    time:  unitTime(h.sixteenth),
     notes: h.notes,
-    dur:   `${h.length / 16}m`,
+    dur:   `${h.length / unitsPerBar()}m`,
   }));
 
   const arranged = arrangementGate("pad");

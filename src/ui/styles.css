@@ -252,27 +252,6 @@ button {
   margin: 0;
 }
 
-/* ライト／ダークの切り替えボタン（ヘッダー右端） */
-.theme-toggle {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  margin-left: auto;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text-muted);
-}
-
-.theme-toggle:hover { color: var(--text); border-color: var(--border-strong); }
-.theme-toggle svg { width: 18px; height: 18px; }
-
-/* ライトでは月（ダークへ）、ダークでは太陽（ライトへ）を出す */
-.theme-toggle .icon-sun { display: none; }
-:root[data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
-:root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 
 /* ── パンくず ─────────────────────────── */
 .breadcrumb {
@@ -518,7 +497,6 @@ button {
 .chips-mood  .chip.is-active { background: var(--simple-soft); border-color: var(--simple); color: var(--simple-ink); font-weight: 600; }
 .chips-genre .chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
 .chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
-.chips-arrange .chip.is-active { background: var(--list-soft); border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
 
 .bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
 
@@ -927,6 +905,8 @@ button {
 .arr-sub  { font-size: 12px; color: var(--text-muted); }
 .arr-head > div { min-width: 0; }
 .arr-head .pill { flex: none; min-width: 44px; padding: 2px 8px; font-size: 11px; }
+/* ソロ中のパート（ON/OFF ボタンの右クリック）。スキンの box-shadow と重ならないよう outline で囲む */
+.arr-head .pill.is-solo { outline: 2px solid var(--custom); outline-offset: 1px; }
 
 .arr-ticks {
   position: relative;
@@ -1586,6 +1566,11 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 .mixer-power:focus-visible { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
 .mixer-power-led { display: none; }
 .mixer-power[aria-pressed="true"] { color: var(--hw-sel-text); background: var(--hw-sel); }
+
+/* ソロ中（電源ボタンの右クリック）のパートは電源ボタンにオレンジの枠 */
+.mixer-power.is-solo { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
+/* アレンジャーのループ再生のボタン（ON はオレンジ） */
+.arr-loop[aria-pressed="true"] { color: #fff; background: var(--hw-orange); border-color: var(--hw-orange); }
 
 /* 定位（パン）：小さいノブと値（C / L30 / R30）。マスターは同じ高さにクリップの印を置く */
 .mixer-pan,
@@ -2380,9 +2365,10 @@ button.mixer-value {
 .pr-label { font-size: 13px; color: var(--text-muted); }
 .pr-octave { min-width: 18px; text-align: center; font-variant-numeric: tabular-nums; }
 
+/* 操作の案内：細く縮めて1文字ずつ折り返さないよう、1行のまま置き、ボタンの横に入らなければ次の行の右端へ回す */
 .pr-hint {
-  flex: 1;
-  min-width: 0;
+  flex: 1 0 auto;
+  white-space: nowrap;
   text-align: right;
   font-size: 12px;
   color: var(--text-muted);
@@ -2411,6 +2397,9 @@ button.mixer-value {
 
 .pr-lock { color: var(--text-muted); }
 .pr-lock.is-on { color: var(--simple-ink); background: var(--simple-soft); border-color: var(--simple-line); }
+/* ソロ（編集中のパートだけ鳴らす）。押している間はスケールロックと同じ色で点ける */
+.pr-solo { color: var(--text-muted); }
+.pr-solo.is-on { color: var(--simple-ink); background: var(--simple-soft); border-color: var(--simple-line); }
 
 /* 縦にスクロールする本体。目盛りは上に固定する */
 .pr-scroll {
@@ -2525,8 +2514,8 @@ button.mixer-value {
     linear-gradient(to right, var(--grid-16) 1px, transparent 1px);
   background-size:
     calc(100% / var(--bars)) 100%,
-    calc(100% / var(--bars) / 4) 100%,
-    calc(100% / var(--bars) / 16) 100%;
+    calc(100% / var(--bars) / var(--beats, 4)) 100%,
+    calc(100% / var(--bars) / var(--steps, 16)) 100%;  /* 拍・マスの数は拍子で変わる（PianoRollTab / DrumRoll が --beats / --steps を入れる） */
 }
 
 .pr-row {
@@ -3615,6 +3604,18 @@ span[data-term],
 .grow-status { margin: 4px 0 12px; color: var(--text-sub); font-size: 12px; }
 .grow-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; margin-bottom: 12px; }
 .grow-edited { color: var(--text-sub); font-size: 12px; }
+.grow-keys { margin: -4px 0 12px; color: var(--text-sub); font-size: 12px; }
+.grow-keys kbd {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  text-align: center;
+}
 .grow-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -3795,4 +3796,14 @@ span[data-term],
 
   select option:disabled { color: var(--text-muted); cursor: default; }
   .hw .select option:disabled { color: var(--hw-faint); }
+
+  /* 選択肢の見出し（lidless のプリセットのカテゴリなど）。見出しは控えめの色、中の選択肢は普通の色に戻す */
+  select optgroup {
+    padding-top: 4px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .hw .select optgroup { color: var(--hw-faint); }
+  select optgroup > option { font-weight: normal; color: var(--text); }
+  .hw .select optgroup > option { color: var(--hw-text); }
 }

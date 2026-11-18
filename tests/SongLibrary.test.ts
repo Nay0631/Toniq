@@ -6,14 +6,14 @@ vi.mock("../src/engine/History", () => ({ resetHistory: vi.fn() }));
 
 import { getState, setState, defaultState, SONG_FIELDS } from "../src/engine/AppState";
 import {
-  listSongs, loadSong, saveCurrentSong, renameSong, importSongFile,
-  SongStorageError, SavedSong,
+  listSongs, loadSong, saveCurrentSong, renameSong, importSongFile, deleteSong, newSong,
+  SongStorageError, SavedSong, markSongClean, hasUnsavedChanges, hasHandmadeContent, currentSongFields,
 } from "../src/engine/SongLibrary";
 import { LEGACY_PRESET_IDS } from "../src/engine/Grow";
 import { volumeFromLegacy, volumeToDb } from "../src/engine/VolumeCurve";
 import { getArrangement } from "../src/engine/LoopArranger";
 import { customDrumPattern, withDrumHit } from "../src/engine/DrumEngine";
-import { chordById, drums, resetState, MemoryStorage } from "./helpers";
+import { chordById, chords, drums, resetState, MemoryStorage } from "./helpers";
 
 const STORAGE_KEY = "toniq.songs";
 let storage: MemoryStorage;
@@ -145,6 +145,7 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(s.sections).toBe(defaultState.sections);
     expect(s.modulation).toBe(0);  // 転調は以前はなかった（しない）
     expect(s.modulationScope).toBe(defaultState.modulationScope);
+    expect(s.meter).toBe("4/4");  // 拍子は以前はなかった（4/4）
     expect(s.key).toBe("D");
     expect(s.bpm).toBe(85);
     expect(s.melodyNotes).toEqual([{ note: "D5", duration: "4n", time: "0:0:0" }]);
@@ -249,6 +250,119 @@ describe("曲ファイル", () => {
   });
 });
 
+describe("曲ファイル：中身の確認（鳴らすときに例外になる値を読み込まない）", () => {
+  const importOne = (overrides: Record<string, unknown>) => {
+    const result = importSongFile(JSON.stringify({ format: "toniq-song", version: 4, exportedAt: 0, songs: [legacySong(overrides)] }));
+    return { result, song: listSongs()[0] };
+  };
+  const chord = () => structuredClone(chordById("chord_007"));
+
+  it("知らないキー・ディグリー・コードの種類・スケールの曲は飛ばす", () => {
+    expect(importOne({ key: "H" }).result).toEqual({ added: 0, skipped: 1 });
+    const badDegree = chord(); badDegree.progression[0].degree = "IX";
+    expect(importOne({ chordPattern: badDegree }).result).toEqual({ added: 0, skipped: 1 });
+    const badType = chord(); badType.progression[1].type = "power";
+    expect(importOne({ chordPattern: badType }).result).toEqual({ added: 0, skipped: 1 });
+    expect(importOne({ chordPattern: { ...chord(), base_scale: "blues??" } }).result).toEqual({ added: 0, skipped: 1 });
+    expect(importOne({ chordPattern: { ...chord(), progression: [{ bar: "1", degree: "I", type: "major" }] } }).result)
+      .toEqual({ added: 0, skipped: 1 });
+    expect(listSongs()).toEqual([]);
+  });
+
+  it("形の違うメロディの音は落とし、正しい音は残す（3連符の長さも読める）", () => {
+    const { result, song } = importOne({
+      melodyNotes: [
+        { note: "D5", duration: "4n", time: "0:0:0" },
+        { note: "X9", duration: "4n", time: "0:1:0" },      // 知らない音名
+        { note: "E5", duration: "soon", time: "0:2:0" },    // 知らない長さ
+        { note: "F5", duration: "8n", time: "たぶん2小節目" },  // 位置が読めない
+        { note: null, duration: "4n", time: "0:3:0" },      // 休符はそのまま
+        { note: "A5", duration: "8t", time: "1:0:1.3333" },
+        "ゴミ", 42, null,
+      ],
+      chorusMelodyNotes: "なし",
+    });
+    expect(result.added).toBe(1);
+    expect(song.melodyNotes).toEqual([
+      { note: "D5", duration: "4n", time: "0:0:0" },
+      { note: null, duration: "4n", time: "0:3:0" },
+      { note: "A5", duration: "8t", time: "1:0:1.3333" },
+    ]);
+    expect(song.chorusMelodyNotes).toEqual([]);
+  });
+
+  it("範囲外・型の違う値は、範囲の中の値や初期値にする", () => {
+    const { song } = importOne({
+      pans: { melody: 999, arp: "左" }, volumes: { drum: -5, melody: "大きめ", bass: 140 },
+      parts: { drum: "yes", bass: false }, swing: 250, sidechain: "強", modulation: 40,
+      fxType: "explosion", chordRhythm: "triplet", arrangePreset: "wild", swingUnit: "4n", melodyMethod: "ai",
+      sections: ["A", "C"], arrangeEdits: [{ section: "B", nth: 0, part: "pad", on: false }, { section: "Z", nth: 0, part: "pad" }, "x"],
+      growParams: { 1: 0.5, 2: "x" }, bassSub: "on", meter: "7/8",
+    });
+    expect(song.pans.melody).toBe(100);
+    expect(song.pans.arp).toBe(defaultState.pans.arp);
+    expect(song.volumes.drum).toBe(0);
+    expect(song.volumes.melody).toBe(defaultState.volumes.melody);
+    expect(song.volumes.bass).toBe(100);
+    expect(song.parts.drum).toBe(defaultState.parts.drum);
+    expect(song.parts.bass).toBe(false);
+    expect(song.swing).toBe(100);
+    expect(song.sidechain).toBe(0);
+    expect(song.modulation).toBe(12);
+    expect(song.fxType).toBe("auto");
+    expect(song.chordRhythm).toBe(defaultState.chordRhythm);
+    expect(song.arrangePreset).toBe("standard");
+    expect(song.swingUnit).toBe("16n");
+    expect(song.melodyMethod).toBe("manual");
+    expect(song.sections).toBeNull();
+    expect(song.arrangeEdits).toEqual([{ section: "B", nth: 0, part: "pad", on: false }]);
+    expect(song.growParams).toEqual({ 1: 0.5 });
+    expect(song.bassSub).toBeNull();
+    expect(song.meter).toBe("4/4");
+  });
+
+  it("サビの進行は Aメロと長さ・スケールが合うものだけ残し、形の違うものは「なし」にする", () => {
+    const base = chordById("chord_007");
+    const partner = chords.find(c => c.id !== base.id && c.length_bars === base.length_bars && c.base_scale === base.base_scale)!;
+    const other   = chords.find(c => c.length_bars !== base.length_bars)!;
+    expect(importOne({ chorusPattern: partner }).song.chorusPattern?.id).toBe(partner.id);
+    expect(importOne({ chorusPattern: other }).song.chorusPattern).toBeNull();
+    expect(importOne({ chorusPattern: { id: "x", progression: "?" } }).song.chorusPattern).toBeNull();
+  });
+
+  it("ドラムのトラックは、ステップ数ちょうどの on/off と強さにそろえる（形の違うトラックは落とす）", () => {
+    const { song } = importOne({
+      drumPattern: {
+        id: "custom", name: "オリジナル", steps: 12, meter: "3/4",
+        tracks: {
+          kick:  { pattern: [1, 0, 0, 0, "x", 0], velocity: [5, 0, 0, 0] },  // 短い・強さが範囲外・強さがない
+          snare: "なし",
+        },
+      },
+    });
+    const drum = song.drumPattern!;
+    expect(Object.keys(drum.tracks)).toEqual(["kick"]);
+    expect(drum.tracks.kick.pattern).toEqual([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]);
+    expect(drum.tracks.kick.velocity).toEqual([1, 0, 0, 0, 0.8, 0, 0, 0, 0, 0, 0, 0]);
+    expect(drum.meter).toBe("3/4");
+    expect(drum.genre).toEqual([]);
+  });
+
+  it("正しい曲はそのまま読める（書き出して読み込むと同じ内容）", () => {
+    setState({
+      genre: "ハウス", key: "F#", bpm: 124, bars: 16, meter: "3/4",
+      chordPattern: chordById("chord_007"), drumPattern: drums[2],
+      melodyNotes: [{ note: "F#4", duration: "8n", time: "1:2:2" }], swing: 30, modulation: 2,
+      arrangeEdits: [{ section: "A", nth: 1, part: "drum", bars: [0, 1], splits: [1], drum: "drum_003" }],
+    });
+    const saved = saveCurrentSong();
+    storage.clear();
+    importSongFile(JSON.stringify({ format: "toniq-song", version: 4, exportedAt: 0, songs: [saved] }));
+    const [song] = listSongs();
+    for (const f of SONG_FIELDS) expect(song[f], f).toEqual(saved[f]);
+  });
+});
+
 describe("ミュージックリストに書き込めないとき", () => {
   beforeEach(() => {
     setState({ chordPattern: chordById("chord_001"), drumPattern: drums[0] });
@@ -286,5 +400,64 @@ describe("ミュージックリストに書き込めないとき", () => {
     storage.quotaAfter = 10;
     expect(() => importSongFile(JSON.stringify(legacySong()))).toThrow(SongStorageError);
     expect(listSongs()).toEqual([]);
+  });
+});
+
+describe("保存していない変更（hasUnsavedChanges）", () => {
+  beforeEach(() => {
+    setState({ mode: "custom", chordPattern: chordById("chord_007"), drumPattern: drums[0] });
+    markSongClean();
+  });
+
+  it("保存したあとに変えると変更あり、元の値に戻すと変更なし", () => {
+    saveCurrentSong();
+    expect(hasUnsavedChanges()).toBe(false);
+    const bpm = getState().bpm;
+    setState({ bpm: bpm + 1 });
+    expect(hasUnsavedChanges()).toBe(true);
+    setState({ bpm });
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("古い形式の曲は、開いたときの読み替えだけでは変更にしない", () => {
+    storage.setItem(STORAGE_KEY, JSON.stringify([legacySong()]));
+    loadSong("song_old");
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("モードを移っただけ・キーの順が違うだけでは変更にしない", () => {
+    saveCurrentSong();
+    const parts = getState().parts;
+    const reversed = Object.fromEntries(Object.entries(parts).reverse()) as typeof parts;
+    setState({ mode: "simple", generated: true, parts: reversed });
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("今の曲をリストから消すと、変えていなくても変更あり", () => {
+    const saved = saveCurrentSong();
+    deleteSong(saved.id);
+    expect(hasUnsavedChanges()).toBe(true);
+  });
+
+  it("新規作成した直後は変更なし", () => {
+    setState({ bpm: 200 });
+    newSong();
+    expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  it("シンプルモードの生成前は、ピアノロールで作った内容だけを守る", () => {
+    setState({ mode: "simple", generated: false, genre: "テクノ", mood: "暗い" });
+    expect(hasUnsavedChanges()).toBe(false);
+    setState({ melodyMethod: "manual", melodyNotes: [{ note: "C5", duration: "4n", time: "0:0:0" }] });
+    expect(hasHandmadeContent()).toBe(true);
+    expect(hasUnsavedChanges()).toBe(true);
+  });
+
+  it("差し替える前の内容を渡すと、その内容で比べる", () => {
+    saveCurrentSong();
+    const original = currentSongFields();
+    setState({ melodyNotes: [{ note: "C5", duration: "4n", time: "0:0:0" }] });  // サンプルの試聴などの一時的な差し替え
+    expect(hasUnsavedChanges()).toBe(true);
+    expect(hasUnsavedChanges(original)).toBe(false);
   });
 });

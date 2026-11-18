@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -88,11 +88,34 @@ function createWindow() {
     minHeight: 600,
     title: "Toniq",
     icon: windowIcon(),
+    // 最大化してから見せる（1200×800 で一瞬出てから広がるのを防ぐ）
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.cjs"),
     },
+  });
+  // 起動時は最大化で表示する（元に戻すと上の 1200×800 になる）
+  win.once("ready-to-show", () => {
+    win.maximize();
+    win.show();
+  });
+
+  // 画面側が beforeunload で止めた（保存していない変更がある）ときは、閉じてよいか確かめる。
+  // Electron は beforeunload で止めても何も出さずに閉じるのをやめるだけなので、ここでダイアログを出す
+  win.webContents.on("will-prevent-unload", event => {
+    const choice = dialog.showMessageBoxSync(win, {
+      type:      "warning",
+      title:     "Toniq",
+      message:   "保存していない変更があります",
+      detail:    "このまま閉じると、ミュージックリストに保存していない変更は失われます。",
+      buttons:   ["保存せずに閉じる", "キャンセル"],
+      defaultId: 1,
+      cancelId:  1,
+      noLink:    true,
+    });
+    if (choice === 0) event.preventDefault();  // preventDefault で beforeunload の取り消しを無視して閉じる
   });
 
   if (isDev) {

@@ -6,6 +6,7 @@ import { getArrangement, findBlock, LAYERS, SECTION_BARS } from "./LoopArranger"
 import { chorusProgression, endingBar, getSections, isFillBar, loopBars, songMelody, songProgression } from "./SongForm";
 import chordDB from "../data/chord_progressions.json";
 import melodyParams from "../data/melody_params.json";
+import { isStrongUnit, unitsPerBar, unitsPerBeat } from "./Meter";
 
 // 自動チェック：今の曲を規則で調べ、作曲のよくある弱点（強拍でコードとぶつかる、言い切らずに終わる、
 // 大きく跳ぶ、サビが盛り上がらない、ずっと同じ編成 など）を数字で出す。アレンジャーのテスト中の機能の欄に表示する。
@@ -20,7 +21,7 @@ export interface QualityItem {
 
 interface SongNote { midi: number; start: number; end: number }
 
-// 曲全体のメロディ（休符を除く。16分音符単位の位置）
+// 曲全体のメロディ（休符を除く。位置はマスの数。4/4・3/4 は16分音符、3連符は8分3連符。Meter.ts）
 function melodyNotes(): SongNote[] {
   return songMelody()
     .filter((n): n is typeof n & { note: string } => n.note !== null)
@@ -28,9 +29,10 @@ function melodyNotes(): SongNote[] {
     .sort((a, b) => a.start - b.start);
 }
 
-// 16分音符単位の位置で鳴っているコードの構成音（ピッチクラス）
+// マスの位置で鳴っているコードの構成音（ピッチクラス）
 function chordOf(song: ChordProgression, unit: number) {
-  return song.progression.find(c => unit >= (c.bar - 1) * 16 && unit < (c.bar - 1 + c.duration_bars) * 16);
+  const BAR = unitsPerBar();
+  return song.progression.find(c => unit >= (c.bar - 1) * BAR && unit < (c.bar - 1 + c.duration_bars) * BAR);
 }
 
 function chordAt(song: ChordProgression, key: string, unit: number): number[] {
@@ -44,7 +46,8 @@ const pct = (a: number, b: number) => `${Math.round((a / Math.max(1, b)) * 100)}
 // ===== 数値の結果 =====
 
 export interface MelodyMetrics {
-  strongFit:   number;  // 強拍（1・3拍目の頭）の音のうちコード構成音の数
+  strongFit:   number;  // 強拍（1・3拍目の頭）の音のうちコード構成音の数（参考の値。合否には使わない）
+  strongClash: number;  // 強拍の音のうち、コードとぶつかる音（コード構成音の半音上＝アボイドノート）の数
   strongTotal: number;  // 強拍の音の数
   tonicEnds:   number;  // 周回の最後の音が主音の周回
   chordEnds:   number;  // 周回の最後の音が（主音以外の）コード構成音の周回
@@ -101,12 +104,20 @@ function melodyMetrics(sections: string[]): MelodyMetrics | null {
   if (!song || notes.length === 0) return null;
   const tonic = NOTE_INDEX[s.key] ?? 0;
 
-  // 強拍（1拍目・3拍目の頭）の音がコード構成音か
-  const strong = notes.filter(n => n.start % 8 === 0);
-  const strongFit = strong.filter(n => chordAt(song, s.key, n.start).includes(n.midi % 12)).length;
+  // 強拍（4/4 は1拍目・3拍目の頭、3/4 は1拍目の頭）の音がコードに合うか。
+  // コード構成音（strongFit）か、構成音ではないがぶつからない音（9th・6th などのテンション）か、
+  // 構成音の半音上でぶつかる音（strongClash。メジャーコードの上の4度など、いわゆるアボイドノート）か
+  const strong = notes.filter(n => isStrongUnit(n.start));
+  let strongFit = 0, strongClash = 0;
+  for (const n of strong) {
+    const tones = chordAt(song, s.key, n.start);
+    const pc = n.midi % 12;
+    if (tones.includes(pc)) strongFit++;
+    else if (tones.includes((pc + 11) % 12)) strongClash++;
+  }
 
   // 周回（フレーズ）の終わりの音：主音か、そのときのコードの構成音か
-  const L = loopBars() * 16;
+  const L = loopBars() * unitsPerBar();
   let tonicEnds = 0, chordEnds = 0, phrases = 0;
   for (let i = 0; i < sections.length; i++) {
     const inLoop = notes.filter(n => n.start >= i * L && n.start < (i + 1) * L);
@@ -122,7 +133,7 @@ function melodyMetrics(sections: string[]): MelodyMetrics | null {
   // 跳躍・順次進行（休符をはさまずに続く、となりの音との高さの差。1拍以上の休符のあとは息つぎなので数えない）
   let maxLeap = 0, steps = 0, pairs = 0;
   for (let i = 1; i < notes.length; i++) {
-    if (notes[i].start - notes[i - 1].end >= 4) continue;
+    if (notes[i].start - notes[i - 1].end >= unitsPerBeat()) continue;
     const leap = Math.abs(notes[i].midi - notes[i - 1].midi);
     maxLeap = Math.max(maxLeap, leap);
     pairs++;
@@ -137,6 +148,7 @@ function melodyMetrics(sections: string[]): MelodyMetrics | null {
 
   return {
     strongFit,
+    strongClash,
     strongTotal: strong.length,
     tonicEnds,
     chordEnds,
@@ -149,9 +161,16 @@ function melodyMetrics(sections: string[]): MelodyMetrics | null {
   };
 }
 
+// 強拍の音のうち、コードとぶつかる音（構成音の半音上）をここまで許す。
+// メロディはコード構成音を見ずにペンタトニックで作るので、強拍がコード構成音になるのは平均 5 割ほど（以前の基準「構成音が 75% 以上」は
+// 合格率が 1 割で、良し悪しを分けられなかった）。構成音でなくても 9th・6th などはぶつからないので、実際に濁る音の割合で見る。
+// 2026-11-17 の計測（全ジャンル×雰囲気 各 50 曲）でぶつかる音は平均 6〜13%、20% を超える曲は 1〜2 割
+export const STRONG_CLASH_LIMIT = 0.2;
+
 // 合否の基準（true = 良い、false = 見直したほうがよい、null = 判定しない）
 export const QUALITY_RULES = {
-  strongFit:  (m: MelodyMetrics) => m.strongTotal === 0 ? null : m.strongFit / m.strongTotal >= 0.75,
+  // 名前は以前のまま（保存した計測結果・メロディの評価と項目をそろえるため）。中身は「強拍でコードとぶつからないか」
+  strongFit:  (m: MelodyMetrics) => m.strongTotal === 0 ? null : m.strongClash / m.strongTotal <= STRONG_CLASH_LIMIT,
   phraseEnd:  (m: MelodyMetrics) => m.phrases === 0 ? null : m.tonicEnds + m.chordEnds === m.phrases && m.tonicEnds > 0,
   leap:       (m: MelodyMetrics) => m.maxLeap <= 9,
   chorusLift: (m: MelodyMetrics) => m.chorusLift === null ? null : m.chorusLift > 0,
@@ -167,10 +186,10 @@ function melodyItems(x: SongMetrics): QualityItem[] {
     return [{ label: "メロディ", value: "未作成（自動生成すると調べます）", ok: null, hint: "メロディを作るとチェックします" }];
   }
   return [{
-    label: "強拍のコード構成音",
-    value: `${pct(m.strongFit, m.strongTotal)}（${m.strongFit} / ${m.strongTotal} 音）`,
+    label: "強拍の響き",
+    value: `コードとぶつかる音 ${pct(m.strongClash, m.strongTotal)}（${m.strongClash} / ${m.strongTotal} 音）・コード構成音 ${pct(m.strongFit, m.strongTotal)}`,
     ok: QUALITY_RULES.strongFit(m),
-    hint: "1拍目・3拍目の頭の音がコードの音だと、メロディとコードがぶつからずに聞こえます（75% 以上が目安）",
+    hint: `強拍（4/4 は1・3拍目、3/4 は1拍目）の頭の音が、コードの音の半音上だと濁って聞こえます（ぶつかる音が ${STRONG_CLASH_LIMIT * 100}% 以下が目安。コード構成音の割合は参考）`,
   }, {
     label: "フレーズの終わり",
     value: `主音 ${m.tonicEnds}・構成音 ${m.chordEnds} / ${m.phrases} 周`,

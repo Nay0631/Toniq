@@ -72,10 +72,11 @@ export function initPreferences(): void {
   const noteNames = read(KEYS.noteNames);
   const drumSource = read(KEYS.drumSource);
   setState({
-    noteNames:    noteNames === "doremi" ? "doremi" : "cde",
+    // 保存がなければドレミ表記（CDE 表記を選んで保存した端末はそのまま）
+    noteNames:    noteNames === "cde" ? "cde" : "doremi",
     loopPlayback: read(KEYS.loopPlayback) === "on",
-    // 保存がなければ grow（以前の初期値のシンセを保存した端末はシンセのまま）
-    drumSource:   drumSource === "sample" || drumSource === "synth" ? drumSource : "grow",
+    // 保存がなければサンプル音源（lidless・シンセを選んで保存した端末はそのまま）
+    drumSource:   drumSource === "grow" || drumSource === "synth" ? drumSource : "sample",
   });
   // テスト中の機能は、保存がなければ初期値（ON）のまま
   for (const feature of TEST_FEATURES) {

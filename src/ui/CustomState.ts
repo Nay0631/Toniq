@@ -7,6 +7,8 @@ import chordDB from "../data/chord_progressions.json";
 import drumDB  from "../data/drum_patterns.json";
 import { ChordProgression, DrumPattern } from "../data/types";
 import { SCALE_LABELS } from "./format";
+import { Meter, convertNotes, currentMeter } from "../engine/Meter";
+import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
 
 // カスタムモード画面の状態の更新（DOM は触らない）と、選択肢の元になるデータ。
 // 表示は CustomRender.ts、イベントの登録は CustomScreen.ts
@@ -56,6 +58,26 @@ export function setChordPattern(next: ChordProgression): void {
     ? s.chorusPattern
     : pickChorus(next, s.genre, s.mood);
   setState({ chordPattern: next, chorusPattern });
+  if (regenerate) {
+    setState({ melodyVersion: s.melodyVersion + 1 });
+    makeMelody();
+  }
+}
+
+// 拍子を変える。メロディとオリジナルのドラムは小節と拍の位置を保って新しい拍子のマスに置き直し（Meter.ts の convertNotes・
+// DrumEngine.ts の drumPatternIn。3/4 にない4拍目の音は落ちる）、自動生成のメロディは新しい拍子で作り直す。
+// DB のパターン（コード進行・ドラム・ベースなど）は鳴らすときに拍子に合わせて直すので、そのまま
+export function setMeter(next: Meter): void {
+  const s = getState();
+  const from = currentMeter();
+  if (next === from) return;
+  const regenerate = hasAutoMelody();
+  setState({
+    meter: next,
+    melodyNotes:       convertNotes(s.melodyNotes, from, next),
+    chorusMelodyNotes: convertNotes(s.chorusMelodyNotes, from, next),
+    ...(s.drumPattern && isCustomDrum(s.drumPattern) ? { drumPattern: drumPatternIn(s.drumPattern, next) } : {}),
+  });
   if (regenerate) {
     setState({ melodyVersion: s.melodyVersion + 1 });
     makeMelody();

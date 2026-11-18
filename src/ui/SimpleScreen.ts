@@ -1,8 +1,8 @@
-import { getState, setState, type ArrangePreset } from "../engine/AppState";
+import { getState, setState } from "../engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset, rerollChord, rerollDrum, pickChorus } from "../engine/SimpleModeResolver";
 import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import { generateMelody } from "../engine/MelodyGenerator";
-import { isArrangedAt, LAYERS, ARRANGE_PRESETS } from "../engine/LoopArranger";
+import { isArrangedAt, LAYERS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
 import * as Playback from "../engine/Playback";
@@ -12,6 +12,8 @@ import { startPianoRollPlayhead } from "./PianoRollTab";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import { CUSTOM_DRUM_ID } from "../data/types";
 import { bindSpaceToPlay } from "./SpaceKey";
+import { beatsPerBar, unitsPerBeat } from "../engine/Meter";
+import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -94,16 +96,29 @@ function generate(): void {
   setState({
     chordPattern:  result.chordPattern,
     chorusPattern: pickChorus(result.chordPattern, s.genre, s.mood),  // サビの進行（同じ長さ・スケールのもの）
-    drumPattern:   result.drumPattern,
+    // ピアノロールで作ったオリジナルのドラムは残す（別のパターンにするときはドラムの「↻ 再抽選」）
+    drumPattern:   isCustomDrum(s.drumPattern) ? s.drumPattern : result.drumPattern,
     melodyVersion: 0,
     generated:     true,
     songId:        null,  // 新しい曲としてミュージックリストに保存する
-    arrangeEdits:  [],    // カスタムモードで変えたアレンジは捨てて、選んだ構成のプリセットのままにする
+    arrangePreset: "standard",  // シンプルモードでは構成を選ばないので、標準の構成にする
+    arrangeEdits:  [],    // カスタムモードで変えたアレンジも捨てる
     sections:      null,  // セクションもジャンルの標準に戻す
   });
   setState({ bars: songBars() });
-  makeMelody();
+  // 自分で入力したメロディ（生成前にピアノロールで入れた音・前回の曲で入れた音）は残し、自動生成のときだけ作る
+  if (s.melodyMethod === "auto") makeMelody();
   console.log("シンプルモード：生成", getState());
+}
+
+// 生成し直しても残す、ピアノロールで作った内容の名前（「入力したメロディと作ったドラム」など。なければ null）
+function keptContent(): string | null {
+  const s = getState();
+  const kept = [
+    s.melodyMethod === "manual" && (s.melodyNotes.length > 0 || s.chorusMelodyNotes.length > 0) ? "入力したメロディ" : "",
+    isCustomDrum(s.drumPattern) ? "作ったドラム" : "",
+  ].filter(Boolean);
+  return kept.length > 0 ? kept.join("と") : null;
 }
 
 // 再生中に曲の内容が変わったら先頭から再生し直す
@@ -135,10 +150,11 @@ function renderWave(): void {
   const wave = $("s-wave");
   if (!wave || !s.chordPattern || !s.drumPattern) return;
 
-  const beats    = s.bars * 4;
-  const drum     = s.drumPattern;
-  // パターンは16分音符のステップ（オリジナルは複数小節あるので、曲の拍からパターンの位置を決める）
-  const stepsPerBeat = 4;
+  const perBar   = beatsPerBar();  // 拍子（カスタムモードで 3/4 にした曲を開いたとき）
+  const beats    = s.bars * perBar;
+  // パターンは今の拍子のマス（オリジナルは複数小節あるので、曲の拍からパターンの位置を決める）
+  const drum     = drumPatternIn(s.drumPattern);
+  const stepsPerBeat = unitsPerBeat();
   const energies: number[] = [];
   for (let i = 0; i < beats; i++) {
     let e = 0;
@@ -154,7 +170,7 @@ function renderWave(): void {
 
   wave.innerHTML = "";
   for (let i = 0; i < beats; i++) {
-    const bar   = Math.floor(i / 4);
+    const bar   = Math.floor(i / perBar);
     const parts = LAYERS.filter(p => s.parts[p] && isArrangedAt(p, bar)).length;
     const jitter = ((i * 37) % 11) / 55;
     const h = Math.min(1, 0.2 + (parts / LAYERS.length) * (0.45 + 0.45 * energies[i] / maxEnergy) + jitter);
@@ -236,10 +252,6 @@ function render(): void {
     el.classList.toggle("is-active", el.dataset.tempo === s.tempoPreset));
   $("s-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   $("s-bpm")!.textContent = `${s.bpm} BPM`;
-  // 構成のプリセット（選んだものの説明を見出しの横に出す）
-  $$("[data-arrange-preset]").forEach(el =>
-    el.classList.toggle("is-active", el.dataset.arrangePreset === s.arrangePreset));
-  $("s-arrange-hint")!.textContent = ARRANGE_PRESETS.find(p => p.id === s.arrangePreset)?.desc ?? "";
   const metronomeOn = isMetronomeOn();
   $("s-metronome")!.textContent = metronomeOn ? "■ クリックを止める" : "♪ クリックで試聴";
   $("s-metronome")!.classList.toggle("is-active", metronomeOn);
@@ -254,6 +266,15 @@ function render(): void {
   }
   $$("[data-melody-method]").forEach(el =>
     el.classList.toggle("is-active", el.dataset.melodyMethod === s.melodyMethod));
+
+  // ピアノロールで作った内容は生成しても残すことを知らせる
+  const kept = keptContent();
+  const keepHint = $("s-keep-hint")!;
+  keepHint.hidden = !kept;
+  keepHint.textContent = kept ? `ピアノロールで${kept}は、そのまま使います` : "";
+  $("s-regenerate")!.title = kept
+    ? `選び直して新しい曲にします（${kept}はそのまま）`
+    : "コード進行・ドラム・メロディを選び直して、新しい曲にします";
 
   $("s-setup")!.hidden  = s.generated;
   $("s-result")!.hidden = !s.generated;
@@ -313,18 +334,6 @@ export function initSimpleScreen(): void {
     } else {
       void playGenreSample();
     }
-  });
-
-  // 構成のプリセット：「生成する」で作る曲の流れ（生成した曲の再生中に変えたら再生し直す）
-  const presetBox = $("s-arrange-preset")!;
-  presetBox.innerHTML = ARRANGE_PRESETS.map(p =>
-    `<button class="chip" data-arrange-preset="${p.id}">${p.label}</button>`).join("");
-  presetBox.addEventListener("click", async e => {
-    const chip = (e.target as HTMLElement).closest<HTMLElement>("[data-arrange-preset]");
-    if (!chip) return;
-    setState({ arrangePreset: chip.dataset.arrangePreset as ArrangePreset });
-    render();
-    await restartIfPlaying();
   });
 
   $$("[data-tempo]").forEach(el =>
@@ -413,6 +422,8 @@ export function initSimpleScreen(): void {
 
   $("s-drum-reroll")?.addEventListener("click", async () => {
     const s = getState();
+    if (isCustomDrum(s.drumPattern)
+        && !confirm("ピアノロールで作ったドラムを、別のドラムパターンに置き換えますか？")) return;
     setState({ drumPattern: rerollDrum(s.genre, s.mood, s.drumPattern?.id) });
     render();
     await restartIfPlaying();

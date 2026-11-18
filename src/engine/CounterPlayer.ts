@@ -5,6 +5,7 @@ import { MelodyNote, noteToMidi, midiToNote, timeToUnits, durationToUnits } from
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
+import { isStrongUnit, isTriplet, unitTime, unitsPerBar, unitsPerBeat } from "./Meter";
 
 // カウンターメロディ：メロディに寄り添うもう1本の旋律。メロディとコード進行から毎回同じ形に決まる（AppState には持たない。
 // メロディを編集すれば自動で追従する）。
@@ -17,8 +18,8 @@ import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 // ===== 生成 =====
 
 export interface CounterNote {
-  sixteenth: number;  // 曲（ループ）の頭からの位置（16分音符）
-  length:    number;  // 16分音符の数
+  sixteenth: number;  // 曲（ループ）の頭からの位置（マスの数。4/4・3/4 は16分音符、3連符は8分3連符。Meter.ts）
+  length:    number;  // マスの数
   midi:      number;
   velocity:  number;
 }
@@ -30,7 +31,8 @@ const HARMONY_FLOOR = 55;  // G3。これより下になる音は休む（コー
 // 合いの手の音域（MIDI。メロディの Aメロの音域（C4〜A4 あたり）より上）
 const FILL_LOW  = 67;  // G4
 const FILL_HIGH = 84;  // C6
-const FILL_MIN_GAP = 8;  // メロディの次の発音までがこれ以上（16分音符。半小節）空く所に入れる
+// メロディの次の発音までがこれ以上（マスの数。2拍 = 4/4 の半小節）空く所に入れる
+const fillMinGap = () => unitsPerBeat() * 2;
 
 interface Placed { start: number; length: number; midi: number }
 
@@ -45,9 +47,10 @@ function placedMelody(melody: MelodyNote[]): Placed[] {
 interface ChordAt { tones: number[]; section: "A" | "B"; shift: number }
 
 function chordTimeline(progression: ChordProgression, key: string): (unit: number) => ChordAt {
+  const BAR = unitsPerBar();
   const spans = progression.progression.map(c => ({
-    start:   (c.bar - 1) * 16,
-    end:     (c.bar - 1 + c.duration_bars) * 16,
+    start:   (c.bar - 1) * BAR,
+    end:     (c.bar - 1 + c.duration_bars) * BAR,
     tones:   resolveChord(c.degree, c.type, 0, chordKey(key, c), progression.base_scale, 4).notes.map(n => noteToMidi(n) % 12),
     section: c.section ?? "A",
     shift:   c.keyShift ?? 0,
@@ -77,8 +80,10 @@ function harmonyNote(melody: number, chordTones: number[], scale: Set<number>, s
 function fillFigure(
   start: number, end: number, chordAt: (unit: number) => ChordAt, penta: number[], held: number, up: boolean,
 ): CounterNote[] {
-  const first = Math.ceil(start / 2) * 2;  // 8分音符の位置にそろえる
-  const count = Math.min(4, Math.floor((end - first) / 2));
+  // 1音の間隔（マスの数）：8分音符。3連符の拍子では3連符1つずつ（3連符の駆け上がり・駆け下り）
+  const gap   = isTriplet() ? 1 : 2;
+  const first = Math.ceil(start / gap) * gap;  // 8分音符の位置にそろえる
+  const count = Math.min(4, Math.floor((end - first) / gap));
   if (count < 2) return [];
 
   const clashes = (midi: number) => [1, 11].includes(((midi - held) % 12 + 12) % 12);
@@ -95,7 +100,7 @@ function fillFigure(
   const inRange = (i: number) => i >= 0 && i < penta.length;
   let dir = up ? 1 : -1;
   for (let k = 0; k < count; k++) {
-    const pos  = first + k * 2;
+    const pos  = first + k * gap;
     const last = k === count - 1;
     if (k > 0) {
       const prev = index;
@@ -113,7 +118,7 @@ function fillFigure(
       }
     }
     // 最後の音は次のメロディの発音まで（最大1拍）伸ばす
-    const length = last ? Math.max(2, Math.min(4, end - pos)) : 2;
+    const length = last ? Math.max(gap, Math.min(unitsPerBeat(), end - pos)) : gap;
     notes.push({ sixteenth: pos, length, midi: penta[index], velocity: k === 0 ? 0.75 : 0.68 });
   }
   return notes;
@@ -133,7 +138,8 @@ export function counterNotes(progression: ChordProgression, melody: MelodyNote[]
     return Array.from({ length: FILL_HIGH - FILL_LOW + 1 }, (_, i) => FILL_LOW + i).filter(m => core.includes(m % 12));
   };
   const chordAt = chordTimeline(progression, key);
-  const total   = progression.length_bars * 16;
+  const BAR     = unitsPerBar(), BEAT = unitsPerBeat();
+  const total   = progression.length_bars * BAR;
 
   const out: CounterNote[] = [];
   let prevHarmony: number | null = null;
@@ -142,9 +148,9 @@ export function counterNotes(progression: ChordProgression, melody: MelodyNote[]
   notes.forEach((n, i) => {
     const chord = chordAt(n.start);
     if (chord.section === "B") {
-      const midi = harmonyNote(n.midi, chord.tones, scaleOf(chord.shift), n.start % 8 === 0, prevHarmony);
+      const midi = harmonyNote(n.midi, chord.tones, scaleOf(chord.shift), isStrongUnit(n.start), prevHarmony);
       prevHarmony = midi;
-      if (midi !== null) out.push({ sixteenth: n.start, length: n.length, midi, velocity: n.start % 4 === 0 ? 0.82 : 0.74 });
+      if (midi !== null) out.push({ sixteenth: n.start, length: n.length, midi, velocity: n.start % BEAT === 0 ? 0.82 : 0.74 });
       return;
     }
     prevHarmony = null;
@@ -152,11 +158,11 @@ export function counterNotes(progression: ChordProgression, melody: MelodyNote[]
     // 合いの手：次の発音（最後の音はループの頭の音）までが半小節以上空く所。発音から1拍あとに入れる
     const next = notes[i + 1]?.start ?? notes[0].start + total;
     const end  = Math.min(next, total);
-    const bar  = Math.floor(n.start / 16);
+    const bar  = Math.floor(n.start / BAR);
     // 1小節に1つまで。続けて入れるとうるさいので、前の小節に入れたら休む（呼びかけと応答の間を空ける）
-    if (end - n.start < FILL_MIN_GAP || filledBars.has(bar) || filledBars.has(bar - 1)) return;
+    if (end - n.start < fillMinGap() || filledBars.has(bar) || filledBars.has(bar - 1)) return;
     // 合いの手を入れる所もセクション A（次がサビの頭なら、サビに食い込まない）
-    const from = n.start + 4;
+    const from = n.start + BEAT;
     if (chordAt(Math.min(end - 1, total - 1)).section === "B") return;
     const figure = fillFigure(from, end, chordAt, pentaOf(chord.shift), n.midi, bar % 2 === 0);
     if (figure.length === 0) return;
@@ -195,9 +201,9 @@ export function loadCounter(progression: ChordProgression, melody: MelodyNote[],
   if (!counterSynth) initCounterSynth();
 
   const events = counterNotes(progression, melody, key).map(n => ({
-    time: `0:0:${n.sixteenth}`,
+    time: unitTime(n.sixteenth),
     note: midiToNote(n.midi),
-    dur:  `0:0:${n.length}`,
+    dur:  unitTime(n.length),
     vel:  n.velocity,
   }));
 

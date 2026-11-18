@@ -12,6 +12,8 @@ import { bassSubOn } from "../engine/BassPlayer";
 import drumDB from "../data/drum_patterns.json";
 import { CUSTOM_DRUM_ID, DrumPattern } from "../data/types";
 import { render } from "./Router";
+import { soloPart, toggleSolo } from "./Solo";
+import { setLoopPlayback } from "./Preferences";
 import { formatTimePrecise } from "./format";
 import { chorusProgression, getSections, loopBars } from "../engine/SongForm";
 
@@ -201,7 +203,8 @@ export function renderArranger(): void {
             <div class="arr-name" data-term="${name}">${label}</div>
             <div class="arr-sub">${sub}</div>
           </div>
-          <button class="pill${on ? " is-on" : ""}" data-arr-toggle="${name}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
+          <button class="pill${on ? " is-on" : ""}${soloPart() === name ? " is-solo" : ""}" data-arr-toggle="${name}" aria-pressed="${on}"
+                  title="クリックで ON/OFF・右クリックでこのパートだけ鳴らす（ソロ。もう一度右クリックで元に戻す）">${on ? "ON" : "OFF"}</button>
         </div>
         <div class="arr-track" data-part="${name}">${body}</div>
       </div>`;
@@ -233,6 +236,9 @@ export function renderArranger(): void {
     : `${s.genre} の${arrangePresetLabel(s.arrangePreset)}の構成`;
   $("c-arr-mode")!.classList.toggle("is-edited", changed);
   ($("c-arr-reset") as HTMLButtonElement).disabled = !changed;
+  const loop = $("c-arr-loop");
+  loop?.classList.toggle("is-on", s.loopPlayback);
+  loop?.setAttribute("aria-pressed", String(s.loopPlayback));
   renderPresetSelect();
   renderPlayhead();
   // ほかの画面（シンプルモードなど）で始めた再生でも、表示したら再生位置の線を動かす
@@ -460,6 +466,14 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
 
   // ブロックを右クリック：消す（ピアノロールと同じ操作。ブラウザの右クリックメニューは出さない）
   root.addEventListener("contextmenu", e => {
+    // ON/OFF ボタンを右クリック：そのパートだけ鳴らす（ソロ）／もう一度でソロにする前に戻す
+    const toggle = (e.target as HTMLElement).closest<HTMLElement>("[data-arr-toggle]");
+    if (toggle) {
+      e.preventDefault();
+      toggleSolo(toggle.dataset.arrToggle as LayerName);
+      render();
+      return;
+    }
     const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
     if (!block) return;
     e.preventDefault();
@@ -498,6 +512,12 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
   $("c-arr-to-start")?.addEventListener("click", () => {
     setState({ startBar: 0 });
     onSeek();
+  });
+
+  // ループ再生（設定画面と同じ設定。再生中に切り替えてもすぐ反映される）
+  $("c-arr-loop")?.addEventListener("click", () => {
+    setLoopPlayback(!getState().loopPlayback);
+    render();
   });
 
   // 構成のプリセット：セクションの並び（短く繰り返す）も変わるので、再生中なら再生し直す。変えた所はそのまま当て直す
