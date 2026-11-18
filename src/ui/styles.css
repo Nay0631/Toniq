@@ -518,7 +518,6 @@ button {
 .chips-mood  .chip.is-active { background: var(--simple-soft); border-color: var(--simple); color: var(--simple-ink); font-weight: 600; }
 .chips-genre .chip.is-active { background: var(--custom-soft); border-color: var(--custom); color: var(--custom-ink); font-weight: 600; }
 .chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
-.chips-arrange .chip.is-active { background: var(--list-soft); border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
 
 .bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
 
@@ -3795,4 +3794,14 @@ span[data-term],
 
   select option:disabled { color: var(--text-muted); cursor: default; }
   .hw .select option:disabled { color: var(--hw-faint); }
+
+  /* 選択肢の見出し（lidless のプリセットのカテゴリなど）。見出しは控えめの色、中の選択肢は普通の色に戻す */
+  select optgroup {
+    padding-top: 4px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .hw .select optgroup { color: var(--hw-faint); }
+  select optgroup > option { font-weight: normal; color: var(--text); }
+  .hw .select optgroup > option { color: var(--hw-text); }
 }

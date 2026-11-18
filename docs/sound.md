@@ -1,24 +1,24 @@
-# 音・grow・ミックス・書き出し
+# 音・lidless・ミックス・書き出し
 
 詳しい仕様。CLAUDE.md の「詳しい仕様」から参照される（要点・決まりごとは CLAUDE.md）。
 
-## grow（内部シンセ）
+## lidless（内部シンセ）
 
-- Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメントでは「grow」と呼ぶ。
-- grow（`grow/`）は C++ のシンセサイザー。音を作るコア（`grow/core/`。JUCE なし）を、Toniq では WebAssembly＋AudioWorklet で、単体では JUCE の Standalone・VST3 で鳴らす。作り・決まりごとは `grow/README.md`。
-  - Toniq ではメロディの音色 `melodyInstrument: "grow"`（初期値。選択肢の先頭の「grow」）、コード・ベース・パッド・アルペジオ・シグネチャー・カウンターメロディ・FX / SE はいつも grow で鳴らす（ドラムは音源 `drumSource` が `"grow"`（初期値）のとき）（準備ができていない・wasm がないときは各 Player の Tone.js の音色。シグネチャーは `SIGNATURES` の `create`）。シグネチャーはジャンルの鳴り方（`events`）のまま、音だけ grow で出す（`growTrigger`。ノイズのイベントは `NOISE_NOTE`。レコードノイズはプチプチ音をプリセット「レコードプチ」の2台目で鳴らす `growCreate`）。コードは16音ポリで和音を鳴らし、`GrowInstrument` は同じサンプルに重なる合図（和音の発音・消音）を2サンプルずつずらして渡す。準備ができていない・wasm がないとき、コードはソフトパッドで鳴る。`Grow.ts` が `public/grow/grow.wasm` を読み込み、AudioWorklet（`growWorklet.js`。`?raw` で読み込んで Blob の URL で登録）をオーディオコンテキストごとに登録する。再生・試聴・サンプルは `Playback.audioReady`、WAV / MP3 書き出しは `renderSong` の `schedule` で、`prepareGrowContext()` を待つ（パッドなどはいつも grow なので毎回）。準備ができていない・wasm がないときは `resolveMelodySound()` がジャンルの標準の音色にする。
+- Toniq の内部シンセサイザーの名称は **lidless**（グロウ）とする。UI 表示・コメント・ドキュメントでは「lidless」と呼ぶ。
+- lidless（`grow/`）は C++ のシンセサイザー。音を作るコア（`grow/core/`。JUCE なし）を、Toniq では WebAssembly＋AudioWorklet で、単体では JUCE の Standalone・VST3 で鳴らす。作り・決まりごとは `grow/README.md`。
+  - Toniq ではメロディの音色 `melodyInstrument: "grow"`（初期値。選択肢の先頭の「lidless」）、コード・ベース・パッド・アルペジオ・シグネチャー・カウンターメロディ・FX / SE はいつも lidless で鳴らす（ドラムは音源 `drumSource` が `"grow"`（初期値）のとき）（準備ができていない・wasm がないときは各 Player の Tone.js の音色。シグネチャーは `SIGNATURES` の `create`）。シグネチャーはジャンルの鳴り方（`events`）のまま、音だけ lidless で出す（`growTrigger`。ノイズのイベントは `NOISE_NOTE`。レコードノイズはプチプチ音をプリセット「レコードプチ」の2台目で鳴らす `growCreate`）。コードは16音ポリで和音を鳴らし、`GrowInstrument` は同じサンプルに重なる合図（和音の発音・消音）を2サンプルずつずらして渡す。準備ができていない・wasm がないとき、コードはソフトパッドで鳴る。`Grow.ts` が `public/grow/grow.wasm` を読み込み、AudioWorklet（`growWorklet.js`。`?raw` で読み込んで Blob の URL で登録）をオーディオコンテキストごとに登録する。再生・試聴・サンプルは `Playback.audioReady`、WAV / MP3 書き出しは `renderSong` の `schedule` で、`prepareGrowContext()` を待つ（パッドなどはいつも lidless なので毎回）。準備ができていない・wasm がないときは `resolveMelodySound()` がジャンルの標準の音色にする。
   - `GrowInstrument`（`Grow.ts`）はほかの音色の Synth と同じ `triggerAttackRelease` で鳴らす。音符は AudioParam（`on` / `off`）の1サンプルの合図で渡す（書き出しでも合う）。時刻を決めて当てるパラメーターも `setParamAtTime(ID, 値, 時刻)` で AudioParam（`pidx` / `pval`）の合図で渡す。音の終わりは 2ms 遅らせてレガートでつながるようにし、同じ高さが続くときはワークレットが前の音の終わりを無視する。自前のエフェクト（リバーブを含む）を持つので、各パートの Volume に直接つなぐ。同じタスクで作った `GrowInstrument` はマイクロタスクでまとめて1つの AudioWorkletNode（1つの wasm。最大16スロット）にする（`flush`）。スロットの最初の値は `processorOptions` で渡し、ノードができる前の発音・パラメーターはためておいて当てる。
-  - コードの音色は grow のプリセットだけ（`chordInstrument` はいつも `"grow"`。Tone.js の音色は wasm がないときのソフトパッドだけ）。カスタムモードの「コード進行」欄の「音色」は「ジャンルに合わせる（〇〇）」と `CHORD_PRESET_CHOICES`（`Grow.ts`。ソフトパッド・ワイドパッド・エレピ・ストリングス・オルガン・スクエア・スーパーソウ・ハードパッド）で、`growChordPreset` を書き換える（選び直すと `growChordParams` は捨てる）。以前の Tone.js の音色（`soft` / `epiano` / `strings` / `organ` / `square` / `supersaw`）を保存した曲は、`loadSong()`（`songFields`）が同じ音の grow のプリセット（`LEGACY_CHORD_PRESETS`）に読み替える。
+  - コードの音色は lidless のプリセットだけ（`chordInstrument` はいつも `"grow"`。Tone.js の音色は wasm がないときのソフトパッドだけ）。カスタムモードの「コード進行」欄の「音色」は「ジャンルに合わせる（〇〇）」と、コードのパートで選べるカテゴリ（`Grow.ts` の `PART_CATEGORIES`。和音・パッド）のプリセットをカテゴリの見出し（`<optgroup>`）ごとに並べたもの（lidless の音作りのパネルでほかのカテゴリのプリセットを選んでいたら「その他」に足す）で、`growChordPreset` を書き換える（選び直すと `growChordParams` は捨てる）。以前の Tone.js の音色（`soft` / `epiano` / `strings` / `organ` / `square` / `supersaw`）を保存した曲は、`loadSong()`（`songFields`）が同じ音の lidless のプリセット（`LEGACY_CHORD_PRESETS`）に読み替える。
   - 音作りの値はメロディが `AppState.growPreset`（コアのプリセットの ID。初期値 `null` = ジャンルの標準 `MELODY_STANDARD`：EDM = シンセリード、8bit = チップリード、ローファイ = キーズ、ゲームBGM = ベル、テクノ = シンクリード、ハウス = プラック、トランス = トランスリード、アンビエント = ソフトパッド。以前の初期値 `"lead"` を保存した曲はそのまま）と `growParams`（変えた値。パラメーターの ID → 値。`null` = プリセットのまま）、コードが `growChordPreset`（初期値 `null` = ジャンルの標準 `CHORD_STANDARD`。パッドのパートのパッド系の音と重ならない和音の音：EDM・トランス = スーパーソウ、8bit = スクエア、ローファイ = エレピ、ゲームBGM・アンビエント = ストリングス、テクノ・ハウス = オルガン）と `growChordParams`、ベース・パッド・アルペジオ・シグネチャー・カウンターメロディが `growSounds`（`{ preset, params }`。`preset` の `null` = ジャンルの標準。パッドは `PAD_STANDARD`（EDM・トランス・アンビエント = ワイドパッド、テクノ = ゲートパッド、ほか = ソフトパッド）、アルペジオは `arp_params.json` の `instrument` → `ARP_STANDARD`（ジャンルで上書きするときは `ARP_GENRE_STANDARD`。ローファイ = ローファイキーズ）、シグネチャーは `SIGNATURE_STANDARD`、カウンターメロディは `COUNTER_STANDARD`。同じジャンルの中ではパートどうしで同じプリセットを使わない（8bit のコードとアルペジオのスクエアだけ例外）。`GROW_STANDARD`（`Grow.ts`）がプリセットを ID で探し、今の wasm にない ID は後ろの候補の既存のプリセットにする）。プリセットは曲に ID で保存する（以前は番号。番号で保存した古い曲は `loadSong()`（`songFields`）が `LEGACY_PRESET_IDS` で ID に読み替える。曲ファイルの `FILE_VERSION` は 2）。保存した ID が今の wasm にないときはジャンルの標準で鳴らす。どれも `SONG_FIELDS` に含む。パートごとの値は `currentGrowValues(part)`（`GrowPart`）で読み、書き換えは `setGrowSound()`。`GrowInstrument` には値を返す関数（`growValues(part)`）を渡す。ジャンルを足すときは `GROW_STANDARD` のメロディ（`MELODY_STANDARD`）・コード（`CHORD_STANDARD`）・ベース（`BASS_STANDARD`）・パッド（`PAD_STANDARD`）・シグネチャー（`SIGNATURE_STANDARD`）・カウンターメロディ（`COUNTER_STANDARD`）にも足す（なければローファイの定義）。パラメーターの表・プリセット・値の表示はコア（wasm）から読み、TypeScript 側では持たない。
-  - 音作りのパネル（`GrowPanel.ts`、カスタムモードの設定タブの下 `#c-grow`。いつも出す。「対象」で編集するパートを選ぶ。メロディは音色が grow のときだけ選べる。どのパートもプリセットに「ジャンルの標準」を選べる）はテスト用の暫定。最終的にはプリセットを選ぶだけにする予定。値を変えると `applyGrowLive()`（`Grow.ts`）で鳴っている grow（全パート）にすぐ当てる（作り直さない）。BPM の変更も `Playback.applyBpm()` から当てる。
+  - 音作りのパネル（`GrowPanel.ts`、カスタムモードの設定タブの下 `#c-grow`。いつも出す。「対象」で編集するパートを選ぶ。メロディは音色が lidless のときだけ選べる。どのパートもプリセットに「ジャンルの標準」を選べる）はテスト用の暫定。最終的にはプリセットを選ぶだけにする予定。値を変えると `applyGrowLive()`（`Grow.ts`）で鳴っている lidless（全パート）にすぐ当てる（作り直さない）。BPM の変更も `Playback.applyBpm()` から当てる。
   - 以前の Tone.js 版（`ToniqSynth.ts` / `ToniqSynthPanel.ts`、`AppState.toniqSynth` / `toniqSynthEnabled`、メロディの音色 `"toniq"`、localStorage の `toniq.test.toniqSynth`）は廃止した。保存済みの曲の `toniqSynth` は読み捨て、`melodyInstrument: "toniq"` は `loadSong()`（`songFields`）で `"auto"` にして読む。
   - MIDI書き出しはほかの音色と同じくメロディの音として書き出す（音色の再現はしない）。
 
 ## ドラムの音源
 
-- ドラムの音源（テスト中）：`AppState.drumSource` が `"grow"`（grow、初期値）か `"synth"`（Tone.js のシンセ）か `"sample"`（ワンショット音源）。設定画面の「ドラムの音源」で切り替え、`Preferences.ts` が localStorage の `toniq.drumSource` に保存する（保存がなければ grow。以前の初期値のシンセを保存した端末はシンセのまま）。曲の内容ではないので `SONG_FIELDS` には入れない。パーカッションも同じ音源に合わせて鳴らす（ワンショット音源でファイルがないパーカッションは grow）。再生中に切り替えたら（サンプル音源なら読み込みを待って）ドラムとパーカッションだけ読み込み直す。
-  - grow：トラックごとに grow を1台ずつ鳴らす（`SynthFactory.ts` の `createGrowVoice`。コアの「ドラム …」のプリセット、ID は `drum_…`。トラック名 → ID は `GROW_DRUMS`）。ジャンルのキット（`DRUM_KITS`）の値（キックの高さ・ピッチの下がり方・長さ・クリック、スネアの高さ・長さ・響き線の帯域、ハイハットの長さ・帯域）は `growDrumSound()` がプリセットの値に上書きして当てる。どの音もサスティン 0 で鳴り終わるので発音の合図だけ送り（`GrowInstrument.triggerAttack`）、オープンハイハットのチョークだけ消音の合図（`triggerRelease`）を送る。クラップは短い音を3回重ねてから余韻を鳴らす。grow を鳴らせない（準備ができていない・プリセットのない古い wasm）トラックはシンセで鳴る。
-  - grow のドラムは強さ 1 のピークが −6dB 前後で出るので、`GROW_TRIM_DB` で1打の聞こえる大きさをシンセのドラムにそろえている（差は全ジャンルで ±1dB ほど。2026-11-12 に測定）。プリセット・`DRUM_KITS` を変えたら測り直す。
+- ドラムの音源（テスト中）：`AppState.drumSource` が `"grow"`（lidless、初期値）か `"synth"`（Tone.js のシンセ）か `"sample"`（ワンショット音源）。設定画面の「ドラムの音源」で切り替え、`Preferences.ts` が localStorage の `toniq.drumSource` に保存する（保存がなければ lidless。以前の初期値のシンセを保存した端末はシンセのまま）。曲の内容ではないので `SONG_FIELDS` には入れない。パーカッションも同じ音源に合わせて鳴らす（ワンショット音源でファイルがないパーカッションは lidless）。再生中に切り替えたら（サンプル音源なら読み込みを待って）ドラムとパーカッションだけ読み込み直す。
+  - lidless：トラックごとに lidless を1台ずつ鳴らす（`SynthFactory.ts` の `createGrowVoice`。コアの「ドラム …」のプリセット、ID は `drum_…`。トラック名 → ID は `GROW_DRUMS`）。ジャンルのキット（`DRUM_KITS`）の値（キックの高さ・ピッチの下がり方・長さ・クリック、スネアの高さ・長さ・響き線の帯域、ハイハットの長さ・帯域）は `growDrumSound()` がプリセットの値に上書きして当てる。どの音もサスティン 0 で鳴り終わるので発音の合図だけ送り（`GrowInstrument.triggerAttack`）、オープンハイハットのチョークだけ消音の合図（`triggerRelease`）を送る。クラップは短い音を3回重ねてから余韻を鳴らす。lidless を鳴らせない（準備ができていない・プリセットのない古い wasm）トラックはシンセで鳴る。
+  - lidless のドラムは強さ 1 のピークが −6dB 前後で出るので、`GROW_TRIM_DB` で1打の聞こえる大きさをシンセのドラムにそろえている（差は全ジャンルで ±1dB ほど。2026-11-12 に測定）。プリセット・`DRUM_KITS` を変えたら測り直す。
   - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。
   - 音源はジャンルのドラムバス（高域カット→歪み→コンプ→持ち上げ）を通る。音源の音量は `SynthFactory.ts` の `SAMPLE_TRIM_DB` で下げており、`mix_presets.json` の `gain` はシンセのドラムで測った値のまま。
@@ -34,7 +34,7 @@
   - FX / SE はさらに、ジャンルによらない長い響きのロングリバーブ（`LONG_REVERB` / `LONG_REVERB_SENDS`）にも送る（戻りは同じく戻りの EQ へ。キックでは沈めない）。
 - コード・パッド・アルペジオのボイシングは `voiceProgression(progression, key, VOICING_RANGES.*)`（`degree_resolver.ts`）で決める。最低音を範囲内に収め、進行全体（ループの継ぎ目の 最後 → 最初 も含む1周）で合計が最小になる転回形の組み合わせを選ぶ（ボイスリーディング。1つずつ近いものを選ぶのではなく、全部の組み合わせから求める）。コードの間は、各音の動きの合計が小さい・同じ高さのまま保てる共通音が多い・最高音の動きが小さい並べ方を選び、進行の `inversion` は動きが同じくらいなら優先する（重みは `VOICE_COST`）。コード（`chordEvents`）はメロディ（`songMelody()`。メロディが OFF・未作成なら見ない）も渡し、最高音がメロディより上に出る・メロディと半音でとなり合う・短9度下に入る転回形を、その音の長さに応じて避ける（同じ高さは避けない。範囲は変えないので、避けきれない所は残る。2026-11-17 の計測で、最高音がメロディより上に出る時間は 38% → 14%、半音のぶつかりは 18% → 10%、コードの間の動きは変わらず）。メロディを読み込み直す（`reloadLayer("melody")`。ピアノロールの編集など）とコードも読み込み直す。パッド・アルペジオはメロディを見ない。パッドは `spread`（開離配置）。MIDI書き出しも同じボイシングを使う。各 Player は自前のリバーブを持たず（ローパス・コーラス・ディレイなどだけ）、エフェクトのノードは `dispose*` で一緒に破棄する。強さ（ベロシティ）は拍の位置で付けて少し揺らし、和音は数msずつずらして鳴らす（ストラム）。
 - 音量（`mix_presets.json` の `gain`）：全ジャンルの聞こえる大きさ（統合ラウドネス）を **−16.5 LUFS** にそろえ、ピークは −1dB 以下に収める。`npm run mix:measure`（`tools/mix-measure.mjs`）で全ジャンル×雰囲気の曲を書き出して測り、`gain` の提案（今の `gain` ＋ 目標との差）を出す。音源・パート・ミックスを変えたら測り直す（`--save before` → `--compare before`）。
-  - 2026-11-17 に決め直した値（全パート ON・32小節・ドラムは grow・雰囲気は 激しい／落ち着いた）。以前はピークだけで決めていて、ジャンル間の差が 8.0 LU あった（テクノ −14.3 〜 アンビエント −22.3）：
+  - 2026-11-17 に決め直した値（全パート ON・32小節・ドラムは lidless・雰囲気は 激しい／落ち着いた）。以前はピークだけで決めていて、ジャンル間の差が 8.0 LU あった（テクノ −14.3 〜 アンビエント −22.3）：
 
     | ジャンル | `gain` | 統合ラウドネス | ピーク |
     |---|---|---|---|
@@ -52,7 +52,7 @@
   - `gain`（持ち上げ）はコンプのあと・リミッターの前なので、リミッターに当たらない範囲では足した分だけ大きくなる。コンプ・リミッター（Web Audio の DynamicsCompressor）は設定に応じて自動で持ち上げるので、`threshold` / `ratio` を変えると大きさも変わる（アンビエントで `threshold` −28・`ratio` 3 にしたら 5〜9 LU 上がった）。変えたら必ず測り直す。
   - リミッター（`Tone.Limiter`）は速い立ち上がりを通すので、`threshold` より上に 0.5〜1dB はみ出す。ピークが −1dB に近いジャンル（EDM・8bit・ゲームBGM・アンビエント）は `limiter.threshold` を −2 にしている。アンビエントはコンプも少し深くした（`threshold` −20 → −24、`ratio` 2 → 2.5、`attack` 0.05 → 0.02。静かな所との差を縮めて全体を持ち上げる）。
   - 書き出した WAV は `npm run grow:render -- --analyze <WAV>` でも測れる（16bit に丸めたあとの音。`mix:measure` は丸める前を測る）。
-- 以前の測定の記録：grow のプリセットは聞こえる大きさを −18 LUFS にそろえてある（`grow/README.md`）。grow にしたあと（2026-11-11）、全ジャンル・全パート ON・32小節・ドラムはシンセ／サンプルで測り直し、ピークはすべて −1.5dB 以下だった。アンビエントだけ統合ラウドネスがほかより 6〜10dB 小さかったので、`gain` を −4 → 1 に上げた（ほかのジャンルはそのまま）。そのあと grow を作り直した（モジュレーション・エフェクト・マルチティンバー、コードの標準の音色）ので測り直し、アンビエントのシンセのドラムが −0.6dB になったため `gain` を −1 にした（全ジャンルのピークは −1.6dB 以下）。ドラムの音源を grow にしたとき（2026-11-12）も、全ジャンル・全パート ON・32小節・雰囲気「激しい」で測り、ピークはすべて −1.2dB 以下、統合ラウドネスはシンセのドラムと ±1.5dB 以内だったので `gain` はそのまま。
+- 以前の測定の記録：lidless のプリセットは聞こえる大きさを −18 LUFS にそろえてある（`grow/README.md`）。lidless にしたあと（2026-11-11）、全ジャンル・全パート ON・32小節・ドラムはシンセ／サンプルで測り直し、ピークはすべて −1.5dB 以下だった。アンビエントだけ統合ラウドネスがほかより 6〜10dB 小さかったので、`gain` を −4 → 1 に上げた（ほかのジャンルはそのまま）。そのあと lidless を作り直した（モジュレーション・エフェクト・マルチティンバー、コードの標準の音色）ので測り直し、アンビエントのシンセのドラムが −0.6dB になったため `gain` を −1 にした（全ジャンルのピークは −1.6dB 以下）。ドラムの音源を lidless にしたとき（2026-11-12）も、全ジャンル・全パート ON・32小節・雰囲気「激しい」で測り、ピークはすべて −1.2dB 以下、統合ラウドネスはシンセのドラムと ±1.5dB 以内だったので `gain` はそのまま。
 
 ## グルーヴ（スウィング・サイドチェイン）
 
@@ -62,7 +62,7 @@
 
 ## 音色
 
-- コードのリズム（`chordRhythm`）・コードの音色（`growChordPreset`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。コードの音色は grow のプリセット（ChordPlayer の Tone.js の音色は wasm がないときの `FALLBACK` だけ）。メロディの音色の定義は MelodyPlayer の `INSTRUMENTS`。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。
+- コードのリズム（`chordRhythm`）・コードの音色（`growChordPreset`）・メロディの音色（`melodyInstrument`）は ChordPlayer / MelodyPlayer が AppState から読む。コードの音色は lidless のプリセット（ChordPlayer の Tone.js の音色は wasm がないときの `FALLBACK` だけ）。メロディの音色の定義は MelodyPlayer の `INSTRUMENTS`。メロディの音色は初期値 `auto`（ジャンルの標準。`melody_params.json` の `instrument`）で、MelodyPlayer の `INSTRUMENTS` は Synth とエフェクト（ビブラート・ディレイなど）の組で定義する。ジャンルを追加するときは `instrument` も指定する。音色は Synth を作り直したとき（再生開始時）に反映される。
 
 ## 書き出し（WAV / MP3 / MIDI）
 

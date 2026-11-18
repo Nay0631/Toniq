@@ -83,8 +83,42 @@ const CHORD_STANDARD: Record<string, string[]> = {
   "トランス":   ["supersaw", "wide_pad"],
   "アンビエント": ["strings", "wide_pad"],
 };
-// コードの音色の選択肢（カスタムモードの「コード進行」欄の「音色」。Tone.js の音色だったものと同じ音の grow のプリセット）
-export const CHORD_PRESET_CHOICES: readonly string[] = ["soft_pad", "wide_pad", "epiano", "strings", "organ", "square", "supersaw", "hard_pad"];
+// プリセットのカテゴリ（コアの GrowPresets.h の PresetCategory の ID）
+export type GrowCategory = "init" | "lead" | "chord" | "pad" | "bass" | "pluck" | "texture" | "fx" | "drum" | "perc";
+export const GROW_CATEGORIES: readonly GrowCategory[] = ["init", "lead", "chord", "pad", "bass", "pluck", "texture", "fx", "drum", "perc"];
+
+// パートごとに選べるカテゴリ（並びは選択肢に出す順）。コードの音色の選択肢・lidless の音作りのパネルのプリセットはここから作る。
+// ジャンルの標準（GROW_STANDARD）もこのカテゴリのプリセットから選ぶ（tests/GrowPresets.test.ts で確かめる）
+export const PART_CATEGORIES: Record<GrowPart, readonly GrowCategory[]> = {
+  melody:    ["lead", "chord", "pluck", "pad"],
+  chord:     ["chord", "pad"],
+  bass:      ["bass"],
+  pad:       ["pad"],
+  arp:       ["pluck", "chord", "lead"],
+  counter:   ["lead", "pluck", "chord"],
+  signature: ["lead", "chord", "pad", "bass", "pluck", "texture", "fx"],
+};
+
+// カテゴリを持たない古い wasm（grow_preset_category がない）のときの、ID → カテゴリと表示名。
+// カテゴリを持つ wasm の値と同じか tests/GrowPresets.test.ts で確かめる。新しいプリセットはここに足さなくてよい
+export const FALLBACK_CATEGORIES: Readonly<Record<string, GrowCategory>> = {
+  init: "init",
+  lead: "lead", chip_lead: "lead", brass: "lead", sync_lead: "lead", trance_lead: "lead",
+  supersaw: "chord", keys: "chord", epiano: "chord", organ: "chord", square: "chord", stab: "chord", gate_saw: "chord", lofi_keys: "chord",
+  wide_pad: "pad", soft_pad: "pad", hard_pad: "pad", gate_pad: "pad", strings: "pad",
+  sub_bass: "bass", saw_bass: "bass", square_bass: "bass", rolling_bass: "bass", chip_bass: "bass", soft_bass: "bass",
+  fat_bass: "bass", pulse_bass: "bass", wobble_bass: "bass", acid: "bass",
+  pluck: "pluck", bell: "pluck", blip: "pluck", house_pluck: "pluck",
+  vinyl_hiss: "texture", vinyl_crackle: "texture", wind: "texture",
+  noise_sweep: "fx", fx_riser_noise: "fx", fx_riser_pitch: "fx", fx_boom: "fx", fx_burst: "fx", fx_down_noise: "fx",
+  fx_down_tone: "fx", fx_reverse: "fx", fx_chip: "fx", accel_se: "fx",
+  drum_kick: "drum", drum_snare: "drum", drum_hat_closed: "drum", drum_hat_open: "drum", drum_clap: "drum", drum_rim: "drum",
+  drum_shaker: "perc", drum_tambourine: "perc", drum_conga: "perc", drum_ride: "perc",
+};
+const FALLBACK_CATEGORY_NAMES: Record<GrowCategory, string> = {
+  init: "初期化", lead: "リード", chord: "和音", pad: "パッド", bass: "ベース", pluck: "プラック",
+  texture: "質感（ノイズ）", fx: "FX", drum: "ドラム", perc: "パーカッション",
+};
 
 // ベースは bass_params.json の音色（ジャンル）に合わせる。どれもなければサブベース
 const BASS_STANDARD: Record<string, string[]> = {
@@ -160,6 +194,11 @@ interface GrowExports {
   grow_preset_name(i: number): number;
   grow_preset_id?(i: number): number;  // 古い wasm にはない
   grow_preset_value(preset: number, i: number): number;
+  // カテゴリ（古い wasm にはない）
+  grow_preset_category?(i: number): number;
+  grow_category_count?(): number;
+  grow_category_id?(c: number): number;
+  grow_category_name?(c: number): number;
 }
 
 let wasmBytes: ArrayBuffer | null = null;
@@ -167,6 +206,9 @@ let ex: GrowExports | null = null;
 let params: GrowParamMeta[] = [];
 let presetNames: string[] = [];
 let presetIds:   string[] = [];
+// プリセットごとのカテゴリ（コアにない ID のカテゴリは "init" として扱う）と、カテゴリの表示名
+let presetCategories: GrowCategory[] = [];
+const categoryNames: Record<GrowCategory, string> = { ...FALLBACK_CATEGORY_NAMES };
 let loading: Promise<boolean> | null = null;
 
 const decoder = new TextDecoder();
@@ -194,7 +236,7 @@ export function loadGrow(): Promise<boolean> {
     try {
       const bytes = await fetchArrayBuffer(WASM_URL);
       if (!bytes) {
-        console.warn(`grow の wasm（${WASM_URL}）がありません。npm run grow:wasm でビルドしてください`);
+        console.warn(`lidless の wasm（${WASM_URL}）がありません。npm run grow:wasm でビルドしてください`);
         return false;
       }
       const module   = await WebAssembly.compile(bytes);
@@ -218,13 +260,51 @@ export function loadGrow(): Promise<boolean> {
       presetNames = Array.from({ length: ex.grow_preset_count() }, (_, i) => readString(ex!.grow_preset_name(i)));
       // 古い wasm（grow_preset_id がない）は、番号の並びを LEGACY_PRESET_IDS とみなす
       presetIds = presetNames.map((_, i) => ex!.grow_preset_id ? readString(ex!.grow_preset_id(i)) : LEGACY_PRESET_IDS[i] ?? "");
+      readCategories(ex);
       return true;
     } catch (e) {
-      console.warn("grow の wasm を読み込めませんでした:", e);
+      console.warn("lidless の wasm を読み込めませんでした:", e);
       return false;
     }
   })();
   return loading;
+}
+
+// プリセットのカテゴリを読む。カテゴリを持たない古い wasm は FALLBACK_CATEGORIES で補う
+function readCategories(e: GrowExports): void {
+  const known = (id: string): GrowCategory => (GROW_CATEGORIES as readonly string[]).includes(id) ? id as GrowCategory : "init";
+  if (!e.grow_preset_category || !e.grow_category_count || !e.grow_category_id || !e.grow_category_name) {
+    presetCategories = presetIds.map(id => FALLBACK_CATEGORIES[id] ?? "init");
+    return;
+  }
+  const ids = Array.from({ length: e.grow_category_count() }, (_, c) => readString(e.grow_category_id!(c)));
+  ids.forEach((id, c) => {
+    if ((GROW_CATEGORIES as readonly string[]).includes(id)) categoryNames[id as GrowCategory] = readString(e.grow_category_name!(c));
+  });
+  presetCategories = presetIds.map((_, i) => known(ids[e.grow_preset_category!(i)] ?? ""));
+}
+
+// プリセットごとのカテゴリ（番号順）
+export function growPresetCategories(): GrowCategory[] {
+  return presetCategories;
+}
+
+export function growCategoryName(category: GrowCategory): string {
+  return categoryNames[category];
+}
+
+// パートで選べるプリセットを、カテゴリごとにまとめる（並びは PART_CATEGORIES、カテゴリの中はコアの並び）。
+// withInit なら最後に「初期化」も入れる（音作りのパネルで一から作るとき）
+export function growPresetChoices(part: GrowPart, withInit = false): { category: GrowCategory; presets: number[] }[] {
+  const categories = withInit ? [...PART_CATEGORIES[part], "init" as const] : PART_CATEGORIES[part];
+  return categories
+    .map(category => ({ category, presets: presetCategories.flatMap((c, i) => (c === category ? [i] : [])) }))
+    .filter(group => group.presets.length > 0);
+}
+
+// パートの、ジャンルの標準の候補（ID。前から順に探す）
+export function growStandardCandidates(part: GrowPart, genre: string): string[] {
+  return GROW_STANDARD[part](genre);
 }
 
 export function isGrowLoaded(): boolean {
@@ -395,7 +475,7 @@ export async function prepareGrowContext(): Promise<boolean> {
     const url = URL.createObjectURL(new Blob([workletSource], { type: "text/javascript" }));
     p = raw.audioWorklet.addModule(url)
       .then(() => { registered.add(raw); return true; })
-      .catch(e => { console.warn("grow の AudioWorklet を登録できませんでした:", e); return false; })
+      .catch(e => { console.warn("lidless の AudioWorklet を登録できませんでした:", e); return false; })
       .finally(() => URL.revokeObjectURL(url));
     registering.set(raw, p);
   }

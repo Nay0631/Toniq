@@ -43,19 +43,14 @@ const only = value("--preset")?.split(",").map(s => s.trim()).filter(Boolean);
 // ===== プリセットの使われ方と鳴らすフレーズ =====
 // lead = 単音の旋律、chord = 和音、bass = 低い音の刻み、pluck = 速い刻み、fx = 長い1音、noise = ノイズ（ずっと押す）、
 // drum = 8分音符で8回打つ（高さは DRUM_NOTES）。
-// fixed = 音量をそろえない（わざと小さい・大きい音。--suggest の対象外）
+// 使われ方はプリセットのカテゴリ（コアの GrowPresets.h の PresetCategory）から決める（CATEGORY_ROLES）。
+// カテゴリと違う鳴らし方をするプリセットだけ ROLES に書く。カテゴリのない古い wasm はすべて lead で鳴らす
+const CATEGORY_ROLES = {
+  init: "lead", lead: "lead", chord: "chord", pad: "chord", bass: "bass", pluck: "pluck",
+  texture: "noise", fx: "fx", drum: "drum", perc: "drum",
+};
 const ROLES = {
-  init: "lead", lead: "lead", supersaw: "chord", pluck: "pluck", acid: "bass", wide_pad: "chord",
-  sub_bass: "bass", chip_lead: "lead", noise_sweep: "fx", soft_pad: "chord", keys: "chord", bell: "pluck",
-  blip: "pluck", stab: "chord", gate_saw: "chord", vinyl_hiss: "noise", vinyl_crackle: "noise", wind: "noise",
-  epiano: "chord", organ: "chord", strings: "chord", square: "chord",
-  fx_riser_noise: "fx", fx_riser_pitch: "fx", fx_boom: "fx", fx_burst: "fx", fx_down_noise: "fx",
-  fx_down_tone: "fx", fx_reverse: "fx", fx_chip: "pluck",
-  saw_bass: "bass", square_bass: "bass", rolling_bass: "bass", chip_bass: "bass", soft_bass: "bass", brass: "lead", sync_lead: "lead",
-  hard_pad: "chord", gate_pad: "chord", fat_bass: "bass", pulse_bass: "bass", wobble_bass: "bass", trance_lead: "lead", accel_se: "fx",
-  drum_kick: "drum", drum_snare: "drum", drum_hat_closed: "drum", drum_hat_open: "drum", drum_clap: "drum", drum_rim: "drum",
-  drum_shaker: "drum", drum_tambourine: "drum", drum_conga: "drum", drum_ride: "drum",
-  lofi_keys: "chord", house_pluck: "pluck",
+  fx_chip: "pluck",  // チップSE は短い音を速く刻む
 };
 // ドラムを鳴らす高さ（Toniq の標準のキット（src/engine/SynthFactory.ts の DEFAULT_KIT）と同じくらい）
 const DRUM_NOTES = { drum_kick: 24, drum_snare: 54, drum_hat_closed: 80, drum_hat_open: 80, drum_clap: 60, drum_rim: 92,
@@ -127,11 +122,18 @@ const paramCount = info.grow_param_count();
 const paramIds = Array.from({ length: paramCount }, (_, i) => readString(info, info.grow_param_id(i)));
 const masterIndex = paramIds.indexOf("master");
 const MASTER_MAX  = info.grow_param_max(masterIndex);
+// プリセットのカテゴリ（コアの PresetCategory の ID。古い wasm は null）
+const categoryIds = info.grow_category_count
+  ? Array.from({ length: info.grow_category_count() }, (_, c) => readString(info, info.grow_category_id(c)))
+  : null;
 const presets = Array.from({ length: info.grow_preset_count() }, (_, i) => ({
-  index: i,
-  id:    info.grow_preset_id ? readString(info, info.grow_preset_id(i)) : String(i),
-  name:  readString(info, info.grow_preset_name(i)),
+  index:    i,
+  id:       info.grow_preset_id ? readString(info, info.grow_preset_id(i)) : String(i),
+  name:     readString(info, info.grow_preset_name(i)),
+  category: categoryIds ? categoryIds[info.grow_preset_category(i)] ?? null : null,
 }));
+// プリセットの使われ方：ROLES の例外 → カテゴリの標準
+const roleOf = p => ROLES[p.id] ?? CATEGORY_ROLES[p.category] ?? "lead";
 
 // プリセットでフレーズを鳴らす。overrides はパラメーターの番号 → 値
 function render(preset, role, overrides = {}) {
@@ -340,7 +342,7 @@ for (const pair of value("--set")?.split(",").filter(Boolean) ?? []) {
 }
 
 const results = targets.map(p => {
-  const role = ROLES[p.id] ?? "lead";
+  const role = roleOf(p);
   const audio = render(p, role, overrides);
   const m = measure(audio);
   if (flag("--wav")) writeWav(join(OUT, `${p.id}.wav`), audio.L, audio.R);

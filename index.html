@@ -195,12 +195,6 @@
           </div>
 
           <div class="field">
-            <div class="field-label">▤ 構成 <span class="field-hint" id="s-arrange-hint"></span></div>
-            <!-- 構成のプリセット（AppState.arrangePreset。LoopArranger.ts の ARRANGE_PRESETS から SimpleScreen.ts が作る） -->
-            <div class="chips chips-arrange" id="s-arrange-preset"></div>
-          </div>
-
-          <div class="field">
             <div class="field-label">メロディの入力方法</div>
             <div class="method-cards">
               <button class="method-card" data-melody-method="auto">
@@ -365,7 +359,7 @@
               <span class="form-label" data-term="instrument" data-std="melodySound">インスト</span>
               <select class="select" id="c-instrument">
                 <!-- 内部シンセ grow（初期値）。音作りは設定タブの下のパネル（GrowPanel.ts） -->
-                <option value="grow" data-term="melodySound.grow">grow（Toniq専用シンセ）</option>
+                <option value="grow" data-term="melodySound.grow">lidless（Toniq専用シンセ）</option>
                 <option value="auto" data-term="melodySound.auto">ジャンルに合わせる</option>
                 <option value="supersaw" data-term="melodySound.supersaw">SuperSaw リード（EDM）</option>
                 <option value="epiano" data-term="melodySound.epiano">エレピ（ローファイ）</option>
@@ -839,10 +833,10 @@
           <div class="settings-row">
             <div class="settings-text">
               <div class="settings-label">ドラムの音源（テスト中）</div>
-              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ grow で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は、ドラムはシンセ、パーカッションは grow で鳴ります。</div>
+              <div class="settings-desc">ドラムとパーカッションを、Toniq のシンセ lidless で鳴らすか、ほかのシンセで鳴らすか、録音した音（サンプル音源）で鳴らすかを選びます。サンプル音源がない音は、ドラムはシンセ、パーカッションは lidless で鳴ります。</div>
             </div>
             <div class="chips settings-options" role="radiogroup" aria-label="ドラムの音源">
-              <button class="chip" role="radio" data-settings-drum-source="grow">grow</button>
+              <button class="chip" role="radio" data-settings-drum-source="grow">lidless</button>
               <button class="chip" role="radio" data-settings-drum-source="synth">シンセ</button>
               <button class="chip" role="radio" data-settings-drum-source="sample">サンプル音源</button>
             </div>
@@ -979,7 +973,7 @@
             <summary>テスト中の機能</summary>
             <ul>
               <li>カスタムモードの設定タブで、ドラムの「もっと調整」の「ドラムの演奏」から、フィル・揺らぎ・エンディングを ON/OFF できます（端末ごとに保存）。</li>
-              <li>カスタムモードの設定タブの下にある grow のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
+              <li>カスタムモードの設定タブの下にある lidless のパネルで、各パートの音色を細かく作れます（暫定の画面です）。</li>
               <li>設定画面の「開発用」の「メロディの評価」で、生成した曲を聴いて 1〜5 の点数を付けられます。<kbd>1</kbd>〜<kbd>5</kbd> で点数、<kbd>Space</kbd> で再生／停止、<kbd>C</kbd> でサビから再生、<kbd>←</kbd> / <kbd>→</kbd> で前後の曲です。</li>
             </ul>
           </details>

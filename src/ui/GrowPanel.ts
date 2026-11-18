@@ -1,7 +1,7 @@
 import { getState } from "../engine/AppState";
 import {
   loadGrow, isGrowLoaded, growParamList, growPresetNames, growPresetIds, currentGrowValues, growSettings, applyGrowLive,
-  storedGrowSound, setGrowSound, standardGrowPreset,
+  storedGrowSound, setGrowSound, standardGrowPreset, growPresetChoices, growCategoryName,
   formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta, type GrowPart,
 } from "../engine/Grow";
 import { onRender, render as renderAll } from "./Router";
@@ -81,8 +81,6 @@ function build(): void {
     if (!groups.has(p.group)) groups.set(p.group, []);
     groups.get(p.group)!.push(p);
   });
-  const ids = growPresetIds();
-  const presets = growPresetNames().map((n, i) => `<option value="${escapeHtml(ids[i])}" data-term="sound.${escapeHtml(ids[i])}">${escapeHtml(n)}</option>`).join("");
   const modules = [...groups].map(([group, list]) => `
     <section class="grow-module">
       <h4 class="grow-module-title">${escapeHtml(group)}</h4>
@@ -94,9 +92,7 @@ function build(): void {
       <label class="grow-control grow-preset"><span class="grow-name">対象</span>
         <select class="select" id="c-grow-target"></select></label>
       <label class="grow-control grow-preset"><span class="grow-name">プリセット</span>
-        <select class="select" id="c-grow-preset">
-          <option value="${STANDARD_VALUE}" id="c-grow-standard"></option>${presets}
-        </select></label>
+        <select class="select" id="c-grow-preset"></select></label>
       <button class="btn btn-small" id="c-grow-reset">プリセットに戻す</button>
       <span class="grow-edited" id="c-grow-edited"></span>
     </div>
@@ -131,6 +127,21 @@ function build(): void {
   built = true;
 }
 
+// プリセットのセレクトの中身：「ジャンルの標準」（今のジャンルの標準のプリセット名を添える）と、
+// 対象のパートで選べるカテゴリ（Grow.ts の PART_CATEGORIES）＋初期化のプリセットをカテゴリの見出しごとに。
+// ほかのカテゴリのプリセットを選んでいる曲（以前はどのプリセットでも選べた）は、その音を「その他」に足す
+function presetOptionsHtml(selected: string | null): string {
+  const ids = growPresetIds(), names = growPresetNames();
+  const option = (i: number) => `<option value="${escapeHtml(ids[i])}" data-term="sound.${escapeHtml(ids[i])}">${escapeHtml(names[i])}</option>`;
+  const groups = growPresetChoices(target, true);
+  const listed = new Set(groups.flatMap(g => g.presets));
+  const selectedIndex = selected === null ? -1 : ids.indexOf(selected);
+  const others = selectedIndex >= 0 && !listed.has(selectedIndex) ? [selectedIndex] : [];
+  return `<option value="${STANDARD_VALUE}">ジャンルの標準（${escapeHtml(names[standardGrowPreset(target)] ?? "")}）</option>`
+    + groups.map(g => `<optgroup label="${escapeHtml(growCategoryName(g.category))}">${g.presets.map(option).join("")}</optgroup>`).join("")
+    + (others.length ? `<optgroup label="その他">${others.map(option).join("")}</optgroup>` : "");
+}
+
 // 値の表示を AppState にそろえる（曲の内容は書き換えない）
 function renderPanel(): void {
   const values = currentGrowValues(target);
@@ -144,10 +155,10 @@ function renderPanel(): void {
   targetSelect.innerHTML = targets.map(t => `<option value="${t}">${TARGET_LABELS[t]}</option>`).join("");
   targetSelect.value = target;
 
-  // 「ジャンルの標準」は今のジャンルの標準のプリセット名を添える
-  const standard = $("c-grow-standard") as HTMLOptionElement;
-  standard.textContent = `ジャンルの標準（${growPresetNames()[standardGrowPreset(target)] ?? ""}）`;
-  ($("c-grow-preset") as HTMLSelectElement).value = stored.preset === null ? STANDARD_VALUE : growPresetIds()[settings.preset] ?? "";
+  const presetSelect = $("c-grow-preset") as HTMLSelectElement;
+  const html = presetOptionsHtml(stored.preset);
+  if (presetSelect.innerHTML !== html) presetSelect.innerHTML = html;
+  presetSelect.value = stored.preset === null ? STANDARD_VALUE : growPresetIds()[settings.preset] ?? "";
   ($("c-grow-reset") as HTMLButtonElement).disabled = settings.params === null;
   $("c-grow-edited").textContent = settings.params === null ? "" : "プリセットから変更しています";
 
@@ -183,8 +194,8 @@ function render(): void {
 
   const status = $("c-grow-status");
   status.textContent =
-    loadState === "failed"  ? "grow の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色、コードはソフトパッド、ベース・パッド・アルペジオ・シグネチャー・FX / SE は Tone.js の音色で鳴ります。"
-    : loadState === "loading" ? "grow を読み込んでいます…"
+    loadState === "failed"  ? "lidless の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色、コードはソフトパッド、ベース・パッド・アルペジオ・シグネチャー・FX / SE は Tone.js の音色で鳴ります。"
+    : loadState === "loading" ? "lidless を読み込んでいます…"
     : "テスト中の暫定のパネルです。最終的にはプリセットを選ぶだけになる予定です。";
 
   if (!isGrowLoaded()) return;
@@ -196,7 +207,7 @@ export function initGrowPanel(): void {
   // 「もっと調整」と同じ畳める欄にする（開閉・変更の数・標準に戻すは CustomMore.ts）
   $("c-grow").innerHTML = `
     <details class="panel-more grow-more" data-more="grow">
-      <summary class="panel-more-summary"><span class="panel-more-label"><span data-term="grow">grow</span> の音作り（テスト中）</span><span class="panel-more-items">パートごとのプリセット・つまみ</span><span class="panel-more-badge"></span></summary>
+      <summary class="panel-more-summary"><span class="panel-more-label"><span data-term="grow">lidless</span> の音作り（テスト中）</span><span class="panel-more-items">パートごとのプリセット・つまみ</span><span class="panel-more-badge"></span></summary>
       <div class="panel-more-body">
         <p class="grow-status" id="c-grow-status"></p>
         <div class="grow-body"></div>

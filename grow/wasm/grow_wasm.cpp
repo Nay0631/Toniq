@@ -116,6 +116,11 @@ GROW_EXPORT const char* grow_param_format (int i, float value)
 GROW_EXPORT int grow_preset_count()               { return grow::numPresets(); }
 GROW_EXPORT const char* grow_preset_name (int i)  { return grow::presetName (i); }
 GROW_EXPORT const char* grow_preset_id (int i)    { return grow::presetId (i); }
+// プリセットのカテゴリ（PresetCategory の番号）と、カテゴリの ID（ASCII）・表示名（UTF-8）
+GROW_EXPORT int grow_preset_category (int i)        { return grow::presetCategory (i); }
+GROW_EXPORT int grow_category_count()               { return grow::numPresetCategories; }
+GROW_EXPORT const char* grow_category_id (int c)    { return grow::categoryId (c); }
+GROW_EXPORT const char* grow_category_name (int c)  { return grow::categoryName (c); }
 
 // プリセットの値（index 番目のパラメーター）
 GROW_EXPORT float grow_preset_value (int preset, int index)

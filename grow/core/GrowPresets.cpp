@@ -32,9 +32,31 @@ struct Preset
 {
     const char* id;       // 変えない ID（Toniq は曲にこれを保存し、これで探す）
     const char* name;
+    PresetCategory category;
     const Value* values;  // 初期値から変える値
     int count;
 };
+
+// カテゴリの ID（ASCII。変えない）と表示名。並びは PresetCategory と同じ
+struct Category
+{
+    const char* id;
+    const char* name;
+};
+const Category categories[] = {
+    { "init", "初期化" },
+    { "lead", "リード" },
+    { "chord", "和音" },
+    { "pad", "パッド" },
+    { "bass", "ベース" },
+    { "pluck", "プラック" },
+    { "texture", "質感（ノイズ）" },
+    { "fx", "FX" },
+    { "drum", "ドラム" },
+    { "perc", "パーカッション" },
+};
+static_assert (sizeof (categories) / sizeof (categories[0]) == (std::size_t) numPresetCategories,
+               "categories の数を PresetCategory とそろえる");
 
 // ノコギリ波を3枚重ねて少し広げ、もう1枚を少しずらす。フィルターを EG で開く。レガートで滑らかにつなぎ、
 // 伸ばすほど深くなるビブラート
@@ -823,73 +845,78 @@ const Value housePluck[] = {
 };
 
 template <std::size_t N>
-constexpr Preset preset (const char* id, const char* name, const Value (&values)[N]) { return { id, name, values, (int) N }; }
+constexpr Preset preset (const char* id, const char* name, PresetCategory category, const Value (&values)[N])
+{
+    return { id, name, category, values, (int) N };
+}
+
+using C = PresetCategory;
 
 // 並びは番号（JUCE 版のプログラム番号）になる。足すときは後ろに足す。ID は一度出したら変えない
 const Preset presets[] = {
-    { "init", "初期化", nullptr, 0 },
-    preset ("lead", "シンセリード", lead),
-    preset ("supersaw", "スーパーソウ", supersaw),
-    preset ("pluck", "プラック", pluck),
-    preset ("acid", "アシッド", acid),
-    preset ("wide_pad", "ワイドパッド", pad),
-    preset ("sub_bass", "サブベース", subBass),
-    preset ("chip_lead", "チップリード", chipLead),
-    preset ("noise_sweep", "ノイズスイープ", noiseSweep),
+    { "init", "初期化", C::init, nullptr, 0 },
+    preset ("lead", "シンセリード", C::lead, lead),
+    preset ("supersaw", "スーパーソウ", C::chord, supersaw),
+    preset ("pluck", "プラック", C::pluck, pluck),
+    preset ("acid", "アシッド", C::bass, acid),
+    preset ("wide_pad", "ワイドパッド", C::pad, pad),
+    preset ("sub_bass", "サブベース", C::bass, subBass),
+    preset ("chip_lead", "チップリード", C::lead, chipLead),
+    preset ("noise_sweep", "ノイズスイープ", C::fx, noiseSweep),
     // ここから Toniq のパート向け（Toniq は ID で探す。src/engine/Grow.ts の GROW_STANDARD）
-    preset ("soft_pad", "ソフトパッド", softPad),
-    preset ("keys", "キーズ", keys),
-    preset ("bell", "ベル", bell),
-    preset ("blip", "ブリップ", blip),
-    preset ("stab", "スタブ", stab),
-    preset ("gate_saw", "ゲートソウ", gateSaw),
-    preset ("vinyl_hiss", "レコードヒス", vinylHiss),
-    preset ("vinyl_crackle", "レコードプチ", vinylCrackle),
-    preset ("wind", "ウィンド", wind),
-    preset ("epiano", "エレピ", ePiano),
-    preset ("organ", "オルガン", organ),
-    preset ("strings", "ストリングス", strings),
-    preset ("square", "スクエア", squareChord),
+    preset ("soft_pad", "ソフトパッド", C::pad, softPad),
+    preset ("keys", "キーズ", C::chord, keys),
+    preset ("bell", "ベル", C::pluck, bell),
+    preset ("blip", "ブリップ", C::pluck, blip),
+    preset ("stab", "スタブ", C::chord, stab),
+    preset ("gate_saw", "ゲートソウ", C::chord, gateSaw),
+    preset ("vinyl_hiss", "レコードヒス", C::texture, vinylHiss),
+    preset ("vinyl_crackle", "レコードプチ", C::texture, vinylCrackle),
+    preset ("wind", "ウィンド", C::texture, wind),
+    preset ("epiano", "エレピ", C::chord, ePiano),
+    preset ("organ", "オルガン", C::chord, organ),
+    preset ("strings", "ストリングス", C::pad, strings),
+    preset ("square", "スクエア", C::chord, squareChord),
     // FX / SE 向け（FxPlayer.ts が ID で探す）
-    preset ("fx_riser_noise", "FX ライザーノイズ", fxRiserNoise),
-    preset ("fx_riser_pitch", "FX ライザーピッチ", fxRiserPitch),
-    preset ("fx_boom", "FX ブーム", fxBoom),
-    preset ("fx_burst", "FX バースト", fxBurst),
-    preset ("fx_down_noise", "FX ダウンノイズ", fxDownNoise),
-    preset ("fx_down_tone", "FX ダウントーン", fxDownTone),
-    preset ("fx_reverse", "FX リバース", fxReverse),
-    preset ("fx_chip", "FX チップ", fxChip),
+    preset ("fx_riser_noise", "FX ライザーノイズ", C::fx, fxRiserNoise),
+    preset ("fx_riser_pitch", "FX ライザーピッチ", C::fx, fxRiserPitch),
+    preset ("fx_boom", "FX ブーム", C::fx, fxBoom),
+    preset ("fx_burst", "FX バースト", C::fx, fxBurst),
+    preset ("fx_down_noise", "FX ダウンノイズ", C::fx, fxDownNoise),
+    preset ("fx_down_tone", "FX ダウントーン", C::fx, fxDownTone),
+    preset ("fx_reverse", "FX リバース", C::fx, fxReverse),
+    preset ("fx_chip", "FX チップ", C::fx, fxChip),
     // ベース向け（Toniq は ID で探す。src/engine/Grow.ts の GROW_STANDARD）
-    preset ("saw_bass", "ソウベース", sawBass),
-    preset ("square_bass", "スクエアベース", squareBass),
-    preset ("rolling_bass", "ローリングベース", rollingBass),
-    preset ("chip_bass", "チップベース", chipBass),
-    preset ("soft_bass", "ソフトベース", softBass),
-    preset ("brass", "ブラス", brass),
-    preset ("sync_lead", "シンクリード", syncLead),
+    preset ("saw_bass", "ソウベース", C::bass, sawBass),
+    preset ("square_bass", "スクエアベース", C::bass, squareBass),
+    preset ("rolling_bass", "ローリングベース", C::bass, rollingBass),
+    preset ("chip_bass", "チップベース", C::bass, chipBass),
+    preset ("soft_bass", "ソフトベース", C::bass, softBass),
+    preset ("brass", "ブラス", C::lead, brass),
+    preset ("sync_lead", "シンクリード", C::lead, syncLead),
     // sleepfreaks のシンセレシピを参考にした音色
-    preset ("hard_pad", "ハードパッド", hardPad),
-    preset ("gate_pad", "ゲートパッド", gatePad),
-    preset ("fat_bass", "ファットベース", fatBass),
-    preset ("pulse_bass", "パルスベース", pulseBass),
-    preset ("wobble_bass", "ワブルベース", wobbleBass),
-    preset ("trance_lead", "トランスリード", tranceLead),
-    preset ("accel_se", "加速SE", accelSe),
+    preset ("hard_pad", "ハードパッド", C::pad, hardPad),
+    preset ("gate_pad", "ゲートパッド", C::pad, gatePad),
+    preset ("fat_bass", "ファットベース", C::bass, fatBass),
+    preset ("pulse_bass", "パルスベース", C::bass, pulseBass),
+    preset ("wobble_bass", "ワブルベース", C::bass, wobbleBass),
+    preset ("trance_lead", "トランスリード", C::lead, tranceLead),
+    preset ("accel_se", "加速SE", C::fx, accelSe),
     // ドラム（Toniq のドラムの音源「grow」。src/engine/SynthFactory.ts の GROW_DRUMS が ID で探す）
-    preset ("drum_kick", "ドラム キック", drumKick),
-    preset ("drum_snare", "ドラム スネア", drumSnare),
-    preset ("drum_hat_closed", "ドラム ハイハット（クローズド）", drumHatClosed),
-    preset ("drum_hat_open", "ドラム ハイハット（オープン）", drumHatOpen),
-    preset ("drum_clap", "ドラム クラップ", drumClap),
-    preset ("drum_rim", "ドラム リム", drumRim),
+    preset ("drum_kick", "ドラム キック", C::drum, drumKick),
+    preset ("drum_snare", "ドラム スネア", C::drum, drumSnare),
+    preset ("drum_hat_closed", "ドラム ハイハット（クローズド）", C::drum, drumHatClosed),
+    preset ("drum_hat_open", "ドラム ハイハット（オープン）", C::drum, drumHatOpen),
+    preset ("drum_clap", "ドラム クラップ", C::drum, drumClap),
+    preset ("drum_rim", "ドラム リム", C::drum, drumRim),
     // パーカッション（Toniq のパート「パーカッション」。src/engine/PercPlayer.ts の GROW_PERC が ID で探す）
-    preset ("drum_shaker", "パーカッション シェイカー", drumShaker),
-    preset ("drum_tambourine", "パーカッション タンバリン", drumTambourine),
-    preset ("drum_conga", "パーカッション コンガ", drumConga),
-    preset ("drum_ride", "パーカッション ライド", drumRide),
+    preset ("drum_shaker", "パーカッション シェイカー", C::perc, drumShaker),
+    preset ("drum_tambourine", "パーカッション タンバリン", C::perc, drumTambourine),
+    preset ("drum_conga", "パーカッション コンガ", C::perc, drumConga),
+    preset ("drum_ride", "パーカッション ライド", C::perc, drumRide),
     // アルペジオ・カウンターメロディのジャンル別（src/engine/Grow.ts の GROW_STANDARD）
-    preset ("lofi_keys", "ローファイキーズ", lofiKeys),
-    preset ("house_pluck", "ハウスプラック", housePluck),
+    preset ("lofi_keys", "ローファイキーズ", C::chord, lofiKeys),
+    preset ("house_pluck", "ハウスプラック", C::pluck, housePluck),
 };
 
 constexpr int presetCount = (int) (sizeof (presets) / sizeof (presets[0]));
@@ -908,6 +935,21 @@ const char* presetName (int index)
 const char* presetId (int index)
 {
     return index >= 0 && index < presetCount ? presets[index].id : "";
+}
+
+int presetCategory (int index)
+{
+    return index >= 0 && index < presetCount ? (int) presets[index].category : (int) PresetCategory::init;
+}
+
+const char* categoryId (int category)
+{
+    return category >= 0 && category < numPresetCategories ? categories[category].id : "";
+}
+
+const char* categoryName (int category)
+{
+    return category >= 0 && category < numPresetCategories ? categories[category].name : "";
 }
 
 void presetValues (int index, float* values)
