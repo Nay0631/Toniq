@@ -34,7 +34,15 @@ export interface QuizSound {
 export type QuizAnswer =
   | { kind: "choice"; choices: string[]; correct: string }                          // 選択肢から選ぶ
   | { kind: "notes";  correct: string[]; octaves: number }                          // 鍵盤で複数の音を選んで「決定」
-  | { kind: "key";    correct: string; root?: string; hideLabels?: boolean };       // 鍵盤を1つ押す（root は色付きで示す）
+  | { kind: "key";    correct: string; root?: string; hideLabels?: boolean; at?: QuizKeyAt };  // 鍵盤を1つ押す（root は色付きで示す）
+
+// 鍵盤の位置で答える問題（音程など）。音名ではなく鍵盤の位置（左端の C からの半音数）で判定し、
+// 1音目（root）より右の鍵盤に答えがあるように octaves オクターブ分の鍵盤を出す
+export interface QuizKeyAt {
+  root:    number;
+  correct: number;
+  octaves: number;
+}
 
 // 参照用の鍵盤（C からの半音数で、root と target を色付きで示す）
 export interface QuizRefPiano {
@@ -176,22 +184,22 @@ export const SCALES: Scale[] = [
     feel: "ブルーノート（半音低い3度・5度・7度）を加えた、ブルースらしい響きです。" },
 ];
 
-// コード進行（[主音からの半音数, コードのサフィックス]）
+// コード進行（[主音からの半音数, コードのサフィックス]）。名前のディグリーは Toniq 本体と同じ書き方（大文字＋m）
 export interface Progression { name: string; chords: [number, string][]; desc: string }
 
 export const PROGRESSIONS: Progression[] = [
-  { name: "II-V-I", chords: [[2, "m7"], [7, "7"], [0, "maj7"]],
+  { name: "ツーファイブワン（IIm7-V7-IM7）", chords: [[2, "m7"], [7, "7"], [0, "maj7"]],
     desc: "ジャズでよく使われる、きれいに主音へ戻る進行です。" },
   { name: "I-IV-V", chords: [[0, ""], [5, ""], [7, ""]],
     desc: "もっとも基本的な、明るくシンプルな進行です。" },
-  { name: "I-V-vi-IV", chords: [[0, ""], [7, ""], [9, "m"], [5, ""]],
+  { name: "I-V-VIm-IV", chords: [[0, ""], [7, ""], [9, "m"], [5, ""]],
     desc: "ポップスで定番の、前向きな雰囲気の進行です。" },
-  { name: "vi-IV-I-V", chords: [[9, "m"], [5, ""], [0, ""], [7, ""]],
-    desc: "マイナーから始まる、切なさのある定番の進行です。" },
+  { name: "VIm-IV-I-V", chords: [[9, "m"], [5, ""], [0, ""], [7, ""]],
+    desc: "マイナーから始まる、切なさのある定番の進行です。小室進行とは後ろの2つ（I と V）の順番が逆です。" },
   { name: "王道進行（IV-V-IIIm-VIm）", chords: [[5, ""], [7, ""], [4, "m"], [9, "m"]],
     desc: "J-POP でとてもよく使われる、切なく盛り上がる進行です。" },
   { name: "小室進行（VIm-IV-V-I）", chords: [[9, "m"], [5, ""], [7, ""], [0, ""]],
-    desc: "疾走感のある、ダンスミュージックでも使われる進行です。" },
+    desc: "疾走感のある、ダンスミュージックでも使われる進行です。V から I へ戻って終わるので、区切りがはっきりします。" },
   { name: "カノン進行（I-V-VIm-IIIm-IV-I-IV-V）",
     chords: [[0, ""], [7, ""], [9, "m"], [4, "m"], [5, ""], [0, ""], [5, ""], [7, ""]],
     desc: "パッヘルベルの「カノン」と同じ、流れるように下がっていく進行です。" },
@@ -199,14 +207,15 @@ export const PROGRESSIONS: Progression[] = [
     desc: "セブンスコードを使った、おしゃれでジャジーな進行です。" },
 ];
 
+// trim = 聞こえ方をそろえる持ち上げ（dB）。サブベースは耳の感度が低く、超高域はナイキスト周波数の近くで帯域が欠けるので足す
 export const EQ_BANDS = [
-  { name: "サブベース（20〜60Hz）", freq: 40,    desc: "耳よりも体で感じる重低音。キックやベースのいちばん下の部分です。" },
-  { name: "低域（60〜250Hz）",      freq: 120,   desc: "ベースやキックの太さ・厚みが出る帯域です。" },
-  { name: "低中域（250〜500Hz）",   freq: 350,   desc: "多すぎると音がこもって聴こえやすい帯域です。" },
-  { name: "中域（500Hz〜2kHz）",    freq: 1000,  desc: "声やメロディの中心になる帯域です。" },
-  { name: "中高域（2k〜4kHz）",     freq: 3000,  desc: "音の輪郭や抜けのよさに関わる、耳につきやすい帯域です。" },
-  { name: "高域（4k〜10kHz）",      freq: 6000,  desc: "ハイハットやシンバルのきらびやかさが出る帯域です。" },
-  { name: "超高域（10k〜20kHz）",   freq: 14000, desc: "空気感やつやに関わる、とても高い帯域です。" },
+  { name: "サブベース（20〜60Hz）", freq: 40,    trim: 4,   desc: "耳よりも体で感じる重低音。キックやベースのいちばん下の部分です。" },
+  { name: "低域（60〜250Hz）",      freq: 120,   trim: 0,   desc: "ベースやキックの太さ・厚みが出る帯域です。" },
+  { name: "低中域（250〜500Hz）",   freq: 350,   trim: 0,   desc: "多すぎると音がこもって聴こえやすい帯域です。" },
+  { name: "中域（500Hz〜2kHz）",    freq: 1000,  trim: 0,   desc: "声やメロディの中心になる帯域です。" },
+  { name: "中高域（2k〜4kHz）",     freq: 3000,  trim: 0,   desc: "音の輪郭や抜けのよさに関わる、耳につきやすい帯域です。" },
+  { name: "高域（4k〜10kHz）",      freq: 6000,  trim: 0,   desc: "ハイハットやシンバルのきらびやかさが出る帯域です。" },
+  { name: "超高域（10k〜20kHz）",   freq: 14000, trim: 2.5, desc: "空気感やつやに関わる、とても高い帯域です。" },
 ];
 
 // 聴音問題の表示（ヘッドホンのアイコン）
@@ -237,6 +246,18 @@ export function toggle(label: string, on = true): QuizToggle {
 export function group(label: string, items: ([string, string] | string)[]): QuizGroup {
   const list = items.map((it, i) => typeof it === "string" ? { key: String(i), label: it } : { key: it[0], label: it[1] });
   return { kind: "group", label, items: list, enabled: new Set(list.map(it => it.key)) };
+}
+
+// 出題範囲の初期値を labels（表示名）の項目だけにする（初心者向けにやさしい範囲から始める）。
+// 表示名が見つからないのは書き間違いなので例外にする（tests/Quiz.test.ts で気づける）
+export function startWith(g: QuizGroup, labels: string[]): QuizGroup {
+  const keys = labels.map(label => {
+    const item = g.items.find(it => it.label === label);
+    if (!item) throw new Error(`出題範囲「${g.label}」に「${label}」がありません`);
+    return item.key;
+  });
+  g.enabled = new Set(keys);
+  return g;
 }
 
 // 出題範囲から1つ選ぶ
@@ -272,7 +293,9 @@ export function fixedChoice(correct: string, choices: string[]): QuizAnswer {
 }
 
 export function chordType(suffix: string): ChordType {
-  return CHORD_TYPES.find(c => c.suffix === suffix) ?? CHORD_TYPES[0];
+  const ct = CHORD_TYPES.find(c => c.suffix === suffix);
+  if (!ct) throw new Error(`コードの種類「${suffix}」は CHORD_TYPES にありません`);
+  return ct;
 }
 
 export function chordNotes(root: number, ct: ChordType): string[] {
@@ -301,6 +324,11 @@ export const SEMITONE_CHOICES = Array.from({ length: 13 }, (_, i) => String(i));
 
 export function intervalGroup(): QuizGroup {
   return group("出題する音程", INTERVALS.map(iv => iv.abbr));
+}
+
+// 音程を鍵盤で答える問題の位置（1音目を左のオクターブに置き、答えがそれより右に来るように2オクターブ出す）
+export function intervalKeyAt(root: number, semi: number): QuizKeyAt {
+  return { root, correct: root + semi, octaves: 2 };
 }
 
 export function chordTypeGroup(): QuizGroup {

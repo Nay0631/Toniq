@@ -1,12 +1,20 @@
 import * as A from "../QuizAudio";
 import {
-  NOTES, noteList, CHORD_TYPES, DEGREE_ABBR, SCALES, PROGRESSIONS, LISTEN, rand, toggle, group, pick, pickFrom, enabledOf, choice, fixedChoice, chordType, chordNotes, chordMidis, progressionMidis, chordTypeGroup,
+  NOTES, noteList, CHORD_TYPES, DEGREE_ABBR, SCALES, PROGRESSIONS, LISTEN, rand, toggle, group, startWith, pick, pickFrom, enabledOf, choice, fixedChoice, chordType, chordNotes, chordMidis, progressionMidis, chordTypeGroup,
 } from "../QuizCore";
 import type { QuizMode, ChordType, Scale } from "../QuizCore";
 
 // 音楽クイズ「コード・スケール」の出題モード（カテゴリの並びは QuizModes.ts）
 
 // ===== コード・スケール =====
+
+// 初期の出題範囲（初心者向けにやさしいものから。出題設定で広げられる）
+const BASIC_CHORDS     = ["X", "Xm"];
+const BASIC_FORMULAS   = ["X", "Xm", "X7", "Xmaj7", "Xm7"];
+const BASIC_SCALES     = ["メジャー", "マイナー", "メジャーペンタトニック", "マイナーペンタトニック"];
+const BASIC_PROGS      = ["I-IV-V", "I-V-VIm-IV", "王道進行（IV-V-IIIm-VIm）"];
+const CHORDS_HINT      = "最初は X（メジャー）と Xm（マイナー）だけを出題します。慣れたら「出題するコード」を増やしてみましょう。";
+const SCALES_HINT      = "最初はメジャー・マイナーとそのペンタトニックだけを出題します。慣れたら「出題するスケール」を増やしてみましょう。";
 
 export const majorMinorEar: QuizMode = {
   id: "major_minor_ear", title: "メジャー/マイナー判定", settings: [],
@@ -34,10 +42,10 @@ function chordExplain(root: number, ct: ChordType): string {
 export const chordNotesMode = ((): QuizMode => {
   const twoOctave = toggle("鍵盤を2オクターブ表示");
   const types = group("出題形式", [["to_notes", "コード→構成音（鍵盤）"], ["to_chord", "構成音→コード"]]);
-  const chords = chordTypeGroup();
+  const chords = startWith(chordTypeGroup(), BASIC_CHORDS);
   return {
     id: "chord_notes", title: "コード構成音", settings: [twoOctave, types, chords],
-    hint: "まずは「出題するコード」を X（メジャー）と Xm（マイナー）だけにして始めるのがおすすめです。",
+    hint: CHORDS_HINT,
     question() {
       const root = rand(12);
       const ct = pickFrom(chords, CHORD_TYPES);
@@ -65,9 +73,10 @@ export const chordNotesMode = ((): QuizMode => {
 export const chordEar = ((): QuizMode => {
   const twoOctave = toggle("鍵盤を2オクターブ表示");
   const modes = group("回答方法", [["piano", "鍵盤で回答"], ["choice", "選択肢で回答"]]);
-  const chords = chordTypeGroup();
+  const chords = startWith(chordTypeGroup(), BASIC_CHORDS);
   return {
     id: "chord_ear", title: "コード聴音", settings: [twoOctave, modes, chords],
+    hint: CHORDS_HINT,
     question() {
       const root = rand(12);
       const ct = pickFrom(chords, CHORD_TYPES);
@@ -96,11 +105,12 @@ export const chordEar = ((): QuizMode => {
 
 export const chordFormula = ((): QuizMode => {
   const types = group("出題形式", [["to_formula", "コード→度数構成"], ["to_chord", "度数構成→コード"]]);
-  const chords = chordTypeGroup();
+  const chords = startWith(chordTypeGroup(), BASIC_FORMULAS);
   const formula = (ct: ChordType) => ct.semis.map(s => DEGREE_ABBR[s]).join(" - ");
   const display = (ct: ChordType) => `${ct.name}（${ct.suffix || "maj"}）`;
   return {
     id: "chord_formula", title: "コードの度数構成", settings: [types, chords],
+    hint: "最初はよく使うコード（X・Xm・X7・Xmaj7・Xm7）だけを出題します。慣れたら「出題するコード」を増やしてみましょう。",
     question() {
       const ct = pickFrom(chords, CHORD_TYPES);
       const enabled = enabledOf(chords, CHORD_TYPES);
@@ -120,16 +130,19 @@ export const chordFormula = ((): QuizMode => {
 })();
 
 export const chordProgEar = ((): QuizMode => {
-  const progressions = group("出題する進行", PROGRESSIONS.map(p => p.name));
+  const progressions = startWith(group("出題する進行", PROGRESSIONS.map(p => p.name)), BASIC_PROGS);
   return {
     id: "chord_prog_ear", title: "コード進行聴音", settings: [progressions],
+    hint: "最初は響きの違いがわかりやすい3つ（I-IV-V・I-V-VIm-IV・王道進行）だけを出題します。慣れたら「出題する進行」を増やしてみましょう。",
     question() {
       const prog = pickFrom(progressions, PROGRESSIONS);
-      const midis = progressionMidis(prog, rand(12));
+      const key = rand(12);
+      const midis = progressionMidis(prog, key);
+      const names = prog.chords.map(([offset, suffix]) => NOTES[(key + offset) % 12] + suffix).join(" → ");
       return {
         label: "進行を聴いて、パターンを選んでください", prompt: LISTEN,
         answer: choice(prog.name, enabledOf(progressions, PROGRESSIONS).map(p => p.name), PROGRESSIONS.map(p => p.name)),
-        explain: `${prog.name}：${prog.desc}`,
+        explain: `${prog.name}：${prog.desc}（今回はキー ${NOTES[key]} で ${names}）`,
         sounds: [{ label: "進行を再生", play: () => A.playChords(midis) }],
       };
     },
@@ -137,9 +150,10 @@ export const chordProgEar = ((): QuizMode => {
 })();
 
 export const scaleNotes = ((): QuizMode => {
-  const scales = group("出題するスケール", SCALES.map(s => s.short));
+  const scales = startWith(group("出題するスケール", SCALES.map(s => s.short)), BASIC_SCALES);
   return {
     id: "scale_notes", title: "スケール構成音", settings: [scales],
+    hint: SCALES_HINT,
     question() {
       const root = rand(12);
       const scale = pickFrom(scales, SCALES);
@@ -160,10 +174,11 @@ export const scaleNotes = ((): QuizMode => {
 
 export const scaleFormula = ((): QuizMode => {
   const types = group("出題形式", [["to_formula", "スケール→度数構成"], ["to_scale", "度数構成→スケール"]]);
-  const scales = group("出題するスケール", SCALES.map(s => s.short));
+  const scales = startWith(group("出題するスケール", SCALES.map(s => s.short)), BASIC_SCALES);
   const formula = (s: Scale) => s.semis.map(x => DEGREE_ABBR[x]).join(" - ");
   return {
     id: "scale_formula", title: "スケールの度数構成", settings: [types, scales],
+    hint: SCALES_HINT,
     question() {
       const scale = pickFrom(scales, SCALES);
       const enabled = enabledOf(scales, SCALES);

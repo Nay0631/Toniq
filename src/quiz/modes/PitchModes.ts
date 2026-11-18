@@ -2,7 +2,7 @@ import { getState } from "../../engine/AppState";
 import * as A from "../QuizAudio";
 import {
   displayNote,
-  NOTES, DOREMI, noteName, isBlack, KEY_PLACES, INTERVALS, LISTEN, rand, toggle, group, pick, pickFrom, enabledOf, choice, fixedChoice, SEMITONE_CHOICES, intervalGroup, blackKeyToggle, notePool, noteSound,
+  NOTES, DOREMI, noteName, isBlack, KEY_PLACES, INTERVALS, LISTEN, rand, toggle, group, pick, pickFrom, enabledOf, choice, fixedChoice, SEMITONE_CHOICES, intervalGroup, intervalKeyAt, startWith, blackKeyToggle, notePool, noteSound,
 } from "../QuizCore";
 import type { QuizMode } from "../QuizCore";
 
@@ -53,6 +53,10 @@ export const keyPosition = ((): QuizMode => {
   };
 })();
 
+// 知識で答える音程のモードの初期の出題範囲（よく使う音程から。出題設定で広げられる）
+const BASIC_INTERVALS = ["M2", "m3", "M3", "P4", "P5", "P8"];
+const BASIC_INTERVALS_HINT = "最初はよく使う音程（M2・m3・M3・P4・P5・P8）だけを出題します。慣れたら「出題する音程」を増やしてみましょう。";
+
 export const higherLower = ((): QuizMode => {
   const gaps = group("2音の差", [["large", "大きい（5〜12半音）"], ["small", "小さい（1〜4半音）"]]);
   gaps.enabled.delete("small");  // 初期状態は聴き分けやすい大きな差だけ
@@ -74,19 +78,20 @@ export const higherLower = ((): QuizMode => {
 })();
 
 export const earInterval = ((): QuizMode => {
-  const intervals = intervalGroup();
+  // 初期値は聴き分けやすい3つ（出題設定で広げられる）
+  const intervals = startWith(intervalGroup(), ["M3", "P5", "P8"]);
   return {
     id: "ear_interval", title: "音程聴音", settings: [intervals],
-    hint: "まずは「出題する音程」を M3（長三度）・P5（完全五度）・P8（完全八度）だけにして始めるのがおすすめです。",
+    hint: "最初は M3（長三度）・P5（完全五度）・P8（完全八度）だけを出題します。慣れたら「出題する音程」を増やしてみましょう。",
     question() {
       const root = rand(12);
       const iv = pickFrom(intervals, INTERVALS);
       const rootMidi = 60 + root;
       return {
-        label: "2音を聴いて、2音目の音を鍵盤で選んでください（色付きの鍵盤が1音目）",
+        label: "2音を聴いて、2音目の音を鍵盤で選んでください（色付きの鍵盤が1音目。2音目は1音目と同じか、それより高い音です）",
         prompt: LISTEN,
-        answer: { kind: "key", correct: NOTES[(root + iv.semi) % 12], root: NOTES[root] },
-        explain: `${iv.name}（${iv.abbr}）：1音目から ${iv.semi} 半音上の音です。`,
+        answer: { kind: "key", correct: NOTES[(root + iv.semi) % 12], at: intervalKeyAt(root, iv.semi) },
+        explain: `${iv.name}（${iv.abbr}）：1音目の ${noteName(root)} から ${iv.semi} 半音上の ${noteName(root + iv.semi)} です。`,
         sounds: [
           { label: "2音を再生",     play: () => A.playMelody([rootMidi, rootMidi + iv.semi]) },
           { label: "1音目のみ",     play: () => A.playMelody([rootMidi]) },
@@ -100,9 +105,10 @@ export const earInterval = ((): QuizMode => {
 
 export const degreeSemitone = ((): QuizMode => {
   const types = group("出題形式", [["name", "度数→半音数"], ["semitone", "半音数→度数"], ["abbr", "略記→半音数"]]);
-  const intervals = intervalGroup();
+  const intervals = startWith(intervalGroup(), BASIC_INTERVALS);
   return {
     id: "degree_semitone", title: "度数・半音数", settings: [types, intervals],
+    hint: BASIC_INTERVALS_HINT,
     question() {
       const iv = pickFrom(intervals, INTERVALS);
       const type = pick(types);
@@ -123,9 +129,10 @@ export const degreeSemitone = ((): QuizMode => {
 
 export const intervalNote = ((): QuizMode => {
   const usePiano = toggle("鍵盤で回答");
-  const intervals = intervalGroup();
+  const intervals = startWith(intervalGroup(), BASIC_INTERVALS);
   return {
     id: "interval_note", title: "音程（度数）", settings: [usePiano, intervals],
+    hint: BASIC_INTERVALS_HINT,
     question() {
       const root = rand(12);
       const iv = pickFrom(intervals, INTERVALS);
@@ -135,7 +142,7 @@ export const intervalNote = ((): QuizMode => {
         prompt: `<em>${noteName(root)}</em> の${iv.name}`,
         sub: `${iv.abbr} / +${iv.semi} 半音`,
         answer: usePiano.on
-          ? { kind: "key", correct: NOTES[target], root: NOTES[root] }
+          ? { kind: "key", correct: NOTES[target], at: intervalKeyAt(root, iv.semi) }
           : choice(noteName(target), NOTES.map(displayNote)),
         explain: `${noteName(root)} から ${iv.semi} 半音上が ${noteName(target)}（${iv.name}）です。`,
         sounds: [{ label: "2音を再生", play: () => A.playMelody([60 + root, 60 + root + iv.semi]), afterAnswer: true }],
@@ -146,10 +153,9 @@ export const intervalNote = ((): QuizMode => {
 
 export const noteInterval = ((): QuizMode => {
   const showPiano = toggle("鍵盤を表示");
-  const twoOctave = toggle("2オクターブ表示");
   const types = group("回答方法", [["semitone", "半音数で回答"], ["abbr", "略記で回答"], ["name", "度数で回答"]]);
   return {
-    id: "note_interval", title: "2音間の音程", settings: [showPiano, twoOctave, types],
+    id: "note_interval", title: "2音間の音程", settings: [showPiano, types],
     question() {
       const root = rand(12);
       const semi = rand(11) + 1;  // 1〜11（ユニゾン・オクターブのあいまいさを避ける）
@@ -157,9 +163,8 @@ export const noteInterval = ((): QuizMode => {
       const type = pick(types);
       const base = {
         prompt: `<em>${noteName(root)}</em> から <em>${noteName(root + semi)}</em>`,
-        ref: showPiano.on
-          ? { root, target: twoOctave.on ? root + semi : (root + semi) % 12, octaves: twoOctave.on ? 2 : 1 }
-          : undefined,
+        // 2音目がいつも1音目より右に来るように2オクターブ出す
+        ref: showPiano.on ? { root, target: root + semi, octaves: 2 } : undefined,
         explain: `${noteName(root)} から ${noteName(root + semi)} は ${semi} 半音上で、${iv.name}（${iv.abbr}）です。`,
         sounds: [{ label: "2音を再生", play: () => A.playMelody([60 + root, 60 + root + semi]), afterAnswer: true }],
       };
