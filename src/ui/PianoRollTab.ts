@@ -14,6 +14,7 @@ import type { ChordProgression } from "../data/types";
 import { buildDrumRoll, initDrumRoll, renderDrumPlayhead, renderDrumRoll } from "./DrumRoll";
 import { beatsPerBar, isTriplet, unitsPerBar, unitsPerBeat } from "../engine/Meter";
 import { typingKeyMidi } from "./TypingKeys";
+import { soloPart, toggleSolo } from "./Solo";
 
 // 表示する音域（MIDI ノート番号。C3〜C7）
 const LOW  = 48;
@@ -65,7 +66,9 @@ let target: RollTarget = "melody";
 const TARGET_SEG = `
   <div class="pr-seg pr-target" role="group" aria-label="編集するパート">
     <button data-pr-target="melody">メロディ</button><button data-pr-target="drum">ドラム</button>
-  </div>`;
+  </div>
+  <button class="btn btn-small pr-solo" data-pr-solo aria-pressed="false"
+          title="編集中のパートだけを鳴らす（ほかのパートは OFF。もう一度押すと元の ON/OFF に戻す）">ソロ</button>`;
 
 // 編集中のセクションのコード進行（サビの進行がなければ Aメロと同じ）
 function rollProgression(): ChordProgression | null {
@@ -242,6 +245,12 @@ export function renderPianoRoll(): void {
 
   root.querySelectorAll<HTMLElement>("[data-pr-target]").forEach(btn =>
     btn.classList.toggle("is-active", btn.dataset.prTarget === target));
+  // ソロ：編集中のパートのソロ中なら点ける（アレンジャーの右クリックでのソロとも共通）
+  const soloOn = soloPart() === target;
+  root.querySelectorAll<HTMLElement>("[data-pr-solo]").forEach(btn => {
+    btn.classList.toggle("is-on", soloOn);
+    btn.setAttribute("aria-pressed", String(soloOn));
+  });
   pane(root, "melody").hidden = target !== "melody";
   pane(root, "drum").hidden   = target !== "drum";
   if (target === "drum") {
@@ -526,6 +535,13 @@ export function initPianoRoll(): void {
         render();
         // 隠している間にスクロール位置が戻ることがあるので、鍵盤入力のオクターブが見える位置へスクロールし直す
         if (target === "melody") scrollToOctave(rootEl);
+      }));
+
+    // ソロ：編集中のパート（メロディ／ドラム）だけを鳴らす。もう一度押すとソロにする前の ON/OFF に戻す
+    rootEl.querySelectorAll<HTMLElement>("[data-pr-solo]").forEach(btn =>
+      btn.addEventListener("click", () => {
+        toggleSolo(target);
+        render();
       }));
 
     // ツールバー

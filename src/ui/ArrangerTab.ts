@@ -12,6 +12,7 @@ import { bassSubOn } from "../engine/BassPlayer";
 import drumDB from "../data/drum_patterns.json";
 import { CUSTOM_DRUM_ID, DrumPattern } from "../data/types";
 import { render } from "./Router";
+import { soloPart, toggleSolo } from "./Solo";
 import { formatTimePrecise } from "./format";
 import { chorusProgression, getSections, loopBars } from "../engine/SongForm";
 
@@ -201,7 +202,8 @@ export function renderArranger(): void {
             <div class="arr-name" data-term="${name}">${label}</div>
             <div class="arr-sub">${sub}</div>
           </div>
-          <button class="pill${on ? " is-on" : ""}" data-arr-toggle="${name}" aria-pressed="${on}">${on ? "ON" : "OFF"}</button>
+          <button class="pill${on ? " is-on" : ""}${soloPart() === name ? " is-solo" : ""}" data-arr-toggle="${name}" aria-pressed="${on}"
+                  title="クリックで ON/OFF・右クリックでこのパートだけ鳴らす（ソロ。もう一度右クリックで元に戻す）">${on ? "ON" : "OFF"}</button>
         </div>
         <div class="arr-track" data-part="${name}">${body}</div>
       </div>`;
@@ -460,6 +462,14 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
 
   // ブロックを右クリック：消す（ピアノロールと同じ操作。ブラウザの右クリックメニューは出さない）
   root.addEventListener("contextmenu", e => {
+    // ON/OFF ボタンを右クリック：そのパートだけ鳴らす（ソロ）／もう一度でソロにする前に戻す
+    const toggle = (e.target as HTMLElement).closest<HTMLElement>("[data-arr-toggle]");
+    if (toggle) {
+      e.preventDefault();
+      toggleSolo(toggle.dataset.arrToggle as LayerName);
+      render();
+      return;
+    }
     const block = (e.target as HTMLElement).closest<HTMLElement>(".arr-block");
     if (!block) return;
     e.preventDefault();

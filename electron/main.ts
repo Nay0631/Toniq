@@ -88,11 +88,18 @@ function createWindow() {
     minHeight: 600,
     title: "Toniq",
     icon: windowIcon(),
+    // 最大化してから見せる（1200×800 で一瞬出てから広がるのを防ぐ）
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.cjs"),
     },
+  });
+  // 起動時は最大化で表示する（元に戻すと上の 1200×800 になる）
+  win.once("ready-to-show", () => {
+    win.maximize();
+    win.show();
   });
 
   if (isDev) {
