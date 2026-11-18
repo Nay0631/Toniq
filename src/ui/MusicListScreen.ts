@@ -7,12 +7,13 @@ import { songBeforeRating } from "./RatingScreen";
 import { hasOutputFolder, openOutputFolder } from "../engine/OutputFiles";
 import * as Playback from "../engine/Playback";
 import { onRender, render as renderAll, showScreen } from "./Router";
-import { formatTime } from "./format";
+import { formatTime, SCALE_LABELS } from "./format";
+import { beatsPerBar } from "../engine/Meter";
 
 const $ = (id: string) => document.getElementById(id);
 
-const SORT_LABELS: Record<MusicListSort, string> = { newest: "新しい順", oldest: "古い順", name: "名前順" };
-const SORT_ORDER: MusicListSort[] = ["newest", "oldest", "name"];
+// 並び順の選択肢（index.html の #ml-sort の option と同じ値）
+const SORT_VALUES: readonly MusicListSort[] = ["newest", "oldest", "name"];
 const MODE_LABELS = { simple: "シンプルモード", custom: "カスタムモード" };
 
 const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>`;
@@ -165,14 +166,28 @@ function finishRename(input: HTMLInputElement, commit: boolean): void {
   render();
 }
 
+// キーとスケール（例：A ナチュラルマイナー）。キー名は CDE 表記のまま
+function keyLabel(song: SavedSong): string {
+  const scale = song.chordPattern?.base_scale;
+  return scale ? `${song.key} ${SCALE_LABELS[scale] ?? scale}` : song.key;
+}
+
+// 検索・お気に入りの条件に合うか（ジャンルの絞り込みは別。ジャンルのチップの曲数に使う）。
+// 曲名・ジャンル・雰囲気・キーから探し、スペース（全角も）で区切った言葉はすべて含むものに絞る
+function matchesQuery(song: SavedSong): boolean {
+  const s = getState();
+  if (s.musicListFavorites && !song.favorite) return false;
+  const words = s.musicListQuery.toLowerCase().split(/[\s　]+/).filter(Boolean);
+  if (words.length === 0) return true;
+  const text = [song.name, song.genre, song.mood, keyLabel(song)].join(" ").toLowerCase();
+  return words.every(w => text.includes(w));
+}
+
 // 絞り込みと並び替えをした一覧
 function visibleSongs(songs: SavedSong[]): SavedSong[] {
   const s = getState();
-  const query = s.musicListQuery.trim().toLowerCase();
   const filtered = songs.filter(song =>
-    (!query || song.name.toLowerCase().includes(query)) &&
-    (!s.musicListGenre || song.genre === s.musicListGenre) &&
-    (!s.musicListFavorites || song.favorite));
+    matchesQuery(song) && (!s.musicListGenre || song.genre === s.musicListGenre));
 
   if (s.musicListSort === "oldest") return filtered.sort((a, b) => a.updatedAt - b.updatedAt);
   if (s.musicListSort === "name")   return filtered.sort((a, b) => a.name.localeCompare(b.name, "ja"));
@@ -192,11 +207,13 @@ function formatDate(ms: number): string {
 
 function songRow(song: SavedSong): string {
   const playing = isPlayingSong(song.id);
-  const seconds = (song.bars * 4 * 60) / song.bpm;
-  const detail  = `${song.genre}・${song.mood}・${song.key}・${song.bpm} BPM・${song.bars}小節（${MODE_LABELS[song.mode]}）`;
+  // 拍子のない古い曲は 4/4（loadSong と同じ）
+  const seconds = (song.bars * beatsPerBar(song.meter ?? "4/4") * 60) / song.bpm;
+  // 曲名の下に出す情報（似た名前の曲を見分けられるように）。小節数とモードは曲名のツールチップに出す
+  const meta = `${song.genre}・${song.mood}・${keyLabel(song)}・${song.bpm} BPM`;
   const name = renameSongId === song.id
     ? `<input class="song-name-input" data-action="rename" value="${escapeHtml(song.name)}" aria-label="曲名" spellcheck="false">`
-    : `<span class="song-name" title="${escapeHtml(detail)}（ダブルクリックで編集）">${escapeHtml(song.name)}</span>`;
+    : `<span class="song-name" title="${song.bars}小節・${MODE_LABELS[song.mode]}（ダブルクリックで編集）">${escapeHtml(song.name)}</span>`;
 
   return `
     <li class="song-row${playing ? " is-playing" : ""}${menuSongId === song.id ? " is-menu-open" : ""}" data-id="${song.id}">
@@ -205,6 +222,7 @@ function songRow(song: SavedSong): string {
       </button>
       <div class="song-main">
         ${name}
+        <span class="song-meta">${escapeHtml(meta)}</span>
         <div class="song-progress" ${playing ? "" : "hidden"}><span></span></div>
       </div>
       <span class="song-time">${formatTime(seconds)}</span>
@@ -253,6 +271,27 @@ function renderSaveButtons(): void {
   });
 }
 
+// ジャンルのチップ：検索・お気に入りの条件に合う曲の数を添え、0 曲のジャンルは押せなくする（空振りを防ぐ）。
+// 選んでいるジャンルは 0 曲でも押せるままにする
+function renderGenreChips(songs: SavedSong[]): void {
+  const genre = getState().musicListGenre;
+  const matched = songs.filter(matchesQuery);
+  document.querySelectorAll<HTMLButtonElement>("[data-ml-genre]").forEach(chip => {
+    const chipGenre = chip.dataset.mlGenre ?? "";
+    const count = chipGenre ? matched.filter(song => song.genre === chipGenre).length : matched.length;
+    let badge = chip.querySelector<HTMLElement>(".ml-genre-count");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "ml-genre-count";
+      chip.append(badge);
+    }
+    badge.textContent = String(count);
+    const active = chipGenre === genre;
+    chip.classList.toggle("is-active", active);
+    chip.disabled = count === 0 && !active;
+  });
+}
+
 function render(): void {
   renderSaveButtons();
   const s = getState();
@@ -266,10 +305,11 @@ function render(): void {
 
   const search = $("ml-search") as HTMLInputElement;
   if (search.value !== s.musicListQuery) search.value = s.musicListQuery;
-  $("ml-sort-label")!.textContent = SORT_LABELS[s.musicListSort];
-  $("ml-favorites")!.classList.toggle("is-active", s.musicListFavorites);
-  document.querySelectorAll<HTMLElement>("[data-ml-genre]").forEach(el =>
-    el.classList.toggle("is-active", el.dataset.mlGenre === s.musicListGenre));
+  ($("ml-sort") as HTMLSelectElement).value = s.musicListSort;
+  const favorites = $("ml-favorites")!;
+  favorites.classList.toggle("is-active", s.musicListFavorites);
+  favorites.setAttribute("aria-pressed", String(s.musicListFavorites));
+  renderGenreChips(songs);
 
   $("ml-empty")!.hidden    = songs.length > 0;
   $("ml-no-match")!.hidden = songs.length === 0 || visible.length > 0;
@@ -318,9 +358,10 @@ export function initMusicListScreen(): void {
     setState({ musicListQuery: (e.target as HTMLInputElement).value });
     render();
   });
-  $("ml-sort")?.addEventListener("click", () => {
-    const next = SORT_ORDER[(SORT_ORDER.indexOf(getState().musicListSort) + 1) % SORT_ORDER.length];
-    setState({ musicListSort: next });
+  $("ml-sort")?.addEventListener("change", e => {
+    const value = (e.target as HTMLSelectElement).value as MusicListSort;
+    if (!SORT_VALUES.includes(value)) return;
+    setState({ musicListSort: value });
     render();
   });
   $("ml-favorites")?.addEventListener("click", () => {

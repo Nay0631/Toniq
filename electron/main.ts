@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -132,6 +132,9 @@ app.whenReady().then(() => {
   outputRoot = prepareOutputRoot();
   console.log("出力フォルダ:", outputRoot);
   registerFileHandlers();
+  // インストール版では Electron 標準のメニューバー（File・Edit・View・Window）を出さない。
+  // 開発時は再読み込み（Ctrl+R）・開発者ツール（Ctrl+Shift+I）を使うので残す
+  if (!isDev) Menu.setApplicationMenu(null);
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

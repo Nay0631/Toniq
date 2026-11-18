@@ -43,7 +43,7 @@ lidless のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビル
 ## ディレクトリ構成
 
 ```
-electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示）と、出力フォルダ output/ への保存・フォルダを開く IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
+electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示。インストール版は標準のメニューバーを出さない）と、出力フォルダ output/ への保存・フォルダを開く IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ lidless（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   lidless の wasm（npm run grow:wasm で作る。Grow.ts が読む）
@@ -68,7 +68,7 @@ src/ui/
   MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・定位（パン）のノブ・音量のフェーダー・レベルメーター、マスターの左右のピークのメーター・最大のピーク・クリップの印）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通。ツールバーの「メロディ／ドラム」で切り替える）
   DrumRoll.ts             ピアノロールのドラム（行 = キック・スネアなど、列 = 16分音符のマスでオリジナルのドラムパターンを作る。1・2・4小節）
-  MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
+  MusicListScreen.ts      ミュージックリスト画面（曲名・ジャンル・雰囲気・キーでの検索・並び替え・お気に入り・曲数付きのジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、上に分けた曲ファイルの操作と「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
   QuizScreen.ts           音楽クイズ画面（カテゴリ・出題モードの切り替え、出題・採点、鍵盤／選択肢での回答、出題設定）
   Controls.ts             シンセサイザー風のノブ（attachKnob）・縦フェーダー（attachFader。ミキサー）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
   ExportProgress.ts       音声の書き出し（WAV / MP3）の進み具合のダイアログ（目安の説明・段階・進み具合・経過時間。両モード共通の exportAudioWithProgress）

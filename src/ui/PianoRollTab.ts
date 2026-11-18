@@ -65,7 +65,7 @@ let target: RollTarget = "melody";
 // メロディ／ドラムの切り替え（両方のツールバーの先頭に置く）
 const TARGET_SEG = `
   <div class="pr-seg pr-target" role="group" aria-label="編集するパート">
-    <button data-pr-target="melody">メロディ</button><button data-pr-target="drum">ドラム</button>
+    <button data-pr-target="melody">メロディ</button><button data-pr-target="drum" data-term="pianorollDrum">ドラム</button>
   </div>
   <button class="btn btn-small pr-solo" data-pr-solo aria-pressed="false"
           title="編集中のパートだけを鳴らす（ほかのパートは OFF。もう一度押すと元の ON/OFF に戻す）">ソロ</button>`;
