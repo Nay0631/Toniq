@@ -13,14 +13,16 @@ import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import type { ChordProgression } from "../data/types";
 import { buildDrumRoll, initDrumRoll, renderDrumPlayhead, renderDrumRoll } from "./DrumRoll";
 import { beatsPerBar, isTriplet, unitsPerBar, unitsPerBeat } from "../engine/Meter";
+import { typingKeyMidi } from "./TypingKeys";
 
 // 表示する音域（MIDI ノート番号。C3〜C7）
 const LOW  = 48;
 const HIGH = 96;
 const ROWS = HIGH - LOW + 1;
 
+// 鍵盤入力の基準のオクターブ（下の段の C）。上の段は1オクターブ上から G まで届くので、5 で C6〜G7（C7 より上は置けない）
 const OCTAVE_MIN = 3;
-const OCTAVE_MAX = 6;
+const OCTAVE_MAX = 5;
 
 // 入力する音符の長さ（units はマスの数。4/4・3/4 は 1 マス = 16分音符）
 interface LengthDef { value: PianoRollLength; label: string; name: string; units: number }
@@ -38,12 +40,6 @@ const TRIPLET_LENGTHS: LengthDef[] = [
   { value: "16n", label: "8分3連", name: "8分3連符",  units: 1 },
 ];
 const lengths = (): LengthDef[] => isTriplet() ? TRIPLET_LENGTHS : STRAIGHT_LENGTHS;
-
-// 鍵盤入力：A〜K の段を白鍵、W E T Y U を黒鍵として、オクターブの C からの半音数に割り当てる
-const KEYMAP: Record<string, number> = {
-  KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6,
-  KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12,
-};
 
 const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
 
@@ -225,9 +221,9 @@ function buildSkeleton(root: HTMLElement): void {
       <span class="pr-status-sep"></span>
       <span>オクターブ：<span data-pr-status-octave></span></span>
       <span class="pr-status-keys">
-        <kbd>Z</kbd><kbd>X</kbd> オクターブ切替
+        <kbd>↓</kbd><kbd>↑</kbd> オクターブ切替
         <kbd>Del</kbd> 削除
-        <kbd>A〜K</kbd> 鍵盤入力
+        <kbd>Z〜/</kbd><kbd>Q〜]</kbd> 鍵盤入力
       </span>
     </div>
     </div>
@@ -343,7 +339,7 @@ export function renderPianoRoll(): void {
 function scrollToOctave(root: HTMLElement): void {
   const scroller = q(root, ".pr-scroll");
   const rowH  = q(root, ".pr-grid").getBoundingClientRect().height / ROWS;
-  const center = (getState().pianoRollOctave + 1) * 12 + 6;  // オクターブの中央（F#）
+  const center = (getState().pianoRollOctave + 2) * 12;  // 鍵盤入力の音域（基準の C〜2オクターブ上の G）の中ほど
   scroller.scrollTop = (HIGH - center) * rowH - scroller.clientHeight / 2 + rowH;
 }
 
@@ -395,9 +391,7 @@ function removeNote(start: number): void {
 }
 
 // 鍵盤入力：入力位置に音を置き、入力位置を音の後ろへ進める
-function inputKey(offset: number): void {
-  const s    = getState();
-  const midi = (s.pianoRollOctave + 1) * 12 + offset;
+function inputKey(midi: number): void {
   if (!allowed(midi, scalePitchClasses())) return;
 
   const total = loopUnits();
@@ -604,18 +598,19 @@ export function initPianoRoll(): void {
     grid.addEventListener("pointercancel", endDrag);
   });
 
-  // キーボード：A〜K で鍵盤入力、Z / X でオクターブ切替、Delete で選択中の音を削除
+  // キーボード：タイピングピアノ（TypingKeys.ts）で鍵盤入力、↓ / ↑ でオクターブ切替、Delete で選択中の音を削除
   document.addEventListener("keydown", e => {
     if (!currentRoot() || target !== "melody" || isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey || drag) return;
+    const midi = typingKeyMidi(e.code, getState().pianoRollOctave);
 
-    if (e.code === "KeyZ" || e.code === "KeyX") {
-      setOctave(getState().pianoRollOctave + (e.code === "KeyZ" ? -1 : 1));
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      setOctave(getState().pianoRollOctave + (e.key === "ArrowDown" ? -1 : 1));
     } else if (e.key === "Delete" || e.key === "Backspace") {
       if (selected === null) return;
       removeNote(selected);
-    } else if (e.code in KEYMAP) {
+    } else if (midi !== null) {
       if (e.repeat) return;
-      inputKey(KEYMAP[e.code]);
+      inputKey(midi);
     } else {
       return;
     }

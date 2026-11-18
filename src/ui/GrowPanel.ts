@@ -4,9 +4,11 @@ import {
   storedGrowSound, setGrowSound, standardGrowPreset, growPresetChoices, growCategoryName,
   formatGrowParam, growToNormalised, growFromNormalised, type GrowParamMeta, type GrowPart,
 } from "../engine/Grow";
-import { previewGrowSound } from "../engine/GrowPreview";
+import { previewGrowSound, growKeyDown, growKeyUp, stopGrowKeys } from "../engine/GrowPreview";
 import { onRender, render as renderAll } from "./Router";
 import { renderCustomMore } from "./CustomMore";
+import { typingKeyMidi } from "./TypingKeys";
+import { isTyping, modalOpen } from "./SpaceKey";
 
 // grow（テスト中）の音作りのパネル（カスタムモードの設定タブの下 #c-grow）。
 // 暫定のパネルで、最終的にはプリセットを選ぶだけにする予定。
@@ -34,6 +36,62 @@ function growTargets(): GrowPart[] {
   if (getState().melodyInstrument === "grow") list.push("melody");
   list.push("counter", "chord", "bass", "pad", "arp", "signature");
   return list;
+}
+
+// ===== キーボードでの試し弾き（タイピングピアノ。TypingKeys.ts） =====
+// カスタムモードの設定タブ・アレンジャータブで、パネルの「対象」のパートの今の音色（プリセット＋つまみ）を、押している間だけ鳴らす。
+// ピアノロールのタブでは同じキーがメロディの入力になるので鳴らさない。
+// 基準のオクターブはパートごとの表示上の一時的な状態（ベースは 2、それ以外は 4 から）。↓ / ↑ で切り替える
+const KEY_OCTAVE_MIN = 1;
+const KEY_OCTAVE_MAX = 6;
+const keyOctaves: Partial<Record<GrowPart, number>> = {};
+const pressed = new Map<string, number>();  // 押しているキー（code）→ 鳴らした MIDI ノート番号（離すときにオクターブが変わっていても同じ音を止める）
+
+function keyOctave(): number {
+  return keyOctaves[target] ?? (target === "bass" ? 2 : 4);
+}
+
+function keysActive(): boolean {
+  const s = getState();
+  return s.screen === "custom" && s.tab !== "pianoroll" && isGrowLoaded() && !modalOpen();
+}
+
+function releaseAllKeys(): void {
+  pressed.clear();
+  stopGrowKeys();
+}
+
+function onKeyDown(e: KeyboardEvent): void {
+  if (!keysActive() || isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    // つまみ・フェーダー・スライダーにフォーカスがあるときは、矢印はその値の変更に使う
+    if ((e.target as HTMLElement | null)?.closest?.("input, select, [role=slider]")) return;
+    e.preventDefault();
+    const next = Math.max(KEY_OCTAVE_MIN, Math.min(KEY_OCTAVE_MAX, keyOctave() + (e.key === "ArrowDown" ? -1 : 1)));
+    keyOctaves[target] = next;
+    renderKeyHint();
+    return;
+  }
+  const midi = typingKeyMidi(e.code, keyOctave());
+  if (midi === null) return;
+  e.preventDefault();
+  if (e.repeat || pressed.has(e.code)) return;
+  pressed.set(e.code, midi);
+  void growKeyDown(target, midi);
+}
+
+function onKeyUp(e: KeyboardEvent): void {
+  const midi = pressed.get(e.code);
+  if (midi === undefined) return;
+  pressed.delete(e.code);
+  growKeyUp(midi);
+}
+
+function renderKeyHint(): void {
+  const hint = document.getElementById("c-grow-keys");
+  if (!hint) return;
+  const o = keyOctave();
+  hint.innerHTML = `⌨ キーボードで試し弾き：<kbd>Z</kbd>〜<kbd>/</kbd> が C${o}〜、<kbd>Q</kbd>〜<kbd>]</kbd> が C${o + 1}〜（<kbd>↓</kbd><kbd>↑</kbd> オクターブ）`;
 }
 
 // プリセットのセレクトの「ジャンルの標準」の値
@@ -97,10 +155,12 @@ function build(): void {
       <button class="btn btn-small" id="c-grow-reset">プリセットに戻す</button>
       <span class="grow-edited" id="c-grow-edited"></span>
     </div>
+    <p class="grow-keys" id="c-grow-keys"></p>
     <div class="grow-grid">${modules}</div>`;
 
   ($("c-grow-target") as HTMLSelectElement).addEventListener("change", e => {
     target = (e.target as HTMLSelectElement).value as GrowPart;
+    releaseAllKeys();
     renderPanel();
   });
   ($("c-grow-preset") as HTMLSelectElement).addEventListener("change", e => {
@@ -175,16 +235,22 @@ function renderPanel(): void {
     const index = Number(el.dataset.growValue);
     el.textContent = formatGrowParam(index, values[index]);
   });
+  renderKeyHint();
   renderCustomMore();  // 「grow の音作り」の欄の変更の数
 }
 
 function render(): void {
   const s = getState();
+  // 試し弾きを鳴らせない画面・タブへ移ったら、押したままの音を止める
+  if (!keysActive() && pressed.size > 0) releaseAllKeys();
   if (s.screen !== "custom") return;
   const panel = $("c-grow");
   panel.hidden = false;  // パッド・アルペジオ・シグネチャーはいつも grow なので、いつも出す
   const targets = growTargets();
-  if (!targets.includes(target)) target = targets[0];
+  if (!targets.includes(target)) {
+    target = targets[0];
+    releaseAllKeys();
+  }
 
   if (loadState === "idle") {
     loadState = "loading";
@@ -217,4 +283,8 @@ export function initGrowPanel(): void {
       </div>
     </details>`;
   onRender(render);
+  document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("keyup", onKeyUp);
+  // ウィンドウを離れると keyup が届かないので、押したままの音を止める
+  window.addEventListener("blur", releaseAllKeys);
 }

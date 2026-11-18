@@ -3593,6 +3593,18 @@ span[data-term],
 .grow-status { margin: 4px 0 12px; color: var(--text-sub); font-size: 12px; }
 .grow-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; margin-bottom: 12px; }
 .grow-edited { color: var(--text-sub); font-size: 12px; }
+.grow-keys { margin: -4px 0 12px; color: var(--text-sub); font-size: 12px; }
+.grow-keys kbd {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 11px;
+  text-align: center;
+}
 .grow-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

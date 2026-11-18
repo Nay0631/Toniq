@@ -196,7 +196,7 @@ export interface AppState {
   // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
   pianoRollLength:    PianoRollLength;
   pianoRollScaleLock: boolean;  // ON のときはスケール外の音を置けない
-  pianoRollOctave:    number;   // 鍵盤入力（A〜K）のオクターブ
+  pianoRollOctave:    number;   // 鍵盤入力（タイピングピアノ）の基準のオクターブ（下の段の C。3〜5）
   drumRollVelocity:   number;   // ピアノロールのドラムで置く音の強さ（0〜1。強・中・弱）
 
   // パートのON/OFF

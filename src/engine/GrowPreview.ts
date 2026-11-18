@@ -31,6 +31,57 @@ function previewNote(category: GrowCategory): number {
   return base + ((root - 9 + 12) % 12);
 }
 
+// ===== キーボードでの試し弾き（タイピングピアノ。KeyboardPreview.ts から呼ぶ） =====
+// 押している間だけ鳴らす。音色はパートごとに1つ作り、同じパートなら使い回す（音作りの値は applyGrowLive ですぐ当たる）。
+// 曲の再生中も鳴らせる（曲に合わせて音色を確かめられるように）。鳴らした音はミキサーを通さない
+
+let keyInst: GrowInstrument | null = null;
+let keyPart: GrowPart | null = null;
+let keyToken = 0;  // 準備を待っている間に離された・止められたら取りやめる
+const keyHeld = new Set<number>();
+
+// 試し弾きの音色を止めて破棄する
+export function stopGrowKeys(): void {
+  keyToken++;
+  keyHeld.clear();
+  if (!keyInst) return;
+  const inst = keyInst;
+  keyInst = null;
+  keyPart = null;
+  inst.output.gain.rampTo(0, FADE_SECONDS);
+  setTimeout(() => inst.dispose(), FADE_SECONDS * 1000 + 50);
+}
+
+// part の今の音作りで midi の音を鳴らし始める（離すまで伸ばす）
+export async function growKeyDown(part: GrowPart, midi: number): Promise<void> {
+  if (keyPart !== part) stopGrowKeys();
+  stopGrowPreview();  // プリセットを選んだときの1音と重ねない
+  const my = keyToken;
+  keyHeld.add(midi);
+  if (!keyInst) {
+    try {
+      await Tone.start();
+      if (!(await prepareGrowContext())) return;
+    } catch (e) {
+      console.warn("lidless の試し弾きを鳴らせませんでした:", e);
+      return;
+    }
+    if (my !== keyToken || !keyHeld.has(midi)) return;
+    if (!keyInst) {
+      keyInst = new GrowInstrument(growValues(part));
+      keyInst.connect(Tone.getDestination());
+      keyPart = part;
+    }
+  }
+  keyInst.triggerAttack(Tone.Frequency(midi, "midi").toNote(), undefined, 0.8);
+}
+
+// midi の音を離す
+export function growKeyUp(midi: number): void {
+  if (!keyHeld.delete(midi) || !keyInst) return;
+  keyInst.triggerRelease(Tone.Frequency(midi, "midi").toNote());
+}
+
 // 鳴っている試聴の音を短くフェードして止める
 export function stopGrowPreview(): void {
   token++;
