@@ -14,9 +14,9 @@ namespace lfo    { constexpr float sine = 0, triangle = 1; }
 namespace mode   { constexpr float mono = 1, legato = 2; }
 namespace delay  { constexpr float d8 = 1, d8dot = 2, d4 = 3, d4dot = 4; }
 namespace sync   { constexpr float n4 = 3, n8 = 4, n16 = 5; }
-namespace src    { constexpr float eg2 = 2, lfo1 = 3, lfo2 = 4, fenv = 5; }
-namespace dest   { constexpr float cutoff = 2, amp = 4, lfo1Rate = 7; }
-namespace lfoW   { constexpr float saw = 2, square = 3; }
+namespace src    { constexpr float velocity = 1, eg2 = 2, lfo1 = 3, lfo2 = 4, fenv = 5; }
+namespace dest   { constexpr float pitch = 0, cutoff = 2, amp = 4, fm = 5, lfo1Rate = 7; }
+namespace lfoW   { constexpr float saw = 2, square = 3, random = 4; }
 namespace dist   { constexpr float tube = 0, hard = 1, fold = 2, bit = 3; }
 
 // 各プリセットの master（出力の大きさ）は、聞こえる大きさ（モーメンタリーラウドネスの最大）が -18 LUFS になるようにそろえた値
@@ -844,6 +844,227 @@ const Value housePluck[] = {
     { master, 4.3f },
 };
 
+// ===== 音色を広げるプリセット（パートの選択肢はカテゴリで決まる） =====
+
+// オルゴール：1オクターブ上のサインを、約6倍の高さのサインで頭だけ FM して「チン」と鳴らし、澄んだ余韻を長く残す
+const Value musicBox[] = {
+    { osc1Wave, wave::sine }, { osc1Octave, 1 }, { osc1Level, 0.7f },
+    { osc2Wave, wave::sine }, { osc2Octave, 2 }, { osc2Semi, 7 }, { osc2Fine, 12 }, { osc2Level, 0.05f },
+    { fmAmount, 0.03f },
+    { eg2Attack, 0.001f }, { eg2Decay, 0.07f }, { eg2Sustain, 0 }, { eg2Release, 0.05f },
+    { mod1Source, src::eg2 }, { mod1Dest, dest::fm }, { mod1Amount, 0.3f },
+    { ringAmount, 0.08f },
+    { filterType, filter::lp12 }, { filterCutoff, 12000 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 1.8f }, { aenvSustain, 0 }, { aenvRelease, 1.5f },
+    { velocity, 0.6f },
+    { chorusMix, 0.15f }, { reverbMix, 0.3f }, { reverbSize, 0.7f },
+    { drift, 0.1f },
+    { master, -5.6f },
+};
+
+// ウォームパッド：ノコギリ波を少しだけ重ね、三角波で丸みを足して低めのカットオフでこもらせる。
+// チューブで薄く倍音を足し、フィルターをゆっくり揺らす（ローファイ・ハウス）
+const Value warmPad[] = {
+    { osc1Unison, 3 }, { osc1Detune, 10 }, { osc1Width, 0.7f }, { osc1Level, 0.45f },
+    { osc2Wave, wave::triangle }, { osc2Fine, -6 }, { osc2Unison, 2 }, { osc2Detune, 8 }, { osc2Width, 0.6f }, { osc2Level, 0.5f },
+    { filterType, filter::lp24 }, { filterCutoff, 900 }, { filterResonance, 0.1f }, { filterEnvAmount, 8 },
+    { fenvAttack, 0.8f }, { fenvDecay, 1.5f }, { fenvSustain, 0.5f }, { fenvRelease, 1.5f },
+    { aenvAttack, 0.5f }, { aenvDecay, 1 }, { aenvSustain, 0.85f }, { aenvRelease, 1.8f },
+    { lfoWave, lfo::triangle }, { lfoRate, 0.2f }, { lfoFilter, 3 },
+    { chorusMix, 0.35f }, { reverbMix, 0.25f }, { reverbSize, 0.6f },
+    { drift, 0.45f },
+    { distType, dist::tube }, { distDrive, 0.25f }, { distTone, 4000 }, { distMix, 0.3f },
+    { master, -4.2f },
+};
+
+// チップパッド：矩形波2枚を少しずらし、パルス幅をゆっくり動かして厚みを出す。ビットクラッシャーで粗くする（8bit）
+const Value chipPad[] = {
+    { osc1Wave, wave::square }, { osc1Level, 0.45f },
+    { osc2Wave, wave::square }, { osc2Fine, 12 }, { osc2Level, 0.4f }, { osc2PulseWidth, 0.3f },
+    { filterType, filter::lp12 }, { filterCutoff, 6000 }, { filterResonance, 0 },
+    { aenvAttack, 0.3f }, { aenvDecay, 0.5f }, { aenvSustain, 0.85f }, { aenvRelease, 0.8f },
+    { lfoWave, lfo::triangle }, { lfoRate, 0.25f }, { lfoPulseWidth, 0.2f },
+    { chorusMix, 0.2f }, { reverbMix, 0.2f },
+    { distType, dist::bit }, { distDrive, 0.4f }, { distTone, 9000 }, { distMix, 0.35f },
+    { master, -8.1f },
+};
+
+// ガラスパッド：サインを約3倍の高さのサインで FM し、EG 2 で FM をゆっくりふくらませてから引かせる（きらめき）。
+// 長い余韻と広いリバーブ（アンビエント・ゲームBGM）
+const Value glassPad[] = {
+    { osc1Wave, wave::sine }, { osc1Unison, 3 }, { osc1Detune, 8 }, { osc1Width, 0.8f }, { osc1Level, 0.7f },
+    { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Semi, 7 }, { osc2Level, 0.1f },
+    { fmAmount, 0.06f }, { ringAmount, 0.08f },
+    { eg2Attack, 1.5f }, { eg2Decay, 3 }, { eg2Sustain, 0.3f }, { eg2Release, 2 },
+    { mod1Source, src::eg2 }, { mod1Dest, dest::fm }, { mod1Amount, 0.15f },
+    { filterType, filter::lp12 }, { filterCutoff, 9000 }, { filterResonance, 0 },
+    { aenvAttack, 0.8f }, { aenvDecay, 2 }, { aenvSustain, 0.8f }, { aenvRelease, 2.5f },
+    { chorusMix, 0.5f }, { delayMix, 0.15f }, { delayTime, delay::d4dot }, { reverbMix, 0.45f }, { reverbSize, 0.8f },
+    { drift, 0.2f },
+    { master, -8.5f },
+};
+
+// リースベース：1オクターブ下のノコギリ波2枚を少しずらし、ゆっくりうなる音（位相のずれ）を出す。
+// ローパス 24 とチューブで太く、LFO でフィルターをゆっくり動かす（EDM・テクノの暗い曲）
+const Value reeseBass[] = {
+    { osc1Octave, -1 }, { osc1Unison, 2 }, { osc1Detune, 10 }, { osc1Width, 0.3f }, { osc1Level, 0.7f },
+    { osc2Wave, wave::saw }, { osc2Octave, -1 }, { osc2Fine, 14 }, { osc2Level, 0.7f },
+    { subLevel, 0.3f },
+    { filterType, filter::lp24 }, { filterCutoff, 700 }, { filterResonance, 0.15f }, { filterKeyTrack, 0.3f },
+    { filterDrive, 0.4f },
+    { lfoWave, lfo::sine }, { lfoRate, 0.15f }, { lfoFilter, 8 },
+    { aenvAttack, 0.005f }, { aenvSustain, 1 }, { aenvRelease, 0.1f },
+    { voiceMode, mode::legato }, { glide, 0.04f }, { reverbMix, 0 },
+    { chorusMix, 0.1f },
+    { distType, dist::tube }, { distDrive, 0.35f }, { distTone, 3000 }, { distMix, 0.35f },
+    { compMix, 1 }, { compThreshold, -12 }, { compRatio, 4 }, { compAttack, 0.01f }, { compRelease, 0.1f },
+    { master, -1.4f },
+};
+
+// ダークドローン：重ねたノコギリ波に1オクターブ下の矩形波とサブを足し、閉じたフィルターを2つの遅い LFO でうねらせる
+// （アンビエント・テクノの暗い曲）
+const Value darkDrone[] = {
+    { osc1Unison, 5 }, { osc1Detune, 15 }, { osc1Width, 1 }, { osc1Level, 0.5f },
+    { osc2Wave, wave::square }, { osc2Octave, -1 }, { osc2Level, 0.35f },
+    { subLevel, 0.3f },
+    { filterType, filter::lp24 }, { filterCutoff, 350 }, { filterResonance, 0.35f }, { filterKeyTrack, 0.2f },
+    { lfoWave, lfo::triangle }, { lfoRate, 0.08f }, { lfoFilter, 12 },
+    { lfo2Wave, lfo::sine }, { lfo2Rate, 0.13f },
+    { mod1Source, src::lfo2 }, { mod1Dest, dest::cutoff }, { mod1Amount, 0.1f },
+    { aenvAttack, 2.5f }, { aenvDecay, 1 }, { aenvSustain, 1 }, { aenvRelease, 2.5f },
+    { chorusMix, 0.3f }, { reverbMix, 0.5f }, { reverbSize, 0.8f },
+    { drift, 0.5f },
+    { master, -9.8f },
+};
+
+// フルート風：三角波に息のノイズを少し混ぜ、ふわっと立ち上げる。下からすくい上げ、伸ばすと深くなるビブラート
+const Value flute[] = {
+    { osc1Wave, wave::triangle }, { osc1Level, 0.7f },
+    { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Level, 0.08f },
+    { noiseLevel, 0.06f },
+    { filterType, filter::lp12 }, { filterCutoff, 3500 }, { filterResonance, 0.05f }, { filterKeyTrack, 0.8f },
+    { filterEnvAmount, 6 }, { fenvAttack, 0.06f }, { fenvDecay, 0.3f }, { fenvSustain, 0.6f }, { fenvRelease, 0.15f },
+    { aenvAttack, 0.06f }, { aenvDecay, 0.3f }, { aenvSustain, 0.85f }, { aenvRelease, 0.15f },
+    { pitchEnvAmount, -0.6f }, { pitchEnvTime, 0.05f },
+    { lfoRate, 5 }, { lfoPitch, 0.15f }, { lfoAmp, 0.05f }, { lfoFade, 0.5f },
+    { voiceMode, mode::legato }, { glide, 0.03f },
+    { reverbMix, 0.25f },
+    { drift, 0.2f },
+    { master, -4 },
+};
+
+// 口笛：1オクターブ上のサインを下からすくい上げ、音から音へ滑らせる。速めのビブラート
+const Value whistle[] = {
+    { osc1Wave, wave::sine }, { osc1Octave, 1 }, { osc1Level, 0.8f },
+    { noiseLevel, 0.03f },
+    { filterType, filter::lp12 }, { filterCutoff, 8000 }, { filterResonance, 0 },
+    { aenvAttack, 0.03f }, { aenvDecay, 0.2f }, { aenvSustain, 0.9f }, { aenvRelease, 0.1f },
+    { pitchEnvAmount, -2 }, { pitchEnvTime, 0.06f },
+    { lfoRate, 5.5f }, { lfoPitch, 0.25f }, { lfoFade, 0.3f },
+    { voiceMode, mode::legato }, { glide, 0.09f },
+    { delayMix, 0.15f }, { delayTime, delay::d8dot }, { reverbMix, 0.25f },
+    { master, -4.8f },
+};
+
+// レガートリード：細いノコギリ波に1オクターブ下の矩形波を重ね、レゾナンスの効いたフィルターでクセを付ける。
+// はっきり聞こえる長めのグライドで音から音へ滑らせる（トランス・EDM。シンセリードより細く、粘る）
+const Value legatoLead[] = {
+    { osc1Unison, 2 }, { osc1Detune, 8 }, { osc1Width, 0.4f }, { osc1Level, 0.7f },
+    { osc2Wave, wave::square }, { osc2Octave, -1 }, { osc2Level, 0.4f },
+    { filterType, filter::lp24 }, { filterCutoff, 2800 }, { filterResonance, 0.35f }, { filterEnvAmount, 12 },
+    { fenvAttack, 0.005f }, { fenvDecay, 0.6f }, { fenvSustain, 0.6f }, { fenvRelease, 0.2f },
+    { aenvAttack, 0.005f }, { aenvSustain, 0.9f }, { aenvRelease, 0.2f },
+    { voiceMode, mode::legato }, { glide, 0.12f },
+    { lfoRate, 5.5f }, { lfoPitch, 0.2f }, { lfoFade, 0.6f },
+    { delayMix, 0.25f }, { delayTime, delay::d8dot }, { delayFeedback, 0.35f }, { reverbMix, 0.2f },
+    { drift, 0.15f },
+    { distType, dist::tube }, { distDrive, 0.25f }, { distTone, 8000 }, { distMix, 0.25f },
+    { compMix, 0.7f }, { compThreshold, -16 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.15f },
+    { master, -3.5f },
+};
+
+// マリンバ：サインに4倍の高さのサインを弱く重ね（木の板の倍音）、頭だけ FM してマレットで叩いた音を出す。短く減衰する
+const Value marimba[] = {
+    { osc1Wave, wave::sine }, { osc1Level, 0.8f },
+    { osc2Wave, wave::sine }, { osc2Octave, 2 }, { osc2Level, 0.06f },
+    { eg2Attack, 0.001f }, { eg2Decay, 0.03f }, { eg2Sustain, 0 }, { eg2Release, 0.03f },
+    { mod1Source, src::eg2 }, { mod1Dest, dest::fm }, { mod1Amount, 0.25f },
+    { pitchEnvAmount, 2 }, { pitchEnvTime, 0.01f },
+    { filterType, filter::lp12 }, { filterCutoff, 7000 }, { filterResonance, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.6f }, { aenvSustain, 0 }, { aenvRelease, 0.4f },
+    { velocity, 0.7f },
+    { reverbMix, 0.2f },
+    { master, -2.3f },
+};
+
+// カリンバ：サインに約5倍の少しずれた倍音を重ね（金属の舌の響き）、頭だけ FM ではじく。マリンバより長く響く
+const Value kalimba[] = {
+    { osc1Wave, wave::sine }, { osc1Level, 0.7f },
+    { osc2Wave, wave::sine }, { osc2Octave, 2 }, { osc2Semi, 4 }, { osc2Fine, 40 }, { osc2Level, 0.1f },
+    { eg2Attack, 0.001f }, { eg2Decay, 0.05f }, { eg2Sustain, 0 }, { eg2Release, 0.05f },
+    { mod1Source, src::eg2 }, { mod1Dest, dest::fm }, { mod1Amount, 0.3f },
+    { filterType, filter::lp12 }, { filterCutoff, 8000 }, { filterResonance, 0 },
+    { aenvAttack, 0.001f }, { aenvDecay, 1 }, { aenvSustain, 0 }, { aenvRelease, 0.8f },
+    { velocity, 0.6f },
+    { chorusMix, 0.15f }, { delayMix, 0.1f }, { delayTime, delay::d8dot }, { reverbMix, 0.25f },
+    { drift, 0.2f },
+    { master, -3.7f },
+};
+
+// クラビ：細いパルス波を、レゾナンスの効いたフィルターで素早く開閉する。強く弾くほど明るい（ハウス・ファンク）
+const Value clav[] = {
+    { osc1Wave, wave::square }, { osc1PulseWidth, 0.15f }, { osc1Level, 0.6f },
+    { osc2Wave, wave::saw }, { osc2Octave, 1 }, { osc2Level, 0.2f },
+    { filterType, filter::lp24 }, { filterCutoff, 600 }, { filterResonance, 0.25f }, { filterEnvAmount, 36 },
+    { fenvAttack, 0.001f }, { fenvDecay, 0.12f }, { fenvSustain, 0.2f }, { fenvRelease, 0.06f },
+    { filterVelocity, 0.6f },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.35f }, { aenvSustain, 0.3f }, { aenvRelease, 0.06f },
+    { velocity, 0.7f },
+    { chorusMix, 0.15f }, { reverbMix, 0.08f },
+    { distType, dist::tube }, { distDrive, 0.2f }, { distTone, 9000 }, { distMix, 0.2f },
+    { compMix, 0.8f }, { compThreshold, -16 }, { compRatio, 4 }, { compAttack, 0.005f }, { compRelease, 0.1f },
+    { master, 3.7f },
+};
+
+// トランスプラック：7枚重ねたノコギリ波を短くはじき、付点8分のディレイを左右に返す（トランスのアルペジオ）
+const Value trancePluck[] = {
+    { osc1Unison, 7 }, { osc1Detune, 30 }, { osc1Width, 1 }, { osc1Level, 0.7f },
+    { osc2Wave, wave::saw }, { osc2Octave, 1 }, { osc2Unison, 3 }, { osc2Detune, 15 }, { osc2Width, 1 }, { osc2Level, 0.3f },
+    { filterType, filter::lp24 }, { filterCutoff, 500 }, { filterResonance, 0.2f }, { filterEnvAmount, 42 },
+    { fenvAttack, 0.001f }, { fenvDecay, 0.18f }, { fenvSustain, 0 }, { fenvRelease, 0.2f },
+    { aenvAttack, 0.001f }, { aenvDecay, 0.35f }, { aenvSustain, 0 }, { aenvRelease, 0.25f },
+    { filterVelocity, 0.3f },
+    { delayMix, 0.3f }, { delayTime, delay::d8dot }, { delayFeedback, 0.4f }, { delayPingPong, 1 }, { reverbMix, 0.3f },
+    { drift, 0.15f },
+    { compMix, 1 }, { compThreshold, -20 }, { compRatio, 4 }, { compAttack, 0.01f }, { compRelease, 0.12f },
+    { master, 3.3f },
+};
+
+// FX サブドロップ：2オクターブ下のサインがピッチ EG（直線）で2オクターブ上から一定の速さで沈む。
+// 弾いた音の2オクターブ下で止まる（C4 で弾くと C2）。チューブで倍音を足し、小さいスピーカーでも聞こえるようにする
+const Value fxSubDrop[] = {
+    { osc1Wave, wave::sine }, { osc1Octave, -2 }, { osc1Level, 0.9f },
+    { filterType, filter::lp12 }, { filterCutoff, 3000 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { aenvAttack, 0.002f }, { aenvDecay, 2 }, { aenvSustain, 0 }, { aenvRelease, 0.5f },
+    { pitchEnvAmount, 24 }, { pitchEnvTime, 1.5f }, { pitchEnvCurve, 1 },
+    { reverbMix, 0.05f },
+    { distType, dist::tube }, { distDrive, 0.4f }, { distTone, 3000 }, { distMix, 0.4f },
+    { master, -2.6f },
+};
+
+// 雨音：ローパスで角を取ったノイズを速いランダムな LFO で細かく揺らし（雨粒のパラパラ）、もう1つの遅い LFO で明るさを動かす
+// （音の高さによらない。アンビエント・ローファイのシグネチャー）
+const Value rain[] = {
+    { osc1Level, 0 }, { noiseLevel, 1 },
+    { filterType, filter::lp12 }, { filterCutoff, 5000 }, { filterResonance, 0 }, { filterKeyTrack, 0 },
+    { lfoWave, lfoW::random }, { lfoRate, 18 }, { lfoAmp, 0.45f },
+    { lfo2Wave, lfo::sine }, { lfo2Rate, 0.1f },
+    { mod1Source, src::lfo2 }, { mod1Dest, dest::cutoff }, { mod1Amount, 0.08f },
+    { aenvAttack, 1 }, { aenvSustain, 1 }, { aenvRelease, 1 },
+    { chorusMix, 0.4f }, { reverbMix, 0.4f }, { reverbSize, 0.7f },
+    { master, 4.6f },
+};
+
 template <std::size_t N>
 constexpr Preset preset (const char* id, const char* name, PresetCategory category, const Value (&values)[N])
 {
@@ -917,6 +1138,22 @@ const Preset presets[] = {
     // アルペジオ・カウンターメロディのジャンル別（src/engine/Grow.ts の GROW_STANDARD）
     preset ("lofi_keys", "ローファイキーズ", C::chord, lofiKeys),
     preset ("house_pluck", "ハウスプラック", C::pluck, housePluck),
+    // 音色を広げるプリセット
+    preset ("music_box", "オルゴール", C::pluck, musicBox),
+    preset ("warm_pad", "ウォームパッド", C::pad, warmPad),
+    preset ("chip_pad", "チップパッド", C::pad, chipPad),
+    preset ("glass_pad", "ガラスパッド", C::pad, glassPad),
+    preset ("reese_bass", "リースベース", C::bass, reeseBass),
+    preset ("dark_drone", "ダークドローン", C::pad, darkDrone),
+    preset ("flute", "フルート風", C::lead, flute),
+    preset ("whistle", "口笛", C::lead, whistle),
+    preset ("legato_lead", "レガートリード", C::lead, legatoLead),
+    preset ("marimba", "マリンバ", C::pluck, marimba),
+    preset ("kalimba", "カリンバ", C::pluck, kalimba),
+    preset ("clav", "クラビ", C::chord, clav),
+    preset ("trance_pluck", "トランスプラック", C::pluck, trancePluck),
+    preset ("fx_sub_drop", "FX サブドロップ", C::fx, fxSubDrop),
+    preset ("rain", "雨音", C::texture, rain),
 };
 
 constexpr int presetCount = (int) (sizeof (presets) / sizeof (presets[0]));
