@@ -1,6 +1,6 @@
 @startuml
 !include ../astah-sequence-style.puml
-mainframe sd A01-10_構成選択機能_シーケンス図
+mainframe sd A01-8_構成選択機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":アレンジ画面" as L2

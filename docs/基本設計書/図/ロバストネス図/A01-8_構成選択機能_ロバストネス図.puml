@@ -1,6 +1,6 @@
 @startuml
 !include ../astah-robustness-style.puml
-mainframe **uc** A01-10_構成選択機能_ロバストネス図
+mainframe **uc** A01-8_構成選択機能_ロバストネス図
 
 actor "利用者" as A1
 boundary "アレンジ画面" as B1

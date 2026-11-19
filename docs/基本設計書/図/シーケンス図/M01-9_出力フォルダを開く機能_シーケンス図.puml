@@ -1,6 +1,6 @@
 @startuml
 !include ../astah-sequence-style.puml
-mainframe sd M01-11_出力フォルダを開く機能_シーケンス図
+mainframe sd M01-9_出力フォルダを開く機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":ミュージックリスト画面" as L2
