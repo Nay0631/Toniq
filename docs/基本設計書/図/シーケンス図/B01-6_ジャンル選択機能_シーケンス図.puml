@@ -8,13 +8,16 @@ boundary ":カスタムモード画面" as L3
 control ":ジャンル設定" as L4
 control ":パターン選出" as L5
 entity ":テンポマスタ" as L6
+control ":拍子" as L14
+entity ":メロディ設定マスタ" as L15
+entity ":ジャンルスケールマスタ" as L16
 entity ":アプリの状態" as L7
 control ":ジャンル試聴" as L8
 control ":再生" as L9
 control ":ミックス" as L10
 entity ":ミックス設定マスタ" as L11
-control ":grow" as L12
-entity ":growプリセット" as L13
+control ":lidless" as L12
+entity ":lidlessプリセット" as L13
 
 alt シンプルモード画面
   note over L2 : 選んでいる雰囲気に合うジャンルの\nチップだけを雰囲気ごとの順に出す
@@ -56,9 +59,23 @@ else カスタムモード画面
     deactivate L6
     deactivate L5
   end
-  L4 -> L7 : ジャンル・BPM・ドラムのカテゴリを更新する() : void
+  opt 拍子が前のジャンルの標準のまま
+    L4 -> L14 : 標準の拍子にする() : void
+    activate L14
+    L14 -> L15 : 標準の拍子を取得する() : void
+    activate L15
+    deactivate L15
+    deactivate L14
+  end
+  L4 -> L16 : 合うスケールを取得する() : void
+  activate L16
+  deactivate L16
+  L4 -> L7 : ジャンル・BPM・ドラムのカテゴリ・拍子を更新する() : void
   activate L7
   deactivate L7
+  L4 -> L3 : おすすめのスケールを表示する() : void
+  activate L3
+  deactivate L3
   opt 再生中
     L4 -> L9 : 再生し直す() : void
     activate L9

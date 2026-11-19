@@ -9,10 +9,12 @@ entity ":アプリの状態" as L4
 entity ":端末の設定データ" as L5
 control ":ドラム音源読み込み" as L6
 entity ":ドラム音源ファイル" as L7
-control ":grow" as L9
-entity ":growプリセット" as L10
+control ":lidless" as L9
+entity ":lidlessプリセット" as L10
 control ":パート管理" as L8
 control ":ドラムキット作成" as L11
+
+note over L2 : 選択肢は lidless／サンプル音源（以前の「シンセ」は選べない）。\nパーカッションも同じ音源で鳴らす（サンプル音源にないトラックは lidless）
 
 L1 -> L2 : ドラムの音源を押下する() : void
 activate L2
@@ -31,8 +33,8 @@ alt サンプル音源
   activate L7
   deactivate L7
   deactivate L6
-else grow
-  L3 -> L9 : grow の準備を待つ() : void
+else lidless
+  L3 -> L9 : lidless の準備を待つ() : void
   activate L9
   deactivate L9
 end
@@ -41,14 +43,14 @@ opt 再生中
   activate L8
   L8 -> L11 : 選んだ音源でキットを作る() : void
   activate L11
-  opt grow
-    L11 -> L9 : grow のドラムの音をジャンルのキットに合わせて作る() : void
+  opt lidless
+    L11 -> L9 : lidless のドラムの音をジャンルのキットに合わせて作る() : void
     activate L9
     L9 -> L10 : ドラムのプリセットを取得する() : void
     activate L10
     deactivate L10
     deactivate L9
-    opt grow で鳴らせないトラック
+    opt lidless で鳴らせないトラック
       L11 -> L11 : シンセで鳴らす() : void
       activate L11
       deactivate L11

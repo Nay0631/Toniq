@@ -12,8 +12,8 @@ control ":ドラム音源読み込み" as L5
 entity ":ドラム音源ファイル" as L6
 control ":ミックス" as L7
 entity ":ミックス設定マスタ" as L8
-control ":grow" as L16
-entity ":growプリセット" as L17
+control ":lidless" as L16
+entity ":lidlessプリセット" as L17
 entity ":アプリの状態" as L9
 control ":各パートの演奏" as L10
 control ":音声合成" as L12
@@ -69,7 +69,7 @@ opt ファイル名を決めた
   activate L8
   deactivate L8
   deactivate L7
-  L3 -> L16 : grow の準備を待つ() : void
+  L3 -> L16 : lidless の準備を待つ() : void
   activate L16
   L16 -> L17 : プリセットを取得する() : void
   activate L17

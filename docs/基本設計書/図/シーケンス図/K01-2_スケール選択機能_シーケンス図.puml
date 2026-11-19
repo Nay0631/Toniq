@@ -10,6 +10,7 @@ entity ":アプリの状態" as L5
 control ":メロディ生成" as L6
 control ":再生" as L7
 
+note over L2 : 選択肢はコード進行マスタにあるスケール。\nジャンルに合うスケール（ジャンルスケールマスタ）に「（おすすめ）」を付ける
 L1 -> L2 : スケールを選ぶ() : void
 activate L2
 L2 -> L3 : スケールを設定する() : void
@@ -36,6 +37,9 @@ opt 再生中
   activate L7
   deactivate L7
 end
+L3 -> L2 : 進行を変えた通知を出し、進行の行を光らせる() : void
+activate L2
+deactivate L2
 deactivate L3
 deactivate L2
 

@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-11_ソロ切替機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "アレンジ画面" as B1
+boundary "ミキサー" as B2
+boundary "ピアノロール画面" as B3
+control "ソロ" as C1
+control "パート管理" as C2
+control "各パートの演奏" as C3
+entity "アプリの状態" as E1
+
+A1 --> B1 : レーンの ON/OFF ボタンを\n右クリックする
+A1 --> B2 : ON/OFF ボタンを\n右クリックする
+A1 --> B3 : ソロボタンを押下する
+B1 --> C1 : ソロを切り替える
+B2 --> C1 : ソロを切り替える
+B3 --> C1 : 編集中のパートの\nソロを切り替える
+C1 --> C1 : そのパートだけ ON で\nなくなっていた\n（ソロは解けたとみなす）
+C1 --> C2 : そのパートだけ ON にする・\nソロにする前の ON/OFF に戻す
+C2 --> E1 : パートの ON/OFF を更新する
+C2 --> C3 : 再生中もすぐ反映する
+C1 --> B1 : ソロのパートの枠と\nON/OFF を表示する
+
+@enduml

@@ -1,0 +1,61 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-11_ソロ切替機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":ソロ" as L3
+control ":パート管理" as L4
+entity ":アプリの状態" as L5
+control ":各パートの演奏" as L6
+
+note over L2 : ミキサーの ON/OFF ボタンの右クリック、\nピアノロールの「ソロ」ボタン（編集中のメロディ／ドラム）も同じ流れ
+
+L1 -> L2 : レーンの ON/OFF ボタンを右クリックする() : void
+activate L2
+L2 -> L3 : ソロを切り替える() : void
+activate L3
+L3 -> L5 : パートの ON/OFF を取得する() : void
+activate L5
+deactivate L5
+opt そのパートだけ ON でなくなっていた
+  L3 -> L3 : ソロは解けたとみなす() : void
+  activate L3
+  deactivate L3
+end
+alt 押したパートがソロ中
+  L3 -> L4 : ソロにする前の ON/OFF に戻す() : void
+  activate L4
+  L4 -> L5 : パートの ON/OFF を更新する() : void
+  activate L5
+  deactivate L5
+  opt 再生中
+    L4 -> L6 : すぐ反映する() : void
+    activate L6
+    deactivate L6
+  end
+  deactivate L4
+else それ以外
+  L3 -> L3 : ソロにする前の ON/OFF を覚える() : void
+  activate L3
+  deactivate L3
+  note right of L3 : ほかのパートのソロ中なら\n最初に覚えたものを残す
+  L3 -> L4 : そのパートだけ ON にする() : void
+  activate L4
+  L4 -> L5 : パートの ON/OFF を更新する() : void
+  activate L5
+  deactivate L5
+  opt 再生中
+    L4 -> L6 : すぐ反映する() : void
+    activate L6
+    deactivate L6
+  end
+  deactivate L4
+end
+L3 -> L2 : ソロのパートの枠と ON/OFF を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

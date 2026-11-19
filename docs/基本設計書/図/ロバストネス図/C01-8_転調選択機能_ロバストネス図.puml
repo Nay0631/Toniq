@@ -1,0 +1,22 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** C01-8_転調選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "もっと調整" as B1
+control "転調設定" as C1
+control "再生" as C2
+control "曲の構成" as C3
+control "コード変換" as C4
+entity "アプリの状態" as E1
+
+A1 --> B1 : 転調・転調する所を選ぶ
+B1 --> C1 : 転調を設定する
+C1 --> E1 : 転調の幅・\n転調する所を更新する
+C1 --> B1 : 変更の数を表示する
+C1 --> C2 : 再生中なら再生し直す
+C2 --> C3 : 転調する周回を求める
+C3 --> C3 : サビがない曲・試聴\n（転調しない）
+C2 --> C4 : 上げたキーでコードを求める
+
+@enduml

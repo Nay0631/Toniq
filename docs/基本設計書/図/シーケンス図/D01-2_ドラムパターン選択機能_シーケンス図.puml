@@ -17,6 +17,12 @@ alt シンプルモード画面（再抽選）
   activate L2
   L2 -> L4 : ドラムパターンを再抽選する() : void
   activate L4
+  opt オリジナルのドラム（ピアノロールで作成）を使っている
+    L4 -> L4 : 置き換えるか確認する() : void
+    activate L4
+    deactivate L4
+    note right of L4 : 取り消したら何もしない
+  end
   L4 -> L5 : 今のパターン以外から選ぶ() : void
   activate L5
   L5 -> L6 : ジャンル×雰囲気の候補を取得する() : void

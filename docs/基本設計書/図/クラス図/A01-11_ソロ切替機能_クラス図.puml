@@ -1,0 +1,43 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "アレンジ画面" as B1 <<boundary>> {
+  {method} <U+002B> レーンの ON/OFF ボタンを右クリックする() : void
+  {method} <U+002B> ソロのパートの枠と ON/OFF を表示する() : void
+}
+class "ミキサー" as B2 <<boundary>> {
+  {method} <U+002B> ON/OFF ボタンを右クリックする() : void
+}
+class "ピアノロール画面" as B3 <<boundary>> {
+  {method} <U+002B> ソロボタンを押下する() : void
+}
+class "ソロ" as C1 <<control>> {
+  {field} <U+002D> ソロにする前の ON/OFF
+  {method} <U+002B> ソロを切り替える() : void
+  {method} <U+002D> ソロは解けたとみなす() : void
+  {method} <U+002D> ソロにする前の ON/OFF を覚える() : void
+}
+class "パート管理" as C2 <<control>> {
+  {method} <U+002B> そのパートだけ ON にする() : void
+  {method} <U+002B> ソロにする前の ON/OFF に戻す() : void
+}
+class "各パートの演奏" as C3 <<control>> {
+  {method} <U+002B> すぐ反映する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> パートの ON/OFF
+  {method} <U+002B> パートの ON/OFF を取得する() : void
+  {method} <U+002B> パートの ON/OFF を更新する() : void
+}
+
+B1 --> C1
+B2 --> C1
+B3 --> C1
+C1 --> E1
+C1 --> C2
+C2 --> E1
+C2 --> C3
+C1 --> B1
+
+@enduml

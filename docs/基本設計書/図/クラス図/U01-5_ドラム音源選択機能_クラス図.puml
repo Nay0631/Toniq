@@ -12,9 +12,9 @@ class "ドラム音源読み込み" as C2 <<control>> {
   {field} <U+002D> 読み込んだ音源
   {method} <U+002B> 音源を読み込む() : void
 }
-class "grow" as C4 <<control>> {
-  {method} <U+002B> grow の準備を待つ() : void
-  {method} <U+002B> grow のドラムの音をジャンルのキットに合わせて作る() : void
+class "lidless" as C4 <<control>> {
+  {method} <U+002B> lidless の準備を待つ() : void
+  {method} <U+002B> lidless のドラムの音をジャンルのキットに合わせて作る() : void
 }
 class "パート管理" as C3 <<control>> {
   {method} <U+002B> ドラムを読み込み直す() : void
@@ -36,7 +36,7 @@ class "ドラム音源ファイル" as E3 <<entity>> {
   {field} <U+002B> トラックごとの音
   {method} <U+002B> ジャンルの音源を取得する() : void
 }
-class "growプリセット" as E4 <<entity>> {
+class "lidlessプリセット" as E4 <<entity>> {
   {field} <U+002B> ID
   {field} <U+002B> プリセット名
   {field} <U+002B> 音作りの値

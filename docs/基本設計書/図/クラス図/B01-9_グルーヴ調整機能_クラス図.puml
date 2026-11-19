@@ -2,18 +2,20 @@
 !include ../astah-class-style.puml
 mainframe **pkg**
 
-class "カスタムモード画面" as B1 <<boundary>> {
+class "もっと調整" as B1 <<boundary>> {
   {method} <U+002B> スウィング・サイドチェインのノブを回す() : void
   {method} <U+002B> 標準ボタンを押下する() : void
-  {method} <U+002B> ノブの値を表示する() : void
+  {method} <U+002B> 跳ねる単位を選ぶ() : void
+  {method} <U+002B> ノブの値と変更の数を表示する() : void
 }
 class "グルーヴ設定" as C1 <<control>> {
-  {method} <U+002B> グルーヴの量を設定する() : void
+  {method} <U+002B> グルーヴを設定する() : void
 }
 class "グルーヴ" as C2 <<control>> {
   {method} <U+002B> スウィングを反映する() : void
   {method} <U+002B> ほかのパートを沈める() : void
-  {method} <U+002D> 裏の16分音符をずらす() : void
+  {method} <U+002D> スウィングをかけない() : void
+  {method} <U+002D> 裏の16分音符・8分音符をずらす() : void
 }
 class "ドラム演奏" as C3 <<control>> {
   {method} <U+002B> キックを鳴らす() : void
@@ -21,8 +23,10 @@ class "ドラム演奏" as C3 <<control>> {
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> スウィング（0〜100、空＝標準）
   {field} <U+002B> サイドチェイン（0〜100、空＝標準）
-  {method} <U+002B> スウィング・サイドチェインを更新する() : void
-  {method} <U+002B> スウィングの量を取得する() : void
+  {field} <U+002B> 跳ねる単位（16分音符／8分音符）
+  {field} <U+002B> 拍子
+  {method} <U+002B> スウィング・サイドチェイン・跳ねる単位を更新する() : void
+  {method} <U+002B> スウィングの量・単位・拍子を取得する() : void
   {method} <U+002B> サイドチェインの量を取得する() : void
 }
 class "ミックス設定マスタ" as E2 <<entity>> {

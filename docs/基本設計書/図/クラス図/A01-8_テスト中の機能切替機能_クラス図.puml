@@ -2,9 +2,9 @@
 !include ../astah-class-style.puml
 mainframe **pkg**
 
-class "アレンジ画面" as B1 <<boundary>> {
-  {method} <U+002B> テスト中の機能のスイッチを押下する() : void
-  {method} <U+002B> スイッチの ON/OFF を表示する() : void
+class "もっと調整" as B1 <<boundary>> {
+  {method} <U+002B> フィル・揺らぎ・エンディングのボタンを押下する() : void
+  {method} <U+002B> ON/OFF と変更の数を表示する() : void
 }
 class "テスト機能設定" as C1 <<control>> {
   {method} <U+002B> 機能を ON/OFF する() : void

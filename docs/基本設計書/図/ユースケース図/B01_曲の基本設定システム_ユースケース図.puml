@@ -15,7 +15,8 @@ rectangle "曲の基本設定システム" <<システム名>> {
     usecase "ジャンル試聴機能" as UC7
     usecase "リード選択機能" as UC8
     usecase "グルーヴ調整機能" as UC9
-    usecase "grow音作り機能" as UC10
+    usecase "lidless音作り機能" as UC10
+    usecase "拍子選択機能" as UC11
   }
 }
 
@@ -29,5 +30,6 @@ A1 -- UC7
 A1 -- UC8
 A1 -- UC9
 A1 -- UC10
+A1 -- UC11
 
 @enduml

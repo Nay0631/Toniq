@@ -1,0 +1,47 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "もっと調整" as B1 <<boundary>> {
+  {method} <U+002B> 拍子を選ぶ() : void
+  {method} <U+002B> この欄を標準に戻すボタンを押下する() : void
+  {method} <U+002B> 拍子と変更の数を表示する() : void
+}
+class "標準に戻す" as C5 <<control>> {
+  {method} <U+002B> 拍子・グルーヴを標準に戻す() : void
+}
+class "拍子設定" as C1 <<control>> {
+  {method} <U+002B> 拍子を設定する() : void
+}
+class "拍子" as C2 <<control>> {
+  {method} <U+002B> メロディとオリジナルのドラムを置き直す() : void
+}
+class "メロディ生成" as C3 <<control>> {
+  {method} <U+002B> メロディを作り直す() : void
+}
+class "再生" as C4 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 拍子（4/4・3/4・4/4 の3連符）
+  {field} <U+002B> メロディ
+  {field} <U+002B> オリジナルのドラム
+  {method} <U+002B> 拍子・メロディ・ドラムを更新する() : void
+}
+class "メロディ設定マスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 標準の拍子
+  {method} <U+002B> ジャンルの標準の拍子を取得する() : void
+}
+
+B1 --> C1
+B1 --> C5
+C5 --> E2
+C5 --> C1
+C1 --> C2
+C1 --> C3
+C1 --> E1
+C1 --> B1
+C1 --> C4
+
+@enduml
