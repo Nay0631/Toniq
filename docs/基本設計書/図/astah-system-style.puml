@@ -1,0 +1,57 @@
+' astah 風の見た目の共通設定（システム概要図・システム構成図用。配置図の部品で描く）
+' 各図の先頭で相対パスで !include して使う。
+' 例: !include ../astah-system-style.puml
+' 図の枠は .puml 側で「mainframe **deployment** <図名>」と書く。
+' ※ このファイル単体では図にならないよう、@startuml / @enduml は書かない。
+
+' 影なし・背景は白
+skinparam shadowing false
+skinparam BackgroundColor white
+
+' 並べる向き（left to right direction など）は各図に書く
+
+' 線はまっすぐ引く（曲線にしない）
+skinparam linetype polyline
+
+' 線は黒
+skinparam ArrowColor black
+skinparam ArrowThickness 1.5
+
+' 利用者は頭が薄い黄色の人形
+skinparam ActorBackgroundColor #FFFFCC
+skinparam ActorBorderColor black
+
+' 機器・ソフト・データは白地に黒の太い枠、角は少し丸くする（入れ物は薄いグレー）
+skinparam NodeBackgroundColor #F5F5F5
+skinparam NodeBorderColor black
+skinparam NodeBorderThickness 2
+skinparam RectangleBackgroundColor white
+skinparam RectangleBorderColor black
+skinparam RectangleBorderThickness 2
+skinparam DatabaseBackgroundColor white
+skinparam DatabaseBorderColor black
+skinparam DatabaseBorderThickness 2
+skinparam StorageBackgroundColor white
+skinparam StorageBorderColor black
+skinparam StorageBorderThickness 2
+skinparam FolderBackgroundColor white
+skinparam FolderBorderColor black
+skinparam FolderBorderThickness 2
+skinparam ArtifactBackgroundColor white
+skinparam ArtifactBorderColor black
+skinparam ArtifactBorderThickness 2
+skinparam RoundCorner 15
+
+' 部品の名前（入れ物ではない四角）は中央にそろえる
+skinparam DefaultTextAlignment center
+
+' ステレオタイプは «» ではなく << >> で書く
+skinparam guillemet false
+
+' 図全体の枠（mainframe）は黒
+skinparam DiagramBorderColor black
+skinparam DiagramBorderThickness 1
+
+' 文字の太さの設定はファイルの最後に置く
+skinparam NodeFontStyle bold
+skinparam RectangleFontStyle bold
