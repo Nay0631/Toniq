@@ -370,6 +370,25 @@ const balladTriplets: SignatureDef = {
   },
 };
 
+// シャッフル：裏から入るピアノのキメ（「ッチャーン ッチャーン」）。1・3拍目の3つ目（3連符の最後）で短く引っかけ、
+// 2・4拍目の頭で強く鳴らす。音はコードの上の3音（セブンスなら 3度・5度・7度）で軽くする。
+// 4/4 の3連符の拍子で鳴らす前提（4/4 の拍子にした曲では 8分の裏から入る）
+const shufflePiano: SignatureDef = {
+  label: "シャッフルのピアノ",
+  create: out => pianoVoice(out, 0.3, -20),
+  events: (notes, bar, bars) => {
+    const ev: SignatureEvent[] = [];
+    const upper = notes.length > 3 ? notes.slice(-3) : notes;
+    for (let b = 0; b < bars; b++) {
+      gridSteps([2, 4, 10, 12]).forEach((step, i) => {
+        const head = i % 2 === 1;  // 2・4拍目の頭
+        ev.push({ time: t(bar + b, step), notes: upper, dur: head ? "8n" : "16n", accent: head });
+      });
+    }
+    return ev;
+  },
+};
+
 const SIGNATURES: Record<string, SignatureDef> = {
   "EDM":      edmStab,
   "8bit":     chipArp,
@@ -381,6 +400,7 @@ const SIGNATURES: Record<string, SignatureDef> = {
   "アンビエント": ambientWind,
   "ワルツ":    waltzAfterbeat,
   "6/8バラード": balladTriplets,
+  "シャッフル": shufflePiano,
 };
 
 export function signatureDef(genre: string = getState().genre): SignatureDef {

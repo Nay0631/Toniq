@@ -10,7 +10,8 @@ import { GrowInstrument, growValues, isGrowReady, findGrowPreset, growPresetValu
 import { fitPattern, unitTime, unitsPerBar, unitsPerBeat } from "./Meter";
 
 // ジャンル別のベース設定（bass_params.json）
-// パターンは16ステップ表記：R = ルート、F = 5度、O = 1オクターブ上、- = 伸ばす、. = 休符
+// パターンは16ステップ表記：R = ルート、F = 5度、O = 1オクターブ上、3 = 3度、6 = 6度、7 = 7度、- = 伸ばす、. = 休符
+// （3・6・7 はシャッフルのブギウギ「R-3-F-6-7-6-F-3-」のために足した。5度は以前からの F）
 interface BassParam {
   patterns:    string[];  // 小節ごとに順に使う
   fill:        string;    // コード進行1周の最後の小節で使う
@@ -128,16 +129,21 @@ export function bassNotes(progression: ChordProgression, key: string, octave: nu
       progression.base_scale,
       octave + param.octaveShift
     );
-    // 5度はコードの構成音から取る（dim なら減5度）。見つからなければ完全5度
+    // 5度・3度・7度はコードの構成音から取る（dim なら減5度、マイナーなら短3度、sus なら2度・4度、maj7 なら長7度）。
+    // 見つからなければ完全5度・長3度・短7度。6度はいつも長6度（ブギウギの R-3-5-6-♭7）
     const rootMidi = Tone.Frequency(resolved.notes[0]).toMidi();
-    const fifth = resolved.notes
-      .map(n => Tone.Frequency(n).toMidi() - rootMidi)
-      .find(i => i >= 6 && i <= 8) ?? 7;
+    const intervals = resolved.notes.map(n => Tone.Frequency(n).toMidi() - rootMidi);
+    const fifth   = intervals.find(i => i >= 6 && i <= 8) ?? 7;
+    const third   = intervals.find(i => i >= 2 && i <= 5) ?? 4;
+    const seventh = intervals.find(i => i === 10 || i === 11) ?? 10;
     const root = Tone.Frequency(resolved.bass_note);
     const roles: Record<string, string> = {
-      R: root.toNote(),
-      F: root.transpose(fifth).toNote(),
-      O: root.transpose(12).toNote(),
+      R:   root.toNote(),
+      F:   root.transpose(fifth).toNote(),
+      O:   root.transpose(12).toNote(),
+      "3": root.transpose(third).toNote(),
+      "6": root.transpose(9).toNote(),
+      "7": root.transpose(seventh).toNote(),
     };
 
     if (chord.ending) {

@@ -425,6 +425,7 @@ const GENRE_FX: Record<string, Exclude<FxType, "auto">> = {
   "アンビエント": "downlifter",
   "ワルツ":     "reverse",   // 弦・オルゴールの曲に、シンバルを逆回しにした「フワーッ」
   "6/8バラード": "reverse",
+  "シャッフル":  "reverse",
 };
 
 type FxKind = Exclude<FxType, "auto">;

@@ -15,7 +15,7 @@ import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
 
 export const KEYS = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 export const BAR_OPTIONS = [8, 16, 24, 32, 48, 64];
-export const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント", "ワルツ", "6/8バラード"];
+export const APP_GENRES  = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント", "ワルツ", "6/8バラード", "シャッフル"];
 
 export const chords = chordDB as unknown as ChordProgression[];
 export const drums  = drumDB  as unknown as DrumPattern[];

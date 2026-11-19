@@ -8,5 +8,6 @@
   "トランス": ["harmonic_minor", "minor"],
   "アンビエント": ["lydian", "major_pentatonic", "whole_tone"],
   "ワルツ": ["major", "harmonic_minor", "minor"],
-  "6/8バラード": ["major", "minor"]
+  "6/8バラード": ["major", "minor"],
+  "シャッフル": ["blues", "mixolydian", "dorian"]
 }

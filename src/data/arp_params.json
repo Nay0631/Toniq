@@ -88,5 +88,14 @@
     "gate": 0.7,
     "cutoff": 4000,
     "delay": { "time": "4n", "feedback": 0.2, "wet": 0.18 }
+  },
+  "シャッフル": {
+    "instrument": "pluck",
+    "step": "8n",
+    "pattern": "up",
+    "octaves": 1,
+    "gate": 0.5,
+    "cutoff": 5000,
+    "delay": { "time": "8n", "feedback": 0.15, "wet": 0.1 }
   }
 }

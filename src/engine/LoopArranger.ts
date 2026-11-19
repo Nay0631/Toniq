@@ -102,6 +102,14 @@ const LOOP_SCHEDULE: Record<string, SectionPlan[]> = {
     { section: "B", parts: ["drum", "perc", "signature", "bass", "chord", "pad", "melody", "counter", "fx"], add: ["arp"] },
     { section: "A", parts: ["drum", "signature", "bass", "chord", "melody", "counter"], drop: ["drum"] },
   ],
+  // シャッフル：ドラム・ブギウギのベース・オルガンのバンドで始め、後半からピアノのキメ（シグネチャー）が入る。
+  // サビの直前の1小節はベースを抜いてため、サビでホーン（メロディ）にカウンター・タンバリン・ライドを重ねる
+  "シャッフル": [
+    { section: "A", parts: ["drum", "bass", "chord"], add: ["signature"] },
+    { section: "A", parts: ["drum", "bass", "chord", "signature", "melody"], add: ["counter"], gap: ["bass"] },
+    { section: "B", parts: ["drum", "perc", "bass", "chord", "signature", "pad", "melody", "counter", "fx"], add: ["arp"] },
+    { section: "A", parts: ["drum", "perc", "bass", "chord", "signature", "melody"], drop: ["perc"] },
+  ],
 };
 
 // 1セクションが何周か（コード進行の長さから。8小節の進行なら1周）

@@ -158,5 +158,20 @@
       "filterEnvelope": { "attack": 0.02, "decay": 0.4, "sustain": 0.5, "release": 0.5, "baseFrequency": 350, "octaves": 1 },
       "volume": -4
     }
+  },
+  "シャッフル": {
+    "patterns": [
+      "R-3-F-6-7-6-F-3-"
+    ],
+    "fill": "R-3-F-6-O-7-6-F-",
+    "octaveShift": 0,
+    "sub": false,
+    "synth": {
+      "oscillator": "triangle",
+      "envelope": { "attack": 0.005, "decay": 0.25, "sustain": 0.4, "release": 0.12 },
+      "filterQ": 1,
+      "filterEnvelope": { "attack": 0.005, "decay": 0.2, "sustain": 0.3, "release": 0.15, "baseFrequency": 250, "octaves": 2 },
+      "volume": -6
+    }
   }
 }

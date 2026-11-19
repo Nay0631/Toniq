@@ -243,6 +243,12 @@ export const FILLS: Record<string, Record<FillSize, FillDef>> = {
     normal: { from: 8,  tracks: { snare: "x.x.xxx.", kick: "x......." }, keep: [] },
     big:    { from: 0,  tracks: { snare: "x...x.x.xxx.xxx.", kick: "x.......x......." }, keep: [] },
   },
+  // シャッフル（4/4 の3連符）：「x.x.」= タッカ（3連符の1つ目と3つ目）、「xxx.」= 3連符3つ
+  "シャッフル": {
+    small:  { from: 12, tracks: { snare: "x.x." }, keep: ["hihat_closed"] },
+    normal: { from: 8,  tracks: { snare: "x.xxxxx.", kick: "x......." }, keep: [] },
+    big:    { from: 0,  tracks: { snare: "x.x.x.x.xxx.xxx.", kick: "x.......x......." }, keep: [] },
+  },
 };
 
 // フィルの理由ごとの大きさ（0 = 小・1 = 中・2 = 大）。次がサビ・エンディングは大きく、同じセクションの中の区切りは小さく
@@ -336,7 +342,7 @@ export function kickAt(bar: number, step: number): boolean {
 // ===== 揺らぎ（AppState.drumHumanize） =====
 
 // ゴーストノート（小さなスネア）を入れるジャンルと確率。入れる位置は2拍目・4拍目のスネアの前後の裏
-const GHOST_RATE: Record<string, number> = { "ローファイ": 0.25, "ハウス": 0.15, "ゲームBGM": 0.12 };
+const GHOST_RATE: Record<string, number> = { "ローファイ": 0.25, "ハウス": 0.15, "ゲームBGM": 0.12, "シャッフル": 0.2 };
 const GHOST_STEPS = [7, 10, 15];
 
 const HATS = new Set(["hihat_closed", "hihat_open"]);

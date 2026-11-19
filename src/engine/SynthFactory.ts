@@ -98,6 +98,13 @@ const DRUM_KITS: Record<string, DrumKitParams> = {
     hat:   { decay: 0.04, openDecay: 0.3, freq: 7500 },
     bus:   { lowpass: 10000, drive: 0.06, compress: -20, makeup: 2 },
   },
+  // シャッフル：バンドのような生っぽいキット（少しだけ歪ませ、スネアは中くらいの長さ）
+  シャッフル: {
+    kick:  { note: "C1", octaves: 3.5, pitchDecay: 0.035, decay: 0.32, wave: "sine", click: 0.25 },
+    snare: { tone: 200, decay: 0.2, noiseFreq: 1900 },
+    hat:   { decay: 0.045, openDecay: 0.3, freq: 8000 },
+    bus:   { lowpass: 12000, drive: 0.1, compress: -21, makeup: 1 },
+  },
 };
 
 // 強弱を音量に変換する（弱い音が小さくなりすぎないよう曲線をつける）

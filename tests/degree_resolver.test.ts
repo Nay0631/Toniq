@@ -74,10 +74,16 @@ describe("scaleSemitones", () => {
     expect(resolveChord("V", "dom7", 0, "A", "harmonic_minor").notes).toEqual(["E4", "G#4", "B4", "D5"]);
     expect(resolveChord("IV", "major", 0, "A", "melodic_minor").notes).toEqual(["D4", "F#4", "A4"]);
     expect(resolveChord("bVII", "major", 0, "C", "mixolydian").notes).toEqual(["A#4", "D5", "F5"]);
+    // ブルース：セブンス（I7・IV7）と、マイナーブルースの IVm7・bVI7
+    expect(resolveChord("I", "dom7", 0, "C", "blues").notes).toEqual(["C4", "E4", "G4", "A#4"]);
+    expect(resolveChord("IVm", "min7", 0, "A", "blues").notes).toEqual(["D4", "F4", "A4", "C5"]);
+    expect(resolveChord("bVI", "dom7", 0, "A", "blues").notes).toEqual(["F4", "A4", "C5", "D#5"]);
   });
 
   it("スケールの7音を低い順に返す（未定義はマイナー）", () => {
     expect(scaleSemitones("major")).toEqual([0, 2, 4, 5, 7, 9, 11]);
+    // ブルース：マイナーペンタトニック（0・3・5・7・10）＋2度とブルーノート（♭5）
+    expect(scaleSemitones("blues")).toEqual([0, 2, 3, 5, 6, 7, 10]);
     expect(scaleSemitones("minor")).toEqual([0, 2, 3, 5, 7, 8, 10]);
     expect(scaleSemitones("harmonic_minor")).toEqual([0, 2, 3, 5, 7, 8, 11]);
     expect(scaleSemitones("melodic_minor")).toEqual([0, 2, 3, 5, 7, 9, 11]);

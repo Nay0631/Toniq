@@ -86,6 +86,12 @@ export const PERC_PATTERNS: Record<string, PercDef> = {
     A: { shaker: "xoo.xoo.xoo.xoo." },
     B: { shaker: "Xoo.xoo.Xoo.xoo.", ride: "x...x...x...x..." },
   },
+  // シャッフル（4/4 の3連符）：2・4拍目のタンバリン。サビは「タッカ」で刻むライドを足す
+  "シャッフル": {
+    label: "タンバリン・ライド",
+    A: { tambourine: "....x.......x..." },
+    B: { tambourine: "....X.......X...", ride: "X.o.x.o.X.o.x.o." },
+  },
 };
 
 const VELOCITY: Record<string, number> = { X: 1, x: 0.7, o: 0.42 };

@@ -33,7 +33,7 @@ import { songMetrics, QUALITY_RULES, STRONG_CLASH_LIMIT, MelodyMetrics } from ".
 import type { ChordProgression } from "../src/data/types";
 import { chords, drums, resetState, seededRandom } from "./helpers";
 
-const GENRES = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント", "ワルツ", "6/8バラード"];
+const GENRES = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント", "ワルツ", "6/8バラード", "シャッフル"];
 const OTHER_METERS: Meter[] = ["3/4", "4/4t"];
 
 beforeEach(() => {
@@ -339,15 +339,16 @@ describe("メロディ生成（3/4）", () => {
 });
 
 describe("ジャンルの標準の拍子", () => {
-  it("ワルツは 3/4、6/8バラードは 4/4 の3連符、ほかのジャンルと知らないジャンルは 4/4", () => {
-    expect(genreMeter("ワルツ")).toBe("3/4");
-    expect(genreMeter("6/8バラード")).toBe("4/4t");
-    GENRES.filter(g => g !== "ワルツ" && g !== "6/8バラード").forEach(g => expect(genreMeter(g), g).toBe("4/4"));
+  it("ワルツは 3/4、6/8バラード・シャッフルは 4/4 の3連符、ほかのジャンルと知らないジャンルは 4/4", () => {
+    const special: Record<string, Meter> = { "ワルツ": "3/4", "6/8バラード": "4/4t", "シャッフル": "4/4t" };
+    GENRES.forEach(g => expect(genreMeter(g), g).toBe(special[g] ?? "4/4"));
     expect(genreMeter("知らないジャンル")).toBe("4/4");
   });
 
   it("一括計測（シンプルモードの生成と同じ手順）はジャンルの拍子で曲を作り、メロディは頭の拍から鳴る", () => {
-    const cases: [string, string, Meter][] = [["ワルツ", "明るい", "3/4"], ["6/8バラード", "切ない", "4/4t"], ["EDM", "明るい", "4/4"]];
+    const cases: [string, string, Meter][] = [
+      ["ワルツ", "明るい", "3/4"], ["6/8バラード", "切ない", "4/4t"], ["シャッフル", "明るい", "4/4t"], ["EDM", "明るい", "4/4"],
+    ];
     for (const [genre, mood, meter] of cases) {
       generateBatchSong(1, genre, mood, 0);
       expect(getState().meter, genre).toBe(meter);

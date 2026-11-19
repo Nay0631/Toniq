@@ -90,5 +90,14 @@
     "gain":      0,
     "swing":     0,
     "sidechain": 0
+  },
+  "シャッフル": {
+    "reverb":    { "decay": 1.8, "wet": 0.22, "preDelay": 0.02 },
+    "eq":        { "low": 2, "mid": 0, "high": 1 },
+    "compressor":{ "threshold": -18, "ratio": 2.5, "attack": 0.01, "release": 0.2 },
+    "limiter":   { "threshold": -2 },
+    "gain":      -2,
+    "swing":     0,
+    "sidechain": 0
   }
 }

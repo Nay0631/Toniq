@@ -292,5 +292,34 @@
     "preferStepwise": true,
     "octaveRange": [4, 5],
     "instrument": "epiano"
+  },
+  "シャッフル": {
+    "meter": "4/4t",
+    "rhythmPatterns": [
+      "x-x-x---x-x-x---",
+      "..x-x---..x-x---",
+      "x---..x-x-------",
+      "x-x-x-x-x-------",
+      "..x-x-x-x---x---",
+      "x-----x-x---....",
+      "x---x-x-..x-x---",
+      "....x-x-x---x-x-",
+      "x-x-x---........",
+      "........x-x-x---",
+      "x---x---..x-x---",
+      "..x-x-x---x-x---"
+    ],
+    "chorusRhythmPatterns": [
+      "x---x---x-------",
+      "x-x-x---x-------",
+      "x-------x-x-x---",
+      "..x-x---x---x---",
+      "x---x-x-x-------"
+    ],
+    "phraseForms": ["AAAB", "AABA", "ABAC", "AaAB", "ABAB"],
+    "maxLeap": 5,
+    "preferStepwise": true,
+    "octaveRange": [4, 5],
+    "instrument": "lead"
   }
 }

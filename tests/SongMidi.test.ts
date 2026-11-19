@@ -121,7 +121,7 @@ describe("bassNotes（ベースの音の並び）", () => {
     return { chord: c, pcs: resolveChord(c.degree, c.type, 0, "A", p.base_scale, 2).notes.map(n => noteToMidi(n) % 12) };
   };
 
-  it.each(GENRES)("%s：音はコードのルート・5度で、小節からはみ出さず重ならない", genre => {
+  it.each(GENRES)("%s：音はコードの構成音（ブギウギの6度も）で、小節からはみ出さず重ならない", genre => {
     song(4, { genre });
     const p = songProgression()!;
     const notes = bassNotes(p, "A");
@@ -136,7 +136,9 @@ describe("bassNotes（ベースの音の並び）", () => {
       expect(prevEnd).toBeLessThanOrEqual((bar + 1) * 16);
       const { chord, pcs } = tones(p, bar);
       const pc = noteToMidi(n.note) % 12;
-      expect(pcs, `${genre} ${n.sixteenth} ${n.note} ${chord.degree}`).toContain(pc);
+      // ブギウギの 6・7（ルートの長6度・短7度）は、三和音のコードでは構成音ではない
+      const allowed = [...pcs, (pcs[0] + 9) % 12, (pcs[0] + 10) % 12];
+      expect(allowed, `${genre} ${n.sixteenth} ${n.note} ${chord.degree}`).toContain(pc);
     }
     expect(prevEnd).toBeLessThanOrEqual(32 * 16);
   });
@@ -146,11 +148,25 @@ describe("bassNotes（ベースの音の並び）", () => {
     const param = (bassParams as Record<string, { patterns: string[]; fill: string }>)[genre];
     const notes = bassNotes(songProgression()!, "A");
     const onsets = (bar: number) => notes.filter(n => Math.floor(n.sixteenth / 16) === bar).map(n => n.sixteenth % 16);
-    const expected = (pattern: string) => [...pattern].flatMap((ch, i) => "RFO".includes(ch) ? [i] : []);
+    const expected = (pattern: string) => [...pattern].flatMap((ch, i) => "RFO367".includes(ch) ? [i] : []);
     for (let bar = 0; bar < 32; bar++) {
       const pattern = bar % 4 === 3 ? param.fill : param.patterns[bar % param.patterns.length];
       expect(onsets(bar), `${genre} 小節 ${bar}`).toEqual(expected(pattern));
     }
+  });
+
+  it("シャッフル：ブギウギ（R-3-5-6-♭7-6-5-3）を3連符の「タッカ」で、コードの3度・7度に合わせて鳴らす", () => {
+    setState({ genre: "シャッフル", meter: "4/4t" });
+    const p = chords.find(c => c.id === "chord_105")!;  // Im7-IVm7-Im7-V7（マイナーブルース）
+    const notes = bassNotes(p, "A");
+    const bar = (b: number) => notes.filter(n => Math.floor(n.sixteenth / 12) === b);
+    const rel = (b: number) => bar(b).map(n => noteToMidi(n.note) - noteToMidi(bar(b)[0].note));
+    // 拍ごとに3連符の1つ目（長い）と3つ目（短い）
+    expect(bar(0).map(n => n.sixteenth)).toEqual([0, 2, 3, 5, 6, 8, 9, 11]);
+    expect(bar(0).map(n => n.length)).toEqual([2, 1, 2, 1, 2, 1, 2, 1]);
+    expect(rel(0)).toEqual([0, 3, 7, 9, 10, 9, 7, 3]);   // Im7：短3度
+    expect(rel(1)).toEqual([0, 3, 7, 9, 10, 9, 7, 3]);   // IVm7
+    expect(rel(3)).toEqual([0, 4, 7, 9, 12, 10, 9, 7]);  // 最後の小節（V7）は fill：長3度・オクターブまで上がって下りる
   });
 
   it("エンディングの小節はルートの全音符1つ", () => {
