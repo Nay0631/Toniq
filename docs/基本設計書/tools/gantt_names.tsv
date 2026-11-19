@@ -1,0 +1,95 @@
+機能ID	仕様書の機能名	ガントチャートでの別名（;区切り）	英名
+B01-1	BPM選択		BpmSelection
+B01-2	テンポ選択		TempoSelection
+B01-3	BPMクリック選択		TapTempo
+B01-4	BPM試聴		BpmPreview
+B01-5	小節数選択		BarCountSelection
+B01-6	ジャンル選択		GenreSelection
+B01-7	ジャンル試聴		GenrePreview
+B01-8	リード選択		LeadSelection
+B01-9	グルーヴ調整		GrooveAdjustment
+B01-10	lidless音作り	Toniqシンセ音作り	LidlessSoundDesign
+B01-11	拍子選択		MeterSelection
+K01-1	キー音選択		KeySelection
+K01-2	スケール選択		ScaleSelection
+K01-3	キー・スケール試聴		KeyScalePreview
+C01-1	コード進行カテゴリ選択		ProgressionCategorySelection
+C01-2	雰囲気選択		MoodSelection
+C01-3	コード進行選択		ProgressionSelection
+C01-4	コード進行リズム選択		ChordRhythmSelection
+C01-5	コード進行試聴		ProgressionPreview
+C01-6	コード音色選択		ChordSoundSelection
+C01-7	サビ進行選択		ChorusProgressionSelection
+C01-8	転調選択		ModulationSelection
+D01-1	ドラムカテゴリ選択		DrumCategorySelection
+D01-2	ドラムパターン選択		DrumPatternSelection
+D01-3	ドラム試聴		DrumPreview
+D01-4	ドラムパターン入力		DrumPatternInput
+S01-1	特殊音選択		ExtraPartSelection
+P01-1	メロディ入力		MelodyInput
+P01-2	スケールロック		ScaleLock
+P01-3	ノーツ選択		NoteSelection
+A01-1	パート配置		PartArrangement
+A01-2	パート別音量調節		PartVolumeControl
+A01-3	MIDIエクスポート		MidiExport
+A01-4	MP3エクスポート		Mp3Export
+A01-5	WAVエクスポート		WavExport
+A01-6	再生開始位置選択		PlayStartSelection
+A01-7	セクション切替		SectionSwitch
+A01-10	構成選択		StructureSelection
+A01-11	ソロ切替		SoloToggle
+L01-1	楽曲再生		SongPlayback
+Q01-1	音楽クイズ		MusicQuiz
+G01-1	楽曲生成		SongGeneration
+M01-1	楽曲保存		SongSave
+M01-2	新規作成		NewSong
+M01-3	楽曲検索		SongSearch
+M01-4	楽曲を開く	楽曲読み込み	SongOpen
+M01-5	楽曲情報変更		SongInfoEdit
+M01-6	楽曲削除		SongDelete
+M01-7	曲ファイル書き出し		SongFileExport
+M01-8	曲ファイル読み込み		SongFileImport
+M01-11	出力フォルダを開く		OpenOutputFolder
+H01-1	元に戻す・やり直す	リバース	UndoRedo
+U01-1	配色選択		ThemeSelection
+U01-2	スキン選択		SkinSelection
+U01-3	音名表記選択		NoteNameSelection
+U01-4	ループ再生切替		LoopPlaybackToggle
+U01-5	ドラム音源選択		DrumSourceSelection
+U01-6	用語ツールチップ切替		TooltipToggle
+-	（仕様書から外した機能）	自動チェック	QualityCheck
+-	（仕様書から外した機能）	Toniqシンセ切替	LidlessToggle
+T01	コード進行マスタ	chord_progressions	chord_progressions
+T02	ドラムパターンマスタ	drum_patterns	drum_patterns
+T03	シンプルモード表マスタ	easy_mode_table	easy_mode_table
+T04	テンポマスタ	tempo_presets	tempo_presets
+T05	メロディ設定マスタ	melody_params	melody_params
+T06	ミックス設定マスタ	mix_presets	mix_presets
+T07	ベース設定マスタ	bass_params	bass_params
+T08	アルペジオ設定マスタ	arp_params	arp_params
+T09	楽曲データ	toniq_songs	toniq_songs
+T10	端末の設定データ	toniq_theme	toniq_theme
+T11	lidless プリセット	lidless_presets	lidless_presets
+T12	ジャンルスケールマスタ	genre_scales	genre_scales
+T14	ジャンルマスタ	genres	genres
+T15	雰囲気マスタ	moods	moods
+T16	シンプルモード候補コード進行	simple_chord_candidates	simple_chord_candidates
+T17	シンプルモード候補ドラムパターン	simple_drum_candidates	simple_drum_candidates
+T18	楽曲のパートの音色	song_part_sounds	song_part_sounds
+-	（仕様書のテーブルにない）	musicfile	musicfile
+-	（仕様書のテーブルにない）	AppState	AppState
+B01	曲の基本設定システム	楽曲基本設定システム	
+K01	キー・スケール設定システム	スケール・キーシステム	
+C01	コード進行設定システム	コード進行システム	
+D01	ドラム設定システム	ドラムシステム	
+S01	特殊音設定システム		
+P01	メロディ編集システム	ピアノロールシステム	
+A01	アレンジ・書き出しシステム	アレンジシステム	
+L01	楽曲再生システム	ミュージックリストシステム	
+Q01	音楽クイズシステム		
+G01	自動作曲システム	楽曲生成システム	
+M01	楽曲管理システム	曲の管理システム	
+H01	操作履歴システム	履歴システム	
+U01	環境設定システム	設定システム	
+RESULT-006	シンプルモード生成後	シンプルモード生成完了	
+-	（仕様書から外した画面。007 は欠番）	カスタムモード生成完了	
