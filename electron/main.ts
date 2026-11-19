@@ -72,6 +72,47 @@ function registerFileHandlers(): void {
   // 出力フォルダを開く（kind を省略すると output フォルダそのもの）
   ipcMain.handle("toniq:open-output", (_e, kind?: OutputKind) =>
     shell.openPath(kind ? outputDir(kind) : outputRoot));
+
+  // 書き出したファイル（output/audio の WAV・MP3、output/midi の MIDI）の一覧（ミュージックリストの「書き出したファイル」）
+  ipcMain.handle("toniq:list-output-files", () => {
+    const files: { kind: OutputKind; name: string; path: string; size: number; mtime: number }[] = [];
+    for (const kind of LISTED_KINDS) {
+      const dir = outputDir(kind);
+      for (const name of fs.readdirSync(dir)) {
+        if (!LISTED_EXTS.includes(path.extname(name).toLowerCase())) continue;
+        const file = path.join(dir, name);
+        try {
+          const stat = fs.statSync(file);
+          if (stat.isFile()) files.push({ kind, name, path: file, size: stat.size, mtime: stat.mtimeMs });
+        } catch { /* 読めないファイルは出さない */ }
+      }
+    }
+    return files;
+  });
+
+  // 書き出したファイルの中身（画面で再生する）。出力フォルダの外のファイルは読まない
+  ipcMain.handle("toniq:read-output-file", (_e, file: string) => {
+    if (!isListedOutput(file)) throw new Error("出力フォルダのファイルではありません");
+    return new Uint8Array(fs.readFileSync(file));
+  });
+
+  // 書き出したファイルをごみ箱へ移す（消さずにごみ箱へ入れるので、元に戻せる）。出力フォルダの外のファイルは触らない
+  ipcMain.handle("toniq:trash-output-file", async (_e, file: string) => {
+    if (!isListedOutput(file)) throw new Error("出力フォルダのファイルではありません");
+    await shell.trashItem(file);
+  });
+}
+
+// 一覧に出す出力フォルダの種類と拡張子
+const LISTED_KINDS: OutputKind[] = ["audio", "midi"];
+const LISTED_EXTS = [".wav", ".mp3", ".mid", ".midi"];
+
+// output/audio・output/midi の直下にある、一覧に出す拡張子のファイルか（画面から渡されたパスを確かめる）
+function isListedOutput(file: unknown): file is string {
+  if (typeof file !== "string") return false;
+  const resolved = path.resolve(file);
+  if (!LISTED_EXTS.includes(path.extname(resolved).toLowerCase())) return false;
+  return LISTED_KINDS.some(kind => path.dirname(resolved) === path.resolve(outputDir(kind)));
 }
 
 // ウィンドウのアイコン。ビルド後は dist/（public の中身がコピーされる）、開発時は public/ にある

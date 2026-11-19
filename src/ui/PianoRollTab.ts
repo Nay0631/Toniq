@@ -212,7 +212,7 @@ function buildSkeleton(root: HTMLElement): void {
         <div class="pr-ticks" title="クリックで鍵盤入力の位置を指定"></div>
       </div>
       <div class="pr-main">
-        <div class="pr-keys"></div>
+        <div class="pr-keys pr-piano"></div>
         <div class="pr-grid"></div>
       </div>
     </div>
@@ -311,7 +311,7 @@ export function renderPianoRoll(): void {
       scale.has(pc) ? "" : "is-out",
       pc === tonic ? "is-tonic" : "",
     ].join(" ");
-    keys.push(`<div class="pr-key ${cls}" data-midi="${midi}">${displayNote(midiToNote(midi))}</div>`);
+    keys.push(pianoKey(midi, cls));
     rows.push(`<div class="pr-row ${cls}"></div>`);
   }
   q(root, ".pr-keys").innerHTML = keys.join("");
@@ -343,6 +343,29 @@ export function renderPianoRoll(): void {
   renderPlayhead();
   // ほかの画面で始めた再生でも、表示したら再生位置の線を動かす
   if (Playback.isPlaying()) startPianoRollPlayhead();
+}
+
+// ピアノの鍵盤の形の1鍵（位置・高さは行の数。行の高さ --row-h を掛けて置く）。
+// 黒鍵は自分の行だけ、白鍵は隣の黒鍵の行の半分まで伸ばして、黒鍵の下に潜らせる（C・E・F・B は 1.5 行、D・G・A は 2 行）
+function pianoKey(midi: number, cls: string): string {
+  const row   = HIGH - midi;
+  const black = BLACK_KEYS.has(midi % 12);
+  const top    = black ? row : Math.max(0, row - (BLACK_KEYS.has((midi + 1) % 12) ? 0.5 : 0));
+  const bottom = black ? row + 1 : Math.min(ROWS, row + 1 + (BLACK_KEYS.has((midi - 1) % 12) ? 0.5 : 0));
+  const name  = displayNote(midiToNote(midi));
+  // 白鍵の名前は自分の行の高さに出す（C はオクターブ付き、ほかは音名だけ）。黒鍵は名前を出さず、カーソルを乗せたときに出す
+  const label = black ? "" :
+    `<span class="pk-label" style="top:calc(${row - top} * var(--row-h))">${midi % 12 === 0 ? name : displayNote(midiToNote(midi).replace(/-?\d+$/, ""))}</span>`;
+  return `<div class="pk ${black ? "pk-black" : "pk-white"}${midi % 12 === 0 ? " is-c" : ""} ${cls}" data-midi="${midi}" title="${name}"
+              style="top:calc(${top} * var(--row-h));height:calc(${bottom - top} * var(--row-h))">${label}</div>`;
+}
+
+// 鍵盤を押したように少しだけ光らせる（クリック・タイピングピアノの入力）
+function flashKey(midi: number): void {
+  const key = currentRoot()?.querySelector<HTMLElement>(`.pk[data-midi="${midi}"]`);
+  if (!key) return;
+  key.classList.add("is-pressed");
+  window.setTimeout(() => key.classList.remove("is-pressed"), 180);
 }
 
 function scrollToOctave(root: HTMLElement): void {
@@ -409,6 +432,7 @@ function inputKey(midi: number): void {
   selected = note.start;
   cursor   = (note.start + note.units) % total;
   writeNotes(placeNote(readNotes(), note));
+  flashKey(midi);
   void previewMelodyNote(midiToNote(midi));
 }
 
@@ -595,8 +619,10 @@ export function initPianoRoll(): void {
 
     // 鍵盤をクリック：その音を試聴する
     q(rootEl, ".pr-keys").addEventListener("pointerdown", e => {
-      const key = (e.target as HTMLElement).closest<HTMLElement>(".pr-key");
-      if (key) void previewMelodyNote(midiToNote(Number(key.dataset.midi)));
+      const key = (e.target as HTMLElement).closest<HTMLElement>(".pk");
+      if (!key) return;
+      flashKey(Number(key.dataset.midi));
+      void previewMelodyNote(midiToNote(Number(key.dataset.midi)));
     });
 
     const grid = q(rootEl, ".pr-grid");

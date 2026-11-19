@@ -12,6 +12,7 @@ export const TERMS: Record<string, Term> = {
   bpm:         { title: "BPM", desc: "1分間に刻む拍の数で、曲の速さを表します。数字が大きいほど速い曲になります（120 なら1秒に2拍）。" },
   tempo:       { title: "テンポ", desc: "曲の速さのことです。Toniq では BPM の数字で表します。" },
   tap:         { title: "タップテンポ", desc: "ボタンを曲のリズムに合わせて何回か押すと、その速さを BPM にします。" },
+  metronome:   { title: "メトロノーム", desc: "「カッ・カッ・カッ」と一定の間隔で鳴る音で、曲の速さ（テンポ）を耳で確かめられます。音と音の間が短いほど速い曲になります。1小節の頭（1拍目）だけ高い音で鳴ります。" },
   meter:       { title: "拍子", desc: "1小節に何拍あるかを表します。4/4 拍子は「1・2・3・4」と4拍で1小節で、ポップスやダンス音楽のほとんどがこれです。" },
   "meter.4/4":  { title: "4/4", desc: "4拍で1小節。いちばんよく使われる拍子で、パターンはこの拍子に合わせて作ってあります。" },
   "meter.3/4":  { title: "3/4", desc: "3拍で1小節。ワルツの「ズン・チャッ・チャッ」の拍子です。ドラムやベースのパターンは頭の3拍を使って鳴らします。" },
@@ -229,7 +230,10 @@ let tip: HTMLElement | null = null;
 let current: HTMLElement | null = null;
 let showTimer: ReturnType<typeof setTimeout> | null = null;
 
+// data-tip（説明）と data-tip-title（見出し）を付けた要素は、TERMS の代わりにその文を出す
+// （コード名など、曲ごとに中身が変わる説明。シンプルモードのコード進行・キー）
 function termOf(el: HTMLElement): Term | undefined {
+  if (el.dataset.tip) return { title: el.dataset.tipTitle ?? "", desc: el.dataset.tip };
   return TERMS[el.dataset.term ?? ""];
 }
 
@@ -293,7 +297,7 @@ function schedule(el: HTMLElement): void {
 }
 
 const termTarget = (target: EventTarget | null): HTMLElement | null =>
-  target instanceof Element ? target.closest<HTMLElement>("[data-term]") : null;
+  target instanceof Element ? target.closest<HTMLElement>("[data-term], [data-tip]") : null;
 
 export function initGlossary(): void {
   setState({ tooltips: loadTooltips() });

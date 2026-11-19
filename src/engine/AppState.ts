@@ -38,6 +38,10 @@ export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
 // ミュージックリストの並び順
 export type MusicListSort = "newest" | "oldest" | "name";
 
+// ミュージックリストの表示（songs = 保存した曲、files = 書き出したファイル）と、書き出したファイルの種類の絞り込み（"" = すべて）
+export type MusicListView = "songs" | "files";
+export type MusicListFileType = "" | "wav" | "mp3" | "midi";
+
 // 音名の表記（CDE／ドレミ）。ピアノロール・ルート音・音楽クイズの単音に使う
 export type NoteNames = "cde" | "doremi";
 
@@ -116,6 +120,9 @@ export interface AppState {
   musicListGenre:     string;
   musicListFavorites: boolean;
   musicListSort:      MusicListSort;
+  // 保存した曲／書き出したファイル（WAV・MP3・MIDI）のどちらを見ているかと、ファイルの種類の絞り込み。並び順は曲と共通
+  musicListView:      MusicListView;
+  musicListFileType:  MusicListFileType;
 
   // 音楽クイズで選んでいる出題モード（QuizModes.ts の id）
   quizMode:      string;
@@ -248,6 +255,8 @@ export const defaultState: AppState = {
   musicListGenre:     "",
   musicListFavorites: false,
   musicListSort:      "newest",
+  musicListView:      "songs",
+  musicListFileType:  "",
 
   quizMode:      "doremi_cde",
   noteNames:     "doremi",

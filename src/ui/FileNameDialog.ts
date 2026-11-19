@@ -1,8 +1,10 @@
 import { getState } from "../engine/AppState";
 import { findSong } from "../engine/SongLibrary";
 
-// 書き出すファイルの名前を決めるダイアログ（WAV / MP3 / MIDI。シンプルモード・カスタムモード共通）。
-// Electron では prompt() が使えないので自前で出す。拡張子は固定で、名前の部分だけ入力してもらう
+// 書き出すファイルの名前を決めるダイアログ（WAV / MP3 / MIDI。シンプルモード・カスタムモード・ミュージックリスト共通）。
+// Electron では prompt() が使えないので自前で出す。拡張子は固定で、名前の部分だけ入力してもらう。
+// 書き出したファイルは Toniq で編集し直せないことを、書き出す前にここで知らせる（note）。
+// 保存していない曲なら「ミュージックリストにも保存する」のチェックを出す（saveOption。初めから ON）
 
 let dialog: HTMLElement | null = null;
 
@@ -19,6 +21,11 @@ function ensureDialog(): HTMLElement {
         <span class="filename-ext" data-fn-ext></span>
       </label>
       <p class="filename-error" data-fn-error hidden></p>
+      <div class="filename-note" data-fn-note hidden></div>
+      <label class="filename-save" data-fn-save-row hidden>
+        <input type="checkbox" data-fn-save />
+        <span>ミュージックリストにも保存する<small>あとで続きを編集できます</small></span>
+      </label>
       <div class="filename-actions">
         <button type="button" class="btn" data-fn-cancel>キャンセル</button>
         <button type="submit" class="btn btn-custom">書き出す</button>
@@ -30,7 +37,7 @@ function ensureDialog(): HTMLElement {
 
 // ファイル名に使えない文字を置き換え、前後の空白・末尾のピリオドを取る
 export function sanitizeFileName(name: string): string {
-  return name.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "_").trim().replace(/[. ]+$/, "");
+  return name.replace(/[\/:*?"<>|\u0000-\u001f]/g, "_").trim().replace(/[. ]+$/, "");
 }
 
 // 書き出すファイル名の初期値：ミュージックリストの曲なら曲名、未保存ならジャンル・雰囲気（カスタムモードはキー）
@@ -41,23 +48,46 @@ export function defaultExportName(): string {
   return `toniq_${s.genre}_${s.mode === "custom" ? s.key : s.mood}`;
 }
 
-// ファイル名を聞く。決めたら拡張子付きの名前、キャンセルなら null
-export function askFileName(title: string, ext: string, initial = defaultExportName()): Promise<string | null> {
+export interface ExportFileOptions {
+  note?:       string;   // 名前の欄の下に出す注意書き（改行で段落を分ける）
+  saveOption?: boolean;  // 「ミュージックリストにも保存する」のチェックを出す
+}
+
+export interface ExportFileChoice {
+  filename:   string;   // 拡張子付きの名前
+  saveToList: boolean;  // ミュージックリストにも保存する（チェックを出さなかったときは false）
+}
+
+// ファイル名を聞く。決めたら拡張子付きの名前と保存するかどうか、キャンセルなら null
+export function askExportFile(
+  title: string, ext: string, options: ExportFileOptions = {}, initial = defaultExportName(),
+): Promise<ExportFileChoice | null> {
   const el    = ensureDialog();
   const form  = el.querySelector<HTMLFormElement>("form")!;
   const input = el.querySelector<HTMLInputElement>("[data-fn-input]")!;
   const error = el.querySelector<HTMLElement>("[data-fn-error]")!;
+  const note  = el.querySelector<HTMLElement>("[data-fn-note]")!;
+  const saveRow = el.querySelector<HTMLElement>("[data-fn-save-row]")!;
+  const save    = el.querySelector<HTMLInputElement>("[data-fn-save]")!;
   const cancelBtn = el.querySelector<HTMLButtonElement>("[data-fn-cancel]")!;
   el.querySelector<HTMLElement>("[data-fn-title]")!.textContent = title;
   el.querySelector<HTMLElement>("[data-fn-ext]")!.textContent = `.${ext}`;
   input.value = initial;
   error.hidden = true;
+  note.replaceChildren(...(options.note ?? "").split("\n").filter(Boolean).map(line => {
+    const p = document.createElement("p");
+    p.textContent = line;
+    return p;
+  }));
+  note.hidden = !options.note;
+  saveRow.hidden = !options.saveOption;
+  save.checked = !!options.saveOption;
   el.hidden = false;
   input.focus();
   input.select();
 
   return new Promise(resolve => {
-    const finish = (result: string | null) => {
+    const finish = (result: ExportFileChoice | null) => {
       el.hidden = true;
       form.removeEventListener("submit", onSubmit);
       cancelBtn.removeEventListener("click", onCancel);
@@ -77,7 +107,7 @@ export function askFileName(title: string, ext: string, initial = defaultExportN
         input.focus();
         return;
       }
-      finish(`${name}.${ext}`);
+      finish({ filename: `${name}.${ext}`, saveToList: !!options.saveOption && save.checked });
     };
     const onCancel = () => finish(null);
     const onKey = (e: KeyboardEvent) => {

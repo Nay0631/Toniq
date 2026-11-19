@@ -128,15 +128,19 @@
           <span class="info-item"><span data-term="bpm">BPM</span> <b id="s-info-bpm"></b></span>
           <span class="info-item">ジャンル <b id="s-info-genre"></b></span>
           <span class="info-item">雰囲気 <b id="s-info-mood"></b></span>
-          <span class="info-item" id="s-info-song"></span>
+          <!-- キーとスケール（用語の説明付き。SimpleScreen.ts が中身を作る）と曲の長さ -->
+          <span class="info-item" id="s-info-key"><span data-term="key">キー</span> <b id="s-info-key-value"></b></span>
+          <span class="info-item" id="s-info-bars">長さ <b id="s-info-bars-value"></b></span>
         </div>
         <div class="infobar-actions" id="s-transport">
           <button class="btn btn-square" data-undo aria-label="元に戻す" title="元に戻す（Ctrl+Z）">↶</button>
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
           <button class="btn" data-new-song>＋ 新規作成</button>
-          <button class="btn" data-save-song>♪ 保存</button>
-          <button class="btn btn-square" id="s-stop" aria-label="停止"><span class="icon-stop"></span></button>
-          <button class="btn btn-play" id="s-play">▷ 再生</button>
+          <!-- 再生ボタンは設定タブでは「生成された楽曲」の上に出し、ここにはピアノロールタブのときだけ出す -->
+          <span class="infobar-transport" id="s-bar-transport">
+            <button class="btn btn-square" data-simple-stop aria-label="停止"><span class="icon-stop"></span></button>
+            <button class="btn btn-play" data-simple-play>▷ 再生</button>
+          </span>
         </div>
       </div>
 
@@ -189,7 +193,7 @@
               <button class="chip" data-tempo="速い">速い</button>
               <button class="chip" id="s-tap" data-term="tap">☝ タップで調整</button>
               <span class="bpm-value" id="s-bpm"></span>
-              <button class="chip metronome-btn" id="s-metronome" title="今の BPM の速さでクリック音を鳴らします（1拍目は高い音）">♪ クリックで試聴</button>
+              <button class="chip metronome-btn" id="s-metronome" data-term="metronome">♪ メトロノームで速さを聴く</button>
             </div>
           </div>
 
@@ -222,10 +226,18 @@
           <button class="link-btn" id="s-edit-settings">‹ 設定を変更</button>
 
           <div class="card wave-card">
-            <div class="wave-title">生成された楽曲</div>
-            <div class="wave-area">
+            <!-- 再生の操作は曲の表示のすぐ上に置く（情報バーの右端だと見つけにくいため） -->
+            <div class="wave-head">
+              <button class="btn btn-play wave-play" data-simple-play>▷ 再生</button>
+              <button class="btn btn-square" data-simple-stop aria-label="停止" title="停止"><span class="icon-stop"></span></button>
+              <span class="wave-time" id="s-time"></span>
+              <span class="wave-title">生成された楽曲 <span class="field-hint">波形をクリック・ドラッグすると、その位置から再生します</span></span>
+            </div>
+            <div class="wave-area" id="s-wave-area" role="slider" tabindex="0" aria-label="再生位置"
+              aria-valuemin="0" title="クリック・ドラッグでその位置から再生（← → で1小節ずつ）">
               <div class="wave" id="s-wave"></div>
               <div class="playhead" id="s-playhead" hidden></div>
+              <div class="wave-seek" id="s-seek" hidden><span class="wave-seek-label" id="s-seek-label"></span></div>
             </div>
             <div class="wave-ticks" id="s-ticks"></div>
           </div>
@@ -251,12 +263,19 @@
 
           <hr class="divider">
 
+          <!-- 保存・書き出し：ミュージックリストへの保存（続きを編集できる）と、ファイルへの書き出し（編集し直せない）を並べる -->
+          <div class="field-label">保存・書き出し</div>
+          <div class="result-exports">
+            <button class="btn btn-save" data-save-song>♪ 保存</button>
+            <button class="btn" id="s-export-midi" data-term="midi">MIDIで書き出す</button>
+            <button class="btn" id="s-export-wav" data-term="wav">WAVで書き出す</button>
+            <button class="btn" id="s-export-mp3" data-term="mp3">MP3で書き出す</button>
+          </div>
+          <p class="hint hint-left result-save-hint">「♪ 保存」はミュージックリストに残し、あとで続きを編集できます。WAV・MP3・MIDI はほかのアプリで使うためのファイルで、Toniq で編集し直すことはできません。</p>
+
+          <hr class="divider">
+
           <div class="result-actions">
-            <div class="result-exports">
-              <button class="btn" id="s-export-midi" data-term="midi">MIDIで書き出す</button>
-              <button class="btn" id="s-export-wav" data-term="wav">WAVで書き出す</button>
-              <button class="btn" id="s-export-mp3" data-term="mp3">MP3で書き出す</button>
-            </div>
             <button class="btn" id="s-regenerate">✦ 別の曲を生成する</button>
             <button class="btn btn-custom" data-goto="custom">☰ カスタムモードで編集する</button>
           </div>
@@ -317,7 +336,7 @@
                 <div class="bpm-readout">
                   <span class="lcd bpm-number" id="c-bpm-value"></span>
                   <button class="btn btn-small" id="c-tap" data-term="tap">タップ</button>
-                  <button class="btn btn-small metronome-btn" id="c-metronome" title="今の BPM の速さでクリック音を鳴らします（1拍目は高い音）">♪ 試聴</button>
+                  <button class="btn btn-small metronome-btn" id="c-metronome" data-term="metronome">♪ メトロノーム</button>
                 </div>
               </div>
             </div>
@@ -679,6 +698,19 @@
     <!-- ミュージックリスト画面 -->
     <section class="screen" data-screen="musiclist" hidden>
       <div class="musiclist">
+        <!-- 表示の切り替え：保存した曲（Toniq で続きを編集できる）／書き出したファイル（WAV・MP3・MIDI） -->
+        <div class="ml-views" role="tablist" aria-label="表示">
+          <button class="ml-view" role="tab" data-ml-view="songs">
+            <span class="ml-view-title">保存した曲</span>
+            <span class="ml-view-desc">Toniq で続きを編集できます</span>
+          </button>
+          <button class="ml-view" role="tab" data-ml-view="files">
+            <span class="ml-view-title">書き出したファイル</span>
+            <span class="ml-view-desc">WAV・MP3・MIDI を聴く・探す</span>
+          </button>
+        </div>
+
+        <div id="ml-songs-view">
         <!-- 曲ファイルの操作（絞り込みとは役割が違うので分けて置く） -->
         <div class="ml-files" role="group" aria-label="曲ファイル">
           <span class="ml-files-label">曲ファイル</span>
@@ -734,6 +766,39 @@
         </div>
 
         <ul class="song-list" id="ml-list"></ul>
+        </div>
+
+        <!-- 書き出したファイル（output/audio・output/midi。OutputFileList.ts） -->
+        <div id="ml-files-view" hidden>
+          <div class="musiclist-toolbar">
+            <div class="chips ml-types" role="group" aria-label="ファイルの種類">
+              <button class="chip" data-ml-type="">すべて</button>
+              <button class="chip" data-ml-type="wav" data-term="wav">WAV</button>
+              <button class="chip" data-ml-type="mp3" data-term="mp3">MP3</button>
+              <button class="chip" data-ml-type="midi" data-term="midi">MIDI</button>
+            </div>
+            <span class="ml-toolbar-gap"></span>
+            <select class="select ml-sort" id="ml-file-sort" aria-label="並び順" title="並び順">
+              <option value="newest">新しい順</option>
+              <option value="oldest">古い順</option>
+              <option value="name">名前順</option>
+            </select>
+            <button class="btn ml-tool" id="ml-file-refresh" title="出力フォルダを読み直して、一覧を新しくします">↻ 更新</button>
+            <button class="btn ml-tool" id="ml-file-folder" title="書き出したファイルを保存している output フォルダを開きます">出力フォルダ</button>
+          </div>
+          <p class="ml-files-hint">シンプルモード・カスタムモードや、保存した曲の ⋮ メニューで書き出したファイルです。WAV・MP3 はここで聴けます。MIDI は DAW などの作曲ソフトで開いて使います。</p>
+
+          <p class="ml-no-match" id="ml-file-no-match" hidden>この種類のファイルはありません</p>
+          <div class="musiclist-empty" id="ml-file-empty" hidden>
+            <p>まだ書き出したファイルはありません</p>
+            <p class="musiclist-empty-sub">曲を「WAVで書き出す」「MP3で書き出す」「MIDIで書き出す」で書き出すと、ここに並びます。</p>
+          </div>
+          <div class="musiclist-empty" id="ml-file-browser" hidden>
+            <p>ブラウザで開いているときは、書き出したファイルはダウンロードフォルダに保存されるため、ここには表示されません。</p>
+          </div>
+
+          <ul class="song-list" id="ml-file-list"></ul>
+        </div>
       </div>
     </section>
 
@@ -898,6 +963,8 @@
               <li>雰囲気を選ぶと、その雰囲気に合うジャンルだけが並びます。今のジャンルが合わないときは、合うジャンルの先頭に切り替わります。</li>
               <li>生成した曲の「レイヤー差し替え」の「↻ 再抽選」は、押したパート（メロディ・コード・ドラム）だけを選び直します（Aメロ・サビの両方が変わります）。「✦ 別の曲を生成する」は全部を選び直して新しい曲にします（ピアノロールで入力したメロディ・作ったドラムは残ります）。</li>
               <li>生成した曲では、どのタブでもスペースキーで再生／停止できます。</li>
+              <li>「生成された楽曲」の波形をクリック（ドラッグ）すると、その小節から再生します。波形を選んで <kbd>←</kbd> <kbd>→</kbd> で1小節ずつ、<kbd>Home</kbd> で先頭から鳴らせます。</li>
+              <li>情報バーのキー（「A ナチュラルマイナー」など）と、コードのカードのコード名（「Am」「F」など）にカーソルを乗せると、それが何を表すかの説明が出ます。</li>
               <li>曲はジャンルに合うスケールのコード進行から作られます（スケールを自分で選ぶときはカスタムモードを使います）。</li>
             </ul>
           </details>
@@ -953,7 +1020,7 @@
             <summary>テンポ（BPM）の決め方</summary>
             <ul>
               <li>「タップ」ボタンを曲の拍に合わせて何回か押すと、その速さが BPM になります。</li>
-              <li>「♪ 試聴」でクリック音を鳴らしたまま BPM を変えると、すぐ速さが変わります。</li>
+              <li>「♪ メトロノームで速さを聴く」（カスタムモードは「♪ メトロノーム」）で「カッ・カッ」という拍の音を鳴らしたまま BPM を変えると、すぐ速さが変わります。</li>
             </ul>
           </details>
 
@@ -971,7 +1038,10 @@
             <ul>
               <li><b>♪ 保存</b>：アプリの中のミュージックリストに保存します。リストから開いた曲は上書き保存になります。</li>
               <li>保存した曲の続きを編集するには、ミュージックリストで曲の「編集」ボタンを押します（曲名のダブルクリックでも開けます）。</li>
-              <li><b>WAV / MP3 / MIDI</b>：できた曲を音声・MIDI のファイルにします。保存先は「出力フォルダ」ボタンで開けます。</li>
+              <li><b>WAV / MP3 / MIDI</b>：できた曲を音声・MIDI のファイルにします。書き出したファイルは Toniq で編集し直せないので、続きを編集したいときは「♪ 保存」もしておきます（書き出すときの「ミュージックリストにも保存する」でも保存できます）。保存先は「出力フォルダ」ボタンで開けます。</li>
+              <li>WAV・MP3 の書き出しは、進み具合の画面の「中断する」（<kbd>Esc</kbd>）でやめられます。</li>
+              <li>ミュージックリストの「書き出したファイル」で、書き出した WAV・MP3・MIDI を種類ごとに探せます。WAV・MP3 はその場で聴けます。保存した曲の ⋮ メニューからも WAV・MP3・MIDI で書き出せます。</li>
+              <li>「＋ 新規作成」を押すと、今の曲の編集内容が消えることを確かめる画面が出ます。保存していない変更があるときは「保存してから新規作成」も選べます。</li>
               <li>ミュージックリストの「すべて書き出す」「ファイルを読み込む」で、曲をまとめて移せます。読み込むとき、鳴らせない内容の曲は飛ばされ、範囲外の値（音量など）は使える値に直されます。</li>
             </ul>
           </details>
@@ -988,7 +1058,7 @@
           <details class="help-item">
             <summary>試聴できるもの</summary>
             <ul>
-              <li>シンプルモード：ジャンルの下の「▷ ○○ のサンプルを聴く」で、そのジャンルの雰囲気を確かめられます（今の曲は変わりません）。</li>
+              <li>シンプルモード：ジャンルの下の「▷ ○○ のサンプルを聴く」で、そのジャンルの雰囲気を 15 秒ほど確かめられます（今の曲は変わりません）。</li>
               <li>カスタムモード：「スケール・キー」の「▷ 試聴」でスケールの響き、「FX / SE」の「▷ 試聴」で効果音を確かめられます。コードの音色や lidless の音作りのプリセットを選び直すと、その音が1音鳴ります（曲の再生中は鳴らさず、鳴っている曲の音がすぐ変わります）。lidless のプリセットの一覧は、選んでいるプリセットをもう一度押すと聴き直せ、<kbd>←</kbd><kbd>→</kbd> で前後のプリセットへ送れます。</li>
               <li>カスタムモードの設定タブ・アレンジャータブでは、ピアノロールと同じキー（<kbd>Z</kbd>〜<kbd>/</kbd>・<kbd>Q</kbd>〜<kbd>]</kbd> の段が白鍵、その上の段が黒鍵）で、lidless の音作りの「対象」のパートの音色を試し弾きできます。押している間だけ鳴り、<kbd>↓</kbd> / <kbd>↑</kbd> でオクターブを変えられます（曲の再生中も鳴ります）。</li>
             </ul>

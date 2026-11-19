@@ -120,7 +120,7 @@ export function render(): void {
   syncControls();
   $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   const metronomeOn = isMetronomeOn();
-  $("c-metronome")!.textContent = metronomeOn ? "■ 停止" : "♪ 試聴";
+  $("c-metronome")!.textContent = metronomeOn ? "■ 停止" : "♪ メトロノーム";
   $("c-metronome")!.classList.toggle("is-active", metronomeOn);
 
   // 小節数：選択肢にない値（シンプルモードから引き継いだ値など）も表示できるようにする

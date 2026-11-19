@@ -72,6 +72,11 @@
   --key-white-hover: #f3f3ef;
   --key-border:      #cfcfca;
   --key-label:       #9a9a94;
+  /* ピアノロールの鍵盤（黒鍵はどちらの配色でも同じ黒） */
+  --key-label-strong: #4a4a46;
+  --key-black:       #2a2a28;
+  --key-black-edge:  #121211;
+  --key-black-hover: #3c3c39;
 
   /* カスタムモードのパーツ（.hw）。ここの値はフラットスキン。ほかのスキンは下の [data-skin] で上書きする
      区切り線で仕切ったフラットなグレーの面、白いノブと細い色の弧、黒い帯 */
@@ -178,6 +183,10 @@
   --key-white-hover: #c9c9c5;
   --key-border:      #0f0f11;
   --key-label:       #6e6e69;
+  --key-label-strong: #2e2e2b;
+  --key-black:       #2a2a28;
+  --key-black-edge:  #121211;
+  --key-black-hover: #3c3c39;
 
   --hw-bg:         #2e2e30;
   --hw-bg-2:       #28282a;
@@ -621,13 +630,65 @@ button {
 
 .result-actions .btn { padding: 14px 18px; font-size: 15px; }
 
-/* 書き出し（MIDI / WAV / MP3）は1行に3つ並べる */
+/* 保存・書き出し（♪ 保存 / MIDI / WAV / MP3）は1行に4つ並べる。保存（あとで編集できる）は色を付けて目立たせる */
 .result-exports {
-  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
+
+.result-exports .btn { padding: 14px 18px; font-size: 15px; }
+.btn-save { background: var(--simple-soft); border-color: var(--simple-line); color: var(--simple-ink); font-weight: 700; }
+.btn-save:hover { border-color: var(--simple); }
+.result-save-hint { margin-top: 10px; }
+
+/* 「生成された楽曲」の上の再生の操作 */
+.wave-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 26px;  /* ドラッグ中の「○小節目」のラベルが見出しにかからないように空ける */
+}
+
+.wave-head .wave-title { margin: 0 0 0 auto; text-align: right; }
+.wave-time { font-size: 14px; color: var(--text-sub); font-variant-numeric: tabular-nums; }
+
+/* 情報バーの再生ボタン（ピアノロールタブのときだけ出す） */
+.infobar-transport { display: flex; gap: 8px; }
+.infobar-transport[hidden] { display: none; }
+
+/* 波形はクリック・ドラッグでその小節から再生する */
+.wave-area { cursor: pointer; touch-action: none; user-select: none; border-radius: 4px; }
+.wave-area:focus-visible { outline: 2px solid var(--simple); outline-offset: 6px; }
+
+.wave-seek {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--simple-strong);
+  pointer-events: none;
+}
+
+.wave-seek[hidden] { display: none; }
+
+.wave-seek-label {
+  position: absolute;
+  bottom: 100%;
+  left: 4px;
+  margin-bottom: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.wave-seek.is-right .wave-seek-label { left: auto; right: 4px; }
 
 .hint {
   margin: 14px 0 0;
@@ -2341,7 +2402,7 @@ button.mixer-value {
 .pianoroll {
   --mode:      var(--custom);
   --mode-soft: var(--custom-soft);
-  --keys-w:    56px;
+  --keys-w:    68px;
   --row-h:     22px;
   --ruler-h:   42px;
   --note:      var(--note-color);
@@ -2493,6 +2554,68 @@ button.mixer-value {
 .pr-key.is-out   { color: var(--text-faint); font-weight: 400; }
 .pr-key.is-tonic { color: var(--simple); }
 .pr-key:hover    { background: var(--mode-soft); }
+
+/* メロディの鍵盤：ピアノの形（白鍵は黒鍵の下に潜らせ、黒鍵は左から短く重ねる。位置・高さは PianoRollTab.ts の pianoKey） */
+.pr-piano { background: var(--key-border); }
+
+.pk {
+  position: absolute;
+  left: 0;
+  cursor: pointer;
+}
+
+.pk-white {
+  right: 0;
+  z-index: 1;
+  background: linear-gradient(to right, var(--key-white-hover), var(--key-white) 18%);
+  border-bottom: 1px solid var(--key-border);
+  border-radius: 0 3px 3px 0;
+  box-shadow: inset -2px 0 0 rgb(0 0 0 / 0.04);
+}
+
+.pk-black {
+  z-index: 2;
+  width: 58%;
+  background: linear-gradient(to right, var(--key-black-edge), var(--key-black) 35%);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 1px 1px 2px rgb(0 0 0 / 0.35), inset -3px 0 0 rgb(255 255 255 / 0.06);
+}
+
+.pk-label {
+  position: absolute;
+  right: 6px;
+  font-size: 9px;
+  line-height: var(--row-h);
+  color: var(--key-label);
+  pointer-events: none;
+}
+
+/* C はオクターブ付きで太く */
+.pk.is-c .pk-label { font-weight: 700; color: var(--key-label-strong); }
+.pk-white.is-out .pk-label { opacity: 0.55; }
+.pk-white.is-tonic .pk-label { color: var(--simple); font-weight: 700; opacity: 1; }
+
+/* 主音の黒鍵は右端に印を付ける */
+.pk-black.is-tonic::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: var(--simple);
+}
+
+.pk-white:hover { background: var(--key-white-hover); }
+.pk-black:hover { background: var(--key-black-hover); }
+.pk-white.is-pressed { background: var(--mode-soft); }
+.pk-black.is-pressed { background: var(--mode); }
+
+/* スケールロック中はスケール外の鍵盤を沈ませる */
+.pianoroll.is-locked .pk.is-out { cursor: not-allowed; filter: brightness(0.82); }
+.pianoroll.is-locked .pk-black.is-out { filter: brightness(1.6) saturate(0.4); }
 
 /* 行の背景の上に、小節・拍・16分の線を重ねる */
 .pr-grid {
@@ -2677,7 +2800,7 @@ button.mixer-value {
 @media (max-width: 720px) {
   .pr-hint,
   .pr-status-keys { display: none; }
-  .pianoroll { --keys-w: 44px; }
+  .pianoroll { --keys-w: 52px; }
   .dr-pane { --keys-w: 92px; }
 }
 
@@ -2788,6 +2911,63 @@ button.mixer-value {
 }
 
 .musiclist-empty p { margin: 0 0 16px; }
+.musiclist-empty p:last-child { margin-bottom: 0; }
+.musiclist-empty .musiclist-empty-sub { font-size: 13px; }
+
+/* 保存した曲／書き出したファイルの切り替え（大きめのタブ） */
+.ml-views {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.ml-view {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+
+.ml-view:hover { border-color: var(--border-strong); }
+.ml-view.is-active { background: var(--list-soft); border-color: var(--list); }
+.ml-view-title { font-size: 15px; font-weight: 700; }
+.ml-view.is-active .ml-view-title { color: var(--list-ink); }
+.ml-view-desc { font-size: 12px; color: var(--text-muted); }
+
+/* 書き出したファイル（OutputFileList.ts） */
+.ml-types { gap: 8px; }
+.ml-types .chip { padding: 8px 14px; }
+.ml-types .chip:disabled { opacity: 0.45; cursor: default; }
+.ml-toolbar-gap { flex: 1; }
+.ml-files-hint { margin: -4px 0 14px; font-size: 12px; color: var(--text-muted); }
+
+.file-badge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.6;
+  background: var(--btn-soft);
+  color: var(--text-sub);
+}
+
+.file-badge-wav  { background: var(--simple-soft); color: var(--simple-ink); }
+.file-badge-mp3  { background: var(--list-soft);   color: var(--list-ink); }
+.file-badge-midi { background: var(--custom-soft); color: var(--custom-ink); }
+
+/* MIDI はここでは鳴らせないので、再生ボタンの代わりに印だけ出す */
+.song-play.file-midi { background: transparent; border: 1px dashed var(--border); color: var(--text-muted); cursor: default; }
+.file-row .song-time { min-width: 4.5em; text-align: right; }
+.file-row .song-icon-btn svg { fill: none; }  /* 線で描いたアイコン（ごみ箱） */
 .musiclist-empty-actions { display: flex; justify-content: center; gap: 10px; }
 
 .song-list {
@@ -3252,6 +3432,7 @@ button.mixer-value {
 /* ===== 用語のツールチップ（Glossary.ts） ===== */
 /* 説明のある言葉には点線の下線を付ける（ボタンやグループなどは下線なしでツールチップだけ出す） */
 span[data-term],
+span[data-tip],
 .arr-name[data-term] {
   text-decoration: underline dotted;
   text-decoration-color: var(--text-faint);
@@ -3291,6 +3472,7 @@ span[data-term],
 
 /* ツールチップを OFF にしたときは下線も出さない */
 :root[data-tooltips="off"] span[data-term],
+:root[data-tooltips="off"] span[data-tip],
 :root[data-tooltips="off"] .arr-name[data-term] {
   text-decoration: none;
   cursor: inherit;
@@ -3798,10 +3980,50 @@ span[data-term],
 
 .filename-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 16px;
 }
+
+/* 書き出す前の注意書き（書き出したファイルは Toniq で編集し直せない） */
+.filename-note {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-sub);
+}
+
+.filename-note[hidden] { display: none; }
+.filename-note p { margin: 0; }
+.filename-note p + p { margin-top: 4px; }
+
+.filename-save {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.filename-save[hidden] { display: none; }
+.filename-save input { margin-top: 3px; accent-color: var(--custom); }
+.filename-save small { display: block; font-size: 12px; color: var(--text-muted); }
+
+/* 確かめるダイアログ（ChoiceDialog.ts。「＋ 新規作成」など） */
+.choice-message { margin: 0 0 8px; font-size: 14px; font-weight: 700; line-height: 1.6; }
+.choice-detail { font-size: 13px; line-height: 1.7; color: var(--text-muted); }
+.choice-detail[hidden] { display: none; }
+.choice-detail p { margin: 0; }
+.choice-detail p + p { margin-top: 4px; }
+
+.btn-danger { color: var(--danger); }
+.btn-danger:hover { border-color: var(--danger); }
 
 /* ===== ドロップダウンのリスト =====
    Electron（Windows）では、OS の別ウィンドウで出すネイティブのリストが 30 秒ほど開かないことがある（Chrome では起きない）。

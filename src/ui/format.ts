@@ -31,7 +31,7 @@ export const SCALE_LABELS: Record<string, string> = {
   blues:      "ブルース",
 };
 
-const CHORD_SUFFIX: Record<string, string> = {
+export const CHORD_SUFFIX: Record<string, string> = {
   major: "", minor: "m", dim: "dim", aug: "aug", maj7: "maj7", min7: "m7", dom7: "7",
   maj9: "maj9", min9: "m9", dom9: "9", add9: "add9", sus2: "sus2", sus4: "sus4", aug7: "aug7",
 };

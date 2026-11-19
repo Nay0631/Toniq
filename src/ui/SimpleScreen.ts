@@ -7,7 +7,8 @@ import { tap, resetTap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
 import * as Playback from "../engine/Playback";
 import { onRender, showTab } from "./Router";
-import { SCALE_LABELS, chordNames, formatTime } from "./format";
+import { formatTime } from "./format";
+import { chordNameSpans, keyScaleSpan } from "./ChordTips";
 import { startPianoRollPlayhead } from "./PianoRollTab";
 import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
 import { CUSTOM_DRUM_ID } from "../data/types";
@@ -162,11 +163,73 @@ async function playGenreSample(): Promise<void> {
   render();
 }
 
-async function startPlayback(): Promise<void> {
-  await Playback.play({ onEnded: render });
+// 曲を再生する（fromBar を渡すとその小節から。「生成された楽曲」の波形のクリック・ドラッグ）
+async function startPlayback(fromBar = 0): Promise<void> {
+  await Playback.play({ fromBar, onEnded: render });
   startPlayheadLoop();
   startPianoRollPlayhead();
   render();
+}
+
+// ===== 再生位置の操作（「生成された楽曲」の波形） =====
+
+// 波形の上の位置（0〜1）→ 小節（0始まり）。小節の頭から鳴らす
+function barAtRatio(ratio: number): number {
+  const bars = getState().bars;
+  return Math.max(0, Math.min(bars - 1, Math.floor(ratio * bars)));
+}
+
+function ratioAt(e: PointerEvent): number {
+  const rect = $("s-wave-area")!.getBoundingClientRect();
+  return rect.width > 0 ? Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) : 0;
+}
+
+// クリック・ドラッグ中に、どこから鳴らすかの線と「○小節目 0:12」を出す（null で隠す）
+function showSeek(bar: number | null): void {
+  const seek = $("s-seek")!;
+  seek.hidden = bar === null;
+  if (bar === null) return;
+  const bars = getState().bars;
+  seek.style.left = `${(bar / bars) * 100}%`;
+  $("s-seek-label")!.textContent = `${bar + 1}小節目 ${formatTime((Playback.getSongSeconds() * bar) / bars)}`;
+  seek.classList.toggle("is-right", bar / bars > 0.8);  // 右端ではラベルを左に出す
+}
+
+// 今鳴っている小節（止まっていれば null）
+function currentBar(): number | null {
+  if (!Playback.isPlaying()) return null;
+  return Math.floor(Playback.getPositionBars() + 1e-6) % Math.max(1, getState().bars);
+}
+
+function bindSeek(): void {
+  const area = $("s-wave-area")!;
+  let dragging = false;
+  area.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    dragging = true;
+    area.setPointerCapture(e.pointerId);
+    showSeek(barAtRatio(ratioAt(e)));  // 文字の選択は CSS（user-select: none）で止める
+  });
+  area.addEventListener("pointermove", e => showSeek(barAtRatio(ratioAt(e))));
+  area.addEventListener("pointerup", e => {
+    if (!dragging) return;
+    dragging = false;
+    void startPlayback(barAtRatio(ratioAt(e)));
+  });
+  area.addEventListener("pointercancel", () => { dragging = false; showSeek(null); });
+  area.addEventListener("pointerleave", () => { if (!dragging) showSeek(null); });
+  // キーボード：← → で1小節ずつ、Home で先頭から鳴らす
+  area.addEventListener("keydown", e => {
+    const bars = getState().bars;
+    const now  = currentBar() ?? 0;
+    let next: number | null = null;
+    if (e.key === "ArrowRight") next = Math.min(bars - 1, now + 1);
+    if (e.key === "ArrowLeft")  next = Math.max(0, now - 1);
+    if (e.key === "Home")       next = 0;
+    if (next === null) return;
+    e.preventDefault();
+    void startPlayback(next);
+  });
 }
 
 // ===== 表示 =====
@@ -220,9 +283,16 @@ function renderPlayhead(): void {
   if (!wave || !playhead) return;
 
   const playing  = Playback.isPlaying();
-  const progress = playing ? Math.min(1, Playback.getPositionSeconds() / Playback.getSongSeconds()) : 0;
+  const total    = Playback.getSongSeconds();
+  const position = playing ? Math.min(total, Playback.getPositionSeconds()) : 0;
+  const progress = total > 0 ? position / total : 0;
   playhead.hidden = !playing;
   playhead.style.left = `${progress * 100}%`;
+  $("s-time")!.textContent = `${formatTime(position)} / ${formatTime(total)}`;
+  const area = $("s-wave-area")!;
+  area.setAttribute("aria-valuemax", String(getState().bars));
+  area.setAttribute("aria-valuenow", String((currentBar() ?? 0) + 1));
+  area.setAttribute("aria-valuetext", `${(currentBar() ?? 0) + 1}小節目`);
 
   const bars = wave.children;
   for (let i = 0; i < bars.length; i++) {
@@ -250,13 +320,24 @@ function render(): void {
   $("s-info-genre")!.textContent = s.genre;
   $("s-info-mood")!.textContent  = s.mood;
 
-  const songInfo = $("s-info-song")!;
-  songInfo.hidden = !s.generated;
+  // キー・スケール（説明付き）と長さ。生成してから出す
+  $("s-info-key")!.hidden  = !s.generated || !s.chordPattern;
+  $("s-info-bars")!.hidden = !s.generated;
   if (s.chordPattern) {
-    songInfo.textContent = `${s.key}${SCALE_LABELS[s.chordPattern.base_scale] ?? ""}・${s.bars}小節`;
+    const keyValue = $("s-info-key-value")!;
+    const keyText  = `${s.key}|${s.chordPattern.base_scale}|${s.noteNames}`;
+    if (keyValue.dataset.text !== keyText) {  // 変わったときだけ作り直す（ツールチップを消さない）
+      keyValue.dataset.text = keyText;
+      keyValue.replaceChildren(keyScaleSpan(s.key, s.chordPattern.base_scale));
+    }
   }
+  $("s-info-bars-value")!.textContent = `${s.bars}小節`;
   $("s-transport")!.hidden = !s.generated;
-  $("s-play")!.textContent = Playback.isPlaying() ? "↺ 最初から" : "▷ 再生";
+  // 再生ボタンは設定タブでは「生成された楽曲」の上にあるので、情報バーにはピアノロールタブのときだけ出す
+  $("s-bar-transport")!.hidden = s.tab === "settings";
+  $$("[data-simple-play]").forEach(btn => {
+    btn.textContent = Playback.isPlaying() ? "↺ 最初から" : "▷ 再生";
+  });
 
   // 設定
   $$("[data-mood]").forEach(el =>
@@ -280,7 +361,7 @@ function render(): void {
   $("s-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   $("s-bpm")!.textContent = `${s.bpm} BPM`;
   const metronomeOn = isMetronomeOn();
-  $("s-metronome")!.textContent = metronomeOn ? "■ クリックを止める" : "♪ クリックで試聴";
+  $("s-metronome")!.textContent = metronomeOn ? "■ メトロノームを止める" : "♪ メトロノームで速さを聴く";
   $("s-metronome")!.classList.toggle("is-active", metronomeOn);
   const sampleOn = Playback.isSamplePlaying();
   $("s-sample")!.textContent = sampleOn ? "■ サンプルを止める" : `▷ ${s.genre} のサンプルを聴く`;
@@ -313,10 +394,16 @@ function render(): void {
   $("s-melody-action")!.title = s.melodyMethod === "auto"
     ? "Aメロ・サビのメロディを作り直します（コード進行・ドラムはそのまま）"
     : "ピアノロールのタブでメロディを編集します";
+  // コード名（Am・F など）は1つずつ、何を表すかの説明（ツールチップ）を付ける
   const chorus = chorusProgression();
-  $("s-chord-desc")!.textContent = !s.chordPattern ? ""
-    : chorus ? `Aメロ：${chordNames(s.chordPattern, s.key)} ／ サビ：${chordNames(chorus, s.key)}`
-    : `${chordNames(s.chordPattern, s.key)}（Aメロ・サビ共通）`;
+  const chordDesc = $("s-chord-desc")!;
+  const chordText = JSON.stringify([s.chordPattern?.progression, s.chordPattern?.base_scale, chorus?.progression, s.key, s.noteNames]);
+  if (chordDesc.dataset.text !== chordText) {  // 変わったときだけ作り直す（ツールチップを消さない）
+    chordDesc.dataset.text = chordText;
+    chordDesc.replaceChildren(...(!s.chordPattern ? []
+      : chorus ? ["Aメロ：", ...chordNameSpans(s.chordPattern, s.key), " ／ サビ：", ...chordNameSpans(chorus, s.key)]
+      : [...chordNameSpans(s.chordPattern, s.key), "（Aメロ・サビ共通）"]));
+  }
   if (s.drumPattern) {
     $("s-drum-desc")!.textContent = s.drumPattern.id === CUSTOM_DRUM_ID
       ? `${s.drumPattern.name}（ピアノロールで作成）`
@@ -362,6 +449,8 @@ export function initSimpleScreen(): void {
       void playGenreSample();
     }
   });
+  // サンプルの長さはボタンの説明に出す（長さは Playback.SAMPLE_SECONDS で決まる）
+  $("s-sample")!.title = `選んでいるジャンル・雰囲気・テンポで短いサンプル曲を ${Playback.SAMPLE_SECONDS} 秒鳴らします`;
 
   $$("[data-tempo]").forEach(el =>
     el.addEventListener("click", () => {
@@ -412,16 +501,18 @@ export function initSimpleScreen(): void {
     render();
   });
 
-  $("s-play")?.addEventListener("click", startPlayback);
+  // 再生・停止（「生成された楽曲」の上と、ピアノロールタブの情報バーの2か所）
+  $$("[data-simple-play]").forEach(btn => btn.addEventListener("click", () => { void startPlayback(); }));
   // 生成した曲は、どのタブでもスペースキーで再生／停止する（生成前は鳴らす曲がない）
   bindSpaceToPlay(() => {
     const s = getState();
     return s.screen === "simple" && s.generated;
-  }, startPlayback);
-  $("s-stop")?.addEventListener("click", () => {
+  }, () => startPlayback());
+  $$("[data-simple-stop]").forEach(btn => btn.addEventListener("click", () => {
     Playback.stop();
     render();
-  });
+  }));
+  bindSeek();
 
   // レイヤー差し替え
   $("s-melody-action")?.addEventListener("click", async () => {

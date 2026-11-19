@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { AppState, getState, setState } from "./AppState";
 import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
-import { applyMixPreset, mixerReady } from "./MixerEngine";
+import { applyMixPreset, fadeOutMaster, holdMasterFade, mixerReady, resetMasterFade } from "./MixerEngine";
 import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
 import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
@@ -101,6 +101,7 @@ export async function play(options: PlayOptions = {}): Promise<boolean> {
   if (token !== startToken) return false;  // 待っている間に別の再生・停止が入った
 
   try {
+    resetMasterFade();  // サンプルの終わりで絞ったマスターを戻す
     const transport = Tone.getTransport();
     transport.bpm.value = s.bpm;
     applySwing();
@@ -143,6 +144,7 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
   if (token !== startToken) return false;  // 待っている間に別の再生・停止が入った
 
   try {
+    resetMasterFade();  // サンプルの終わりで絞ったマスターを戻す
     const transport = Tone.getTransport();
     transport.bpm.value = s.bpm;
     applySwing();
@@ -179,10 +181,20 @@ export interface SampleSong {
 // サンプルで鳴らすパート（ジャンルの特徴が出るようシグネチャー・パーカッションも鳴らす。FX・カウンターメロディは除く）
 const SAMPLE_LAYERS: LayerName[] = ["drum", "perc", "chord", "bass", "pad", "signature", "melody"];
 
+// サンプルを鳴らす長さ（秒）と、終わりのフェードアウトの長さ（秒）。
+// テンポ・進行の長さ・拍子によらず同じ長さで止める（短い進行はループし、長い進行は途中でフェードアウトする）
+export const SAMPLE_SECONDS = 15;
+const SAMPLE_FADE_SECONDS = 2;
+
 // サンプル中だけ差し替えている曲の内容。stop() で AppState に戻す（null = サンプルを鳴らしていない）
 let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes" | "meter"> | null = null;
 
-// ジャンルのサンプルを1周（4小節未満の進行は4小節）だけ鳴らす。全パートをアレンジに関係なく同時に鳴らす。
+// サンプルを止める合図（オーディオの時計の setTimeout の番号。null = 予定なし）。
+// Transport の小節で決めると途中でテンポを変えたときに長さが変わるので、オーディオの時刻（秒）で決める
+let sampleEndTimer: number | null = null;
+
+// ジャンルのサンプルを SAMPLE_SECONDS 秒だけ鳴らす（終わりの SAMPLE_FADE_SECONDS 秒でフェードアウト）。
+// 全パートをアレンジに関係なく同時に鳴らし、コード進行・メロディはループする。
 // 各パートは AppState から読むので、鳴らしている間だけパターンとメロディを差し替え、止めたら元に戻す
 export async function playSample(sample: SampleSong, onEnded?: () => void): Promise<boolean> {
   await Tone.start();
@@ -204,21 +216,24 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
   });
 
   try {
+    resetMasterFade();
     const transport = Tone.getTransport();
     transport.bpm.value = s.bpm;
     applySwing();  // サンプルはジャンルの標準のスウィング（曲の設定が null のとき）
     setArrangementBypass(true);
     SAMPLE_LAYERS.forEach(reloadLayer);
 
-    const bars = Math.max(4, sample.chordPattern.length_bars);
-    endEventId = transport.scheduleOnce(time => {
-      Tone.getDraw().schedule(() => {
-        stop();
-        onEnded?.();
-      }, time);
-    }, `${bars}m`);
+    // Transport は今（Tone.now()）から始まるので、その SAMPLE_SECONDS 秒後に無音になるよう絞り、そこで止める
+    const startAt = Tone.now();
+    const endAt   = startAt + SAMPLE_SECONDS;
+    fadeOutMaster(endAt, SAMPLE_FADE_SECONDS);
+    sampleEndTimer = Tone.getContext().setTimeout(() => {
+      sampleEndTimer = null;
+      stop();
+      onEnded?.();
+    }, endAt - Tone.now());
 
-    transport.start();
+    transport.start(startAt);
     return true;
   } catch (e) {
     return failStart(e);
@@ -250,6 +265,11 @@ export function stop(): void {
     transport.clear(endEventId);
     endEventId = null;
   }
+  if (sampleEndTimer !== null) {
+    Tone.getContext().clearTimeout(sampleEndTimer);
+    sampleEndTimer = null;
+  }
+  holdMasterFade();  // サンプルのフェードの途中で止めたら、その音量のまま（次の開始で戻す）
   stopLoopArranger();
   setArrangementBypass(false);
   disposeAllLayers();
@@ -304,6 +324,18 @@ export type AudioFormat = "wav" | "mp3";
 export type RenderStage = "prepare" | "schedule" | "render" | "encode";
 export type RenderProgress = (stage: RenderStage, progress: number) => void;
 
+// 書き出しを途中でやめた（画面の「中断する」。AbortSignal で知らせる）ときに投げる
+export class RenderCancelled extends Error {
+  constructor() {
+    super("書き出しを中断しました");
+    this.name = "RenderCancelled";
+  }
+}
+
+function throwIfCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new RenderCancelled();
+}
+
 // 全体のうち各段階が占める割合（始まり・幅）。音声の合成がいちばん重い。
 // MP3 は圧縮に時間がかかるので、変換の割合を大きく取る
 const STAGE_SPAN: Record<AudioFormat, Record<RenderStage, [number, number]>> = {
@@ -329,25 +361,44 @@ export function overallProgress(stage: RenderStage, progress: number, format: Au
 const RENDER_STEPS = 40;  // 音声の合成の途中経過を知らせる回数
 
 // Tone.Offline と同じ手順でオフライン描画する。進み具合を取るため、ブラウザ標準の OfflineAudioContext を使い、
-// 合成の途中で suspend して知らせる（Tone.js の Offline は途中経過を返さない）
+// 合成の途中で suspend して知らせる（Tone.js の Offline は途中経過を返さない）。
+// signal で中断できる：予定の組み立ては打ち切り、合成は次の一時停止で止めたまま再開しない（RenderCancelled を投げる）
 async function renderOffline(
-  callback: () => Promise<void>, durationSec: number, onProgress?: RenderProgress,
+  callback: () => Promise<void>, durationSec: number, onProgress?: RenderProgress, signal?: AbortSignal,
 ): Promise<AudioBuffer> {
   const sampleRate = Tone.getContext().sampleRate;
   const native     = new OfflineAudioContext(2, Math.ceil(durationSec * sampleRate), sampleRate);
   const context    = new Tone.OfflineContext(native);
   const original   = Tone.getContext();
 
+  let timer: ReturnType<typeof setInterval> | null = null;
+  const cancelled = new Promise<never>((_, reject) => {
+    if (!signal) return;
+    const onAbort = () => {
+      if (timer !== null) clearInterval(timer);
+      // Tone.js が演奏の予定を組み立てるループ（OfflineContext の _renderClock）は残りの長さ（_duration）で回るので、
+      // 負にして次の周で抜けさせる（公開の API がないため内部の値を書き換える）
+      (context as unknown as { _duration: number })._duration = -1;
+      reject(new RenderCancelled());
+    };
+    if (signal.aborted) onAbort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+  });
+  cancelled.catch(() => { /* 待っていないときに中断しても未処理の例外にしない */ });
+
   Tone.setContext(context);
   let bufferPromise: Promise<Tone.ToneAudioBuffer>;
   try {
     await callback();
+    throwIfCancelled(signal);
 
-    // 合成の途中で一時停止して進み具合を知らせ、すぐ再開する（合成を始める前に予約しておく）
+    // 合成の途中で一時停止して進み具合を知らせ、すぐ再開する（合成を始める前に予約しておく）。
+    // 中断したあとは再開しない（合成はそこで止まり、残りは描かない）
     for (let i = 1; i < RENDER_STEPS; i++) {
       const at = (durationSec * i) / RENDER_STEPS;
       native.suspend(at)
         .then(() => {
+          if (signal?.aborted) return;
           onProgress?.("render", i / RENDER_STEPS);
           return native.resume();
         })
@@ -355,12 +406,12 @@ async function renderOffline(
     }
 
     // 1段目：Tone.js が演奏の予定（各パートのイベント）を時間順に組み立てる。currentTime で進み具合を測る
-    const timer = setInterval(() => onProgress?.("schedule", context.currentTime / durationSec), 100);
-    bufferPromise = context.render().finally(() => clearInterval(timer));
+    timer = setInterval(() => onProgress?.("schedule", context.currentTime / durationSec), 100);
+    bufferPromise = context.render().finally(() => { if (timer !== null) clearInterval(timer); });
   } finally {
     Tone.setContext(original);
   }
-  const buffer = await bufferPromise;
+  const buffer = await Promise.race([bufferPromise, cancelled]);
   onProgress?.("render", 1);
   return buffer.get()!;
 }
@@ -374,9 +425,9 @@ function isSilent(buffer: AudioBuffer): boolean {
   return true;
 }
 
-// 曲全体をオフラインでレンダリングして AudioBuffer を返す（onProgress で進み具合を知らせる）。
+// 曲全体をオフラインでレンダリングして AudioBuffer を返す（onProgress で進み具合を知らせる。signal で中断できる）。
 // アプリでは renderWav / renderMp3 から使う。ミックスの計測（tools/mix-measure.mjs）は 16bit に丸める前の音を測るのに直接呼ぶ
-export async function renderSong(onProgress?: RenderProgress): Promise<AudioBuffer> {
+export async function renderSong(onProgress?: RenderProgress, signal?: AbortSignal): Promise<AudioBuffer> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) throw new Error("曲が生成されていません");
 
@@ -391,6 +442,7 @@ export async function renderSong(onProgress?: RenderProgress): Promise<AudioBuff
   stop();
   // ドラムの音源は通常のコンテキストで読み込んでおく（AudioBuffer は書き出し用のコンテキストでも使える）
   if (s.drumSource === "sample") await prepareDrumSamples(s.genre);
+  throwIfCancelled(signal);
 
   const schedule = async () => {
     applyMixPreset(s.genre);
@@ -427,45 +479,51 @@ export async function renderSong(onProgress?: RenderProgress): Promise<AudioBuff
 
   let buffer: AudioBuffer;
   try {
-    buffer = await renderOffline(schedule, durationSec, onProgress);
+    buffer = await renderOffline(schedule, durationSec, onProgress, signal);
     // 鳴らすパートがあるのに無音なら、進み具合なしの Tone.Offline で描き直す（標準のコンテキストで動かない場合の保険）
     const anyPart = Object.values(s.parts).some(Boolean);
     if (anyPart && isSilent(buffer)) throw new Error("書き出した音声が無音でした");
   } catch (e) {
+    if (e instanceof RenderCancelled) {
+      disposeAllLayers();  // 書き出し用コンテキストの Synth を捨てる（描き直さない）
+      throw e;
+    }
     console.warn("進み具合付きの書き出しに失敗したので、Tone.Offline で書き出し直します:", e);
     disposeAllLayers();
     onProgress?.("render", 0);
-    buffer = (await Tone.Offline(schedule, durationSec)).get()!;
+    buffer = (await Tone.Offline(schedule, durationSec)).get()!;  // こちらは途中で止められないので、終わってから確かめる
     onProgress?.("render", 1);
   }
 
   // 書き出し用コンテキストの Synth を破棄する（次の再生で通常のコンテキストに作り直される）
   disposeAllLayers();
+  throwIfCancelled(signal);
   return buffer;
 }
 
 // 曲全体を WAV の Blob にする
-export async function renderWav(onProgress?: RenderProgress): Promise<Blob> {
-  const buffer = await renderSong(onProgress);
+export async function renderWav(onProgress?: RenderProgress, signal?: AbortSignal): Promise<Blob> {
+  const buffer = await renderSong(onProgress, signal);
   onProgress?.("encode", 0);
   await new Promise(resolve => setTimeout(resolve, 0));  // 表示を「変換中」にしてから重い変換をする
+  throwIfCancelled(signal);
   const wav = audioBufferToWav(buffer);
   onProgress?.("encode", 1);
   return new Blob([wav], { type: "audio/wav" });
 }
 
 // 曲全体を MP3 の Blob にする
-export async function renderMp3(onProgress?: RenderProgress): Promise<Blob> {
-  const buffer = await renderSong(onProgress);
+export async function renderMp3(onProgress?: RenderProgress, signal?: AbortSignal): Promise<Blob> {
+  const buffer = await renderSong(onProgress, signal);
   onProgress?.("encode", 0);
   await new Promise(resolve => setTimeout(resolve, 0));
-  const mp3 = await audioBufferToMp3(buffer, p => onProgress?.("encode", p));
+  const mp3 = await audioBufferToMp3(buffer, p => onProgress?.("encode", p), signal);
   onProgress?.("encode", 1);
   return new Blob(mp3 as BlobPart[], { type: "audio/mpeg" });
 }
 
-export function renderAudio(format: AudioFormat, onProgress?: RenderProgress): Promise<Blob> {
-  return format === "mp3" ? renderMp3(onProgress) : renderWav(onProgress);
+export function renderAudio(format: AudioFormat, onProgress?: RenderProgress, signal?: AbortSignal): Promise<Blob> {
+  return format === "mp3" ? renderMp3(onProgress, signal) : renderWav(onProgress, signal);
 }
 
 const MP3_KBPS  = 192;              // ビットレート（音楽として十分な音質とファイルの小ささの釣り合い）
@@ -481,8 +539,10 @@ function toInt16(data: Float32Array, from: number, to: number): Int16Array {
   return out;
 }
 
-// AudioBuffer を MP3 に変換する（lamejs。重いので区切りながら変換し、合間に進み具合を知らせる）
-async function audioBufferToMp3(buffer: AudioBuffer, onProgress: (p: number) => void): Promise<Uint8Array[]> {
+// AudioBuffer を MP3 に変換する（lamejs。重いので区切りながら変換し、合間に進み具合を知らせる。区切りごとに中断を確かめる）
+async function audioBufferToMp3(
+  buffer: AudioBuffer, onProgress: (p: number) => void, signal?: AbortSignal,
+): Promise<Uint8Array[]> {
   const { Mp3Encoder } = await import("@breezystack/lamejs");  // 使うときだけ読み込む
   const stereo  = buffer.numberOfChannels >= 2;
   const encoder = new Mp3Encoder(stereo ? 2 : 1, buffer.sampleRate, MP3_KBPS);
@@ -491,6 +551,7 @@ async function audioBufferToMp3(buffer: AudioBuffer, onProgress: (p: number) => 
   const chunks: Uint8Array[] = [];
 
   for (let i = 0; i < buffer.length; i += MP3_CHUNK) {
+    throwIfCancelled(signal);
     const end = Math.min(i + MP3_CHUNK, buffer.length);
     const l   = toInt16(left, i, end);
     const out = right ? encoder.encodeBuffer(l, toInt16(right, i, end)) : encoder.encodeBuffer(l);

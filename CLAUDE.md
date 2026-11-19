@@ -43,7 +43,7 @@ lidless のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビル
 ## ディレクトリ構成
 
 ```
-electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示。インストール版は標準のメニューバーを出さない）と、出力フォルダ output/ への保存・フォルダを開く IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
+electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示。インストール版は標準のメニューバーを出さない）と、出力フォルダ output/ への保存・フォルダを開く・書き出したファイルの一覧／読み込み／ごみ箱へ移す IPC（読む・移すのは output/audio・output/midi の直下の WAV・MP3・MIDI だけ）。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ lidless（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   lidless の wasm（npm run grow:wasm で作る。Grow.ts が読む）
@@ -59,7 +59,8 @@ index.html              UI。ヘッダー＋画面ごとの <section data-screen
 src/main.ts             エントリ。初期状態の解決と各画面の初期化
 src/ui/
   Router.ts               画面・タブ切り替え（showScreen / showTab / render / onRender）。AppState.screen / tab。シンプルモード・カスタムモードは離れたときのタブを AppState.screenTabs に覚え、戻ると同じタブを開く
-  SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、書き出し、ジャンルのサンプル試聴）
+  SimpleScreen.ts         シンプルモード画面（設定→生成→結果、差し替え、保存・書き出し、ジャンルのサンプル試聴、「生成された楽曲」の上の再生ボタンと波形のクリック・ドラッグでの再生位置の操作）
+  ChordTips.ts            シンプルモードの生成後のコード名（Am・F など）とキー・スケールの説明（用語のツールチップの data-tip を作る）
   CustomScreen.ts         カスタムモード画面のイベントの登録と再生の操作（設定タブ：基本設定／スケール・キー＋コード進行／ドラム・パッド/アルペジオの3列＋書き出し、アレンジャータブ下部の書き出し、スペースキーの再生）
   CustomRender.ts         カスタムモード画面の表示（render。情報バー・設定タブの各欄、アレンジャー・ミキサーの描画を呼ぶ）
   CustomState.ts          カスタムモード画面の状態の更新（DOM を触らない。コード進行・サビの切り替えとメロディの作り直し、BPM、グルーヴ）と選択肢の元のデータ（APP_GENRES など）
@@ -68,14 +69,17 @@ src/ui/
   MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・定位（パン）のノブ・音量のフェーダー・レベルメーター、マスターの左右のピークのメーター・最大のピーク・クリップの印）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通。ツールバーの「メロディ／ドラム」で切り替える）
   DrumRoll.ts             ピアノロールのドラム（行 = キック・スネアなど、列 = 16分音符のマスでオリジナルのドラムパターンを作る。1・2・4小節）
-  MusicListScreen.ts      ミュージックリスト画面（曲名・ジャンル・雰囲気・キーでの検索・並び替え・お気に入り・曲数付きのジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、上に分けた曲ファイルの操作と「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
+  MusicListScreen.ts      ミュージックリスト画面（曲名・ジャンル・雰囲気・キーでの検索・並び替え・お気に入り・曲数付きのジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー（WAV / MP3 / MIDI で書き出すも）、上に分けた曲ファイルの操作と「出力フォルダ」ボタン、「保存した曲／書き出したファイル」の切り替え）と両モードの「♪ 保存」「＋ 新規作成」ボタン
+  OutputFileList.ts       ミュージックリストの「書き出したファイル」（output/audio・output/midi の WAV・MP3・MIDI の一覧、種類での絞り込み、WAV・MP3 の試聴、場所を開く、ごみ箱へ移す。Electron のときだけ）
+  SongSave.ts             ミュージックリストへの保存（saveToList / withStorage）と保存していない変更の判定（hasUnsavedSong）。ミュージックリスト・新規作成・書き出しのダイアログで共通
+  ChoiceDialog.ts         ボタンを3つ以上並べられる確認のダイアログ（askChoice。「＋ 新規作成」で使う）
   QuizScreen.ts           音楽クイズ画面（カテゴリ・出題モードの切り替え、出題・採点、鍵盤／選択肢での回答、出題設定）
   Controls.ts             シンセサイザー風のノブ（attachKnob）・縦フェーダー（attachFader。ミキサー）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
-  ExportProgress.ts       音声の書き出し（WAV / MP3）の進み具合のダイアログ（目安の説明・段階・進み具合・経過時間。両モード共通の exportAudioWithProgress）
-  FileNameDialog.ts       書き出すファイル名を決めるダイアログ（WAV / MP3 / MIDI。初期値はリストの曲名、未保存なら toniq_ジャンル_雰囲気（カスタムモードはキー））
+  ExportProgress.ts       音声の書き出し（WAV / MP3）の進み具合のダイアログ（目安の説明・段階・進み具合・経過時間・「中断する」。両モード・ミュージックリスト共通の exportAudioWithProgress / exportMidiWithName。書き出す前の注意とミュージックリストへの保存 prepareExport）
+  FileNameDialog.ts       書き出すファイル名を決めるダイアログ（askExportFile。WAV / MP3 / MIDI。初期値はリストの曲名、未保存なら toniq_ジャンル_雰囲気（カスタムモードはキー）。Toniq で編集し直せないことの注意書きと「ミュージックリストにも保存する」のチェック）
   format.ts               表示用ヘルパー（スケール名、キーに合わせたコード名、時間）
   HistoryControls.ts      元に戻す／やり直すのボタン（両モードの情報バー）とショートカット（Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）、戻したあとの再生への反映
-  Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS）
+  Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS。曲ごとに変わる説明は data-tip / data-tip-title で直接渡す）
   RatingScreen.ts         メロディの評価（開発用。設定画面の「開発用」から開く。一括計測と同じシードの曲を聴いて 1〜5 の点数・タグ・メモを付け、条件（変更前／変更後など）ごとの平均と同じ曲どうしの差を出す。聴いている間だけ曲の内容を差し替え、離れたら戻す）
   SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・用語のツールチップの ON/OFF）
   GrowPanel.ts            lidless（テスト中）の音作りの暫定パネル（カスタムモードの設定タブの下 #c-grow。対象のパート、カテゴリごとのチップで並べたプリセットの一覧（押すと選んで1音鳴らす。←→ で前後へ送る）、コアの表から作るモジュールごとのつまみ。設定タブ・アレンジャータブでのキーボードの試し弾き）
@@ -128,7 +132,7 @@ src/engine/
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）・サイドチェインのゲイン・定位（パン）・レベルメーター。オーディオコンテキストごとに保持
   VolumeCurve.ts          フェーダーの値と dB の換算（75 で 0dB・100 で +5dB の2乗のカーブ）、以前のカーブで保存した値の読み替え、定位の表示。Tone.js を使わない
-  MixerEngine.ts          パートの EQ（低域カット PART_LOW_CUT・中域のへこみ PART_MID_DIP）と定位、マスター（入口→EQ→コンプ→持ち上げ→リミッター）、リバーブ送り（ジャンルごとの量。戻りはコンプを通さない）、マスターのピーク。オーディオコンテキストごとに保持
+  MixerEngine.ts          パートの EQ（低域カット PART_LOW_CUT・中域のへこみ PART_MID_DIP）と定位、マスター（入口→EQ→コンプ→持ち上げ→リミッター→フェード（サンプルの終わり））、リバーブ送り（ジャンルごとの量。戻りはコンプを通さない）、マスターのピーク。オーディオコンテキストごとに保持
   TapTempo.ts             タップテンポ（AppState.bpm を更新する。再生中の反映は呼び出し側が Playback.applyBpm()）
   Metronome.ts            BPM 試聴用のクリック音（Web Audio API で直接鳴らす）
   ScalePreview.ts         キー・スケールの試聴（スケールを順に鳴らして主音の和音で終わる。Web Audio API で直接鳴らす）
@@ -208,23 +212,26 @@ src/engine/
 - ピアノロールの操作：クリックで配置（そのままドラッグで長さ）、音をドラッグで移動、右端で長さ変更、右クリック／Delete で削除、目盛りクリックで鍵盤入力の位置、タイピングピアノで鍵盤入力（Z〜/ の段が C4〜E5、Q〜] の段が C5〜G6、それぞれ上の段が黒鍵。オクターブ 4 のとき。`TypingKeys.ts` の `TYPING_KEYMAP`）、↓ / ↑ でオクターブ切替。
 - ミュージックリスト（`SongLibrary.ts`）は曲の内容（`SONG_FIELDS`：モード・ジャンル・キー・BPM・小節数・パターン・メロディ・音色・アレンジ・パートON/OFF・音量）を localStorage に保存する。画面・タブ・ピアノロールの入力設定は保存しない。曲の内容に関わる項目を AppState に足したら `SONG_FIELDS`（`AppState.ts` に定義）にも足す。`SONG_FIELDS` は曲ファイルと元に戻す／やり直すの対象にもなる。
   - localStorage に書き込めない（容量オーバーなど）と `writeSongs` が `SongStorageError`（`quota` = 容量オーバーか）を投げ、一覧は書き込む前のまま残る（`saveCurrentSong` は `songId` も変えない）。画面側（`MusicListScreen.ts`）は `saveToList`（「♪ 保存」。編集中の曲は消えないので、整理してから保存し直すよう知らせる）と `withStorage`（名前の変更・お気に入り・削除）で受けて知らせる。曲ファイルの読み込みは今までどおりファイルごとのエラーとして出す。ミュージックリストを書き換える操作を足すときも、どちらかで囲む。
-- 曲ファイル：ミュージックリストのツールバーの「ファイルを読み込む」「すべて書き出す」と、曲の ⋮ メニューの「ファイルに書き出す」。形式は `{ format: "toniq-song", version, exportedAt, songs: SavedSong[] }` の JSON（拡張子 `.toniq.json`）。読み込んだ曲は新しい ID で一覧に追加する（上書きしない）。コード進行・ドラムなど鳴らすのに必要な項目がない曲は飛ばし、足りない項目は `loadSong()` と同じく初期値で補う。そのあと `validateImportedSong()`（`SongValidate.ts`）で中身を確かめる：知らないキー・ディグリー・コードの種類・スケールの進行がある曲は飛ばし、形の違うメロディの音・ドラムのトラック・アレンジの変えた所は落とし、範囲外・知らない値（音量・定位・選択肢など）は範囲の中の値か初期値にする。曲の項目を足したら `validateImportedSong` にも足す。形式を変えるときは `FILE_VERSION` を上げ、古い形式も読めるようにする。
+- 曲ファイル：ミュージックリストのツールバーの「ファイルを読み込む」「すべて書き出す」と、曲の ⋮ メニューの「曲ファイルに書き出す」（以前は「ファイルに書き出す」。⋮ メニューに WAV / MP3 / MIDI の書き出しを足したので区別した）。形式は `{ format: "toniq-song", version, exportedAt, songs: SavedSong[] }` の JSON（拡張子 `.toniq.json`）。読み込んだ曲は新しい ID で一覧に追加する（上書きしない）。コード進行・ドラムなど鳴らすのに必要な項目がない曲は飛ばし、足りない項目は `loadSong()` と同じく初期値で補う。そのあと `validateImportedSong()`（`SongValidate.ts`）で中身を確かめる：知らないキー・ディグリー・コードの種類・スケールの進行がある曲は飛ばし、形の違うメロディの音・ドラムのトラック・アレンジの変えた所は落とし、範囲外・知らない値（音量・定位・選択肢など）は範囲の中の値か初期値にする。曲の項目を足したら `validateImportedSong` にも足す。形式を変えるときは `FILE_VERSION` を上げ、古い形式も読めるようにする。
 - 元に戻す／やり直す（`History.ts`）：`setState` の直前（`onBeforeSetState`）に、`SONG_FIELDS`（モードを除く）が変わるなら変更前のスナップショットを積む（最大100）。押してから離すまで（ドラッグ・ノブ）と、操作が途切れるまで（600ms）の変更は1つにまとめる。シンプルモード・カスタムモードの画面でだけ使え、文字の入力欄ではブラウザ標準の元に戻すになる。
   - 表示用の一時的な差し替え（ジャンルのサンプル試聴など）は `withoutHistory()` で囲んで履歴に残さない。描画関数の中で曲の内容を `setState` しない（やり直しの履歴が消える）。
   - 曲を開いた（`loadSong`）・新規作成（`newSong`）・起動時は履歴を捨てる（`resetHistory`）。
   - 戻したとき再生中なら、アレンジ・音量・パートON/OFF・メロディだけの変更はその場で反映し、それ以外は各画面の `restartIfPlaying()` で再生し直す。
-- 用語のツールチップ（`Glossary.ts`）：要素に `data-term="キー"` を付けると、カーソルを乗せる（キーボードならフォーカスする）と少し待って `TERMS` の説明を出す。`span` とアレンジャーのレーン名には点線の下線が付く。パート名（`LayerName`）はそのまま `TERMS` のキーとして使う（アレンジャー）。説明は初心者向けに1〜2文で、専門用語を重ねない。新しい用語を画面に出したら `TERMS` に足して `data-term` を付ける。
+- 用語のツールチップ（`Glossary.ts`）：要素に `data-term="キー"` を付けると、カーソルを乗せる（キーボードならフォーカスする）と少し待って `TERMS` の説明を出す。`span` とアレンジャーのレーン名には点線の下線が付く。パート名（`LayerName`）はそのまま `TERMS` のキーとして使う（アレンジャー）。説明は初心者向けに1〜2文で、専門用語を重ねない。新しい用語を画面に出したら `TERMS` に足して `data-term` を付ける。曲ごとに中身が変わる説明（シンプルモードの生成後のコード名・キー。`ChordTips.ts`）は、`data-tip`（本文）・`data-tip-title`（見出し）で文を直接渡す（`TERMS` より優先。`span` には同じ下線が付く）。
   - ドロップダウンの選択肢（`<option>`）にも `data-term` を付けられる（キーは `scale.<スケール>`・`chordRhythm.<リズム>`・`fx.<種類>`・`sound.<grow のプリセット ID>` の形）。リストの項目にカーソルを乗せる（キーボードで選ぶ）とリストの横に出す。リストはトップレイヤーに描かれるので、ツールチップは popover（`popover="manual"`）で出し直して上に重ねる。`TERMS` にないキーの選択肢は何も出さない。lidless の音作りのパネルのプリセットのチップ（`sound.<ID>`）と行の名前（`growCategory.<カテゴリ>`・`growCategory.standard` / `other`）にも同じ説明を出す。パネルに出るプリセット・カテゴリにはすべて説明を書く（足し忘れは `tests/GrowPresets.test.ts` で落ちる。ドラム・パーカッションのプリセットはパネルに出ないので不要）。
   - ON/OFF は設定画面で切り替える（`AppState.tooltips`、localStorage の `toniq.tooltips` = `on` / `off`、`<html data-tooltips>`。OFF では下線も出さない）。`<head>` でも描画前に `data-tooltips` を付ける。曲の内容ではないので `SONG_FIELDS` には入れない。
 - 設定画面（`SettingsScreen.ts`、`data-screen="settings"`）はメニューの横長の「設定」カードから開く。端末ごとの設定（配色・スキン・音名の表記・ループ再生・ドラムの音源・ツールチップ）を集める。曲に保存する項目は置かない。設定を足すときは AppState に項目を足し、保存は担当のモジュールが localStorage（`toniq.*`）に行い、表示の切り替えは `<html data-*>` で行う。
   - 最後の「ヘルプ」欄（`index.html` の `.settings-help`。`<details>` の開閉式で、JS はなし）に、見ただけではわかりにくい操作（ピアノロール・アレンジャーのマウス・キー操作、ノブの Shift・ホイール、タップテンポ、元に戻すのショートカット、保存の種類、試聴、テスト中の機能）を書いている。操作を足す・変えたらここも直す。
-- 作業ファイル（今の曲1曲分を .toniq.json に保存・開く機能。情報バーの「⇩ 作業ファイル」・メニューの「作業ファイルを開く」・`AppState.projectPath`・`output/projects`）は、ミュージックリストへの保存とほぼ同じなので廃止した。曲をファイルで移すときはミュージックリストの曲ファイル（「ファイルに書き出す」「すべて書き出す」「ファイルを読み込む」）を使う。
+- 作業ファイル（今の曲1曲分を .toniq.json に保存・開く機能。情報バーの「⇩ 作業ファイル」・メニューの「作業ファイルを開く」・`AppState.projectPath`・`output/projects`）は、ミュージックリストへの保存とほぼ同じなので廃止した。曲をファイルで移すときはミュージックリストの曲ファイル（「曲ファイルに書き出す」「すべて書き出す」「ファイルを読み込む」）を使う。
 - 出力フォルダ：
   - Electron では WAV / MP3 / MIDI を、書き出す前に `askFileName()`（`FileNameDialog.ts`。Electron では `prompt()` が使えないので自前のダイアログ）でファイル名を決め、`saveOutput()`（`OutputFiles.ts`）で `output/audio` / `output/midi` に直接保存し（同名なら「 (2)」を付けて上書きしない）、保存後にフォルダを開くか聞く。
   - 出力フォルダの場所は開発時が toniq フォルダの `output/`、インストール版は Toniq.exe と同じ場所の `output/`（書き込めなければ「ドキュメント/Toniq/output」）。起動時に作る。 ミュージックリストのツールバーの「出力フォルダ」ボタン（`MusicListScreen.ts`）で開く。
+  - 書き出したファイルは、ミュージックリストの「書き出したファイル」（`OutputFileList.ts`。`AppState.musicListView = "files"`）で一覧にし、種類（`musicListFileType`：すべて／WAV／MP3／MIDI）で絞り込み、WAV・MP3 を聴ける（曲の再生とは重ねない）。ごみ箱へ移すのは `shell.trashItem`（元に戻せる）。docs/ui.md。
+  - 書き出す前に、ファイル名のダイアログで「書き出したファイルは Toniq で編集し直せない」と知らせ、保存していない曲なら「ミュージックリストにも保存する」（初めから ON）を出す（`ExportProgress.ts` の `prepareExport`）。
+  - WAV / MP3 の書き出しは進み具合のダイアログの「中断する」（Esc）で止められる（`Playback.renderAudio(format, onProgress, signal)` に `AbortSignal` を渡し、止めたら `RenderCancelled` を投げる。何も保存しない）。
   - ブラウザで開いたとき（`window.toniqFiles` がない）は、書き出しはダウンロードになり、「出力フォルダ」ボタンは隠す。
-- `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（保存していない変更があれば確認する。変更の判定は `hasUnsavedChanges`（`SongLibrary.ts`）で、保存・読み込み・新規作成・起動のときの内容と比べる。ウィンドウを閉じるときも `beforeunload`＋Electron の `will-prevent-unload` で確かめる。docs/ui.md）。 ミュージックリストの曲の行には「編集」ボタン（`data-action="open"`。曲のモードで開く）を出す（以前は ⋮ メニューの中にあって気づきにくかったため。曲名のダブルクリックでも開く）。⋮ メニューは名前の変更・ファイルに書き出す・削除。
-- 両モードの情報バーの「＋ 新規作成」は、（保存していない変更があれば）確認のうえ再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
+- `AppState.songId` は今の曲がリストのどの曲か（`null` = 未保存）。リストから開いた・保存した曲は「上書き保存」になり、シンプルモードで生成し直すと `null` に戻って新しい曲として保存される。リストで再生・開くと、その曲を今の曲として読み込む（保存していない変更があれば確認する。変更の判定は `hasUnsavedChanges`（`SongLibrary.ts`）で、保存・読み込み・新規作成・起動のときの内容と比べる。ウィンドウを閉じるときも `beforeunload`＋Electron の `will-prevent-unload` で確かめる。docs/ui.md）。 ミュージックリストの曲の行には「編集」ボタン（`data-action="open"`。曲のモードで開く）を出す（以前は ⋮ メニューの中にあって気づきにくかったため。曲名のダブルクリックでも開く）。⋮ メニューは名前の変更・WAV / MP3 / MIDI で書き出す（その曲を今の曲として読み込んでから書き出す）・曲ファイルに書き出す・削除。
+- 両モードの情報バーの「＋ 新規作成」は、実行する前にいつもダイアログ（`askChoice`）で今の曲の編集内容が消えることを知らせ（保存していない変更があれば「保存してから新規作成」も選べる。`MusicListScreen.ts` の `confirmNewSong`）、そのあと再生を止めて `newSong()`（`SongLibrary.ts`）で曲の内容（`SONG_FIELDS`）を `defaultState` に戻し、`songId` を `null` にする。モードはそのまま、シンプルモードは設定画面（`generated: false`）に戻る。パターンは起動時と同じく初期のジャンル・雰囲気で決め直す（メロディは空にする）。
 - 配色は選び方を `AppState.themeMode`（`light` / `dark` / `system` = OS に合わせる）、実際の配色を `AppState.theme` に置き、`Theme.ts` が `<html data-theme>` に反映して localStorage の `toniq.theme` に保存する（未保存か `system` なら OS の設定に合わせ、OS の配色が変わったら追従する。配色は設定画面だけで選ぶ（ヘッダーの切り替えボタンは廃止した）。曲の内容ではないので `SONG_FIELDS` には入れない）。`index.html` の `<head>` でも同じキーを読んで描画前に `data-theme` を付ける。
 - カスタムモードのスキン（`AppState.skin`。UI 表示名は デフォルト／フラット／スタジオ／ポップ）：
   - `"default"` = メニュー・シンプルモード・ミュージックリストと同じ見た目（初期値）、`"flat"` = フラットなプラグイン風、`"studio"` = 少し暗い制作スタジオ（DAW）風、`"pop"` = クリーム色の地に色分けしたグルーヴボックス風。
@@ -240,19 +247,19 @@ src/engine/
 - ミキサー（`MixerPanel.ts`、`#c-arr-mixer`）はアレンジャータブのタイムラインの下にだけ置く（設定タブには置かない）。左端に dB 目盛り、パートごとのチャンネル（色・名前、ON/OFF ボタン（右クリックでソロ。`Solo.ts`。そのパートだけ ON、もう一度右クリックで元に戻す）、定位（パン）のノブ、縦フェーダー `attachFader`＋レベルメーター、値 0〜100）、右端にマスター（クリップの印・左右のピークのメーター・最大のピーク）。フェーダーは `VolumeManager.setVolume` で `AppState.volumes`（初期値は `defaultState.volumes`。曲に保存され、元に戻す／やり直すの対象）を書き換え、Volume ノードにもすぐ当てる。値と dB の換算は `VolumeCurve.ts`（75 で 0dB、100 で +5dB の2乗のカーブ。以前の値に比例のカーブで保存した曲＝`pans` のない曲は、`loadSong()` が同じ大きさの値に読み替える）。パンのノブは `VolumeManager.setPan` で `AppState.pans`（−100 = 左 〜 100 = 右。`SONG_FIELDS` に含む。ダブルクリックで中央）を書き換える。パートのメーターは再生中だけ `Tone.Meter`（音量・サイドチェイン・パートの EQ・定位のあと）を読み、マスターはリミッターのあとの波形からサンプルのピークを求める（`getMasterPeaks`。WAV / MP3 書き出しのコンテキストには作らない）。最大のピークと、−0.1dBFS に届くと点く「CLIP」は、次の再生の開始かクリックで消す。詳しくは docs/ui.md。パートの ON/OFF はミキサーの ON ボタン、アレンジャーのレーンの ON ボタン、設定タブの「追加パート」欄（パッド／アルペジオ／シグネチャー／カウンターメロディ／パーカッション）のボタンで切り替える。
 - メニューへの導線は、メニュー以外のすべての画面の上部に出るパンくずの「メニューに戻る」ボタン。ヘッダーの「⋯」メニューとシンプル／カスタムの切り替えボタンは廃止した。
 - カスタムモードには「生成する」ボタンを置かない（設定の変更はその場で反映され、メロディの作り直しはピアノロールの「自動生成」で行う）。情報バーの主ボタンは「▷ 再生」。
-- ミュージックリストの絞り込み・並び順（`musicListQuery` / `musicListGenre` / `musicListFavorites` / `musicListSort`）は AppState に置く。⋮ メニューを開いている曲・名前を変更中の曲は表示上の一時的な状態としてモジュール内に持つ。お気に入りは曲データ（`SavedSong.favorite`）に保存する。
+- ミュージックリストの絞り込み・並び順（`musicListQuery` / `musicListGenre` / `musicListFavorites` / `musicListSort`）と、保存した曲／書き出したファイルの切り替え（`musicListView`）・ファイルの種類の絞り込み（`musicListFileType`）は AppState に置く（曲の内容ではないので `SONG_FIELDS` には入れない）。⋮ メニューを開いている曲・名前を変更中の曲、読み込んだファイルの一覧・聴いているファイルは表示上の一時的な状態としてモジュール内に持つ。お気に入りは曲データ（`SavedSong.favorite`）に保存する。
 - 音楽クイズは初心者向け。カテゴリは「音の高さ」「コード・スケール」「リズム・音響」「用語」の4つで、各カテゴリの中はやさしい順に並べる。上級者向けの内容（テンション・転回形・ミックスの聴き分けなど）は足さない。聴き取り・知識の難しいモードは、出題範囲の初期値をやさしいものに絞り（`QuizCore.ts` の `startWith`）、出題設定の `hint` で「慣れたら増やす」と案内する。
 - 音名の表記（`AppState.noteNames`：`cde` / `doremi`。初期値は `doremi`。`cde` を保存した端末はそのまま）はアプリ全体の設定。設定画面と音楽クイズのツールバーのどちらでも切り替えられ、`Preferences.ts` が `toniq.noteNames` に保存する。表示は `format.ts` の `displayNote`（`"C#4"` のようなオクターブ付きも可）で変える。単音（ピアノロールの鍵盤・音符、クイズの単音・構成音）だけを変え、コード名・キー名は CDE 表記のまま（カスタムモードのルート音の選択肢は、ドレミ表記なら `A（ラ）` のように読みを添える）。
 - ループ再生（`AppState.loopPlayback`、設定画面とアレンジャータブのツールバーの「⟲ ループ」（`#c-arr-loop`。同じ設定で、ON の間は点ける）、`toniq.loop`）：ON なら `Playback.play()` が自動停止の代わりに Transport を曲全体（先頭〜`AppState.bars` 小節）でループさせる（`applyLoopPlayback`。再生中に切り替えてもすぐ反映）。周回の表示は発音時刻の小節から求めるので、先頭へ戻ると1周目から数え直す。試聴・サンプル・WAV書き出しはループしない。
 - 音楽クイズ：選んでいる出題モード（`quizMode`）は AppState に置く。出題中の問題・成績（正解数・連続）は表示上の一時的な状態として `QuizScreen.ts` に、出題設定は各モード（`QuizModes.ts`）に持つ（どちらも保存しない）。モードを足すときは `QuizMode`（`settings` と `question()`、必要なら出題設定に出すおすすめ `hint`）を作って `QUIZ_CATEGORIES` に加える。問題は回答方法（`choice` 選択肢／`notes` 鍵盤で複数選択／`key` 鍵盤を1つ押す）、回答後の一言の解説（`explain`）、再生ボタン（`sounds`、`afterAnswer` で回答後だけ表示）で表す。
 - クイズの音名の表記：単音・構成音は `displayNote`（`format.ts`。`QuizModes.ts` から再エクスポート）で今の表記にする。コード名・キー名は CDE 表記のまま。`notes` / `key` の正解は CDE 表記（`NOTES`）で持ち、表示するときに変換する。表記を切り替えると新しい問題を出す。
-- BPM の試聴（`Metronome.ts`。シンプルモードの「♪ クリックで試聴」、カスタムモードの BPM ノブ横の「♪ 試聴」）は、曲の再生（Tone.js）とは別のオーディオコンテキストで 4/4 のクリック音（1拍目は高い音）を鳴らす。拍ごとに `AppState.bpm` を読むので、鳴らしたまま BPM を変えるとすぐ反映される。鳴っているかどうかは表示上の一時的な状態としてモジュール内に持つ（保存しない）。曲の再生・試聴の開始、画面の切り替え、シンプルモードの生成で止める。
+- BPM の試聴（`Metronome.ts`。シンプルモードの「♪ メトロノームで速さを聴く」、カスタムモードの BPM ノブ横の「♪ メトロノーム」。初心者には「クリック」が拍の音のことだと伝わらないので、メトロノームと書いて用語の説明 `metronome` を付ける）は、曲の再生（Tone.js）とは別のオーディオコンテキストで 4/4 のクリック音（1拍目は高い音）を鳴らす。拍ごとに `AppState.bpm` を読むので、鳴らしたまま BPM を変えるとすぐ反映される。鳴っているかどうかは表示上の一時的な状態としてモジュール内に持つ（保存しない）。曲の再生・試聴の開始、画面の切り替え、シンプルモードの生成で止める。
 - キー・スケールの試聴（`ScalePreview.ts`。カスタムモードの「スケール・キー」欄の「響き」の「▷ 試聴」）は、今のキー（`AppState.key`）とスケール（`chordPattern.base_scale`）で、主音から1オクターブ上までの8音（主音は A3〜G#4）を順に鳴らし、最後に主音の和音を鳴らす。スケールの7音は `scaleSemitones()`（`degree_resolver.ts`。`SCALE_TONES` から作る。ピアノロールのスケールロックと共通）。曲の再生とは別のオーディオコンテキストで鳴らし、欄に並べた音名（`displayNote` で今の表記）のうち鳴っている音を光らせる。鳴っている・何音目かは表示上の一時的な状態としてモジュール内に持つ。鳴らしたままキー・スケールを変えると鳴らし直す。曲の再生・試聴・サンプルの開始、BPM のクリック音、画面の切り替えで止める。
 - ジャンルの試聴（シンプルモードの設定画面、ジャンルのチップの下の「▷ ○○ のサンプルを聴く」と一言の説明 `GENRE_DESCRIPTIONS`）：
   - ジャンルのチップは雰囲気で絞り込む（`MOOD_GENRES` の順に並べ、合わないジャンルは隠す。開いた曲のジャンルが外れていても選んでいるジャンルは出す）。雰囲気を選び直して今のジャンルが合わなければ、合うジャンルの先頭に切り替える（テンポのプリセットもそのジャンルの BPM に）。
   - 説明文は `{TERMS のキー:文字}` と書いた所を用語のツールチップ付きの span にして表示する（`renderGenreDesc`）。
   - 選んでいるジャンル・雰囲気から `resolveSimpleMode` でパターンを選び、メロディを自動生成して `Playback.playSample()` で鳴らす。
-  - コード進行1周（4小節未満なら4小節）を、ドラム・パーカッション・コード・ベース・パッド・シグネチャー・メロディをアレンジに関係なく同時に鳴らす（`Playback.ts` の `SAMPLE_LAYERS`。FX / SE・カウンターメロディは鳴らさない）。
+  - ドラム・パーカッション・コード・ベース・パッド・シグネチャー・メロディをアレンジに関係なく同時に鳴らす（`Playback.ts` の `SAMPLE_LAYERS`。FX / SE・カウンターメロディは鳴らさない）。長さはテンポ・進行によらず `SAMPLE_SECONDS`（15 秒。短い進行はループする）で、終わりの2秒でマスターをフェードアウトして止める（止める時刻はオーディオの時計で決めるので、テンポを変えても長さは同じ。docs/ui.md）。
   - 各パートは AppState から読むので、鳴らしている間だけ `chordPattern` / `drumPattern` / `meter`（ジャンルの標準の拍子）/ `melodyNotes`（拍子を差し替えてから作る）を差し替え、`Playback.stop()` で元に戻す（曲の内容は変わらない）。
   - サンプル中にジャンルを選び直すとそのジャンルのサンプルに切り替わり、テンポを変えるとすぐ反映される。画面の切り替え（`stopSample()`）・生成・ほかの再生で止まる。
 - クイズの音は曲の再生（Tone.js）とは別のオーディオコンテキストで鳴らす。新しい音を鳴らす・次の問題へ進む・画面を離れると前の音を止める。クイズ画面に入ると曲の再生は止める。
@@ -291,9 +298,9 @@ src/engine/
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
 - シンプルモードの曲の長さは 32 小節（`SimpleScreen.ts` の `SIMPLE_SONG_BARS`。生成時・コード進行の差し替え時に設定する）。
 - シンプルモードの「生成する」「別の曲を生成する」は、ピアノロールで作った内容（「自分で入力」のメロディ・オリジナルのドラム）を消さずに残す（docs/ui.md）。
-- シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。
+- シンプルモードの「生成された楽曲」の波形は実際の音声ではなく、周回ごとのパート数とドラムの強さから描いた表示用のもの。波形のクリック・ドラッグ（← → でも）で、その小節の頭から再生する（`Playback.play({ fromBar })`）。再生ボタンは波形の上（`data-simple-play` / `data-simple-stop`。情報バーにはピアノロールタブのときだけ出す）、「♪ 保存」は書き出しと同じ「保存・書き出し」の欄に置く（docs/ui.md）。
 - 各パートの Synth はモジュールに1つずつ。WAV書き出しは再生を止めて Synth を作り直し、終わったら破棄する。曲のあとに付ける余韻は `renderTailSeconds()`（2 秒。エンディングを使うときは1小節以上。遅い曲で最後の和音が切れないように）。再生中に書き出すと再生は止まる。
-- WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。
+- WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。中断（`signal`）したときは描き直さない（予定の組み立ては `OfflineContext` の内部の `_duration` を負にして抜け、合成は次の `suspend` から再開しない。docs/ui.md）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。
 - MP3書き出し（`Playback.renderMp3(onProgress)`）は WAV と同じ `renderSong()` で合成した音声を `@breezystack/lamejs`（純 JS の MP3 エンコーダ。ES モジュール対応版の lamejs）で 192kbps に変換する。エンコーダは書き出すときだけ動的に読み込む。変換は重いので `MP3_CHUNK` ごとに区切って画面に返し、`encode` の段階の進み具合を知らせる（全体の割合は `STAGE_SPAN.mp3`）。ボタンは両モードの書き出し欄（`s-export-mp3` / `c-export-mp3` / `c-arr-export-mp3`）。
 - `Playback.play()` は開始時点の AppState で各パートを読み込むので、再生中に曲の内容（コード進行・ドラム・メロディ・キーなど）を変えたら先頭から再生し直す（アレンジの編集だけは再生し直さなくてよい）。
 - 再生の開始（`play` / `preview` / `playSample`）は音源の準備を待つ（await）。待っている間にほかの再生・停止が入ったら、その開始は取りやめる（`startToken`。`stop()` も番号を進める）。戻り値は鳴らし始めたら `true`。読み込みの途中で例外が出たら止めて `onPlaybackError` に知らせ、`main.ts` が「再生できませんでした」と出す（壊れた曲で無反応にならないように）。再生を始める所を足すときもこの形にそろえる。
