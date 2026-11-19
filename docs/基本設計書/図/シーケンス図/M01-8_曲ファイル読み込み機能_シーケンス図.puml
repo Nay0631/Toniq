@@ -7,6 +7,7 @@ boundary ":ミュージックリスト画面" as L2
 control ":曲ファイル読み込み" as L3
 entity ":曲ファイル" as L4
 control ":曲の管理" as L5
+control ":曲の内容の確認" as L7
 entity ":楽曲データ" as L6
 
 L1 -> L2 : ファイルを読み込むボタンを押下してファイルを選ぶ() : void
@@ -21,6 +22,10 @@ loop 選んだファイルごと
   activate L5
   alt Toniq の曲ファイル
     loop ファイルの中の曲ごと
+      L5 -> L7 : 中身を確かめて直す() : void
+      activate L7
+      note right of L7 : 知らないキー・ディグリー・コードの種類は飛ばす。\n形の違う音・トラックは落とし、範囲外の値は直す
+      deactivate L7
       opt 鳴らせる曲
         L5 -> L6 : 足りない項目を補い、新しい ID で追加する() : void
         activate L6

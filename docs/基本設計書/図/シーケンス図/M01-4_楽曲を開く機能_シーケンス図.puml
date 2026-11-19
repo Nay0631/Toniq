@@ -24,8 +24,11 @@ activate L3
 alt 開く曲がすでに今の曲
   note over L3 : 読み込み直さない
 else ほかの曲
-  opt 今の曲がリストに保存されていない
-    L3 -> L1 : 失われてよいか確認する() : void
+  L3 -> L5 : 保存していない変更があるか確かめる() : void
+  activate L5
+  deactivate L5
+  opt 今の曲に保存していない変更がある
+    L3 -> L1 : 別の曲を開くか確認する() : void
     activate L1
     deactivate L1
   end

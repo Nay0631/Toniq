@@ -19,6 +19,9 @@ class "再生" as C4 <<control>> {
   {method} <U+002B> サンプルを1周再生する() : void
   {method} <U+002B> 停止する() : void
 }
+class "拍子" as C5 <<control>> {
+  {method} <U+002B> ジャンルの標準の拍子にする() : void
+}
 class "シンプルモード表マスタ" as E1 <<entity>> {
   {field} <U+002B> ジャンル×雰囲気
   {field} <U+002B> コード進行の候補・ドラムの候補
@@ -31,22 +34,33 @@ class "ドラムパターンマスタ" as E3 <<entity>> {
   {method} <U+002B> ドラムパターンを取得する() : void
 }
 class "メロディ設定マスタ" as E4 <<entity>> {
+  {field} <U+002B> 標準の拍子
+  {method} <U+002B> 標準の拍子を取得する() : void
   {method} <U+002B> 生成パラメータを取得する() : void
 }
 class "アプリの状態" as E5 <<entity>> {
   {field} <U+002B> コード進行
   {field} <U+002B> ドラムパターン
+  {field} <U+002B> 拍子
   {field} <U+002B> メロディ
   {method} <U+002B> 曲の内容を一時的に差し替える() : void
   {method} <U+002B> 曲の内容を元に戻す() : void
+}
+class "ジャンルスケールマスタ" as E6 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 合うスケール
+  {method} <U+002B> ジャンルに合うスケールを取得する() : void
 }
 
 B1 --> C1
 B1 --> C4
 C1 --> C2
 C2 --> E1
+C2 --> E6
 C2 --> E2
 C2 --> E3
+C1 --> C5
+C5 --> E4
 C1 --> C3
 C3 --> E4
 C1 --> C4

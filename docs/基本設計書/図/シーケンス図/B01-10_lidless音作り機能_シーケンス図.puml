@@ -1,0 +1,120 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-10_lidless音作り機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":lidlessパネル" as L2
+control ":音作り設定" as L3
+entity ":lidlessプリセット" as L4
+entity ":アプリの状態" as L5
+control ":音色試聴" as L7
+control ":lidless" as L6
+
+note over L2 : lidless を読み込めないときは、その旨を表示してつまみを出さない。\n「対象」はメロディ・カウンターメロディ・コード・ベース・パッド・アルペジオ・シグネチャー
+
+L1 -> L2 : 対象を選ぶ() : void
+activate L2
+L2 -> L3 : 対象のパートを切り替える() : void
+activate L3
+L3 -> L4 : パートに合うカテゴリのプリセットを取得する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 対象のパートの音作りの値を取得する() : void
+activate L5
+deactivate L5
+L3 -> L2 : チップとつまみの値を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : プリセットのチップを押下する() : void
+activate L2
+L2 -> L3 : プリセットを選ぶ() : void
+activate L3
+alt プリセット
+  L3 -> L4 : プリセットの値を取得する() : void
+  activate L4
+  deactivate L4
+else ジャンルの標準
+  L3 -> L4 : ジャンルの標準のプリセットを取得する() : void
+  activate L4
+  deactivate L4
+end
+L3 -> L5 : 対象のパートの音作りの値を更新する() : void
+activate L5
+deactivate L5
+L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+activate L6
+deactivate L6
+opt 停止中
+  L3 -> L7 : 主音を1音鳴らす() : void
+  activate L7
+  L7 -> L6 : 今の音色で鳴らす() : void
+  activate L6
+  deactivate L6
+  deactivate L7
+end
+L3 -> L2 : チップとつまみの値を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : つまみ・セレクト・チェックを動かす() : void
+activate L2
+L2 -> L3 : 音作りの値を設定する() : void
+activate L3
+L3 -> L5 : 対象のパートの音作りの値を更新する() : void
+activate L5
+deactivate L5
+L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+activate L6
+deactivate L6
+L3 -> L2 : プリセットからの変更を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+alt プリセットに戻すボタン
+  L1 -> L2 : プリセットに戻すボタンを押下する() : void
+  activate L2
+  L2 -> L3 : 変えた値を捨てる() : void
+  activate L3
+  L3 -> L5 : 対象のパートの音作りの値を更新する() : void
+  activate L5
+  deactivate L5
+  L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+  activate L6
+  deactivate L6
+  deactivate L3
+  deactivate L2
+else すべてのパートをジャンルの標準に戻すボタン
+  L1 -> L2 : すべてのパートを標準に戻すボタンを押下する() : void
+  activate L2
+  L2 -> L3 : 全パートの音作りを初期値に戻す() : void
+  activate L3
+  L3 -> L5 : 全パートの音作りの値を更新する() : void
+  activate L5
+  deactivate L5
+  L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+  activate L6
+  deactivate L6
+  deactivate L3
+  deactivate L2
+end
+
+loop 試し弾き（設定タブ・アレンジャータブ）
+  L1 -> L2 : 試し弾きのキーを押す() : void
+  activate L2
+  L2 -> L7 : 押している間だけ対象のパートの音で鳴らす() : void
+  activate L7
+  L7 -> L6 : 今の音色で鳴らす() : void
+  activate L6
+  deactivate L6
+  deactivate L7
+  deactivate L2
+end
+
+@enduml

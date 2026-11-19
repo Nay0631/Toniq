@@ -1,0 +1,140 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd G01-2_メロディ評価機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":メロディの評価画面" as L2
+control ":評価" as L3
+control ":一括計測" as L4
+entity ":シンプルモード表マスタ" as L5
+entity ":コード進行マスタ" as L6
+entity ":ドラムパターンマスタ" as L7
+entity ":メロディ設定マスタ" as L8
+entity ":アプリの状態" as L9
+control ":再生" as L10
+control ":自動チェック" as L11
+control ":評価の管理" as L12
+entity ":メロディの評価データ" as L13
+entity ":評価ファイル" as L14
+
+note over L2 : 設定画面の「開発用」の「評価を始める」から開く。\n条件名（変更前・変更後など）・シード・ジャンル・雰囲気・鳴らすパートを選んでおく
+
+L1 -> L2 : 曲を切り替える（前・次・未評価へ）() : void
+activate L2
+L2 -> L3 : 評価する曲を作る() : void
+activate L3
+L3 -> L4 : 一括計測と同じシードで曲を作る() : void
+activate L4
+L4 -> L5 : ジャンル×雰囲気の候補を取得する() : void
+activate L5
+deactivate L5
+L4 -> L6 : コード進行を取得する() : void
+activate L6
+deactivate L6
+L4 -> L7 : ドラムパターンを取得する() : void
+activate L7
+deactivate L7
+L4 -> L8 : 生成パラメータを取得する() : void
+activate L8
+deactivate L8
+deactivate L4
+L3 -> L9 : 曲の内容を差し替える() : void
+activate L9
+note right of L9 : 元に戻すの履歴には残さない
+deactivate L9
+L3 -> L2 : 曲の番号・内容を表示する() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+L1 -> L2 : 再生する・サビから再生する() : void
+activate L2
+L2 -> L10 : 鳴らすパートで再生する() : void
+activate L10
+deactivate L10
+deactivate L2
+
+L1 -> L2 : 点数・タグ・メモを付ける() : void
+activate L2
+L2 -> L3 : 採点する() : void
+activate L3
+L3 -> L12 : 評価を保存する() : void
+activate L12
+L12 -> L13 : 評価を保存する() : void
+activate L13
+deactivate L13
+opt 保存できない
+  L12 -> L12 : 書き出して古い条件を消すよう知らせる() : void
+  activate L12
+  deactivate L12
+end
+deactivate L12
+L3 -> L11 : 自動チェックの結果を求める() : void
+activate L11
+deactivate L11
+L3 -> L12 : 条件ごとに集計し同じ曲どうしを比べる() : void
+activate L12
+L12 -> L13 : 評価を取得する() : void
+activate L13
+deactivate L13
+deactivate L12
+L3 -> L2 : 結果の表と同じ曲どうしの差を表示する() : void
+activate L2
+deactivate L2
+L3 -> L3 : 未評価の次の曲へ進む() : void
+activate L3
+deactivate L3
+deactivate L3
+deactivate L2
+
+alt 書き出す
+  L1 -> L2 : CSV・JSON に書き出すボタンを押下する() : void
+  activate L2
+  L2 -> L12 : 評価を書き出す() : void
+  activate L12
+  L12 -> L14 : CSV・JSON に書き出す() : void
+  activate L14
+  deactivate L14
+  deactivate L12
+  deactivate L2
+else 読み込む
+  L1 -> L2 : JSON を読み込むボタンを押下する() : void
+  activate L2
+  L2 -> L12 : 評価を読み込む() : void
+  activate L12
+  L12 -> L14 : JSON を読み込む() : void
+  activate L14
+  deactivate L14
+  L12 -> L13 : 評価を足す（同じ条件・同じ曲は置き換える）() : void
+  activate L13
+  deactivate L13
+  deactivate L12
+  deactivate L2
+else 消す
+  L1 -> L2 : この条件の評価を消すボタンを押下する() : void
+  activate L2
+  L2 -> L12 : 条件の評価を消す() : void
+  activate L12
+  L12 -> L12 : 消すか確認する() : void
+  activate L12
+  deactivate L12
+  note right of L12 : 取り消したら消さない
+  L12 -> L13 : 条件の評価を消す() : void
+  activate L13
+  deactivate L13
+  deactivate L12
+  deactivate L2
+end
+
+L1 -> L2 : 画面を離れる() : void
+activate L2
+L2 -> L3 : 評価を終える() : void
+activate L3
+L3 -> L9 : 曲の内容を入る前の曲に戻す() : void
+activate L9
+deactivate L9
+deactivate L3
+deactivate L2
+
+@enduml

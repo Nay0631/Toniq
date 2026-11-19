@@ -13,6 +13,7 @@ rectangle "コード進行設定システム" <<システム名>> {
     usecase "コード進行試聴機能" as UC5
     usecase "コード音色選択機能" as UC6
     usecase "サビ進行選択機能" as UC7
+    usecase "転調選択機能" as UC8
   }
 }
 
@@ -23,5 +24,6 @@ A1 -- UC4
 A1 -- UC5
 A1 -- UC6
 A1 -- UC7
+A1 -- UC8
 
 @enduml

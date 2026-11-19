@@ -4,13 +4,15 @@ mainframe **pkg**
 
 class "カスタムモード画面" as B1 <<boundary>> {
   {method} <U+002B> 再生ボタンを押下する() : void
-}
-class "アレンジ画面" as B3 <<boundary>> {
   {method} <U+002B> スペースキーを押下する() : void
+  {method} <U+002B> 再生できなかったことを知らせる() : void
 }
 class "ミュージックリスト画面" as B2 <<boundary>> {
   {method} <U+002B> 曲の再生ボタンを押下する() : void
   {method} <U+002B> 再生位置を表示する() : void
+}
+class "スペースキー" as C7 <<control>> {
+  {method} <U+002B> 再生／停止を切り替える() : void
 }
 class "楽曲切り替え" as C1 <<control>> {
   {method} <U+002B> 選んだ曲を今の曲にする() : void
@@ -20,12 +22,11 @@ class "曲の管理" as C2 <<control>> {
 }
 class "再生" as C3 <<control>> {
   {method} <U+002B> 再生する() : void
-  {method} <U+002B> 再生開始位置から再生する() : void
   {method} <U+002B> 停止する() : void
   {method} <U+002D> 小節数で止める予約をする() : void
 }
-class "grow" as C6 <<control>> {
-  {method} <U+002B> grow の準備を待つ() : void
+class "lidless" as C6 <<control>> {
+  {method} <U+002B> lidless の準備を待つ() : void
 }
 class "各パートの演奏" as C4 <<control>> {
   {method} <U+002B> ON のパートを読み込む() : void
@@ -45,7 +46,7 @@ class "アプリの状態" as E2 <<entity>> {
   {method} <U+002B> 曲の内容を取得する() : void
   {method} <U+002B> 曲の内容を反映する() : void
 }
-class "growプリセット" as E3 <<entity>> {
+class "lidlessプリセット" as E3 <<entity>> {
   {field} <U+002B> ID
   {field} <U+002B> プリセット名
   {field} <U+002B> 音作りの値
@@ -53,7 +54,8 @@ class "growプリセット" as E3 <<entity>> {
 }
 
 B1 --> C3
-B3 --> C3
+B1 --> C7
+C7 --> C3
 B2 --> C1
 C1 --> C2
 C2 --> E1
@@ -65,5 +67,6 @@ C6 --> E3
 C3 --> C4
 C3 --> C5
 C3 --> B2
+C3 --> B1
 
 @enduml

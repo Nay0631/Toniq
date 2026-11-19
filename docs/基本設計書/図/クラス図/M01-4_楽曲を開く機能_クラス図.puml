@@ -18,6 +18,7 @@ class "再生" as C2 <<control>> {
   {method} <U+002B> 再生を止める() : void
 }
 class "曲の管理" as C3 <<control>> {
+  {method} <U+002B> 保存していない変更があるか確かめる() : void
   {method} <U+002B> 保存した曲を読み込む() : void
 }
 class "音量管理" as C4 <<control>> {

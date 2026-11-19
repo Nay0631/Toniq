@@ -1,0 +1,57 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd B01-11_拍子選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":もっと調整" as L2
+control ":標準に戻す" as L3
+entity ":メロディ設定マスタ" as L4
+control ":拍子設定" as L5
+control ":拍子" as L6
+control ":メロディ生成" as L7
+entity ":アプリの状態" as L8
+control ":再生" as L9
+
+L1 -> L2 : 拍子を選ぶ() : void
+activate L2
+L2 -> L5 : 拍子を設定する() : void
+activate L5
+note right of L5 : 1小節のマスの数は\n4/4＝16、3/4＝12、3連符＝12
+L5 -> L6 : メロディとオリジナルのドラムを置き直す() : void
+activate L6
+note right of L6 : 小節・拍の位置を保つ\n（3/4 では4拍目の音がなくなる）
+deactivate L6
+opt メロディが自動生成
+  L5 -> L7 : メロディを作り直す() : void
+  activate L7
+  deactivate L7
+end
+L5 -> L8 : 拍子・メロディ・ドラムを更新する() : void
+activate L8
+deactivate L8
+L5 -> L2 : 拍子と変更の数を表示する() : void
+activate L2
+deactivate L2
+opt 再生中
+  L5 -> L9 : 再生し直す() : void
+  activate L9
+  deactivate L9
+end
+deactivate L5
+deactivate L2
+
+L1 -> L2 : この欄を標準に戻すボタンを押下する() : void
+activate L2
+L2 -> L3 : 拍子・グルーヴを標準に戻す() : void
+activate L3
+L3 -> L4 : ジャンルの標準の拍子を取得する() : void
+activate L4
+deactivate L4
+L3 -> L5 : 拍子を設定する() : void
+activate L5
+note right of L5 : 拍子を選んだときと同じ流れ
+deactivate L5
+deactivate L3
+deactivate L2
+
+@enduml

@@ -1,0 +1,71 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd D01-4_ドラムパターン入力機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ドラムロール" as L2
+control ":ドラム編集" as L3
+entity ":ドラムパターンマスタ" as L4
+entity ":アプリの状態" as L5
+control ":ドラム演奏" as L6
+
+note over L2 : ピアノロールのツールバーで「ドラム」を選んでいる。\n行＝オープンハイハット・クローズドハイハット・クラップ・リム・スネア・キック、列＝マス
+
+alt マスを編集する
+  L1 -> L2 : マスをクリック・ドラッグ・右クリックする() : void
+  activate L2
+  L2 -> L3 : ドラムを編集する() : void
+  activate L3
+  note right of L3 : 空いていれば置き、あれば消す\n（右クリックは消す）。長さ（1・2・4小節）・\n強さ（強・中・弱）の変更も同じ流れ
+  L3 -> L5 : オリジナルのドラムと置く強さを更新する() : void
+  activate L5
+  deactivate L5
+  opt 再生中
+    L3 -> L6 : 次の音からすぐ反映する() : void
+    activate L6
+    deactivate L6
+  end
+  L3 -> L2 : 置いた音と注意を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+else パターンを読み込む・クリア
+  L1 -> L2 : パターンを読み込む・クリアを押下する() : void
+  activate L2
+  L2 -> L3 : ドラムを編集する() : void
+  activate L3
+  opt オリジナルのドラムを使っている
+    L3 -> L3 : 置き換える・消すか確認する() : void
+    activate L3
+    deactivate L3
+    note right of L3 : 取り消したら何もしない
+  end
+  opt パターンを読み込む
+    L3 -> L4 : 読み込むパターンを取得する() : void
+    activate L4
+    deactivate L4
+  end
+  L3 -> L5 : オリジナルのドラムと置く強さを更新する() : void
+  activate L5
+  deactivate L5
+  opt 再生中
+    L3 -> L6 : 次の音からすぐ反映する() : void
+    activate L6
+    deactivate L6
+  end
+  L3 -> L2 : 置いた音と注意を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+else 行の見出しを押下する
+  L1 -> L2 : 行の見出しを押下する() : void
+  activate L2
+  L2 -> L6 : その音を試聴する() : void
+  activate L6
+  deactivate L6
+  deactivate L2
+end
+
+@enduml

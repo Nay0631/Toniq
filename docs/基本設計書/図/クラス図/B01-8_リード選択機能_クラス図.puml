@@ -2,46 +2,40 @@
 !include ../astah-class-style.puml
 mainframe **pkg**
 
-class "カスタムモード画面" as B1 <<boundary>> {
-  {method} <U+002B> メロディの音色を選ぶ() : void
+class "lidlessパネル" as B1 <<boundary>> {
+  {method} <U+002B> プリセットのチップを押下する() : void
+  {method} <U+002B> 選んでいるチップを表示する() : void
 }
 class "音色設定" as C1 <<control>> {
-  {method} <U+002B> 音色を設定する() : void
+  {method} <U+002B> メロディの音色を設定する() : void
 }
-class "再生" as C2 <<control>> {
-  {method} <U+002B> 再生し直す() : void
+class "音色試聴" as C2 <<control>> {
+  {method} <U+002B> 主音を1音鳴らす() : void
 }
-class "メロディ演奏" as C3 <<control>> {
-  {method} <U+002B> メロディの音源を作り直す() : void
-}
-class "grow" as C4 <<control>> {
-  {method} <U+002B> 音作りの値で音源を作る() : void
+class "lidless" as C3 <<control>> {
+  {method} <U+002B> 選んだ音色で鳴らす() : void
+  {method} <U+002B> 鳴っているメロディにすぐ反映する() : void
 }
 class "アプリの状態" as E1 <<entity>> {
-  {field} <U+002B> メロディの音色
-  {field} <U+002B> メロディの音作りの値（プリセット・変えた値）
-  {method} <U+002B> メロディの音色を更新する() : void
-  {method} <U+002B> 音色・音作りの値を取得する() : void
+  {field} <U+002B> メロディの音色（空＝ジャンルの標準）
+  {field} <U+002B> メロディの変えた値
+  {method} <U+002B> メロディの音色を更新し、変えた値を捨てる() : void
 }
-class "メロディ設定マスタ" as E2 <<entity>> {
-  {field} <U+002B> ジャンル
-  {field} <U+002B> 標準の音色
-  {method} <U+002B> ジャンルの標準の音色を取得する() : void
-}
-class "growプリセット" as E3 <<entity>> {
+class "lidlessプリセット" as E2 <<entity>> {
   {field} <U+002B> ID
   {field} <U+002B> プリセット名
+  {field} <U+002B> カテゴリ
   {field} <U+002B> 音作りの値
-  {method} <U+002B> プリセットの値を取得する() : void
+  {method} <U+002B> プリセットを取得する() : void
+  {method} <U+002B> ジャンルの標準のプリセットを取得する() : void
 }
 
 B1 --> C1
+C1 --> E2
 C1 --> E1
 C1 --> C2
 C2 --> C3
-C3 --> E1
-C3 --> E2
-C3 --> C4
-C4 --> E3
+C1 --> C3
+C1 --> B1
 
 @enduml

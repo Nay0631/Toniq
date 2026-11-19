@@ -5,21 +5,24 @@ mainframe **pkg**
 class "ピアノロール画面" as B1 <<boundary>> {
   {field} <U+002D> 編集中のセクション
   {method} <U+002B> 編集するセクションを選ぶ() : void
-  {method} <U+002B> グリッドの空いている所を押下する() : void
-  {method} <U+002B> キーを押す() : void
+  {method} <U+002B> グリッドを押下する・タイピングピアノのキーを押す() : void
   {method} <U+002B> 自動生成ボタンを押下する() : void
+  {method} <U+002B> クリアボタンを押下する() : void
   {method} <U+002B> 音符を表示する() : void
 }
 class "音符編集" as C1 <<control>> {
   {method} <U+002B> 音を置く() : void
   {method} <U+002B> 自動生成のメロディに置き換える() : void
+  {method} <U+002B> すべて消す() : void
   {method} <U+002D> 重なる音を手前で切る() : void
+  {method} <U+002D> 置き換えるか確認する() : void
+  {method} <U+002D> 消すか確認する() : void
 }
 class "スケール判定" as C2 <<control>> {
   {method} <U+002B> 置ける音か確かめる() : void
 }
 class "メロディ演奏" as C3 <<control>> {
-  {method} <U+002B> 置いた音を試聴する() : void
+  {method} <U+002B> 置いた音を今の音色で試聴する() : void
 }
 class "パート管理" as C4 <<control>> {
   {method} <U+002B> メロディを読み込み直す() : void
