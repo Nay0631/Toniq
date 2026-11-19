@@ -13,7 +13,6 @@ rectangle "アレンジ・書き出しシステム" <<システム名>> {
     usecase "WAVエクスポート機能" as UC5
     usecase "再生開始位置選択機能" as UC6
     usecase "セクション切替機能" as UC7
-    usecase "テスト中の機能切替機能" as UC8
     usecase "構成選択機能" as UC10
     usecase "ソロ切替機能" as UC11
   }
@@ -26,7 +25,6 @@ A1 -- UC4
 A1 -- UC5
 A1 -- UC6
 A1 -- UC7
-A1 -- UC8
 A1 -- UC10
 A1 -- UC11
 

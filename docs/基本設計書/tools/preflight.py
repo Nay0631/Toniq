@@ -1,7 +1,8 @@
 # docx を作る前の確認（/build-design-doc の 0〜2 をまとめたもの）
 #
 # 必要なもの・出力先が開かれていないか・仕様書が origin/main に追いついているか・付録C の「要：」・
-# 5.2 と 6.2 の対応・未実装の機能と build_docx.py の文・次の版数と改訂の概要の材料を、OK / NG で数行に出す。
+# 5.2 と 6.2 の対応・未実装の機能と build_docx.py の文・開発のテスト・確認用のものが載っていないか・
+# 次の版数と改訂の概要の材料を、OK / NG で数行に出す。
 # NG が1つでもあれば終了コード 1。結果は UTF-8 のファイル（--out）にも書く（Windows の端末の文字化け対策）。
 #
 # 使い方（リポジトリのルートで）:
@@ -14,10 +15,16 @@ ROOT = os.path.dirname(os.path.dirname(DOC))
 SPEC = os.path.join(DOC, '仕様書.md')
 GUIDE = os.path.join(DOC, '基本設計書の作成手順.md')
 TEMPLATE = os.path.join(DOC, '作成ファイル', '04_2026_卒研_基本設計書(R4SA_アプリオリ).docx')
-OUT_DOCX = os.path.join(DOC, '作成ファイル', '04_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx')
+# 作る docx のファイル名の先頭の2桁は改訂の版数（2026-11-19 決定。手本の docx の「04_」はそのまま）
+def out_docx(rev):
+    return os.path.join(DOC, '作成ファイル', f'{rev}_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx')
 REV_FILE = os.path.join(HERE, '改訂履歴.tsv')
 BUILD_PY = os.path.join(HERE, 'build_docx.py')
 CODE_PATHS = ['src', 'index.html', 'electron', 'public', 'package.json']
+# システムの開発のためのテスト・確認に作ったものは基本設計書に載せない（2026-11-19 決定）。付録B より前にこの語があれば NG
+DEV_ONLY = ['テスト中の機能', 'メロディ評価', 'メロディの評価', '自動チェック', '一括計測', '開発用',
+            'npm run quality', 'npm run mix:measure', 'npm test', 'npm run lint', 'npm run typecheck',
+            'QualityCheck', 'QualityBatch', 'RatingScreen', 'MelodyRatings']
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--no-fetch', action='store_true', help='git fetch origin を省く')
@@ -48,14 +55,24 @@ if not os.path.exists(TEMPLATE):
     missing.append('手本の docx（git restore で戻す。消さない）')
 report(not missing, '必要なもの（Java・Python・Node.js・Word・手本の docx）', '、'.join(missing) + ' がない' if missing else '')
 
+# ---------- 前回の版数と次の版数 ----------
+revs = []
+if os.path.exists(REV_FILE):
+    for l in open(REV_FILE, encoding='utf-8').read().splitlines():
+        if l.strip() and not l.startswith('#'):
+            revs.append(l.split('\t', 2))
+last = revs[-1] if revs else ['01', '2026/10/19', '初版発行']
+nxt = f'{int(last[0]) + 1:02d}'
+
 # ---------- 出力先が開かれていないか ----------
+OUT_DOCX = out_docx(nxt)
 locked = False
 if os.path.exists(OUT_DOCX):
     try:
         open(OUT_DOCX, 'r+b').close()
     except OSError:
         locked = True
-report(not locked, '出力先の docx が閉じている', 'Word などで開かれている。閉じてから作る' if locked else '')
+report(not locked, f'出力先の docx（{os.path.basename(OUT_DOCX)}）が閉じている', 'Word などで開かれている。閉じてから作る' if locked else '')
 
 # ---------- 仕様書の基準と origin/main ----------
 spec = open(SPEC, encoding='utf-8').read()
@@ -111,14 +128,17 @@ report(ok, '未実装の機能と build_docx.py の文が一致',
        ('仕様書 ' + (','.join(sorted(todo_impl)) or 'なし') + '／スクリプト ' + (','.join(sorted(in_script)) or 'なし') + '。スクリプトの文を直す') if not ok
        else ('未実装なし' if not todo_impl else ','.join(sorted(todo_impl))))
 
-# ---------- 次の版数と改訂の概要の材料 ----------
-revs = []
-if os.path.exists(REV_FILE):
-    for l in open(REV_FILE, encoding='utf-8').read().splitlines():
-        if l.strip() and not l.startswith('#'):
-            revs.append(l.split('\t', 2))
-last = revs[-1] if revs else ['01', '2026/10/19', '初版発行']
-nxt = f'{int(last[0]) + 1:02d}'
+# ---------- 開発のテスト・確認用のもの ----------
+body = spec[:spec.index('## 付録B')] if '## 付録B' in spec else spec
+hits = []
+for i, l in enumerate(body.splitlines(), 1):
+    found = [w for w in DEV_ONLY if w in l]
+    if found:
+        hits.append(f'{i}行目（{found[0]}）')
+report(not hits, '開発のテスト・確認用のもの（テスト中の機能切替・自動チェック・メロディの評価・一括計測など）が載っていない',
+       '、'.join(hits[:8]) + (f' ほか {len(hits) - 8} 行' if len(hits) > 8 else '') + '。仕様書.md から外す（/update-spec の決まり）' if hits else '')
+
+# ---------- 改訂の概要の材料 ----------
 guide = open(GUIDE, encoding='utf-8').read()
 pm = re.search(r'\| 5\. docx を作る \|[^\n]*?(\d+)ページ', guide)
 report(None, '次の版数', f'{nxt}（前回 {last[0]}：{last[1]}、{pm.group(1) + "ページ" if pm else "ページ数不明"}）')
