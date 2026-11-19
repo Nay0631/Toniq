@@ -45,7 +45,7 @@ New-Item -ItemType Directory -Force $png | Out-Null
 #    PNG がない・いちばん新しい .puml（スタイルの共通ファイルを含む）が いちばん古い PNG より新しいときだけ作り直す
 $pngs = @(Get-ChildItem $png -Filter *.png -ErrorAction SilentlyContinue)
 #    （ロバストネス図の SVG・robustness_labels.mjs が新しいときも作り直す。PNG はその SVG から作るため）
-$newestPuml = (@(Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml) + @(Get-ChildItem (Join-Path $doc "図\ロバストネス図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "robustness_labels.mjs")) | Measure-Object LastWriteTime -Maximum).Maximum
+$newestPuml = (@(Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml) + @(Get-ChildItem (Join-Path $doc "図\ロバストネス図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "robustness_labels.mjs")) + @(Get-ChildItem (Join-Path $doc "図\ER図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "er_layout.mjs")) | Measure-Object LastWriteTime -Maximum).Maximum
 $oldestPng = if ($pngs.Count) { ($pngs | Measure-Object LastWriteTime -Minimum).Minimum } else { $null }
 $needPng = $ForcePng -or -not $pngs.Count -or (-not $SkipPng -and $newestPuml -gt $oldestPng)
 if ($needPng) {
@@ -64,6 +64,10 @@ $labelArgs = @((Join-Path $PSScriptRoot "robustness_labels.mjs"))
 if ($needPng) { $labelArgs += @("--png", $png, "--scale", "1.5") }
 & node @labelArgs
 if ($LASTEXITCODE -ne 0) { "（注意）ロバストネス図に文の重なりが残っています。上の「重なり」の図を確かめてください" }
+# ER図：名前を箱の上に出し、子の側の丸を黒丸にする（er_layout.mjs。処理済みの SVG は変えない）。PNG もその SVG から作る
+$erArgs = @((Join-Path $PSScriptRoot "er_layout.mjs"))
+if ($needPng) { $erArgs += @("--png", $png, "--scale", "1.5") }
+& node @erArgs
 "PNG: " + (Get-ChildItem $png -Filter *.png).Count + " 枚"
 
 # 2. 下書き
