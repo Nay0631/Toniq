@@ -18,16 +18,19 @@ param(
   [Parameter(Mandatory = $true)][string]$Rev,       # 改訂履歴に足す版数（例 03。tools/改訂履歴.tsv に足す。表紙の文書番号の「(01)」にも使う）
   [Parameter(Mandatory = $true)][string]$RevNote,   # 改訂履歴に足す改訂の概要
   [string]$Date = (Get-Date -Format "yyyy/MM/dd"),  # 表紙と改訂履歴の日付
-  [string]$Out = "",                                # 出力先（省略時は 作成ファイル/…_仕様書から作成.docx）
+  [string]$Out = "",                                # 出力先（省略時は 作成ファイル/<版数>_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx）
   [switch]$SkipPng,                                 # PNG を作り直さない（ふつうは不要。図が変わったときだけ自動で作り直す）
   [switch]$ForcePng                                 # 図が変わっていなくても PNG を作り直す
 )
 $ErrorActionPreference = "Stop"
+# 版数は2桁（作る docx のファイル名の先頭の2桁と、表紙の文書番号に使う）
+if ($Rev -notmatch '^\d{2}$') { throw "版数（-Rev）は 2 桁の数字で指定してください（例 08）: $Rev" }
 
 $root = (Resolve-Path "$PSScriptRoot\..\..\..").Path
 $doc  = Join-Path $root "docs\基本設計書"
 $template = Join-Path $doc "作成ファイル\04_2026_卒研_基本設計書(R4SA_アプリオリ).docx"
-if ($Out -eq "") { $Out = Join-Path $doc "作成ファイル\04_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx" }
+# 作る docx のファイル名の先頭の2桁は、改訂履歴の版数にする（2026-11-19 決定。手本の docx の「04_」はそのまま）
+if ($Out -eq "") { $Out = Join-Path $doc ("作成ファイル\" + $Rev + "_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx") }
 # 出力先を Word で開いたままだと最後の保存で失敗するので、先に確かめて止める
 if (Test-Path -LiteralPath $Out) {
   try { $fs = [System.IO.File]::Open($Out, 'Open', 'ReadWrite', 'None'); $fs.Close() }
@@ -91,6 +94,11 @@ try {
 }
 Remove-Item -LiteralPath $draft -ErrorAction SilentlyContinue
 "完成: $Out"
+# 前の版の docx（先頭の2桁が違うもの）が残っていれば知らせる（消すかどうかは利用者が決める）
+$outName = Split-Path -Leaf $Out
+foreach ($f in @(Get-ChildItem (Join-Path $doc "作成ファイル") -Filter "*_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx" | Where-Object { $_.Name -ne $outName -and $_.Name -notlike '~$*' })) {
+  "前の版の docx が残っています: " + $f.Name
+}
 
 # 4. できた docx を確かめる（結果は UTF-8 のファイルを経由して出す。端末の文字化け対策）
 "確認中..."
