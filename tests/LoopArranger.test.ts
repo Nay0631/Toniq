@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { setState, getState, type ArrangeEdit } from "../src/engine/AppState";
 import {
   arrangementGate, arrangementBlockAt, buildArrangement, buildDefaultArrangement, currentEditsWithPartBlocks, currentUnits, defaultSections,
-  editsFromLegacy, findBlock, findEdit, getArrangement, setArrangementBypass, withEdit, ARRANGE_PRESETS, LAYERS, SECTION_BARS,
+  editsFromLegacy, findBlock, findEdit, getArrangement, setArrangementBypass, setForcedPart, withEdit, ARRANGE_PRESETS, LAYERS, SECTION_BARS,
 } from "../src/engine/LoopArranger";
 import { chordById, chords, resetState } from "./helpers";
 import easyTable from "../src/data/easy_mode_table.json";
@@ -14,6 +14,7 @@ const GENRES = Object.keys(easyTable);
 beforeEach(() => {
   resetState();
   setArrangementBypass(false);
+  setForcedPart(null);
 });
 
 describe("buildDefaultArrangement（ジャンルの標準アレンジ）", () => {
@@ -106,6 +107,30 @@ describe("arrangementGate（再生中にパートを鳴らすか）", () => {
     expect(fx(7 * BAR_SEC)?.fx).toBe("impact");
     const drum = arrangementBlockAt("drum");
     expect(drum(1)?.drum).toBe("drum_002");
+  });
+
+  it("ピアノロールで編集中のパートは、ブロックのない小節でも鳴らす（ほかのパートはアレンジのまま）", () => {
+    setState({ ...edm16(), bars: 32, arrangeEdits: [  // 32 小節：サビ（小節 17〜24）にはドラムが入る
+      { section: "A", nth: 0, part: "melody", on: false },
+      { section: "A", nth: 0, part: "drum", on: false },
+      { section: "A", nth: 0, part: "chord", on: false },
+    ] });
+    expect(arrangementGate("melody")(1)).toBe(false);
+    setForcedPart("melody");
+    expect(arrangementGate("melody")(1)).toBe(true);
+    expect(arrangementGate("chord")(1)).toBe(false);
+    // ドラム：ブロックの外は null（今の曲の設定のパターンで鳴らす）、ブロックの中はそのブロック
+    expect(arrangementBlockAt("drum")(1)).toBeUndefined();
+    setForcedPart("drum");
+    expect(arrangementBlockAt("drum")(1)).toBeNull();
+    const drumBars = [...Array(32).keys()].filter(bar => findBlock(getArrangement().drum, bar));
+    expect(drumBars.length).toBeGreaterThan(0);
+    for (const bar of drumBars) {
+      expect(arrangementBlockAt("drum")(bar * BAR_SEC + 0.5), `小節${bar + 1}`).toBe(findBlock(getArrangement().drum, bar));
+    }
+    expect(arrangementGate("melody")(1)).toBe(false);
+    setForcedPart(null);
+    expect(arrangementGate("drum")(1)).toBe(false);
   });
 
   it("変えた所がなければ構成のプリセット（標準）のまま", () => {

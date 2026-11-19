@@ -495,14 +495,32 @@ export function positionAt(): (time: number) => { bar: number; step: number } {
 // 読み込んだ時点の Transport（WAV書き出しではオフライン用）で、発音時刻が何小節目かを調べる
 export function arrangementGate(part: LayerName): (time: number) => boolean {
   const bar = barAt();
-  return time => bypass || isArrangedAt(part, bar(time));
+  return time => bypass || forcedPart === part || isArrangedAt(part, bar(time));
 }
 
 // arrangementGate と同じ判定で、発音時刻にあるブロックを返す（ブロックごとに鳴らし分けるパート用。FX の種類など）
-// ブロックの外なら undefined、試聴中（判定を外しているとき）は null
+// ブロックの外なら undefined、試聴中（判定を外しているとき）は null。
+// ピアノロールで編集中のパートは、ブロックの外でも null（今の曲の設定で鳴らす）
 export function arrangementBlockAt(part: LayerName): (time: number) => ArrangeBlock | null | undefined {
   const bar = barAt();
-  return time => bypass ? null : findBlock(getArrangement()[part], bar(time));
+  return time => {
+    if (bypass) return null;
+    const block = findBlock(getArrangement()[part], bar(time));
+    return block === undefined && forcedPart === part ? null : block;
+  };
+}
+
+// ピアノロールで編集中のパート（メロディ／ドラム）。開いている間は、アレンジでブロックを置いていない小節でも鳴らす
+// （置いていない所を編集すると音が聞こえないため。PianoRollTab.ts が立て、ほかのタブ・画面に移ると null に戻す）。
+// 発音のたびに見るので、再生中に切り替えてもすぐ反映される。書き出し（renderSong）では外す
+let forcedPart: LayerName | null = null;
+
+export function setForcedPart(part: LayerName | null): void {
+  forcedPart = part;
+}
+
+export function getForcedPart(): LayerName | null {
+  return forcedPart;
 }
 
 // ===== 周回の表示 =====

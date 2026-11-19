@@ -32,14 +32,9 @@
     <h1 class="app-title">Toniq</h1>
   </header>
 
-  <!-- パンくず（メニュー以外の画面で表示） -->
-  <nav class="breadcrumb" id="breadcrumb" hidden>
-    <button class="breadcrumb-back" data-goto="menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
-      メニューに戻る
-    </button>
-    <span class="breadcrumb-sep"></span>
-    <span class="breadcrumb-title" id="breadcrumb-title"></span>
+  <!-- パンくず（今いる場所を「メニュー › シンプルモード › 生成した曲」のようにたどる。中身は Router.ts の crumbsFor が作る） -->
+  <nav class="breadcrumb" id="breadcrumb" aria-label="現在の場所" hidden>
+    <ol class="breadcrumb-trail" id="breadcrumb-trail"></ol>
     <span class="breadcrumb-sep" data-musiclist-only hidden></span>
     <span class="breadcrumb-count" id="ml-count" data-musiclist-only hidden></span>
   </nav>
@@ -138,7 +133,7 @@
           <button class="btn" data-new-song>＋ 新規作成</button>
           <!-- 再生ボタンは設定タブでは「生成された楽曲」の上に出し、ここにはピアノロールタブのときだけ出す -->
           <span class="infobar-transport" id="s-bar-transport">
-            <button class="btn btn-square" data-simple-stop aria-label="停止"><span class="icon-stop"></span></button>
+            <button class="btn btn-stop" data-simple-stop hidden><span class="icon-stop"></span>停止</button>
             <button class="btn btn-play" data-simple-play>▷ 再生</button>
           </span>
         </div>
@@ -223,13 +218,13 @@
 
         <!-- 生成後：結果 -->
         <div id="s-result" hidden>
-          <button class="link-btn" id="s-edit-settings">‹ 設定を変更</button>
+          <button class="btn back-to-setup" id="s-edit-settings">‹ 雰囲気・ジャンル・テンポを変更</button>
 
           <div class="card wave-card">
             <!-- 再生の操作は曲の表示のすぐ上に置く（情報バーの右端だと見つけにくいため） -->
             <div class="wave-head">
               <button class="btn btn-play wave-play" data-simple-play>▷ 再生</button>
-              <button class="btn btn-square" data-simple-stop aria-label="停止" title="停止"><span class="icon-stop"></span></button>
+              <button class="btn btn-stop" data-simple-stop hidden><span class="icon-stop"></span>停止</button>
               <span class="wave-time" id="s-time"></span>
               <span class="wave-title">生成された楽曲 <span class="field-hint">波形をクリック・ドラッグすると、その位置から再生します</span></span>
             </div>
@@ -304,7 +299,7 @@
           <button class="btn btn-square" data-redo aria-label="やり直す" title="やり直す（Ctrl+Shift+Z）">↷</button>
           <button class="btn" data-new-song>＋ 新規作成</button>
           <button class="btn" data-save-song>♪ 保存</button>
-          <button class="btn btn-square" id="c-stop" aria-label="停止"><span class="icon-stop"></span></button>
+          <button class="btn btn-stop" id="c-stop" hidden><span class="icon-stop"></span>停止</button>
           <button class="btn btn-play" id="c-play">▷ 再生</button>
         </div>
       </div>
@@ -934,6 +929,7 @@
           <details class="help-item">
             <summary>ピアノロール（メロディの入力）</summary>
             <ul>
+              <li>ピアノロールを開いている間は、アレンジャーでメロディ（ドラム）を置いていない小節でも、編集しているパートの音が鳴ります（書き出す曲はアレンジのとおりです）。</li>
               <li>空いている所をクリックで音を置き、そのまま横にドラッグすると長さを決められます。</li>
               <li>音をドラッグで移動、音の右端をドラッグで長さを変えます。</li>
               <li>音を<b>右クリック</b>、または選んで <kbd>Delete</kbd> で消します。</li>
@@ -963,6 +959,7 @@
               <li>雰囲気を選ぶと、その雰囲気に合うジャンルだけが並びます。今のジャンルが合わないときは、合うジャンルの先頭に切り替わります。</li>
               <li>生成した曲の「レイヤー差し替え」の「↻ 再抽選」は、押したパート（メロディ・コード・ドラム）だけを選び直します（Aメロ・サビの両方が変わります）。「✦ 別の曲を生成する」は全部を選び直して新しい曲にします（ピアノロールで入力したメロディ・作ったドラムは残ります）。</li>
               <li>生成した曲では、どのタブでもスペースキーで再生／停止できます。</li>
+              <li>「‹ 雰囲気・ジャンル・テンポを変更」で設定画面に戻れます。戻ってもう一度「生成する」と今の曲は新しい曲に置き換わるので、残したいときは先に保存してください（戻るときに保存もできます）。</li>
               <li>「生成された楽曲」の波形をクリック（ドラッグ）すると、その小節から再生します。波形を選んで <kbd>←</kbd> <kbd>→</kbd> で1小節ずつ、<kbd>Home</kbd> で先頭から鳴らせます。</li>
               <li>情報バーのキー（「A ナチュラルマイナー」など）と、コードのカードのコード名（「Am」「F」など）にカーソルを乗せると、それが何を表すかの説明が出ます。</li>
               <li>曲はジャンルに合うスケールのコード進行から作られます（スケールを自分で選ぶときはカスタムモードを使います）。</li>
@@ -1040,6 +1037,7 @@
               <li>保存した曲の続きを編集するには、ミュージックリストで曲の「編集」ボタンを押します（曲名のダブルクリックでも開けます）。</li>
               <li><b>WAV / MP3 / MIDI</b>：できた曲を音声・MIDI のファイルにします。書き出したファイルは Toniq で編集し直せないので、続きを編集したいときは「♪ 保存」もしておきます（書き出すときの「ミュージックリストにも保存する」でも保存できます）。保存先は「出力フォルダ」ボタンで開けます。</li>
               <li>WAV・MP3 の書き出しは、進み具合の画面の「中断する」（<kbd>Esc</kbd>）でやめられます。</li>
+              <li>画面の上の道すじ（パンくず）で、今いる場所がわかります。「‹ メニューに戻る」やとちゅうの名前を押すと、その画面へ戻れます。ほかの画面へ移ると曲の再生は止まります。</li>
               <li>ミュージックリストの「書き出したファイル」で、書き出した WAV・MP3・MIDI を種類ごとに探せます。WAV・MP3 はその場で聴けます。保存した曲の ⋮ メニューからも WAV・MP3・MIDI で書き出せます。</li>
               <li>「＋ 新規作成」を押すと、今の曲の編集内容が消えることを確かめる画面が出ます。保存していない変更があるときは「保存してから新規作成」も選べます。</li>
               <li>ミュージックリストの「すべて書き出す」「ファイルを読み込む」で、曲をまとめて移せます。読み込むとき、鳴らせない内容の曲は飛ばされ、範囲外の値（音量など）は使える値に直されます。</li>

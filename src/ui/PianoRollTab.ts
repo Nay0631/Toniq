@@ -8,6 +8,7 @@ import { previewMelodyNote } from "../engine/MelodyPlayer";
 import * as Playback from "../engine/Playback";
 import { NOTE_INDEX, scaleSemitones } from "../data/degree_resolver";
 import { onRender, render } from "./Router";
+import { setForcedPart } from "../engine/LoopArranger";
 import { SCALE_LABELS, chordSpans, displayNote } from "./format";
 import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
 import type { ChordProgression } from "../data/types";
@@ -240,6 +241,8 @@ function pane(root: HTMLElement, name: RollTarget): HTMLElement {
 
 export function renderPianoRoll(): void {
   const root = currentRoot();
+  // ピアノロールを開いている間は、編集中のパートをアレンジでブロックを置いていない小節でも鳴らす（ほかのタブ・画面では戻す）
+  setForcedPart(root ? target : null);
   const s = getState();
   if (!root || !s.chordPattern || drag) return;
 

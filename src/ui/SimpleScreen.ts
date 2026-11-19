@@ -6,7 +6,9 @@ import { isArrangedAt, LAYERS } from "../engine/LoopArranger";
 import { tap, resetTap } from "../engine/TapTempo";
 import { isMetronomeOn, onMetronomeChange, stopMetronome, toggleMetronome } from "../engine/Metronome";
 import * as Playback from "../engine/Playback";
-import { onRender, showTab } from "./Router";
+import { onRender, render as renderAll, renderBreadcrumb, showTab } from "./Router";
+import { askChoice } from "./ChoiceDialog";
+import { hasUnsavedSong, lossMessage, saveToList } from "./SongSave";
 import { formatTime } from "./format";
 import { chordNameSpans, keyScaleSpan } from "./ChordTips";
 import { startPianoRollPlayhead } from "./PianoRollTab";
@@ -147,6 +149,31 @@ function melodySummary(): string {
   return s.chorusMelodyNotes.length > 0
     ? `Aメロ ${verse}音・サビ ${count(s.chorusMelodyNotes)}音`
     : `${verse}音。サビも同じメロディ`;
+}
+
+// 生成した曲から設定画面（雰囲気・ジャンル・テンポ）に戻ってよいか確かめる。
+// 戻るだけでは曲は消えないが、もう一度「生成する」と新しい曲に置き換わるので、保存していなければ保存も選べるようにする
+async function confirmBackToSetup(): Promise<boolean> {
+  const unsaved = hasUnsavedSong();
+  const choice = await askChoice({
+    title:   "雰囲気・ジャンル・テンポを変更しますか？",
+    message: "設定画面に戻ってもう一度「生成する」と、今の曲（コード進行・メロディ・ドラムなど）は新しい曲に置き換わり、今の曲のデータは消えます。",
+    detail:  unsaved
+      ? `${lossMessage()}\n残しておきたいときは「保存してから戻る」を選んでください（ミュージックリストに保存され、あとで続きを編集できます）。`
+      : "この曲はミュージックリストに保存してあるので、置き換わったあともミュージックリストから開けます。",
+    choices: unsaved
+      ? [
+        { id: "discard", label: "保存せずに戻る", kind: "danger" },
+        { id: "save",    label: "保存してから戻る", kind: "primary" },
+      ]
+      : [{ id: "back", label: "設定画面に戻る", kind: "primary" }],
+  });
+  if (choice === null) return false;
+  if (choice === "save") {
+    if (!saveToList()) return false;
+    renderAll();  // 「♪ 保存」を「上書き保存」にする
+  }
+  return true;
 }
 
 // 再生中に曲の内容が変わったら先頭から再生し直す
@@ -314,6 +341,7 @@ function startPlayheadLoop(): void {
 function render(): void {
   const s = getState();
   if (s.screen !== "simple") return;
+  renderBreadcrumb();  // 生成の前後で「設定」「生成した曲」が変わる
 
   const presetLabel = s.tempoPreset === "custom" ? "タップ" : s.tempoPreset;
   $("s-info-bpm")!.textContent   = s.generated ? `${s.bpm}` : `${s.bpm}（${presetLabel}）`;
@@ -338,6 +366,8 @@ function render(): void {
   $$("[data-simple-play]").forEach(btn => {
     btn.textContent = Playback.isPlaying() ? "↺ 最初から" : "▷ 再生";
   });
+  // 停止ボタンは鳴っている間だけ出す
+  $$("[data-simple-stop]").forEach(btn => { btn.hidden = !Playback.isPlaying(); });
 
   // 設定
   $$("[data-mood]").forEach(el =>
@@ -495,7 +525,9 @@ export function initSimpleScreen(): void {
     if (wasPlaying) await startPlayback();
   });
 
-  $("s-edit-settings")?.addEventListener("click", () => {
+  // 「雰囲気・ジャンル・テンポを変更」：設定画面に戻る前に、もう一度生成すると今の曲が置き換わることを知らせる
+  $("s-edit-settings")?.addEventListener("click", async () => {
+    if (!await confirmBackToSetup()) return;
     Playback.stop();
     setState({ generated: false });
     render();

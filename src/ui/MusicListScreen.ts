@@ -6,7 +6,7 @@ import {
 import { hasOutputFolder, openOutputFolder } from "../engine/OutputFiles";
 import * as Playback from "../engine/Playback";
 import type { AudioFormat } from "../engine/Playback";
-import { onRender, onScreenChange, render as renderAll, showScreen } from "./Router";
+import { onRender, onScreenChange, render as renderAll, renderBreadcrumb, showScreen } from "./Router";
 import { formatTime, SCALE_LABELS } from "./format";
 import { beatsPerBar } from "../engine/Meter";
 import { hasUnsavedSong, isListedSong, lossMessage, saveToList, withStorage } from "./SongSave";
@@ -304,6 +304,7 @@ function render(): void {
   const onList = s.screen === "musiclist";
   document.querySelectorAll<HTMLElement>("[data-musiclist-only]").forEach(el => { el.hidden = !onList; });
   if (!onList) return;
+  renderBreadcrumb();  // 「保存した曲／書き出したファイル」の段が変わる
 
   // 保存した曲／書き出したファイルの切り替え
   const filesView = s.musicListView === "files";

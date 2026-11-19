@@ -97,6 +97,7 @@ export function render(): void {
   $("c-info-bars")!.textContent = `${s.bars}`;
   $("c-info-loop")!.hidden = !playing;
   const fromBar = playFromBar();
+  $("c-stop")!.hidden = !playing;  // 停止ボタンは鳴っている間だけ出す
   $("c-play")!.textContent = fromBar > 0
     ? `${playing ? "↺" : "▷"} ${fromBar + 1}小節目から`
     : playing ? "↺ 最初から" : "▷ 再生";

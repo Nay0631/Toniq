@@ -3,7 +3,7 @@ import { AppState, getState, setState } from "./AppState";
 import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
 import { applyMixPreset, fadeOutMaster, holdMasterFade, mixerReady, resetMasterFade } from "./MixerEngine";
-import { startLoopArranger, stopLoopArranger, setArrangementBypass } from "./LoopArranger";
+import { getForcedPart, setArrangementBypass, setForcedPart, startLoopArranger, stopLoopArranger } from "./LoopArranger";
 import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
 import { stopScalePreview } from "./ScalePreview";
@@ -428,6 +428,17 @@ function isSilent(buffer: AudioBuffer): boolean {
 // 曲全体をオフラインでレンダリングして AudioBuffer を返す（onProgress で進み具合を知らせる。signal で中断できる）。
 // アプリでは renderWav / renderMp3 から使う。ミックスの計測（tools/mix-measure.mjs）は 16bit に丸める前の音を測るのに直接呼ぶ
 export async function renderSong(onProgress?: RenderProgress, signal?: AbortSignal): Promise<AudioBuffer> {
+  // ピアノロールを開いたまま書き出しても、アレンジのとおりに書き出す（編集中のパートを鳴らし続けるのは画面で聴くときだけ）
+  const forced = getForcedPart();
+  setForcedPart(null);
+  try {
+    return await renderSongWithArrangement(onProgress, signal);
+  } finally {
+    setForcedPart(forced);
+  }
+}
+
+async function renderSongWithArrangement(onProgress?: RenderProgress, signal?: AbortSignal): Promise<AudioBuffer> {
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) throw new Error("曲が生成されていません");
 

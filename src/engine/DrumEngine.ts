@@ -5,7 +5,7 @@ import { getState, ArrangeBlock } from "./AppState";
 import { createDrumKit, DrumKit } from "./SynthFactory";
 import { createVolumeNode } from "./VolumeManager";
 import { prepareGrowContext } from "./Grow";
-import { arrangementBlockAt, findBlock, getArrangement, isArrangementBypassed, positionAt } from "./LoopArranger";
+import { arrangementBlockAt, findBlock, getArrangement, getForcedPart, isArrangementBypassed, positionAt } from "./LoopArranger";
 import { endingBar, fillKind, FillKind, isFillBar } from "./SongForm";
 import { sidechainHit } from "./Groove";
 import {
@@ -333,7 +333,8 @@ export function drumStepHits(source: DrumPattern, bar: number, step: number): Dr
 export function kickAt(bar: number, step: number): boolean {
   const s = getState();
   if (!s.parts.drum) return false;
-  const block = isArrangementBypassed() ? null : findBlock(getArrangement().drum, bar);
+  let block = isArrangementBypassed() ? null : findBlock(getArrangement().drum, bar);
+  if (block === undefined && getForcedPart() === "drum") block = null;  // ピアノロールでドラムを編集中（arrangementBlockAt と同じ）
   if (block === undefined) return false;
   const pattern = blockDrumPattern(block);
   return !!pattern && drumStepHits(pattern, bar, step).some(h => h.name === "kick");

@@ -272,7 +272,45 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
-/* メニューに戻るボタン：枠付きで目立たせる */
+/* パンくずの段（メニュー › 画面 › タブ）。区切りは › */
+.breadcrumb-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumb-item { display: inline-flex; align-items: center; gap: 6px; }
+.breadcrumb-item + .breadcrumb-item::before { content: "›"; color: var(--text-faint); font-size: 16px; }
+
+.breadcrumb-link {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-sub);
+}
+
+.breadcrumb-link:hover { background: var(--bg); color: var(--text); text-decoration: underline; }
+.breadcrumb-current { padding: 4px 8px; font-weight: 700; }
+
+/* 先頭の「‹ メニューに戻る」は枠付きで目立たせる */
+.breadcrumb-home .breadcrumb-link {
+  margin-right: 6px;
+  padding: 6px 14px 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.breadcrumb-home .breadcrumb-link:hover { background: var(--bg); text-decoration: none; }
+
+/* 以前の「メニューに戻る」ボタン（今はパンくずの先頭の段） */
 .breadcrumb-back {
   display: inline-flex;
   align-items: center;
@@ -4105,3 +4143,39 @@ span[data-tip],
   select optgroup > option { font-weight: normal; color: var(--text); }
   .hw .select optgroup > option { color: var(--hw-text); }
 }
+
+/* ===== 停止ボタン（鳴っている間だけ出す。両モード共通） =====
+   再生ボタンと見分けやすいよう赤系の色で「■ 停止」と文字も出す。各スキンの .hw-bar .btn より後ろ・強い指定で上書きする */
+.btn.btn-stop,
+.hw-bar .btn.btn-stop,
+[data-skin] .hw-bar .btn.btn-stop {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  font-weight: 700;
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger-ink);
+}
+
+.btn.btn-stop:hover,
+[data-skin] .hw-bar .btn.btn-stop:hover { background: var(--danger-soft); border-color: var(--danger-ink); opacity: 0.9; }
+.btn.btn-stop[hidden] { display: none; }
+.btn-stop .icon-stop { background: currentColor; border: none; }
+
+/* シンプルモードの生成後の「‹ 雰囲気・ジャンル・テンポを変更」（設定画面に戻る。見つけやすいよう枠付きのボタンにする） */
+.back-to-setup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 9px 16px;
+  font-weight: 700;
+  background: var(--simple-soft);
+  border-color: var(--simple-line);
+  color: var(--simple-ink);
+}
+
+.back-to-setup:hover { border-color: var(--simple); }
