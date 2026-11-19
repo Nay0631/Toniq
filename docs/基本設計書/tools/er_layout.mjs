@@ -4,7 +4,9 @@
 //   - エンティティの箱の上端を、見出しの下の区切り線まで下げ（区切り線は消す）、名前を箱の外の左上に出す
 //   - 箱の上から入る線は、下げた上端まで伸ばす（端の黒丸・ひし形・「1」などの印も一緒に動かす）。
 //     横から名前の高さに入る線は、箱の中の高さまで下げる。どちらも、黒丸が箱の縁に付くようにするため（IDEF1X の書き方）
-//   - 名前は、上から入る線と重ならない位置（箱の左端か、線の右）に置く
+//   - 名前は箱の左上に置き、名前とぶつかる上から入る線は、左から来る線なら箱の左の縁から入れ（空いていて、ほかの箱を通らないとき）、
+//     そうでなければ黒丸の近くで直角に曲げて名前の右へずらす
+//   - 線の名前・多重度の文字が、ほかの線・印・箱・ほかの文字と重なるなら、自分の線の近くの空いている位置へずらす
 //   - リレーションの端の丸（PlantUML の 0）を黒丸にする（IDEF1X の子の側の印）
 //
 // 使い方（リポジトリのルートで）:
@@ -122,6 +124,7 @@ function snapLink(link, boxes) {
           link.g = moveMarksNear(link.g, p, 0, ny - p.y);
         }
         if (right) b.rights.push({ link, end });
+        if (left) b.lefts.push(pts[end].y);
         break;
       }
     }
@@ -131,7 +134,8 @@ function snapLink(link, boxes) {
 // 名前（箱の左上）とぶつかる、上から入る線を名前の右へずらす。場所が足りなければ箱を右へ広げる
 function clearName(b) {
   const lo = b.x - 8, hi = b.x + b.nameLen + 8;
-  const hit = b.tops.filter(t => { const x = t.link.pts[t.end].x; return x >= lo && x <= hi; });
+  const hit = b.tops.filter(t => { const x = t.link.pts[t.end].x; return x >= lo && x <= hi; })
+    .filter(t => !toLeftSide(b, t));
   if (!hit.length) return;
   const others = b.tops.filter(t => !hit.includes(t)).map(t => t.link.pts[t.end].x);
   const slots = [];
@@ -153,9 +157,44 @@ function clearName(b) {
   });
 }
 
-// 線の d を作り直す（clearName で横にずらした線は、端の近くに直角の曲がりを足す）
+// 処理中の SVG のすべての箱（toLeftSide が、回した線がほかの箱を通らないか調べるのに使う）
+let allBoxes = [];
+
+// 名前とぶつかる、左から来て上から入る線を、箱の左の縁から入れる（曲げた縦の線がほかの線の名前を横切らないように）。
+// 左の縁に入るほかの線と高さが近いとき・横の線が短いときは何もしない（false。clearName が右へずらす）
+function toLeftSide(b, t) {
+  const { pts } = t.link;
+  const p = { ...pts[t.end] };
+  const step = t.end === 0 ? 1 : -1;
+  const run = runFrom(pts, t.end, q => Math.abs(q.x - p.x) < 0.01);
+  const corner = pts[run[run.length - 1]];
+  const q = pts[run[run.length - 1] + step];
+  if (!q || Math.abs(q.y - corner.y) > 0.01 || q.x >= p.x) return false;
+  const hrun = runFrom(pts, run[run.length - 1], r => Math.abs(r.y - corner.y) < 0.01);
+  const startX = Math.min(...hrun.map(i => pts[i].x));
+  const X = b.x - 30;
+  const Y = Math.min(b.top + 12, (b.top + b.bottom) / 2);
+  if (startX > X - 10 || Y - corner.y < 20 || b.lefts.some(y => Math.abs(y - Y) < 16)) return false;
+  // 回した縦の線がほかの箱（上に出す名前も）を通るなら回さない
+  const through = o => o !== b && X >= o.x - 4 && X <= o.x + o.w + 4 && corner.y <= o.bottom && Y >= o.top - 18;
+  if (allBoxes.some(through)) return false;
+  for (const i of run) pts[i].x = X;
+  pts[t.end].y = Y;
+  t.link.side = { end: t.end, x: b.x - 12, y: Y };
+  // 黒丸（と多重度の文字）を左の縁へ
+  t.link.g = moveMarksNear(t.link.g, { x: p.x, y: p.y + 6 }, b.x - 6 - p.x, Y - (p.y + 6));
+  b.lefts.push(Y);
+  return true;
+}
+
+// 線の d を作り直す（clearName で横にずらした線は、端の近くに直角の曲がりを足す。左の縁へ回した線は横の線を足す）
 function linkPath(l) {
-  const { pts, jog } = l;
+  const { pts, jog, side } = l;
+  if (side) {
+    const s = `${f3(side.x)},${f3(side.y)}`;
+    if (side.end === pts.length - 1) return `${pairsTo(l.d, pts)} L${s}`;
+    return `M${s} L${pairsTo(l.d, pts).replace(/^M\s*/, '')}`;
+  }
   if (!jog) return pairsTo(l.d, pts);
   const p = pts[jog.end];
   const up = p.y - jog.rise; // 端は箱の上なので、曲がりはその少し上
@@ -165,7 +204,7 @@ function linkPath(l) {
     return `${pairsTo(l.d, moved)} L${f3(p.x)},${f3(up)} L${f3(x1)},${f3(up)} L${f3(x1)},${f3(p.y)}`;
   }
   const moved = pts.map((q, i) => (i === 0 ? { x: q.x, y: up } : q));
-  const rest = pairsTo(l.d, moved).replace(/^Ms*/, '');
+  const rest = pairsTo(l.d, moved).replace(/^M\s*/, '');
   return `M${f3(x1)},${f3(p.y)} L${f3(x1)},${f3(up)} L${f3(p.x)},${f3(up)} L${rest}`;
 }
 
@@ -179,6 +218,92 @@ function followWiden(b) {
   }
 }
 
+// ---------- 線の名前・多重度の文字をほかの線・印・箱と重ならない位置へ ----------
+
+const TEXT_RE = /<text\b[^>]*>([^<]*)<\/text>/g;
+// 文字の箱（x は左端、y は下の線）
+function textRect(e, label) {
+  const x = num(e, 'x'), y = num(e, 'y'), fs = num(e, 'font-size') ?? 13;
+  const w = num(e, 'textLength') ?? 0.62 * fs * label.length;
+  return { x1: x, y1: y - 0.85 * fs, x2: x + w, y2: y + 0.25 * fs };
+}
+const overlap = (a, b, pad) => a.x1 - pad < b.x2 && b.x1 - pad < a.x2 && a.y1 - pad < b.y2 && b.y1 - pad < a.y2;
+const shift = (r, dx, dy) => ({ x1: r.x1 + dx, y1: r.y1 + dy, x2: r.x2 + dx, y2: r.y2 + dy });
+// 点と箱の距離
+const distTo = (r, p) => Math.hypot(Math.max(r.x1 - p.x, 0, p.x - r.x2), Math.max(r.y1 - p.y, 0, p.y - r.y2));
+// 線（d の点の並び。直交の線なので制御点も線の上にある）を線分の箱に
+function segRects(d) {
+  const pts = pairsOf(d);
+  const out = [];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], c = pts[i];
+    if (a.x === c.x && a.y === c.y) continue;
+    out.push({ x1: Math.min(a.x, c.x), y1: Math.min(a.y, c.y), x2: Math.max(a.x, c.x), y2: Math.max(a.y, c.y), a, c });
+  }
+  return out;
+}
+// 線分の上の、点 p にいちばん近い点との距離
+const distSeg = (s, p) => Math.hypot(Math.max(s.x1 - p.x, 0, p.x - s.x2), Math.max(s.y1 - p.y, 0, p.y - s.y2));
+const rectToSeg = (r, s) => {
+  const dx = Math.max(s.x1 - r.x2, 0, r.x1 - s.x2), dy = Math.max(s.y1 - r.y2, 0, r.y1 - s.y2);
+  return Math.hypot(dx, dy);
+};
+
+function placeTexts(links, boxes) {
+  const all = links.map(l => ({ l, segs: segRects(l.final) }));
+  // 印（黒丸・ひし形）
+  const marks = [];
+  for (const l of links) {
+    for (const e of l.g.match(/<ellipse\b[^>]*\/>/g) ?? []) {
+      const cx = num(e, 'cx'), cy = num(e, 'cy');
+      marks.push({ x1: cx - 6, y1: cy - 6, x2: cx + 6, y2: cy + 6 });
+    }
+    for (const e of l.g.match(/<polygon\b[^>]*\/>/g) ?? []) {
+      const v = e.match(/points="([^"]*)"/)[1].split(',').map(Number);
+      const xs = v.filter((_, i) => i % 2 === 0), ys = v.filter((_, i) => i % 2 === 1);
+      marks.push({ x1: Math.min(...xs), y1: Math.min(...ys), x2: Math.max(...xs), y2: Math.max(...ys) });
+    }
+  }
+  // 箱と、箱の上に出す名前
+  const areas = boxes.flatMap(b => [
+    { x1: b.x, y1: b.top, x2: b.x + b.w + (b.widen ?? 0), y2: b.bottom },
+    { x1: b.x, y1: b.top - 18, x2: b.x + b.nameLen, y2: b.top },
+  ]);
+  // 置いた文字（あとの文字はこれと重ねない）。先に全部の文字を入れ、動かすときに入れ替える
+  const texts = [];
+  for (const { l } of all) {
+    for (const m of l.g.matchAll(TEXT_RE)) texts.push({ l, e: m[0], r: textRect(m[0], m[1]), mult: m[1].length <= 2 });
+  }
+  const PAD = 2;
+  const blocked = (t, r) =>
+    // 線の名前は自分の線に触れてよい（横切らなければよい）
+    all.some(({ l, segs }) => segs.some(s => overlap(r, s, t.mult || l !== t.l ? PAD : -0.5))) ||
+    marks.some(m => overlap(r, m, t.mult ? 1 : PAD)) ||
+    areas.some(a => overlap(r, a, PAD)) ||
+    texts.some(o => o !== t && overlap(r, o.r, PAD));
+  // 自分の線から離れすぎない（線の名前は線から 12 まで、多重度の文字は線の端から 22 まで）
+  const own = t => all.find(a => a.l === t.l).segs;
+  const attached = (t, r) => {
+    const segs = own(t);
+    if (!t.mult) return segs.some(s => rectToSeg(r, s) <= 12);
+    const ends = [segs[0].a, segs[segs.length - 1].c];
+    return ends.some(p => distTo(r, p) <= 22);
+  };
+  const cands = [];
+  for (let dx = -300; dx <= 300; dx += 2) for (let dy = -40; dy <= 40; dy += 2) cands.push([dx, dy]);
+  cands.sort((a, c) => Math.abs(a[0]) + 1.5 * Math.abs(a[1]) - (Math.abs(c[0]) + 1.5 * Math.abs(c[1])));
+  for (const t of texts) {
+    if (!blocked(t, t.r)) continue;
+    const found = cands.find(([dx, dy]) => { const r = shift(t.r, dx, dy); return attached(t, r) && !blocked(t, r); });
+    if (!found) continue;
+    const [dx, dy] = found;
+    const moved = setAttr(setAttr(t.e, 'x', f3(num(t.e, 'x') + dx)), 'y', f3(num(t.e, 'y') + dy));
+    t.l.g = t.l.g.replace(t.e, moved);
+    t.e = moved;
+    t.r = shift(t.r, dx, dy);
+  }
+}
+
 // 名前を置く x（箱の左端。名前とぶつかる線は clearName で右へずらしてある）
 function placeName(b) {
   return b.x;
@@ -188,7 +313,8 @@ export function processSvg(svg) {
   if (svg.includes(MARK)) return { svg, changed: false };
   const boxes = [];
   let out = svg.replace(/<g class="entity"[\s\S]*?<\/g>/g, g => fixEntity(g, boxes));
-  for (const b of boxes) { b.tops = []; b.rights = []; }
+  for (const b of boxes) { b.tops = []; b.rights = []; b.lefts = []; }
+  allBoxes = boxes;
   const links = [];
   out = out.replace(/<g class="link"[\s\S]*?<\/g>/g, g => {
     const m = g.match(/<path\b[^>]*\sd="([^"]*)"[^>]*\/>/);
@@ -198,7 +324,9 @@ export function processSvg(svg) {
   });
   for (const l of links) if (l.pts.length >= 2) snapLink(l, boxes);
   for (const b of boxes) { clearName(b); followWiden(b); }
-  links.forEach((l, i) => { out = out.replace(`@LINK${i}@`, l.g.replace(l.d, linkPath(l))); });
+  for (const l of links) l.final = linkPath(l);
+  placeTexts(links, boxes);
+  links.forEach((l, i) => { out = out.replace(`@LINK${i}@`, l.g.replace(l.d, l.final)); });
   boxes.forEach((b, i) => {
     out = out.replace(`@NAME${i}@`, f3(placeName(b)));
     out = out.replace(`@W${i}@`, f3(b.w + (b.widen ?? 0)));
