@@ -3,24 +3,29 @@
 mainframe **deployment** システム概要図
 top to bottom direction
 
-' 利用者 → 画面 → アプリの状態 → 処理（自動作曲・再生・書き出し・曲の管理）→ スピーカー／ファイル の流れ
-' 名前は仕様書の付録A 名前の対応表に合わせる
+' 利用者 → 画面 → アプリの状態 → 処理（自動作曲・再生・書き出し・曲の管理・履歴管理・クイズ出題・端末の設定）→ スピーカー／ファイル の流れ（仕様書 3.1・3.2）
+' 名前は仕様書の付録A 名前の対応表に合わせる。処理は機能ごとの細かさにしない
 
 actor "利用者" as U
 
 rectangle "Toniq（Windows PC で動くデスクトップアプリ）" as SYS {
   rectangle "<&browser{scale=2}>\n画面\n\nシンプルモード画面・カスタムモード画面（アレンジ・ピアノロール・ミキサー）\nミュージックリスト画面・音楽クイズ画面・設定画面" as UI
   rectangle "<&cog{scale=2}>\nアプリの状態\n（曲の内容・設定）" as ST
-  database "<&layers{scale=2}>\nパターンDB\n（コード進行・ドラム・\nジャンル別の設定）" as DB
-  rectangle "自動作曲\n（パターン選出・\nメロディ生成・アレンジ）" as P1
+  database "<&layers{scale=2}>\nパターンDB\n（コード進行マスタ・ドラムパターンマスタ・\nジャンル別の設定のマスタ）" as DB
+  rectangle "自動作曲\n（パターン選出・\nメロディ生成・アレンジ管理）" as P1
   rectangle "再生\n（各パートの演奏・\nlidless・ミックス）" as P2
-  rectangle "書き出し\n（WAV・MP3・MIDI）" as P3
+  rectangle "書き出し\n（音声合成・音声変換・\nMIDI書き出し）" as P3
   rectangle "曲の管理\n（保存・読み込み）" as P4
-  storage "<&list{scale=2}>\nミュージックリスト\n（localStorage）" as LIST
+  rectangle "履歴管理\n（元に戻す・やり直す）" as P5
+  rectangle "クイズ出題\n（出題・採点・\nクイズの音）" as P6
+  rectangle "端末の設定\n（配色・スキン・\n音名の表記など）" as P7
+  database "<&list{scale=2}>\n楽曲データ\n（ミュージックリスト）" as LIST
+  database "<&wrench{scale=2}>\n端末の設定データ" as PREF
+  database "<&question-mark{scale=2}>\nクイズ問題マスタ" as QDB
 }
 
 rectangle "<&volume-high{scale=3}>\nスピーカー・\nヘッドホン" as SPK
-folder "<&folder{scale=3}>\n出力フォルダ\n（WAV・MP3・MIDI）" as OUT
+folder "<&folder{scale=3}>\n出力フォルダ\n（MIDIファイル・\nWAVファイル・MP3ファイル）" as OUT
 artifact "<&document{scale=3}>\n曲ファイル\n（.toniq.json）" as FILE
 
 U --> UI : 選ぶ・編集する
@@ -30,9 +35,15 @@ ST <--> P1 : 生成した曲
 ST --> P2
 ST --> P3
 ST <--> P4
+ST <--> P5 : 変更前の曲の内容
+UI --> P6 : 答える
+QDB --> P6 : 問題を読む
+ST <--> P7
 P2 --> SPK : 音を出す
+P6 --> SPK : 問題の音を出す
 P3 --> OUT : 保存する
 P4 --> LIST : 保存・読み込み
 P4 --> FILE : 書き出し・読み込み
+P7 --> PREF : 保存・読み込み
 SPK -[norank]-> U : 聴く
 @enduml
