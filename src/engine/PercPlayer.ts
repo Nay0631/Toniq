@@ -74,6 +74,24 @@ export const PERC_PATTERNS: Record<string, PercDef> = {
     A: { shaker: "......o.......o." },
     B: { shaker: "..o...o...o...o.", conga_high: "x.........o.....", conga_low: "......o.......o." },
   },
+  // ワルツ（3/4。頭の3拍を使う）：2・3拍目の小さなタンバリン。サビは1拍目を強くし、8分のシェイカーを足す
+  "ワルツ": {
+    label: "タンバリン",
+    A: { tambourine: "....o...o......." },
+    B: { tambourine: "X...x...x.......", shaker: "..o...o...o....." },
+  },
+  // 6/8バラード（4/4 の3連符。拍ごとに「x o o .」= 3連符3つ）：3連符のシェイカー。サビは拍の頭のライドを足す
+  "6/8バラード": {
+    label: "シェイカー",
+    A: { shaker: "xoo.xoo.xoo.xoo." },
+    B: { shaker: "Xoo.xoo.Xoo.xoo.", ride: "x...x...x...x..." },
+  },
+  // シャッフル（4/4 の3連符）：2・4拍目のタンバリン。サビは「タッカ」で刻むライドを足す
+  "シャッフル": {
+    label: "タンバリン・ライド",
+    A: { tambourine: "....x.......x..." },
+    B: { tambourine: "....X.......X...", ride: "X.o.x.o.X.o.x.o." },
+  },
 };
 
 const VELOCITY: Record<string, number> = { X: 1, x: 0.7, o: 0.42 };

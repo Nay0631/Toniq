@@ -43,7 +43,7 @@ lidless のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビル
 ## ディレクトリ構成
 
 ```
-electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示）と、出力フォルダ output/ への保存・フォルダを開く IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
+electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示。インストール版は標準のメニューバーを出さない）と、出力フォルダ output/ への保存・フォルダを開く IPC。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ lidless（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   lidless の wasm（npm run grow:wasm で作る。Grow.ts が読む）
@@ -51,7 +51,7 @@ output/                 曲の出力フォルダ（audio = WAV / MP3、midi = MI
 docs/                   詳しい仕様（generation / arrangement / sound / ui。下の「詳しい仕様」）
 .github/workflows/      CI（test.yml = Lint・型チェック・テスト・一括計測、grow-wasm.yml = lidless の wasm のビルドと確認）
 biome.json              Lint（Biome）の設定
-tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ GrowPresets（lidless のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（lidless のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
 tools/mix-measure.mjs   ミックスの一括計測（npm run mix:measure。Electron なしの Vite と画面なしの Chrome / Edge で全ジャンルの曲を書き出し、ピーク・統合ラウドネスを測って mix_presets.json の gain を提案する。測る式は tools/loudness.mjs）
@@ -68,7 +68,7 @@ src/ui/
   MixerPanel.ts           ミキサー（アレンジャータブのみ。パートごとの ON/OFF・定位（パン）のノブ・音量のフェーダー・レベルメーター、マスターの左右のピークのメーター・最大のピーク・クリップの印）
   PianoRollTab.ts         ピアノロール（メロディの入力・編集。シンプルモード／カスタムモードの両画面で共通。ツールバーの「メロディ／ドラム」で切り替える）
   DrumRoll.ts             ピアノロールのドラム（行 = キック・スネアなど、列 = 16分音符のマスでオリジナルのドラムパターンを作る。1・2・4小節）
-  MusicListScreen.ts      ミュージックリスト画面（検索・並び替え・お気に入り・ジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
+  MusicListScreen.ts      ミュージックリスト画面（曲名・ジャンル・雰囲気・キーでの検索・並び替え・お気に入り・曲数付きのジャンルの絞り込み、曲ごとの再生・「編集」ボタン・⋮メニュー、上に分けた曲ファイルの操作と「出力フォルダ」ボタン）と両モードの「♪ 保存」ボタン
   QuizScreen.ts           音楽クイズ画面（カテゴリ・出題モードの切り替え、出題・採点、鍵盤／選択肢での回答、出題設定）
   Controls.ts             シンセサイザー風のノブ（attachKnob）・縦フェーダー（attachFader。ミキサー）・セレクトの ◀▶（attachStepper）。値は隠した range／select に持たせ input／change イベントで通知
   ExportProgress.ts       音声の書き出し（WAV / MP3）の進み具合のダイアログ（目安の説明・段階・進み具合・経過時間。両モード共通の exportAudioWithProgress）
@@ -105,7 +105,7 @@ src/engine/
   AppState.ts             アプリ状態の唯一の保持場所
   SongLibrary.ts          ミュージックリストの保存・読み込み（localStorage の toniq.songs）と曲ファイル（.toniq.json）の書き出し・読み込み
   SongValidate.ts         曲ファイルから読み込んだ曲の中身の確認（鳴らすときに例外になる値の曲は飛ばし、範囲外の値は直す。validateImportedSong）
-  Meter.ts                拍子（AppState.meter：4/4・3/4・4/4 の3連符）と1小節のマスの数え方、16 ステップのパターンを今の拍子のマスに直す fitPattern / sourceSteps、位置・長さの文字列とマスの数の変換、拍子を変えたときのメロディの置き直し convertNotes
+  Meter.ts                拍子（AppState.meter：4/4・3/4・4/4 の3連符）とジャンルの標準の拍子 genreMeter、1小節のマスの数え方、16 ステップのパターンを今の拍子のマスに直す fitPattern / sourceSteps、位置・長さの文字列とマスの数の変換、拍子を変えたときのメロディの置き直し convertNotes
   OutputFiles.ts          書き出したファイルの保存先（Electron は output/<種類>/ に直接保存、ブラウザはダウンロード。saveOutput）
   History.ts              元に戻す／やり直すの履歴（setState の直前に曲の内容のスナップショットを積む）
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
@@ -167,15 +167,17 @@ src/engine/
 
 - パート名は `"drum" | "perc" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "counter" | "fx"`（`LayerName`）で統一。UI 表示名はドラム／パーカッション／コード／ベース／アルペジオ／パッド／シグネチャー／メロディ／カウンターメロディ（アレンジャー・ミキサーでは「カウンター」）／FX/SE。並びは `LoopArranger.ts` の `LAYERS`（LayerManager などもこれを使う。循環 import になるので LayerManager 側に値を置かない）。
 - 各パートモジュールは `init*Synth()` / `load*()` / `dispose*()` の形にそろえる。`load*` は既存の Part を破棄してから作り直す。
-- ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ` / `ハウス` / `トランス` / `アンビエント`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `bass_params` / `arp_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
+- ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ` / `ハウス` / `トランス` / `アンビエント` / `ワルツ` / `6/8バラード` / `シャッフル`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `bass_params` / `arp_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
 - ジャンルは今後も追加・削除がありうる。追加するときは上の6つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE`（A A サビ A の4セクション。`section` も）にそろえて追加する。ドラムのフィルは `DrumEngine.ts` の `FILLS`（小・中・大の3つ。なければローファイの定義）、ゴーストノートは `GHOST_RATE`（なければ入れない）。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。シグネチャーの鳴り方は `SignaturePlayer.ts` の `SIGNATURES`（なければローファイの定義で鳴る）。FX の標準の種類は `FxPlayer.ts` の `GENRE_FX`（なければライザー）。パーカッションのパターンは `PercPlayer.ts` の `PERC_PATTERNS`（なければローファイの定義）。
   - UI のジャンル一覧は `index.html` の3か所（シンプルモードのチップ `data-genre`、カスタムモードの `#c-genre`、曲一覧の `data-ml-genre`）と `CustomState.ts` の `APP_GENRES`（ドラムのカテゴリの並び順）、`SimpleScreen.ts` の `GENRE_DESCRIPTIONS`（ジャンルの一言の説明）と `MOOD_GENRES`（雰囲気ごとに選べるジャンル。どれか1つ以上の雰囲気に入れる）にも足す。
   - `genre_scales.json`（ジャンルに合うスケール。シンプルモードはこのスケールの進行から選ぶ）にも足す。
   - `chord_progressions.json` / `drum_patterns.json` の `genre` タグにも新ジャンルを付ける。シンプルモードの最初の候補は `easy_mode_table.json` の ID から、差し替え候補はそれに加えてジャンル・雰囲気のタグが一致するものから選ばれる。コード進行のディグリー・`type` が `degree_resolver.ts` に未定義だと鳴らすときに例外になるので、足したら確かめる。
-  - パターンDB（ドラム・ベース・メロディのリズムなど）は 4/4 の 16 ステップで書く。3/4・3連符の拍子では鳴らすときに `Meter.ts` が直す（下の「拍子」）。32分のハイハットロールなど 16 ステップで表せない刻みは作れない（跳ねたノリはスウィング・8分のシャッフル（`swingUnit`）か3連符の拍子で出せる）。
+  - 標準の拍子が 4/4 でないジャンルは `melody_params.json` に `meter` を書く。
+  - パターンDB（ドラム・ベース・メロディのリズムなど）は 4/4 の 16 ステップで書く（3/4 のジャンル（ワルツ）は頭の 12 ステップに書き、残りの 4 ステップは 4/4 にしたとき用。3連符のジャンル（6/8バラード・シャッフル）は拍ごとの「1つ目・2つ目・3つ目か4つ目」が3連符になる。シャッフルの「タッカ」は拍ごとに `x.x.`）。3/4・3連符の拍子では鳴らすときに `Meter.ts` が直す（下の「拍子」）。32分のハイハットロールなど 16 ステップで表せない刻みは作れない（跳ねたノリはスウィング・8分のシャッフル（`swingUnit`）か3連符の拍子で出せる）。
 - ドラムのトラック名は `kick` / `snare` / `hihat_closed` / `hihat_open` / `clap` / `rim`。クローズドハイハットはオープンハイハットを止める（`DrumEngine.ts` の `CHOKES`）。周回の頭で読み込み直すとき、古いキットは鳴り終わるまで少し待ってから破棄する。
 - 雰囲気「緊張感」は廃止。パターンDBの旧「緊張感」タグは「激しい」に置き換えた。
 - 拍子（`AppState.meter`。`SONG_FIELDS` に含む。初期値 `"4/4"`）：`"4/4"`・`"3/4"`・`"4/4t"`（4/4 の3連符。1拍を3つに分ける）。カスタムモードの設定タブの「もっと調整」で選ぶ（シンプルモードには出さない）。
+  - ジャンルの標準の拍子は `melody_params.json` の `meter`（なし = 4/4。ワルツ = `"3/4"`、6/8バラード・シャッフル = `"4/4t"`）で、`genreMeter()`（`Meter.ts`）が読む。シンプルモードの「生成する」・ジャンルのサンプル（`Playback.playSample` が拍子も差し替えて戻す）・一括計測（`generateBatchSong`）はこの拍子で作る。カスタムモードでジャンルを選び直したときは、今の拍子が前のジャンルの標準のままなら新しいジャンルの標準にする（`followGenreMeter`。自分で選んだ拍子は残す）。「もっと調整」の変更の印・「標準に戻す」もジャンルの標準の拍子が基準。
   - 各パートの位置と長さは「マス」の数で持つ（4/4 = 1小節 16、3/4 = 12（16分音符）、3連符 = 12（8分3連符））。1小節・1拍のマスの数は `Meter.ts` の `unitsPerBar()` / `unitsPerBeat()` で求め、`16` や `4` を直接書かない。Tone.js の時刻にするときは `unitTime` / `barTime`、Sequence の刻みは `stepSubdivision()`（3連符は `8t`）、小節の判定は `LoopArranger.ts` の `barAt()` / `positionAt()` を使う。
   - Transport の拍子は `applySwing()`（`Groove.ts` の `applyMeter`）が当てる。3連符の拍子ではスウィングはかけない（マスそのものが跳ねている）。
   - 16 ステップで書いたパターンは `fitPattern`（文字）・`gridSteps`（位置の並び）・`drumPatternIn`（ドラムパターン）で今の拍子のマスに直す：3/4 は小節の頭の3拍（フィルは終わりの3拍）、3連符は拍ごとに 16分4つ → 3連符3つ（8分の裏は3つ目＝シャッフル）。メロディは頭の3拍に音がないリズムを 3/4 では選ばない。
@@ -192,7 +194,7 @@ src/engine/
   - 音は lidless（`growSounds.counter`。ジャンルの標準は `Grow.ts` の `COUNTER_STANDARD`）。MIDI書き出しも同じ音。ジャンルを足すときは `COUNTER_STANDARD` にも足す（なければローファイの定義）。
 - パーカッション（`PercPlayer.ts`）はドラムに重ねる小さな打楽器（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）。ジャンルごとに Aメロ・サビ（`sectionAt(bar)`）の16ステップのパターン（`PERC_PATTERNS`。`X` = 強く、`x` = 普通、`o` = 弱く、`.` = 休み。ないジャンルはローファイ）で鳴らし、サビのほうをにぎやかにする。音はドラムの音源に合わせ、`"grow"` なら lidless の「パーカッション …」のプリセット（`SynthFactory.ts` の `GROW_PERC`）、ワンショット音源（`"sample"`）ならドラムと同じフォルダの `<トラック名>.wav`（`DrumSamples.ts`。ジャンルのフォルダ → `default`。ないトラックは lidless）、シンセ（Tone.js。画面では選べず、測定用）ならシンセ（lidless を鳴らせないときもシンセ）。ドラムのバスは通さず、150Hz から下を削ってジャンルのキットの高域カット（11kHz より下げない `PERC_LOWPASS_MIN`）だけ通し、全体を `PERC_TRIM_DB`（−6dB）下げる（`createPercKit`）。エンディングの小節では鳴らさず、揺らぎはドラムの揺らぎ（`drumHumanize`）に合わせる。サイドチェインでは沈めない。MIDI書き出しはチャンネル10の別トラック（GM の音の番号。シェイカーは Maracas）。ジャンルを足すときは `PERC_PATTERNS` にも足す。
 - サブベース（`AppState.bassSub`。`null` = ジャンルの標準で `bass_params.json` の `sub`。EDM・トランス・テクノが ON。`SONG_FIELDS` に含む）：ベースの各音を E1〜D#2 にたたんだ高さ（`subMidi`。オクターブ上の `O` もルートになる）で、lidless の「サブベース」（なければ Tone.js のサイン）を −6dB（`SUB_LEVEL_DB`）で重ね、本体のベースは 90Hz から下を削る（`BassPlayer.ts`）。カスタムモードの設定タブの「追加パート」欄で選ぶ。音色と同じく再生開始時に反映される（再生中に変えたら再生し直す）。MIDI書き出しはしない。ジャンルを足すときは `bass_params.json` に `sub` も入れる。
-- シグネチャー（`SignaturePlayer.ts`）はジャンルの特徴を出す追加パート。EDM = オフビートのコードスタブ、テクノ = アシッド（16ステップ表記 R/O/F、大文字はアクセント）、8bit = 32分音符の高速アルペジオ、ローファイ = レコードノイズ（ヒス＋ランダムなプチプチ音）、ゲームBGM = ブラス、ハウス = シンコペーションのピアノスタブ、トランス = スーパーソウのコードを16分で刻むトランスゲート、アンビエント = うねる風のノイズ。ジャンルごとに `label` / `create`（Synth とエフェクト）/ `events`（コードごとの発音）を定義する。音色はほかのパートと同じく再生開始時に反映される。MIDI書き出しは未対応。
+- シグネチャー（`SignaturePlayer.ts`）はジャンルの特徴を出す追加パート。EDM = オフビートのコードスタブ、テクノ = アシッド（16ステップ表記 R/O/F、大文字はアクセント）、8bit = 32分音符の高速アルペジオ、ローファイ = レコードノイズ（ヒス＋ランダムなプチプチ音）、ゲームBGM = ブラス、ハウス = シンコペーションのピアノスタブ、トランス = スーパーソウのコードを16分で刻むトランスゲート、アンビエント = うねる風のノイズ、ワルツ = 2・3拍目の後打ちの和音（ズン・チャッ・チャッの「チャッ・チャッ」。「ズン」はベース）、6/8バラード = 和音を3連符で刻むピアノ、シャッフル = 裏から入るピアノのキメ（1・3拍目の3連符の3つ目で引っかけ、2・4拍目の頭で強く）。ジャンルごとに `label` / `create`（Synth とエフェクト）/ `events`（コードごとの発音）を定義する。音色はほかのパートと同じく再生開始時に反映される。MIDI書き出しは未対応。
 - FX / SE（`FxPlayer.ts`）はループの継ぎ目を演出する効果音。種類は `AppState.fxType`（`SONG_FIELDS` に含む）で、`"auto"` はジャンルの標準（`GENRE_FX`）。カスタムモードのドラム欄の下の「FX / SE」で選び、「▷ 試聴」はループの終わりの盛り上げから次のループの頭の1小節まで鳴らす（`Playback.preview("fx")`）。
   - アレンジャーの FX のブロックは1つずつ種類を持てる（`ArrangeBlock.fx`。ブロックのラベルのセレクトで選ぶ。なし = 曲の設定 `fxType`）。鳴らすときは発音時刻にあるブロックを `arrangementBlockAt("fx")`（`LoopArranger.ts`）で調べて種類を決めるので、再生中の変更もすぐ反映される。音源は種類ごとに1つで、曲の設定とアレンジで使う種類を読み込み時に作る（WAV書き出しでは鳴らしている途中に作れないため）。再生中に新しい種類を選んだときは鳴らす直前に作る。
   - 種類（`FX_DEFS`）：`riser` = ライザー（ノイズのバンドパス掃き上げ＋2オクターブ上がる重ねたノコギリ波、トレモロ・オートパンが加速）、`build` = ライザー＋インパクト、`impact` = インパクト（沈むブーム＋閉じていくノイズ）、`downlifter` = ダウンリフター、`reverse` = リバースシンバル、`chip` = チップSE（8bit。矩形波の駆け上がり＋「ピュン」）。
@@ -239,7 +241,7 @@ src/engine/
 - メニューへの導線は、メニュー以外のすべての画面の上部に出るパンくずの「メニューに戻る」ボタン。ヘッダーの「⋯」メニューとシンプル／カスタムの切り替えボタンは廃止した。
 - カスタムモードには「生成する」ボタンを置かない（設定の変更はその場で反映され、メロディの作り直しはピアノロールの「自動生成」で行う）。情報バーの主ボタンは「▷ 再生」。
 - ミュージックリストの絞り込み・並び順（`musicListQuery` / `musicListGenre` / `musicListFavorites` / `musicListSort`）は AppState に置く。⋮ メニューを開いている曲・名前を変更中の曲は表示上の一時的な状態としてモジュール内に持つ。お気に入りは曲データ（`SavedSong.favorite`）に保存する。
-- 音楽クイズは初心者向け。カテゴリは「音の高さ」「コード・スケール」「リズム・音響」「用語」の4つで、各カテゴリの中はやさしい順に並べる。上級者向けの内容（テンション・転回形・ミックスの聴き分けなど）は足さない。
+- 音楽クイズは初心者向け。カテゴリは「音の高さ」「コード・スケール」「リズム・音響」「用語」の4つで、各カテゴリの中はやさしい順に並べる。上級者向けの内容（テンション・転回形・ミックスの聴き分けなど）は足さない。聴き取り・知識の難しいモードは、出題範囲の初期値をやさしいものに絞り（`QuizCore.ts` の `startWith`）、出題設定の `hint` で「慣れたら増やす」と案内する。
 - 音名の表記（`AppState.noteNames`：`cde` / `doremi`。初期値は `doremi`。`cde` を保存した端末はそのまま）はアプリ全体の設定。設定画面と音楽クイズのツールバーのどちらでも切り替えられ、`Preferences.ts` が `toniq.noteNames` に保存する。表示は `format.ts` の `displayNote`（`"C#4"` のようなオクターブ付きも可）で変える。単音（ピアノロールの鍵盤・音符、クイズの単音・構成音）だけを変え、コード名・キー名は CDE 表記のまま（カスタムモードのルート音の選択肢は、ドレミ表記なら `A（ラ）` のように読みを添える）。
 - ループ再生（`AppState.loopPlayback`、設定画面とアレンジャータブのツールバーの「⟲ ループ」（`#c-arr-loop`。同じ設定で、ON の間は点ける）、`toniq.loop`）：ON なら `Playback.play()` が自動停止の代わりに Transport を曲全体（先頭〜`AppState.bars` 小節）でループさせる（`applyLoopPlayback`。再生中に切り替えてもすぐ反映）。周回の表示は発音時刻の小節から求めるので、先頭へ戻ると1周目から数え直す。試聴・サンプル・WAV書き出しはループしない。
 - 音楽クイズ：選んでいる出題モード（`quizMode`）は AppState に置く。出題中の問題・成績（正解数・連続）は表示上の一時的な状態として `QuizScreen.ts` に、出題設定は各モード（`QuizModes.ts`）に持つ（どちらも保存しない）。モードを足すときは `QuizMode`（`settings` と `question()`、必要なら出題設定に出すおすすめ `hint`）を作って `QUIZ_CATEGORIES` に加える。問題は回答方法（`choice` 選択肢／`notes` 鍵盤で複数選択／`key` 鍵盤を1つ押す）、回答後の一言の解説（`explain`）、再生ボタン（`sounds`、`afterAnswer` で回答後だけ表示）で表す。
@@ -251,7 +253,7 @@ src/engine/
   - 説明文は `{TERMS のキー:文字}` と書いた所を用語のツールチップ付きの span にして表示する（`renderGenreDesc`）。
   - 選んでいるジャンル・雰囲気から `resolveSimpleMode` でパターンを選び、メロディを自動生成して `Playback.playSample()` で鳴らす。
   - コード進行1周（4小節未満なら4小節）を、ドラム・パーカッション・コード・ベース・パッド・シグネチャー・メロディをアレンジに関係なく同時に鳴らす（`Playback.ts` の `SAMPLE_LAYERS`。FX / SE・カウンターメロディは鳴らさない）。
-  - 各パートは AppState から読むので、鳴らしている間だけ `chordPattern` / `drumPattern` / `melodyNotes` を差し替え、`Playback.stop()` で元に戻す（曲の内容は変わらない）。
+  - 各パートは AppState から読むので、鳴らしている間だけ `chordPattern` / `drumPattern` / `meter`（ジャンルの標準の拍子）/ `melodyNotes`（拍子を差し替えてから作る）を差し替え、`Playback.stop()` で元に戻す（曲の内容は変わらない）。
   - サンプル中にジャンルを選び直すとそのジャンルのサンプルに切り替わり、テンポを変えるとすぐ反映される。画面の切り替え（`stopSample()`）・生成・ほかの再生で止まる。
 - クイズの音は曲の再生（Tone.js）とは別のオーディオコンテキストで鳴らす。新しい音を鳴らす・次の問題へ進む・画面を離れると前の音を止める。クイズ画面に入ると曲の再生は止める。
 - 基本設計書（仕様書・図）を作る・直すときは `docs/基本設計書/基本設計書の作成手順.md` に従う。仕様書.md の更新・図の作成と更新・docx の作成は、それぞれスキル `update-spec` / `update-diagrams` / `build-design-doc`（`.claude/skills/`）の手順で行う。コードは `git fetch origin` のあと `origin/main` を見る（ローカルの `main` は古いことがある）。

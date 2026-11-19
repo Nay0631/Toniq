@@ -4,6 +4,7 @@ import { applySwing } from "../engine/Groove";
 import { applyGrowLive, setGrowSound, storedGrowSound, type GrowPart } from "../engine/Grow";
 import { setTestFeature, TEST_FEATURES } from "./Preferences";
 import { setMeter } from "./CustomState";
+import { currentMeter, genreMeter } from "../engine/Meter";
 
 // カスタムモードの設定タブの「もっと調整」（<details class="panel-more" data-more="…">）。
 // 標準（ジャンルに合わせる・初期値）のままでも曲として鳴る項目を畳んでおき、ふだんは目に入らないようにする。
@@ -26,7 +27,7 @@ function growChanged(part: GrowPart): boolean {
 }
 
 const CHANGED: Record<string, () => boolean> = {
-  meter:       () => getState().meter !== defaultState.meter,
+  meter:       () => currentMeter() !== genreMeter(getState().genre),  // 標準はジャンルの拍子（ワルツ = 3/4 など）
   swing:       () => getState().swing !== null,
   swingUnit:   () => getState().swingUnit !== defaultState.swingUnit,
   sidechain:   () => getState().sidechain !== null,
@@ -53,7 +54,7 @@ function resetGroup(group: MoreGroup): boolean {
   const s = getState();
   switch (group) {
     case "basic":
-      setMeter(defaultState.meter);  // メロディ・オリジナルのドラムも 4/4 のマスに置き直す
+      setMeter(genreMeter(s.genre));  // ジャンルの標準の拍子。メロディ・オリジナルのドラムもそのマスに置き直す
       setState({ swing: null, sidechain: null, swingUnit: defaultState.swingUnit });
       applySwing();
       return true;

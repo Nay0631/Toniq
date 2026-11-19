@@ -28,6 +28,7 @@ export const SCALE_LABELS: Record<string, string> = {
   lydian:     "リディアン",
   major_pentatonic: "メジャーペンタトニック",
   whole_tone: "全音音階",
+  blues:      "ブルース",
 };
 
 const CHORD_SUFFIX: Record<string, string> = {

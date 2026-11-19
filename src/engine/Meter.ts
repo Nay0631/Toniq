@@ -1,4 +1,5 @@
 import { getState } from "./AppState";
+import melodyParams from "../data/melody_params.json";
 
 // 拍子（AppState.meter）と、1小節のマス（ステップ）の数え方。
 //   "4/4"  = 4拍 × 16分音符4つ = 16 マス（今までどおり）
@@ -27,6 +28,13 @@ export function currentMeter(): Meter {
 }
 
 const grid = (m: Meter) => GRIDS[m] ?? GRIDS["4/4"];
+
+// ジャンルの標準の拍子（melody_params.json の meter。なし・知らない値 = 4/4。ワルツ = 3/4、6/8バラード = 4/4 の3連符）。
+// シンプルモードの生成・ジャンルのサンプル・一括計測はこの拍子で作り、カスタムモードではジャンルを選び直したときに当てる
+export function genreMeter(genre: string): Meter {
+  const m = (melodyParams as Record<string, { meter?: string }>)[genre]?.meter as Meter | undefined;
+  return m && GRIDS[m] ? m : "4/4";
+}
 
 // 1小節の拍の数・1拍のマスの数・1小節のマスの数
 export function beatsPerBar(m: Meter = currentMeter()): number  { return grid(m).beats; }

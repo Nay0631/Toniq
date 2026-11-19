@@ -5,7 +5,7 @@ import { songMetrics, chordDBIssues, melodyParamIssues, QUALITY_RULES, SongMetri
 import { noteToMidi, timeToUnits, MelodyNote } from "./MelodyGenerator";
 import { NOTE_INDEX } from "../data/degree_resolver";
 import easyTable from "../data/easy_mode_table.json";
-import { unitsPerBar } from "./Meter";
+import { genreMeter, unitsPerBar } from "./Meter";
 
 // 自動チェックをまとめて測る（npm run quality。tools/quality-report.mjs が Node から呼ぶ）。
 // アプリからは、メロディの評価画面（RatingScreen.ts）が同じ曲を作るのに generateBatchSong だけを使う。
@@ -101,7 +101,7 @@ export function melodySignature(notes: MelodyNote[], key: string): string {
 // 曲の内容（SONG_FIELDS）だけを初期値に戻すので、画面・配色などの設定はそのまま
 function generateSong(genre: string, mood: string, key: string): void {
   const fresh = structuredClone(Object.fromEntries(SONG_FIELDS.map(f => [f, defaultState[f]]))) as SongFields;
-  setState({ ...fresh, genre, mood, key });
+  setState({ ...fresh, genre, mood, key, meter: genreMeter(genre) });  // 拍子はジャンルの標準（SimpleScreen.ts の generate と同じ）
   const result = resolveSimpleMode(genre, mood);
   setState({
     chordPattern:  result.chordPattern,

@@ -234,5 +234,92 @@
     "verseBand": [0, 0.5],
     "chorusBand": [0.5, 1],
     "instrument": "soft"
+  },
+  "ワルツ": {
+    "meter": "3/4",
+    "rhythmPatterns": [
+      "x-------x---....",
+      "x-----x-x---....",
+      "x---x---x---....",
+      "x-------x-x-....",
+      "x---x-x-x---....",
+      "x-x-x---x---....",
+      "x---x-----x-....",
+      "....x---x---....",
+      "x-----------....",
+      "x-x-x-x-x---....",
+      "x---x-x-x-x-....",
+      "..x-x---x---...."
+    ],
+    "chorusRhythmPatterns": [
+      "x-------x---....",
+      "x-----------....",
+      "x---x---x---....",
+      "x-----x-x---....",
+      "x-------x-x-...."
+    ],
+    "phraseForms": ["ABAC", "AABA", "ABAB", "AaBA", "ABaC"],
+    "maxLeap": 5,
+    "preferStepwise": true,
+    "octaveRange": [4, 5],
+    "instrument": "soft"
+  },
+  "6/8バラード": {
+    "meter": "4/4t",
+    "rhythmPatterns": [
+      "x---x---x-------",
+      "x-x-x---x---x---",
+      "x---x-x-x-------",
+      "x-------x-x-x---",
+      "..x-x---x---x---",
+      "x---x---x-x-x---",
+      "xxx-x---x-------",
+      "x-------xxx-x---",
+      "x---..x-x-------",
+      "x-x-x-x-x-------",
+      "x-----x-x---x---",
+      "x-------x-------"
+    ],
+    "chorusRhythmPatterns": [
+      "x-------x-------",
+      "x---x---x-------",
+      "x-x-x---x-------",
+      "x-------x---x---",
+      "x---x---x---x---"
+    ],
+    "phraseForms": ["ABAC", "AABA", "ABAB", "AaBA", "ABAb"],
+    "maxLeap": 5,
+    "preferStepwise": true,
+    "octaveRange": [4, 5],
+    "instrument": "epiano"
+  },
+  "シャッフル": {
+    "meter": "4/4t",
+    "rhythmPatterns": [
+      "x-x-x---x-x-x---",
+      "..x-x---..x-x---",
+      "x---..x-x-------",
+      "x-x-x-x-x-------",
+      "..x-x-x-x---x---",
+      "x-----x-x---....",
+      "x---x-x-..x-x---",
+      "....x-x-x---x-x-",
+      "x-x-x---........",
+      "........x-x-x---",
+      "x---x---..x-x---",
+      "..x-x-x---x-x---"
+    ],
+    "chorusRhythmPatterns": [
+      "x---x---x-------",
+      "x-x-x---x-------",
+      "x-------x-x-x---",
+      "..x-x---x---x---",
+      "x---x-x-x-------"
+    ],
+    "phraseForms": ["AAAB", "AABA", "ABAC", "AaAB", "ABAB"],
+    "maxLeap": 5,
+    "preferStepwise": true,
+    "octaveRange": [4, 5],
+    "instrument": "lead"
   }
 }

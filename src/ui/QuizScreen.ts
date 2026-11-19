@@ -146,19 +146,24 @@ function buildNotesAnswer(area: HTMLElement, correct: string[], octaves: number)
   area.append(piano, decide);
 }
 
-// 鍵盤を1つ押して答える（hideLabels のときは回答するまで音名を隠す）
+// 鍵盤を1つ押して答える（hideLabels のときは回答するまで音名を隠す）。
+// at があれば音名ではなく鍵盤の位置で判定する（音程の問題。1音目より右の答えの鍵盤だけが正解）
 function buildKeyAnswer(area: HTMLElement, answer: Extract<QuizAnswer, { kind: "key" }>): void {
-  const piano = buildKeyboard(1, (note, key) => {
+  const at = answer.at;
+  const keysAt = (abs: number) => piano.querySelectorAll<HTMLElement>(`[data-abs="${abs}"]`);
+  const correctKeys = () => (at ? keysAt(at.correct) : keysOf(piano, answer.correct));
+  const piano = buildKeyboard(at?.octaves ?? 1, (note, key) => {
     if (answered) return;
-    const ok = note === answer.correct;
+    const ok = at ? Number(key.dataset.abs) === at.correct : note === answer.correct;
     key.classList.add(ok ? "is-correct" : "is-wrong");
-    if (!ok) keysOf(piano, answer.correct).forEach(k => k.classList.add("is-correct"));
+    if (!ok) correctKeys().forEach(k => k.classList.add("is-correct"));
     piano.classList.add("is-done");
     piano.classList.remove("is-unlabeled");
     finish(ok, displayNote(answer.correct));
   });
   if (answer.hideLabels) piano.classList.add("is-unlabeled");
-  if (answer.root) keysOf(piano, answer.root).forEach(k => k.classList.add("is-root"));
+  if (at) keysAt(at.root).forEach(k => k.classList.add("is-root"));
+  else if (answer.root) keysOf(piano, answer.root).forEach(k => k.classList.add("is-root"));
   area.appendChild(piano);
 }
 

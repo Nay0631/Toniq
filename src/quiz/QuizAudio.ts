@@ -105,13 +105,35 @@ export function playClicks(accents: number[], step: number): void {
 
 // ===== 音響 =====
 
-// 帯域を切り出したノイズ
-export function playBandNoise(freq: number, seconds = 1.2): void {
+// ピンクノイズの RMS。Q が一定のバンドパスで切り出すと、どの帯域もおよそ −20dBFS になる
+const PINK_RMS = 0.3;
+
+// ピンクノイズ（1オクターブあたりの強さが同じノイズ。Paul Kellet のフィルター）を RMS が PINK_RMS になるように作る。
+// ホワイトノイズは高い帯域ほど強く、切り出すと 40Hz と 14kHz で 20dB ほど差が出て、大きさで答えがわかってしまうため
+function pinkNoise(data: Float32Array): void {
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, sum = 0;
+  for (let i = 0; i < data.length; i++) {
+    const w = Math.random() * 2 - 1;
+    b0 = 0.99886 * b0 + w * 0.0555179;
+    b1 = 0.99332 * b1 + w * 0.0750759;
+    b2 = 0.969 * b2 + w * 0.153852;
+    b3 = 0.8665 * b3 + w * 0.3104856;
+    b4 = 0.55 * b4 + w * 0.5329522;
+    b5 = -0.7616 * b5 - w * 0.016898;
+    data[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362;
+    b6 = w * 0.115926;
+    sum += data[i] * data[i];
+  }
+  const scale = PINK_RMS / Math.sqrt(sum / data.length);
+  for (let i = 0; i < data.length; i++) data[i] *= scale;
+}
+
+// 帯域を切り出したノイズ（trimDb = 聞こえ方をそろえる持ち上げ。EQ_BANDS の trim）
+export function playBandNoise(freq: number, trimDb = 0, seconds = 1.2): void {
   const { c, out, t } = begin();
   const src = c.createBufferSource();
   const buffer = c.createBuffer(1, Math.floor(c.sampleRate * seconds), c.sampleRate);
-  const data = buffer.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  pinkNoise(buffer.getChannelData(0));
   src.buffer = buffer;
 
   const filter = c.createBiquadFilter();
@@ -119,8 +141,11 @@ export function playBandNoise(freq: number, seconds = 1.2): void {
   filter.frequency.value = freq;
   filter.Q.value = 1.1;
 
+  // 鳴り始め・終わりは短いフェードでプチッという音を防ぐ
+  const level = 10 ** (trimDb / 20);
   const gain = c.createGain();
-  gain.gain.setValueAtTime(0.5, t);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(level, t + 0.03);
   gain.gain.setTargetAtTime(0, t + seconds - 0.08, 0.02);
 
   src.connect(filter).connect(gain).connect(out);

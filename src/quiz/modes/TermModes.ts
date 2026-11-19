@@ -30,7 +30,7 @@ function termMode(id: string, title: string, terms: [string, string][]): QuizMod
 
 export const toniqTerms = termMode("toniq_terms", "Toniq の用語", [
   ["BPM",          "1分間に打つ拍の数。曲の速さを表す"],
-  ["小節",         "拍をいくつかまとめた区切り。Toniq では4拍で1小節"],
+  ["小節",         "拍をいくつかまとめた区切り。Toniq では4拍で1小節（拍子を 3/4 にすると3拍で1小節）"],
   ["ループ",       "同じフレーズをくり返して鳴らすこと"],
   ["コード進行",   "コードを順番に並べた流れ。曲の雰囲気の土台になる"],
   ["メロディ",     "曲の主役になる、1音ずつ流れる旋律"],

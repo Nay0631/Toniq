@@ -114,7 +114,7 @@
           </span>
           <span>
             <span class="menu-card-title">設定</span>
-            <span class="menu-card-desc">配色・スキン・用語の説明など、見た目と使い心地を変える</span>
+            <span class="menu-card-desc">配色・スキン・用語・操作の説明など、見た目と使い心地を変える。</span>
           </span>
         </button>
       </div>
@@ -171,6 +171,9 @@
               <button class="chip" data-genre="ハウス">ハウス</button>
               <button class="chip" data-genre="トランス">トランス</button>
               <button class="chip" data-genre="アンビエント">アンビエント</button>
+              <button class="chip" data-genre="ワルツ">ワルツ</button>
+              <button class="chip" data-genre="6/8バラード">6/8バラード</button>
+              <button class="chip" data-genre="シャッフル">シャッフル</button>
             </div>
             <div class="genre-sample">
               <button class="chip sample-btn" id="s-sample" title="選んでいるジャンル・雰囲気・テンポで短いサンプル曲を鳴らします">▷ サンプルを聴く</button>
@@ -335,6 +338,9 @@
                 <option value="ハウス">ハウス</option>
                 <option value="トランス">トランス</option>
                 <option value="アンビエント">アンビエント</option>
+                <option value="ワルツ">ワルツ</option>
+                <option value="6/8バラード">6/8バラード</option>
+                <option value="シャッフル">シャッフル</option>
               </select>
             </label>
 
@@ -673,27 +679,33 @@
     <!-- ミュージックリスト画面 -->
     <section class="screen" data-screen="musiclist" hidden>
       <div class="musiclist">
+        <!-- 曲ファイルの操作（絞り込みとは役割が違うので分けて置く） -->
+        <div class="ml-files" role="group" aria-label="曲ファイル">
+          <span class="ml-files-label">曲ファイル</span>
+          <button class="btn btn-small ml-tool" id="ml-import" title="書き出した曲ファイル（.toniq.json）をミュージックリストに追加します">ファイルを読み込む</button>
+          <button class="btn btn-small ml-tool" id="ml-export-all" title="ミュージックリストの曲をすべて1つのファイルに書き出します（バックアップ用）">すべて書き出す</button>
+          <button class="btn btn-small ml-tool" id="ml-output-folder" title="書き出した曲（WAV・MP3・MIDI）を保存する output フォルダを開きます" hidden>出力フォルダ</button>
+          <input type="file" id="ml-import-file" accept=".json,application/json" multiple hidden>
+        </div>
+
+        <!-- 絞り込み・並び替え -->
         <div class="musiclist-toolbar">
           <label class="ml-search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/>
             </svg>
-            <input type="search" id="ml-search" placeholder="曲名で検索" spellcheck="false">
+            <input type="search" id="ml-search" placeholder="曲名・ジャンル・雰囲気・キーで検索" spellcheck="false"
+              title="スペースで区切ると、すべての言葉を含む曲にしぼります（例：EDM 明るい）">
           </label>
-          <button class="btn ml-tool" id="ml-sort">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/>
-            </svg>
-            <span id="ml-sort-label"></span>
-          </button>
-          <button class="btn ml-tool" id="ml-favorites">
+          <select class="select ml-sort" id="ml-sort" aria-label="並び順" title="並び順">
+            <option value="newest">新しい順</option>
+            <option value="oldest">古い順</option>
+            <option value="name">名前順</option>
+          </select>
+          <button class="btn ml-tool" id="ml-favorites" aria-pressed="false">
             <svg class="icon-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
             お気に入り
           </button>
-          <button class="btn ml-tool" id="ml-import" title="書き出した曲ファイル（.toniq.json）をミュージックリストに追加します">ファイルを読み込む</button>
-          <button class="btn ml-tool" id="ml-export-all" title="ミュージックリストの曲をすべて1つのファイルに書き出します（バックアップ用）">すべて書き出す</button>
-          <button class="btn ml-tool" id="ml-output-folder" title="書き出した曲（WAV・MP3・MIDI）を保存する output フォルダを開きます" hidden>出力フォルダ</button>
-          <input type="file" id="ml-import-file" accept=".json,application/json" multiple hidden>
         </div>
 
         <div class="chips chips-genre ml-genres">
@@ -706,6 +718,9 @@
           <button class="chip" data-ml-genre="ハウス">ハウス</button>
           <button class="chip" data-ml-genre="トランス">トランス</button>
           <button class="chip" data-ml-genre="アンビエント">アンビエント</button>
+          <button class="chip" data-ml-genre="ワルツ">ワルツ</button>
+          <button class="chip" data-ml-genre="6/8バラード">6/8バラード</button>
+          <button class="chip" data-ml-genre="シャッフル">シャッフル</button>
         </div>
 
         <p class="ml-no-match" id="ml-no-match" hidden>条件に合う曲がありません</p>

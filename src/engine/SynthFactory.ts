@@ -84,6 +84,27 @@ const DRUM_KITS: Record<string, DrumKitParams> = {
     hat:   { decay: 0.03, openDecay: 0.3, freq: 6500 },
     bus:   { lowpass: 7000, drive: 0.05, compress: -18, makeup: 6 },
   },
+  // ワルツ：丸く軽いキックと、細く短いハイハット。弦とオルゴールのじゃまをしないよう歪ませない
+  ワルツ: {
+    kick:  { note: "D1", octaves: 3, pitchDecay: 0.03, decay: 0.35, wave: "sine", click: 0.1 },
+    snare: { tone: 200, decay: 0.18, noiseFreq: 1500 },
+    hat:   { decay: 0.035, openDecay: 0.25, freq: 7500 },
+    bus:   { lowpass: 9000, drive: 0.03, compress: -20, makeup: 3 },
+  },
+  // 6/8バラード：少し長く鳴るスネアで、ゆったりした2・4拍目を出す
+  "6/8バラード": {
+    kick:  { note: "C1", octaves: 3.5, pitchDecay: 0.035, decay: 0.4, wave: "sine", click: 0.15 },
+    snare: { tone: 190, decay: 0.22, noiseFreq: 1600 },
+    hat:   { decay: 0.04, openDecay: 0.3, freq: 7500 },
+    bus:   { lowpass: 10000, drive: 0.06, compress: -20, makeup: 2 },
+  },
+  // シャッフル：バンドのような生っぽいキット（少しだけ歪ませ、スネアは中くらいの長さ）
+  シャッフル: {
+    kick:  { note: "C1", octaves: 3.5, pitchDecay: 0.035, decay: 0.32, wave: "sine", click: 0.25 },
+    snare: { tone: 200, decay: 0.2, noiseFreq: 1900 },
+    hat:   { decay: 0.045, openDecay: 0.3, freq: 8000 },
+    bus:   { lowpass: 12000, drive: 0.1, compress: -21, makeup: 1 },
+  },
 };
 
 // 強弱を音量に変換する（弱い音が小さくなりすぎないよう曲線をつける）

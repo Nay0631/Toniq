@@ -25,6 +25,7 @@ interface MelodyParam {
   pitchLimit?:       number;    // メロディで使う音の数の上限（主音を含む。テクノ = 2 でミニマルにする。なし = 制限なし）
   chorusBand?:       number[];  // サビ（section B）で使う音域の範囲 [下, 上]（0〜1。なし = SECTION_SHAPE.B.band）。音域の狭いジャンルでサビを持ち上げる
   verseBand?:        number[];  // Aメロ（section A）で使う音域の範囲（なし = SECTION_SHAPE.A.band）
+  meter?:            string;    // ジャンルの標準の拍子（"3/4" / "4/4t"。なし = 4/4。Meter.ts の genreMeter が読む）
 }
 
 // ===== 音名→MIDIノート番号 =====

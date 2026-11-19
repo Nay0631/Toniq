@@ -20,6 +20,9 @@ export const DRUM_SAMPLE_DIRS: Record<string, string> = {
   ハウス:       "house",
   トランス:     "trance",
   アンビエント: "ambient",
+  ワルツ:       "waltz",
+  "6/8バラード": "ballad",
+  シャッフル:   "shuffle",
 };
 
 const DEFAULT_DIR = "default";

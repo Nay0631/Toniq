@@ -86,6 +86,30 @@ const LOOP_SCHEDULE: Record<string, SectionPlan[]> = {
     { section: "B", parts: ["pad", "chord", "melody", "counter", "bass", "arp", "signature"], add: ["drum", "perc"] },
     { section: "A", parts: ["pad", "chord", "melody", "signature", "arp"], drop: ["arp"] },
   ],
+  // ワルツ：弦と後打ち（シグネチャー）とベースの「ズン・チャッ・チャッ」から始め、ドラムは2つ目の A から軽く入る。
+  // サビでオルゴールのアルペジオとタンバリンを足す
+  "ワルツ": [
+    { section: "A", parts: ["chord", "bass", "signature"], add: ["pad"] },
+    { section: "A", parts: ["drum", "chord", "bass", "signature", "pad", "melody"], add: ["counter"] },
+    { section: "B", parts: ["drum", "perc", "chord", "bass", "signature", "pad", "melody", "counter", "arp", "fx"] },
+    { section: "A", parts: ["drum", "chord", "bass", "signature", "melody", "arp"], drop: ["arp"] },
+  ],
+  // 6/8バラード：3連符のピアノ（シグネチャー）だけで始め、ベース・弦・歌（メロディ）と重ねていき、
+  // ドラムは2つ目の A の後半から入る。最後の A はドラムを抜いて静かに終わる
+  "6/8バラード": [
+    { section: "A", parts: ["signature", "pad"], add: ["bass"] },
+    { section: "A", parts: ["signature", "bass", "chord", "melody"], add: ["drum"] },
+    { section: "B", parts: ["drum", "perc", "signature", "bass", "chord", "pad", "melody", "counter", "fx"], add: ["arp"] },
+    { section: "A", parts: ["drum", "signature", "bass", "chord", "melody", "counter"], drop: ["drum"] },
+  ],
+  // シャッフル：ドラム・ブギウギのベース・オルガンのバンドで始め、後半からピアノのキメ（シグネチャー）が入る。
+  // サビの直前の1小節はベースを抜いてため、サビでホーン（メロディ）にカウンター・タンバリン・ライドを重ねる
+  "シャッフル": [
+    { section: "A", parts: ["drum", "bass", "chord"], add: ["signature"] },
+    { section: "A", parts: ["drum", "bass", "chord", "signature", "melody"], add: ["counter"], gap: ["bass"] },
+    { section: "B", parts: ["drum", "perc", "bass", "chord", "signature", "pad", "melody", "counter", "fx"], add: ["arp"] },
+    { section: "A", parts: ["drum", "perc", "bass", "chord", "signature", "melody"], drop: ["perc"] },
+  ],
 };
 
 // 1セクションが何周か（コード進行の長さから。8小節の進行なら1周）

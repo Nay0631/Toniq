@@ -42,6 +42,9 @@ const SCALE_INTERVALS: Record<string, Record<string, number>> = {
   major_pentatonic: { I:0, II:2, III:4, IV:5, V:7, VI:9, VII:11, IIm:2, IIIm:4, VIm:9 },
   // 全音音階（6音。どの音の間も全音）。コードは増三和音（aug / aug7）
   whole_tone:     { I:0, II:2, III:4, "#IV":6, "#V":8, bVII:10 },
+  // ブルース：コードはセブンス（I7・IV7・V7。マイナーブルースは Im7・IVm7）。メロディはマイナーペンタトニック＋ブルーノート（SCALE_TONES）。
+  // 長3度を含むセブンスの上で短3度・短7度を鳴らすのがブルースらしさ
+  blues:          { I:0, II:2, bIII:3, IV:5, "#IV":6, V:7, bVI:8, VI:9, bVII:10 },
 };
 
 // ===== メロディ用のスケール音の役割（スケールを追加するときは SCALE_INTERVALS とそろえる） =====
@@ -67,6 +70,8 @@ export const SCALE_TONES: Record<string, ScaleTones> = {
   // 5音・6音のスケールは外す音がない（スケールの音だけで作る）
   major_pentatonic: { core: [0, 2, 4, 7, 9], accent: {} },
   whole_tone:     { core: [0, 2, 4, 6, 8, 10], accent: {} },
+  // ブルース：基本の5音はマイナーペンタトニック。外す音は ♭5（ブルーノート。5度か4度へ）と2度（主音か短3度へ）
+  blues:          { core: [0, 3, 5, 7, 10], accent: { 6: [7, 5], 2: [0, 3] } },
 };
 
 // スケールの音（主音からの半音数、低い順。ふつうは7音、ペンタトニックは5音・全音音階は6音）。SCALE_TONES の core＋accent から作る。未定義なら minor
