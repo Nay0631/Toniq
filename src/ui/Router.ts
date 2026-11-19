@@ -97,6 +97,14 @@ export function onScreenChange(fn: (prev: Screen, next: Screen) => void): void {
   screenChangeHandlers.push(fn);
 }
 
+// パンくずの「‹ メニューに戻る」を押したときの確かめ（保存していない曲の保存など。MusicListScreen が登録する）。
+// false を返したら戻らない。循環 import を避けるため、Router は中身を知らずに呼ぶだけにする
+let menuGuard: (() => Promise<boolean>) | null = null;
+
+export function setMenuGuard(fn: () => Promise<boolean>): void {
+  menuGuard = fn;
+}
+
 // タブのある画面（離れたときのタブを覚えておき、戻ったときに同じタブを開く）
 const SCREENS_WITH_TABS: Screen[] = ["simple", "custom"];
 
@@ -163,10 +171,11 @@ export function initRouter(): void {
   });
 
   // パンくずの段を押すと、その画面（・タブ）へ移る
-  document.getElementById("breadcrumb-trail")?.addEventListener("click", e => {
+  document.getElementById("breadcrumb-trail")?.addEventListener("click", async e => {
     const btn = (e.target as HTMLElement).closest<HTMLElement>("[data-crumb-screen]");
     if (!btn) return;
     const screen = btn.dataset.crumbScreen as Screen;
+    if (screen === "menu" && menuGuard && !await menuGuard()) return;
     if (screen !== getState().screen) showScreen(screen);
     const tab = btn.dataset.crumbTab as Tab | undefined;
     if (tab && tab !== getState().tab) showTab(tab);

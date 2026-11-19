@@ -18,6 +18,7 @@ import { bindSpaceToPlay } from "./SpaceKey";
 import { beatsPerBar, genreMeter, unitsPerBeat } from "../engine/Meter";
 import { setMeter } from "./CustomState";
 import { drumPatternIn, isCustomDrum } from "../engine/DrumEngine";
+import { resetHistory } from "../engine/History";
 
 const $ = (id: string) => document.getElementById(id);
 
@@ -119,6 +120,8 @@ function generate(): void {
   // 自分で入力したメロディ（生成前にピアノロールで入れた音・前回の曲で入れた音）は残し、自動生成のときだけ作る
   if (s.melodyMethod === "auto") makeMelody();
   console.log("シンプルモード：生成", getState());
+  // 新しい曲を作ったので、前の曲への「元に戻す／やり直す」の履歴は捨てる（＋ 新規作成・曲を開いたときと同じ）
+  resetHistory();
 }
 
 // 生成し直しても残す、ピアノロールで作った内容の名前（「入力したメロディと作ったドラム」など。なければ null）
@@ -140,15 +143,14 @@ function confirmEmptyMelody(): boolean {
   return confirm("メロディがまだ入力されていません。\nメロディなしで生成しますか？\n\n（メロディは生成したあとピアノロールで入力できます。メロディの作り方を「自動生成」にすると自動で作ります）");
 }
 
-// メロディの音の数（「Aメロ 24音・サビ 26音」など。サビのメロディがなければ Aメロと同じものが鳴る）
+// メロディの音の数（「Aメロ 24音・サビ 26音」など。Aメロとサビは別のメロディ）
 function melodySummary(): string {
   const s = getState();
   const count = (notes: typeof s.melodyNotes) => notes.filter(n => n.note).length;
   const verse = count(s.melodyNotes);
-  if (verse === 0 && s.chorusMelodyNotes.length === 0) return "まだ音がありません";
-  return s.chorusMelodyNotes.length > 0
-    ? `Aメロ ${verse}音・サビ ${count(s.chorusMelodyNotes)}音`
-    : `${verse}音。サビも同じメロディ`;
+  const chorus = count(s.chorusMelodyNotes);
+  if (verse === 0 && chorus === 0) return "まだ音がありません";
+  return `Aメロ ${verse}音・サビ ${chorus}音`;
 }
 
 // 生成した曲から設定画面（雰囲気・ジャンル・テンポ）に戻ってよいか確かめる。
@@ -360,7 +362,8 @@ function render(): void {
     }
   }
   $("s-info-bars-value")!.textContent = `${s.bars}小節`;
-  $("s-transport")!.hidden = !s.generated;
+  // 情報バーの操作（元に戻す・新規作成・再生）は生成後に出す。ピアノロールタブでは、入力中のメロディを聴けるよう生成前でも出す
+  $("s-transport")!.hidden = !s.generated && s.tab !== "pianoroll";
   // 再生ボタンは設定タブでは「生成された楽曲」の上にあるので、情報バーにはピアノロールタブのときだけ出す
   $("s-bar-transport")!.hidden = s.tab === "settings";
   $$("[data-simple-play]").forEach(btn => {
@@ -391,7 +394,7 @@ function render(): void {
   $("s-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   $("s-bpm")!.textContent = `${s.bpm} BPM`;
   const metronomeOn = isMetronomeOn();
-  $("s-metronome")!.textContent = metronomeOn ? "■ メトロノームを止める" : "♪ メトロノームで速さを聴く";
+  $("s-metronome")!.textContent = metronomeOn ? "■ メトロノームを止める" : "♪ テンポを聴く";
   $("s-metronome")!.classList.toggle("is-active", metronomeOn);
   const sampleOn = Playback.isSamplePlaying();
   $("s-sample")!.textContent = sampleOn ? "■ サンプルを止める" : `▷ ${s.genre} のサンプルを聴く`;
@@ -410,9 +413,6 @@ function render(): void {
   const keepHint = $("s-keep-hint")!;
   keepHint.hidden = !kept;
   keepHint.textContent = kept ? `ピアノロールで${kept}は、そのまま使います` : "";
-  $("s-regenerate")!.title = kept
-    ? `選び直して新しい曲にします（${kept}はそのまま）`
-    : "コード進行・ドラム・メロディを選び直して、新しい曲にします";
 
   $("s-setup")!.hidden  = s.generated;
   $("s-result")!.hidden = !s.generated;
@@ -517,14 +517,6 @@ export function initSimpleScreen(): void {
     render();
   });
 
-  $("s-regenerate")?.addEventListener("click", async () => {
-    if (!confirmEmptyMelody()) return;
-    const wasPlaying = Playback.isPlaying();
-    generate();
-    render();
-    if (wasPlaying) await startPlayback();
-  });
-
   // 「雰囲気・ジャンル・テンポを変更」：設定画面に戻る前に、もう一度生成すると今の曲が置き換わることを知らせる
   $("s-edit-settings")?.addEventListener("click", async () => {
     if (!await confirmBackToSetup()) return;
@@ -535,10 +527,10 @@ export function initSimpleScreen(): void {
 
   // 再生・停止（「生成された楽曲」の上と、ピアノロールタブの情報バーの2か所）
   $$("[data-simple-play]").forEach(btn => btn.addEventListener("click", () => { void startPlayback(); }));
-  // 生成した曲は、どのタブでもスペースキーで再生／停止する（生成前は鳴らす曲がない）
+  // 生成した曲は、どのタブでもスペースキーで再生／停止する。生成前でもピアノロールタブでは、入力中のメロディを聴けるようにする
   bindSpaceToPlay(() => {
     const s = getState();
-    return s.screen === "simple" && s.generated;
+    return s.screen === "simple" && (s.generated || s.tab === "pianoroll");
   }, () => startPlayback());
   $$("[data-simple-stop]").forEach(btn => btn.addEventListener("click", () => {
     Playback.stop();

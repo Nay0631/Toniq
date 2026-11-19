@@ -74,6 +74,7 @@
   --key-label:       #9a9a94;
   /* ピアノロールの鍵盤（黒鍵はどちらの配色でも同じ黒） */
   --key-label-strong: #4a4a46;
+  --key-label-black: #d8d8d2;
   --key-black:       #2a2a28;
   --key-black-edge:  #121211;
   --key-black-hover: #3c3c39;
@@ -184,6 +185,7 @@
   --key-border:      #0f0f11;
   --key-label:       #6e6e69;
   --key-label-strong: #2e2e2b;
+  --key-label-black: #d8d8d2;
   --key-black:       #2a2a28;
   --key-black-edge:  #121211;
   --key-black-hover: #3c3c39;
@@ -546,6 +548,15 @@ button {
 .chips-tempo .chip.is-active { background: var(--list-soft);   border-color: var(--list);   color: var(--list-ink); font-weight: 600; }
 
 .bpm-value { margin-left: 8px; font-size: 18px; font-weight: 700; }
+
+/* テンポの道具（タップで調整・テンポを聴く）：速さの選択肢（丸いチップ）と見分けられるよう、角の丸い四角で地の色を付ける */
+.tempo-sep { width: 1px; height: 26px; margin: 0 4px; background: var(--border); }
+.chips-tempo .tempo-tool {
+  padding: 8px 14px;
+  font-size: 14px;
+  background: var(--bg);
+  border-radius: 8px;
+}
 
 /* ジャンルのサンプル試聴と説明 */
 .genre-sample {
@@ -1039,6 +1050,56 @@ button {
   border-bottom: 8px solid var(--custom);
   border-top: none;
 }
+
+/* ループする区間（目盛りの帯と、レーンに重ねる薄い面） */
+.arr-ticks .arr-range-mark {
+  top: auto;
+  bottom: 0;
+  padding: 0;
+  height: 5px;
+  background: var(--hw-orange);
+  border-radius: 2px;
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.arr-range-area {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--hw-orange);
+  opacity: 0.08;
+  border-left: 1px solid var(--hw-orange);
+  border-right: 1px solid var(--hw-orange);
+  pointer-events: none;
+}
+
+.arr-ticks { touch-action: none; user-select: none; }
+
+/* ツールバーの「区間ループ 5〜8 小節 ×」 */
+.arr-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  font-size: 12px;
+  border: 1px solid var(--hw-orange);
+  border-radius: 999px;
+}
+
+.arr-range-clear {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 1;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.arr-range-clear:hover { color: var(--text); background: var(--bg); }
 
 .arr-start-line {
   position: absolute;
@@ -1668,8 +1729,16 @@ body:has([data-screen="custom"]:not([hidden])) { background: var(--hw-bg); }
 
 /* ソロ中（電源ボタンの右クリック）のパートは電源ボタンにオレンジの枠 */
 .mixer-power.is-solo { outline: 2px solid var(--hw-orange); outline-offset: 1px; }
-/* アレンジャーのループ再生のボタン（ON はオレンジ） */
-.arr-loop[aria-pressed="true"] { color: #fff; background: var(--hw-orange); border-color: var(--hw-orange); }
+/* アレンジャーのループ再生のボタン（ON はオレンジに白い文字）。
+   各スキンの .hw .btn・.btn-small（:hover 込み）の背景より強くして、灰色の背景に白い文字にならないようにする */
+.arr-loop[aria-pressed="true"],
+:root .hw .arr-loop[aria-pressed="true"],
+:root .hw .arr-loop[aria-pressed="true"]:hover {
+  color: #fff;
+  font-weight: 700;
+  background: var(--hw-orange);
+  border-color: var(--hw-orange);
+}
 
 /* 定位（パン）：小さいノブと値（C / L30 / R30）。マスターは同じ高さにクリップの印を置く */
 .mixer-pan,
@@ -2632,6 +2701,9 @@ button.mixer-value {
 .pk.is-c .pk-label { font-weight: 700; color: var(--key-label-strong); }
 .pk-white.is-out .pk-label { opacity: 0.55; }
 .pk-white.is-tonic .pk-label { color: var(--simple); font-weight: 700; opacity: 1; }
+/* 黒鍵の音名は黒の上で読める明るい色で、右端に小さく出す */
+.pk-black .pk-label { right: 12px; font-size: 8px; color: var(--key-label-black); }
+.pk-black.is-out .pk-label { opacity: 0.55; }
 
 /* 主音の黒鍵は右端に印を付ける */
 .pk-black.is-tonic::after {
@@ -2908,11 +2980,6 @@ button.mixer-value {
   margin-bottom: 12px;
 }
 
-.ml-files-label {
-  margin-right: 4px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
 .ml-tool.is-active { background: var(--star-soft); border-color: var(--star); }
 .ml-tool.is-active .icon-star { fill: var(--star); }
 
@@ -4179,3 +4246,16 @@ span[data-tip],
 }
 
 .back-to-setup:hover { border-color: var(--simple); }
+
+/* ピアノロールの知らせ（同じ時刻に音を置けないときなど。数秒で消える） */
+.pr-notice {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--danger-ink);
+  font-size: 13px;
+}
+
+.pr-notice[hidden] { display: none; }

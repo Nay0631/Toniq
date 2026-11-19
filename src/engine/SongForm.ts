@@ -137,7 +137,7 @@ function toPlaced(notes: MelodyNote[], offset: number, limit: number): PlacedNot
     .map(n => ({ ...n, start: n.start + offset, units: Math.min(n.units, limit - n.start) }));
 }
 
-// 曲全体のメロディ。周回ごとにセクションのメロディ（サビは chorusMelodyNotes。空なら melodyNotes）を並べ、
+// 曲全体のメロディ。周回ごとにセクションのメロディ（サビは chorusMelodyNotes。空ならサビは鳴らさない）を並べ、
 // エンディングを使うなら最後の小節を主音の全音符にする（直前の音にいちばん近い高さ）。転調している周回は同じだけ上げる。
 // 試聴中はコード進行1周のまま
 export function songMelody(): MelodyNote[] {
@@ -146,7 +146,7 @@ export function songMelody(): MelodyNote[] {
 
   const BAR       = unitsPerBar();  // 1小節のマスの数（拍子で変わる。Meter.ts）
   const loopUnits = loopBars() * BAR;
-  const chorus    = s.chorusMelodyNotes.length > 0 ? s.chorusMelodyNotes : s.melodyNotes;
+  const chorus    = s.chorusMelodyNotes;
   let placed: PlacedNote[] = [];
   const sections = getSections();
   const shifts   = loopKeyShifts(sections);

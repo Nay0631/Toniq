@@ -1,12 +1,11 @@
 import { getState, setState, MusicListSort, type MusicListView } from "../engine/AppState";
 import {
   listSongs, findSong, renameSong, deleteSong, loadSong, newSong, toggleFavorite, SavedSong,
-  songsToFile, songFileName, importSongFile,
 } from "../engine/SongLibrary";
 import { hasOutputFolder, openOutputFolder } from "../engine/OutputFiles";
 import * as Playback from "../engine/Playback";
 import type { AudioFormat } from "../engine/Playback";
-import { onRender, onScreenChange, render as renderAll, renderBreadcrumb, showScreen } from "./Router";
+import { onRender, onScreenChange, render as renderAll, renderBreadcrumb, setMenuGuard, showScreen } from "./Router";
 import { formatTime, SCALE_LABELS } from "./format";
 import { beatsPerBar } from "../engine/Meter";
 import { hasUnsavedSong, isListedSong, lossMessage, saveToList, withStorage } from "./SongSave";
@@ -109,48 +108,34 @@ async function confirmNewSong(): Promise<boolean> {
   return true;
 }
 
+// シンプルモード・カスタムモードから「‹ メニューに戻る」を押したとき：保存していない変更があれば「楽曲を保存しますか？」と聞く。
+// メニューに戻るだけでは曲は消えない（もう一度開けば続きを編集できる）ので、保存せずに戻ることもできる。戻ってよければ true
+async function confirmBackToMenu(): Promise<boolean> {
+  const s = getState();
+  if (s.screen !== "simple" && s.screen !== "custom") return true;
+  if (s.screen === "simple" && !s.generated) return true;  // シンプルモードの生成前は、保存する曲がまだない
+  if (!hasUnsavedSong()) return true;
+  const saveLabel = isListedSong() ? "上書き保存して戻る" : "保存して戻る";
+  const choice = await askChoice({
+    title:   "楽曲を保存しますか？",
+    message: "保存していない変更があります。メニューに戻る前に、ミュージックリストに保存できます。",
+    detail:  "保存せずに戻っても、今の曲はこの画面を開き直せば続きを編集できます。\n"
+           + "ただし、新規作成・別の曲を開く・アプリを閉じると、保存していない変更は失われます。",
+    choices: [
+      { id: "discard", label: "保存せずに戻る" },
+      { id: "save",    label: saveLabel, kind: "primary" },
+    ],
+  });
+  if (choice === null) return false;
+  if (choice === "save") return saveToList();
+  return true;
+}
+
 function removeSong(id: string): void {
   const song = findSong(id);
   if (!song || !confirm(`「${song.name}」をミュージックリストから削除しますか？`)) return;
   if (isPlayingSong(id)) Playback.stop();
   withStorage(() => deleteSong(id));
-  render();
-}
-
-// ===== 曲ファイル =====
-
-function exportSong(id: string): void {
-  const song = findSong(id);
-  if (song) Playback.downloadBlob(songsToFile([song]), songFileName(song.name));
-}
-
-function exportAllSongs(): void {
-  const songs = listSongs();
-  if (songs.length === 0) {
-    alert("書き出す曲がありません");
-    return;
-  }
-  const date = new Date().toISOString().slice(0, 10);
-  Playback.downloadBlob(songsToFile(songs), songFileName(`toniq_ミュージックリスト_${date}`));
-}
-
-async function importFiles(files: FileList): Promise<void> {
-  let added = 0, skipped = 0;
-  const errors: string[] = [];
-  for (const file of Array.from(files)) {
-    try {
-      const result = importSongFile(await file.text());
-      added   += result.added;
-      skipped += result.skipped;
-    } catch (e) {
-      errors.push(`${file.name}：${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-  const lines = [];
-  if (added > 0)   lines.push(`${added}曲をミュージックリストに追加しました。`);
-  if (skipped > 0) lines.push(`${skipped}曲は内容が足りないため読み込めませんでした。`);
-  lines.push(...errors);
-  alert(lines.join("\n") || "読み込める曲がありませんでした。");
   render();
 }
 
@@ -242,7 +227,6 @@ function songRow(song: SavedSong): string {
           <button data-action="export-wav">WAV で書き出す</button>
           <button data-action="export-mp3">MP3 で書き出す</button>
           <button data-action="export-midi">MIDI で書き出す</button>
-          <button data-action="export" title="Toniq の曲ファイル（.toniq.json）。ほかのパソコンの Toniq で読み込んで続きを編集できます">曲ファイルに書き出す</button>
           <button class="is-danger" data-action="delete">削除</button>
         </div>
       </div>
@@ -343,6 +327,7 @@ function render(): void {
 
 export function initMusicListScreen(): void {
   onRender(render);
+  setMenuGuard(confirmBackToMenu);
 
   // 保存していない変更があれば、ウィンドウを閉じる・読み込み直す前に確かめる。
   // ブラウザは標準の確認を出し、Electron はメインプロセス（will-prevent-unload）が確認のダイアログを出す
@@ -414,21 +399,10 @@ export function initMusicListScreen(): void {
       render();
     }));
 
-  // 曲ファイルの読み込み・すべて書き出す
-  const fileInput = $("ml-import-file") as HTMLInputElement | null;
-  $("ml-import")?.addEventListener("click", () => fileInput?.click());
-  fileInput?.addEventListener("change", async () => {
-    if (fileInput.files && fileInput.files.length > 0) await importFiles(fileInput.files);
-    fileInput.value = "";  // 同じファイルをもう一度選んでも change が起きるようにする
-  });
-  $("ml-export-all")?.addEventListener("click", exportAllSongs);
-
-  // 出力フォルダ（Electron のときだけ）
-  const outputFolder = $("ml-output-folder");
-  if (outputFolder) {
-    outputFolder.hidden = !hasOutputFolder();
-    outputFolder.addEventListener("click", () => { void openOutputFolder(); });
-  }
+  // 出力フォルダを表示（Electron のときだけ。ブラウザでは欄ごと隠す）
+  const filesBar = $("ml-files-bar");
+  if (filesBar) filesBar.hidden = !hasOutputFolder();
+  $("ml-output-folder")?.addEventListener("click", () => { void openOutputFolder(); });
 
   // 曲の操作
   const list = $("ml-list")!;
@@ -453,7 +427,6 @@ export function initMusicListScreen(): void {
     if (action === "menu")         render();
     if (action === "open")         openSong(id);
     if (action === "start-rename") startRename(id);
-    if (action === "export")       { exportSong(id); render(); }
     if (action === "export-wav")   void exportSongAs(id, "wav");
     if (action === "export-mp3")   void exportSongAs(id, "mp3");
     if (action === "export-midi")  void exportSongAs(id, "midi");

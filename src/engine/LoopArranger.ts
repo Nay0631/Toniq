@@ -126,6 +126,7 @@ export const ARRANGE_PRESETS: { id: ArrangePreset; label: string; desc: string }
   { id: "drop",     label: "サビを強く",   desc: "サビの前でドラム・ベースを抜いてため、サビは全部のパートで鳴らす" },
   { id: "short",    label: "短く繰り返す", desc: "Aメロ1回ですぐサビに入り、A→サビ をくり返す" },
   { id: "buildup",  label: "だんだん盛り上がる",     desc: "少ないパートから始めて、セクションごとにパートを足していく" },
+  { id: "chorusFirst", label: "サビ頭",              desc: "いきなりサビから始め、そのあとは Aメロ → サビ → Aメロ と続ける" },
 ];
 
 export function arrangePresetLabel(id: ArrangePreset): string {
@@ -177,6 +178,9 @@ function sectionPlan(genre: string, index: number, preset: ArrangePreset = "stan
       const tier   = (i: number) => tiers[Math.min(i, tiers.length - 1)];
       return { section: base.section, parts: tier(index), add: tier(index + 1) };
     }
+    case "chorusFirst":
+      // 最初のセクションをサビ（標準のサビの定義）にし、そのあとは標準の2つ目以降（A → サビ → A）を続ける
+      return index === 0 ? schedule[2] : base;
     default:
       return base;
   }

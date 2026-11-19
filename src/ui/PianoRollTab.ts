@@ -10,7 +10,7 @@ import { NOTE_INDEX, scaleSemitones } from "../data/degree_resolver";
 import { onRender, render } from "./Router";
 import { setForcedPart } from "../engine/LoopArranger";
 import { SCALE_LABELS, chordSpans, displayNote } from "./format";
-import { chorusProgression, generateSongMelodies } from "../engine/SongForm";
+import { chorusProgression, generateSongMelodies, getSections, loopBars } from "../engine/SongForm";
 import type { ChordProgression } from "../data/types";
 import { buildDrumRoll, initDrumRoll, renderDrumPlayhead, renderDrumRoll } from "./DrumRoll";
 import { beatsPerBar, isTriplet, unitsPerBar, unitsPerBeat } from "../engine/Meter";
@@ -80,7 +80,8 @@ function rollProgression(): ChordProgression | null {
 // 編集中のセクションのメロディ（サビのメロディがまだなければ、サビでも鳴る Aメロのメロディを見せる）
 function sectionNotes(): MelodyNote[] {
   const s = getState();
-  return section === "B" && s.chorusMelodyNotes.length > 0 ? s.chorusMelodyNotes : s.melodyNotes;
+  // サビは Aメロとは別のメロディ（空なら空のまま。Aメロを写さない）
+  return section === "B" ? s.chorusMelodyNotes : s.melodyNotes;
 }
 
 // ===== メロディ（AppState.melodyNotes）との変換 =====
@@ -117,15 +118,46 @@ function writeNotes(notes: RollNote[]): void {
   render();
 }
 
-// 音を置く。メロディは単音なので、重なる前の音は手前で切り、範囲内で始まる音は消す
-function placeNote(others: RollNote[], note: RollNote): RollNote[] {
-  const end = note.start + note.units;
-  const rest = others.flatMap(n => {
-    if (n.start + n.units <= note.start || n.start >= end) return [n];
-    if (n.start < note.start) return [{ ...n, units: note.start - n.start }];
-    return [];
-  });
-  return [...rest, note];
+// 置いてある音を消さずに、新しい音が置ける形にする（メロディは単音なので、同じ時刻に2つの音は鳴らせない）。
+// 始まりがほかの音の鳴っている所（同じ時刻を含む）なら置けない（null）。後ろの音にかかるときは、その手前まで短くする
+// （以前は重なる音を手前で切ったり消したりしていたが、気づかないうちに音が消えるのでやめた）
+function fitNote(others: RollNote[], note: RollNote): RollNote | null {
+  if (others.some(n => n.start <= note.start && note.start < n.start + n.units)) return null;
+  return { ...note, units: Math.min(note.units, nextStartAfter(others, note.start) - note.start) };
+}
+
+// start より後ろで始まる、いちばん近い音の位置（なければコード進行1周の終わり）
+function nextStartAfter(others: RollNote[], start: number): number {
+  return Math.min(loopUnits(), ...others.filter(n => n.start > start).map(n => n.start));
+}
+
+// 音を置く。置けなければ知らせて false（置いてある音はそのまま）
+function placeNote(others: RollNote[], note: RollNote): boolean {
+  const fitted = fitNote(others, note);
+  if (!fitted) {
+    showNotice("ここにはすでに音があります。メロディは同じ時刻に1つの音しか鳴らせないので、今ある音を消すか動かしてから置いてください。");
+    return false;
+  }
+  selected = fitted.start;
+  cursor   = (fitted.start + fitted.units) % loopUnits();
+  writeNotes([...others, fitted]);
+  return true;
+}
+
+// ピアノロールの下に短い知らせを出す（数秒で消える）
+let noticeTimer: ReturnType<typeof setTimeout> | null = null;
+
+function showNotice(text: string): void {
+  const root = currentRoot();
+  const el = root?.querySelector<HTMLElement>("[data-pr-notice]");
+  if (!el) return;
+  el.textContent = text;
+  el.hidden = false;
+  if (noticeTimer !== null) clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => {
+    document.querySelectorAll<HTMLElement>("[data-pr-notice]").forEach(n => { n.hidden = true; });
+    noticeTimer = null;
+  }, 5000);
 }
 
 // ===== スケール =====
@@ -192,9 +224,10 @@ function buildSkeleton(root: HTMLElement): void {
         <button data-pr-section="A">Aメロ</button><button data-pr-section="B">サビ</button>
       </div>
       <span class="pr-sep"></span>
-      <div class="pr-seg" role="group" aria-label="入力する音符の長さ" data-term="noteLength">
+      <div class="pr-seg" role="group" aria-label="音を置くときの音符の長さ" data-term="pianoRollLength">
         ${STRAIGHT_LENGTHS.map(l => `<button data-pr-length="${l.value}">${l.label}</button>`).join("")}
       </div>
+      <span class="pr-label">選択中：<b data-pr-status-length></b></span>
       <span class="pr-sep"></span>
       <button class="btn btn-small pr-lock" data-pr-lock data-term="scaleLock">${LOCK_ICON}スケールロック</button>
       <span class="pr-sep"></span>
@@ -217,15 +250,10 @@ function buildSkeleton(root: HTMLElement): void {
         <div class="pr-grid"></div>
       </div>
     </div>
+    <p class="pr-notice" data-pr-notice role="status" hidden></p>
     <div class="pr-status">
-      <span class="pr-status-lock" data-pr-status-lock></span>
-      <span class="pr-key-chip" data-pr-status-key></span>
-      <span class="pr-status-sep"></span>
-      <span>入力中の音符長：<span data-pr-status-length></span></span>
-      <span class="pr-status-sep"></span>
-      <span>オクターブ：<span data-pr-status-octave></span></span>
+      <span class="pr-key-chip" data-pr-status-key data-term="scale"></span>
       <span class="pr-status-keys">
-        <kbd>↓</kbd><kbd>↑</kbd> オクターブ切替
         <kbd>Del</kbd> 削除
         <kbd>Z〜/</kbd><kbd>Q〜]</kbd> 鍵盤入力
       </span>
@@ -239,10 +267,22 @@ function pane(root: HTMLElement, name: RollTarget): HTMLElement {
   return q(root, `[data-pr-pane="${name}"]`);
 }
 
+// ピアノロールでメロディを編集している間に鳴らす範囲：選んでいるセクション（Aメロ／サビ）の最初の周回。
+// ピアノロールを開いていない・ドラムを編集中・曲にそのセクションの周回がないときは null（曲全体）
+function sectionRange(): Playback.PlayRange | null {
+  if (!currentRoot() || target !== "melody" || !getState().chordPattern) return null;
+  const L = loopBars();
+  const loop = getSections().indexOf(section);
+  if (loop < 0) return null;
+  return { startBar: loop * L, bars: Math.max(1, Math.min(L, getState().bars - loop * L)) };
+}
+
 export function renderPianoRoll(): void {
   const root = currentRoot();
   // ピアノロールを開いている間は、編集中のパートをアレンジでブロックを置いていない小節でも鳴らす（ほかのタブ・画面では戻す）
   setForcedPart(root ? target : null);
+  // メロディを編集している間は、選んでいるセクション（Aメロ／サビ）の周回をくり返し鳴らす（再生中なら当て直す）
+  Playback.refreshPlayRange();
   const s = getState();
   if (!root || !s.chordPattern || drag) return;
 
@@ -331,12 +371,10 @@ export function renderPianoRoll(): void {
     `<div class="pr-cursor" style="left:${pct(cursor)}"></div>
      <div class="pr-playhead" hidden></div>`;
 
-  // ステータスバー
+  // 下のステータスバーのキー・スケールと、ツールバーの選択中の音符長
   const length = lengths().find(l => l.value === s.pianoRollLength);
-  q(root, "[data-pr-status-lock]").innerHTML = `${LOCK_ICON}スケールロック${s.pianoRollScaleLock ? "有効" : "無効"}`;
   q(root, "[data-pr-status-key]").textContent    = `${s.key}${SCALE_LABELS[scaleName()] ?? ""}`;
   q(root, "[data-pr-status-length]").textContent = length?.name ?? "";
-  q(root, "[data-pr-status-octave]").textContent = String(s.pianoRollOctave);
 
   // 初めて表示したときは、鍵盤入力のオクターブが見える位置までスクロールする
   if (!root.dataset.scrolled) {
@@ -356,8 +394,8 @@ function pianoKey(midi: number, cls: string): string {
   const top    = black ? row : Math.max(0, row - (BLACK_KEYS.has((midi + 1) % 12) ? 0.5 : 0));
   const bottom = black ? row + 1 : Math.min(ROWS, row + 1 + (BLACK_KEYS.has((midi - 1) % 12) ? 0.5 : 0));
   const name  = displayNote(midiToNote(midi));
-  // 白鍵の名前は自分の行の高さに出す（C はオクターブ付き、ほかは音名だけ）。黒鍵は名前を出さず、カーソルを乗せたときに出す
-  const label = black ? "" :
+  // 鍵盤の名前は自分の行の高さに出す（C はオクターブ付き、ほかは音名だけ。黒鍵も C# などの音名を出す）
+  const label =
     `<span class="pk-label" style="top:calc(${row - top} * var(--row-h))">${midi % 12 === 0 ? name : displayNote(midiToNote(midi).replace(/-?\d+$/, ""))}</span>`;
   return `<div class="pk ${black ? "pk-black" : "pk-white"}${midi % 12 === 0 ? " is-c" : ""} ${cls}" data-midi="${midi}" title="${name}"
               style="top:calc(${top} * var(--row-h));height:calc(${bottom - top} * var(--row-h))">${label}</div>`;
@@ -432,9 +470,7 @@ function inputKey(midi: number): void {
   const total = loopUnits();
   if (cursor >= total) cursor = 0;
   const note = { midi, start: cursor, units: Math.min(lengthUnits(), total - cursor) };
-  selected = note.start;
-  cursor   = (note.start + note.units) % total;
-  writeNotes(placeNote(readNotes(), note));
+  if (!placeNote(readNotes(), note)) return;  // 入力位置に音がある（位置は進めない）
   flashKey(midi);
   void previewMelodyNote(midiToNote(midi));
 }
@@ -492,8 +528,13 @@ function startDrag(e: PointerEvent, grid: HTMLElement): void {
     const midi  = HIGH - Math.floor((e.clientY - rect.top) / base.rowPx);
     const start = Math.floor((e.clientX - rect.left) / base.stepPx / snap) * snap;
     if (start < 0 || start >= total || !allowed(midi, scalePitchClasses())) return;
+    // ほかの音が鳴っている時刻には置かない（置いてある音は消さない）
+    if (!fitNote(notes, { midi, start, units: 1 })) {
+      showNotice("ここにはすでに音があります。メロディは同じ時刻に1つの音しか鳴らせないので、今ある音を消すか動かしてから置いてください。");
+      return;
+    }
 
-    const note = { midi, start, units: Math.min(lengthUnits(), total - start) };
+    const note = { midi, start, units: Math.min(lengthUnits(), nextStartAfter(notes, start) - start) };
     const el = document.createElement("div");
     el.className = "pr-note is-selected";
     el.innerHTML = `<span class="pr-note-label"></span><span class="pr-note-handle"></span>`;
@@ -523,7 +564,11 @@ function moveDrag(e: PointerEvent): void {
     if (midi !== drag.next.midi) void previewMelodyNote(midiToNote(midi));
     drag.next = { midi, start, units: orig.units };
   } else {
-    const end = Math.max(orig.start + snap, Math.min(orig.start + orig.units + dStep, total));
+    // 長さは選んでいる音符長にかかわらず1マス（16分音符。3連符の拍子では8分3連符）ずつ変えられる。
+    // 後ろの音の手前までしか伸ばさない（後ろの音を消さない）
+    const dUnits = Math.round((e.clientX - drag.x) / drag.stepPx);
+    const limit  = Math.min(total, nextStartAfter(drag.others, orig.start));
+    const end    = Math.max(orig.start + 1, Math.min(orig.start + orig.units + dUnits, limit));
     drag.next = { ...orig, units: end - orig.start };
   }
   updateDragElement();
@@ -535,9 +580,8 @@ function endDrag(): void {
   drag = null;
   const changed = next.midi !== orig.midi || next.start !== orig.start || next.units !== orig.units;
   if (isNew || changed) {
-    selected = next.start;
-    cursor   = (next.start + next.units) % loopUnits();
-    writeNotes(placeNote(others, next));
+    // 動かした先に音があれば元の位置に戻す（知らせる）
+    if (!placeNote(others, next)) renderPianoRoll();
   } else {
     renderPianoRoll();
   }
@@ -549,6 +593,7 @@ function isTyping(target: EventTarget | null): boolean {
 
 export function initPianoRoll(): void {
   onRender(renderPianoRoll);
+  Playback.setPlayRangeProvider(sectionRange);
 
   document.querySelectorAll<HTMLElement>(".pianoroll").forEach(rootEl => {
     buildSkeleton(rootEl);
@@ -582,6 +627,10 @@ export function initPianoRoll(): void {
         section = btn.dataset.prSection === "B" ? "B" : "A";
         selected = null;
         render();
+        // 曲にそのセクションの周回がなければ、選んだセクションだけを鳴らせないことを知らせる
+        if (!getSections().includes(section)) {
+          showNotice(`この曲には${section === "B" ? "サビ" : "Aメロ"}の周回がないので、再生すると曲全体を鳴らします（カスタムモードのアレンジャーの「セクション」の行で周回を切り替えられます）。`);
+        }
       }));
     q(rootEl, "[data-pr-lock]").addEventListener("click", () => {
       setState({ pianoRollScaleLock: !getState().pianoRollScaleLock });

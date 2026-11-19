@@ -95,7 +95,6 @@ export function render(): void {
   $("c-info-bpm")!.textContent  = `${s.bpm}`;
   $("c-info-key")!.textContent  = `${s.key}${SCALE_LABELS[scale] ?? ""}`;
   $("c-info-bars")!.textContent = `${s.bars}`;
-  $("c-info-loop")!.hidden = !playing;
   const fromBar = playFromBar();
   $("c-stop")!.hidden = !playing;  // 停止ボタンは鳴っている間だけ出す
   $("c-play")!.textContent = fromBar > 0

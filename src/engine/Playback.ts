@@ -56,6 +56,46 @@ interface PlayOptions {
 // 曲の再生（play）中の終わったときの処理。null = 曲を再生していない（試聴・サンプル・停止中）
 let songOnEnded: (() => void) | null = null;
 
+// 曲の一部だけをくり返し鳴らす範囲（小節。0 始まり）。ピアノロールで選んでいるセクション（Aメロ／サビ）の周回を
+// くり返すのに使う（PianoRollTab.ts が setPlayRangeProvider で渡す。null = 曲全体）
+export interface PlayRange {
+  startBar: number;
+  bars:     number;
+}
+
+let rangeProvider: (() => PlayRange | null) | null = null;
+let activeRange: PlayRange | null = null;  // 今かけている範囲
+
+export function setPlayRangeProvider(fn: () => PlayRange | null): void {
+  rangeProvider = fn;
+}
+
+// くり返す範囲：ピアノロールのセクション（あれば優先）か、カスタムモードのアレンジャーで指定した区間（AppState.loopRange）
+function currentRange(): PlayRange | null {
+  return rangeProvider?.() ?? userLoopRange();
+}
+
+// アレンジャーで指定した区間（曲の長さに収める）。カスタムモードの画面の再生だけで使う
+function userLoopRange(): PlayRange | null {
+  const s = getState();
+  if (!s.loopRange || s.screen !== "custom") return null;
+  const startBar = Math.max(0, Math.min(s.loopRange.startBar, s.bars - 1));
+  return { startBar, bars: Math.max(1, Math.min(s.loopRange.bars, s.bars - startBar)) };
+}
+
+// 範囲が変わったら（ピアノロールのセクション・タブの切り替え）、再生中の曲に当て直す。
+// 範囲の外を鳴らしていたら範囲の頭へ移る。範囲がなくなったら今の位置から曲全体の再生に戻る
+export function refreshPlayRange(): void {
+  if (songOnEnded === null || !isPlaying()) return;
+  const next = currentRange();
+  if (next?.startBar === activeRange?.startBar && next?.bars === activeRange?.bars) return;
+  applyLoopPlayback();
+  if (next) {
+    const bar = getPositionBars();
+    if (bar < next.startBar || bar >= next.startBar + next.bars) Tone.getTransport().position = `${next.startBar}m`;
+  }
+}
+
 // 曲の終わりの扱いを AppState.loopPlayback に合わせる。
 // ループ再生なら Transport を曲全体（先頭〜AppState.bars 小節）でループさせ、そうでなければ曲の終わりで止める
 export function applyLoopPlayback(): void {
@@ -65,6 +105,14 @@ export function applyLoopPlayback(): void {
   if (endEventId !== null) {
     transport.clear(endEventId);
     endEventId = null;
+  }
+  // ピアノロールで選んでいるセクション・アレンジャーで指定した区間だけをくり返す（範囲があるときは曲の終わりで止めない）
+  activeRange = currentRange();
+  if (activeRange) {
+    transport.loopStart = `${activeRange.startBar}m`;
+    transport.loopEnd   = `${activeRange.startBar + activeRange.bars}m`;
+    transport.loop      = true;
+    return;
   }
   if (s.loopPlayback) {
     transport.loopStart = 0;
@@ -108,7 +156,11 @@ export async function play(options: PlayOptions = {}): Promise<boolean> {
 
     // ON のパートはすべて先頭で読み込み、どの小節で鳴らすかは各パートがアレンジを見て決める
     reloadAllLayers();
-    const fromBar = Math.max(0, Math.min(options.fromBar ?? 0, s.bars - 1));
+    // ピアノロールでセクションを選んでいる・区間ループを指定していれば、その頭から鳴らす（範囲の中から始めるときはそのまま）
+    const range = currentRange();
+    const asked = options.fromBar ?? 0;
+    const start = range && (asked < range.startBar || asked >= range.startBar + range.bars) ? range.startBar : asked;
+    const fromBar = Math.max(0, Math.min(start, s.bars - 1));
     startLoopArranger({
       loopBars:     s.chordPattern.length_bars,
       fromBar,
@@ -260,6 +312,7 @@ export function stop(): void {
   const transport = Tone.getTransport();
   transport.stop();
   transport.loop = false;  // ループ再生の設定は曲の再生のたびに applyLoopPlayback で付け直す
+  activeRange = null;
   songOnEnded = null;
   if (endEventId !== null) {
     transport.clear(endEventId);

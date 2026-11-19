@@ -24,7 +24,7 @@ export function lossMessage(): string {
 }
 
 // ミュージックリストに書き込めなかったときの案内
-export const STORAGE_HINT = "不要な曲を削除するか、ミュージックリストの「すべて書き出す」でファイルに残してから整理してください。";
+export const STORAGE_HINT = "ミュージックリストの不要な曲を削除して整理してください。";
 
 // ミュージックリストを書き換える操作を行う。書き込めなかったら知らせて false を返す
 export function withStorage(action: () => void): boolean {

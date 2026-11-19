@@ -42,10 +42,6 @@ export async function restartIfPlaying(): Promise<void> {
 async function startPlayback(): Promise<void> {
   await Playback.play({
     fromBar: playFromBar(),
-    onLoopChange: loop => {
-      const el = $("c-info-loop");
-      if (el) el.textContent = `周回 ${loop}`;
-    },
     onEnded: render,
   });
   startArrangerPlayhead();

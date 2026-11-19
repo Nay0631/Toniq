@@ -287,12 +287,24 @@ describe("構成のプリセット（ARRANGE_PRESETS）", () => {
     }
   });
 
-  it("短め は A → サビ をくり返す。ほかはセクションの並びを変えない", () => {
+  it("短め は A → サビ をくり返す。サビ頭 はサビから始まる。ほかはセクションの並びを変えない", () => {
     for (const genre of GENRES) {
       expect(defaultSections(genre, 8, 4, "short")).toEqual(["A", "A", "B", "B", "A", "A", "B", "B"]);
-      for (const p of presets.filter(p => p !== "short")) {
+      expect(defaultSections(genre, 8, 4, "chorusFirst").slice(0, 2)).toEqual(["B", "B"]);
+      // 2つ目のセクションからは標準と同じ並び
+      expect(defaultSections(genre, 8, 4, "chorusFirst").slice(2)).toEqual(defaultSections(genre, 8, 4).slice(2));
+      for (const p of presets.filter(p => p !== "short" && p !== "chorusFirst")) {
         expect(defaultSections(genre, 8, 4, p)).toEqual(defaultSections(genre, 8, 4));
       }
+    }
+  });
+
+  it("サビ頭 は最初のセクションを標準のサビと同じパートで鳴らす", () => {
+    for (const genre of GENRES) {
+      const a = buildArrangement({ genre, loopBars: 4, totalBars: 32, preset: "chorusFirst" });
+      const std = buildArrangement({ genre, loopBars: 4, totalBars: 32 });
+      // 標準のサビは 17 小節目（index 16）から
+      expect(LAYERS.filter(p => findBlock(a[p], 0)), genre).toEqual(LAYERS.filter(p => findBlock(std[p], 16)));
     }
   });
 

@@ -76,8 +76,8 @@ export type SwingUnit = "16n" | "8n";
 export type ModulationScope = "last" | "chorus";
 
 // 構成のプリセット（LoopArranger.ts の ARRANGE_PRESETS。ジャンルの標準の構成 LOOP_SCHEDULE に変形を足したもの）
-// standard = 標準、quiet = 静かに始まる、drop = サビを強く、short = 短く繰り返す、buildup = だんだん盛り上がる
-export type ArrangePreset = "standard" | "quiet" | "drop" | "short" | "buildup";
+// standard = 標準、quiet = 静かに始まる、drop = サビを強く、short = 短く繰り返す、buildup = だんだん盛り上がる、chorusFirst = サビ頭
+export type ArrangePreset = "standard" | "quiet" | "drop" | "short" | "buildup" | "chorusFirst";
 
 // アレンジの「変えた所」。セクション単位（何回目の Aメロ／サビか）で、パートを足す・抜く、ドラムのパターン・FX の種類を変える。
 // 標準（プリセット）を組み直してから当て直すので、ジャンル・小節数・進行の長さを変えても追従する
@@ -151,7 +151,8 @@ export interface AppState {
 
   // サビ（セクション B）のコード進行とメロディ。
   // chorusPattern は chordPattern と同じ長さ・スケールのものだけ使う（null・合わないときは chordPattern で鳴らす）。
-  // chorusMelodyNotes が空なら、サビでも melodyNotes を鳴らす
+  // chorusMelodyNotes は Aメロとは別のメロディ（空ならサビではメロディを鳴らさない。Aメロを流用しない）。
+  // サビのメロディの項目がない頃に保存した曲は、読み込み時（SongLibrary の songFields）に melodyNotes を写す
   chorusPattern:     ChordProgression | null;
   chorusMelodyNotes: MelodyNote[];
   // 周回ごとのセクション（null = ジャンルの標準。LoopArranger の LOOP_SCHEDULE）
@@ -200,6 +201,9 @@ export interface AppState {
   arrangePreset: ArrangePreset;
   arrangeEdits:  ArrangeEdit[];
   startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
+  // アレンジャーで指定したループする区間（小節・0始まり。null = なし）。カスタムモードの再生だけで使う。
+  // 曲の内容ではないので SONG_FIELDS には入れない（曲を開く・新規作成で消す）
+  loopRange:   { startBar: number; bars: number } | null;
 
   // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
   pianoRollLength:    PianoRollLength;
@@ -311,6 +315,7 @@ export const defaultState: AppState = {
   arrangePreset: "standard",
   arrangeEdits:  [],
   startBar:    0,
+  loopRange:   null,
 
   pianoRollLength:    "4n",
   pianoRollScaleLock: true,
