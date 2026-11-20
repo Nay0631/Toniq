@@ -15,6 +15,7 @@
 #   }
 #   set → show → replace → insert → delete の順に当てる。行番号はどれも今のファイル（当てる前）の行番号で書く。
 #   insert は下の節から順に挿入するので互いにずれず、delete は insert で増えた分をずらしてから下の行から消す。
+#   最後に B 列（タスク名）の幅を、いちばん長いタスク名が途切れない幅に合わせる（計画が空 {} でも行う）。
 #
 # 使い方（リポジトリのルートで。ガントチャートを Excel で閉じてから）:
 #   powershell -ExecutionPolicy Bypass -File "docs/基本設計書/tools/gantt_apply.ps1" -Plan <計画.json>
@@ -23,7 +24,9 @@ param(
   [Parameter(Mandatory = $true)][string]$Plan,
   [string]$Xlsx = "",
   [string]$Out = "",
-  [string]$Sheet = "2026"
+  [string]$Sheet = "2026",
+  [double]$BWidthMargin = 2,   # B 列の幅に足す余白（文字数の単位）
+  [double]$BWidthMin = 20      # B 列の幅の下限
 )
 $ErrorActionPreference = "Stop"
 $doc = (Resolve-Path "$PSScriptRoot\..").Path
@@ -143,6 +146,18 @@ try {
       Write-Host "削除: $r 行 $b"
     }
   }
+
+  # 5. B 列（タスク名）の幅を、いちばん長いタスク名が途切れない幅にする（2026-11-20 決定。計画が空でも毎回行う）
+  #    見出しの行（6 行目「タスク」）から下だけで測る（1〜5 行目のタイトル・A 列の説明文では広げない）。
+  #    行を足す・消す・改名したあとに測るので、狭めることもある。少し余白を足し、狭くなりすぎないよう下限を置く。
+  $lastB = $ws.UsedRange.Row + $ws.UsedRange.Rows.Count - 1
+  $colB = $ws.Columns.Item(2)
+  $before = [double]$colB.ColumnWidth
+  [void]$ws.Range("B6:B$lastB").Columns.AutoFit()
+  $fit = [double]$colB.ColumnWidth
+  $width = [Math]::Max($fit + $BWidthMargin, $BWidthMin)
+  $colB.ColumnWidth = $width
+  Write-Host ("B 列の幅: {0} → {1}（文字に合わせた幅 {2} + 余白 {3}）" -f $before, $colB.ColumnWidth, $fit, $BWidthMargin)
 
   $wb.Save()
   Write-Host "保存しました: $target"
