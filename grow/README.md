@@ -1,8 +1,8 @@
-# lidless
+# grow
 
-Toniq の内部シンセサイザー（旧名 grow。フォルダ・ファイル・識別子は grow のまま）。C++ で作り、同じ「コア」から2つの形で動く。
+Toniq の内部シンセサイザー（表示名・フォルダ・ファイル・識別子すべて grow）。C++ で作り、同じ「コア」から2つの形で動く。
 
-- **Toniq の中**：コアを WebAssembly にして AudioWorklet で鳴らす（メロディの音色「lidless（テスト中）」）。再生・ミキサー・WAV / MP3 書き出しにそのまま入る。
+- **Toniq の中**：コアを WebAssembly にして AudioWorklet で鳴らす（メロディの音色「grow（テスト中）」）。再生・ミキサー・WAV / MP3 書き出しにそのまま入る。
 - **単体**：[JUCE](https://juce.com/) で **Standalone（grow.exe）** と **VST3 プラグイン** にする。
 
 JUCE は WebAssembly に公式対応していないので、音を作る部分（`core/`）は JUCE を使わない C++ で書き、JUCE は単体版の画面とホストとのやり取りだけに使う。
@@ -41,7 +41,7 @@ npm run grow:wasm   # → public/grow/grow.wasm
 ```
 
 できた `public/grow/grow.wasm` は Git に入れる（Toniq を動かすだけの人が Emscripten を入れなくて済むように）。
-コアを変えたらビルドし直す。wasm がないと、Toniq では lidless を選んでもジャンルの標準の音色で鳴る。
+コアを変えたらビルドし直す。wasm がないと、Toniq では grow を選んでもジャンルの標準の音色で鳴る。
 
 ### 単体版（JUCE）
 
@@ -91,12 +91,12 @@ OSC 1・OSC 2（ユニゾンで最大7枚重ね、左右に広げる。FM・リ�
 - マルチティンバー：wasm（`grow_wasm.cpp`）はスロットごとにエンジンを持つ（`grow_open` / `grow_close` / `grow_*_slot`。最大32。スロット番号を取らない関数はスロット 0）。メモリは開いたエンジンの分だけ伸びる（`ALLOW_MEMORY_GROWTH`）ので、ワークレットは描くたびに出力の参照を確かめ直す。Toniq（`Grow.ts`）は同じタスクで作った `GrowInstrument` をマイクロタスクでまとめて1つのノードにする（再生の開始・書き出しでは全パートが1つのノード・1つの wasm）。スロットの最初の値は `processorOptions` で渡し、ノードができる前の発音・パラメーターはためておいて当てる。
 - 音符は AudioParam（`on` / `off`）の1サンプルだけの合図で渡す（`on` = ノート番号 + 1 + 強さ × 0.5、`off` = ノート番号 + 1）。port のメッセージは書き出しのときに届くのが遅れることがあるので、音符には使わない。時刻を決めて当てるパラメーター（`GrowInstrument.setParamAtTime(ID, 値, 時刻)`）も、AudioParam（`pidx` = 番号 + 1 の1サンプルの合図、`pval` = 値）で渡す（同じサンプルでは パラメーター → 発音・消音 の順に当てる。同じ時刻に複数当てると2サンプルずつずれる）。すぐ当てればよいパラメーター（音作りのパネル）・BPM は port で送る。
 - 音の終わりの合図は 2ms 遅らせ、すき間なく続く音が重なるようにする（レガートでつながる）。同じ高さの音が続くときは、ワークレットが前の音の終わりを無視する。
-- Toniq ではメロディ・コード（音色が lidless のとき）とベース・パッド・アルペジオ・シグネチャー・FX / SE（いつも）を lidless で鳴らす。和音は同じサンプルに重なる合図を2サンプルずつずらして渡す。
+- Toniq ではメロディ・コード（音色が grow のとき）とベース・パッド・アルペジオ・シグネチャー・FX / SE（いつも）を grow で鳴らす。和音は同じサンプルに重なる合図を2サンプルずつずらして渡す。
 - 曲に保存するのはパートごとのプリセットの ID（`GrowPresets.cpp` の `id`。wasm の `grow_preset_id`）と変えた値（ID → 値。null = プリセットのまま）：メロディ `AppState.growPreset` / `growParams`、コード `growChordPreset` / `growChordParams`、ベース・パッド・アルペジオ・シグネチャー `growSounds`（プリセットの null = ジャンルの標準）。
 - FX / SE（`src/engine/FxPlayer.ts` の `GROW_FX`）は「FX …」のプリセット（ID は `fx_…`）を探して鳴らし、テンポで変わる EG の時間などをその場で上書きする。プリセットがなければ Tone.js の音で鳴る。
-- ドラム（ドラムの音源が「lidless」のとき。`src/engine/SynthFactory.ts` の `GROW_DRUMS`）は「ドラム …」のプリセット（ID は `drum_…`：キック・スネア・ハイハット（クローズド／オープン）・クラップ・リム）を1つの打楽器につき1台鳴らす。ジャンルのキットの値（高さ・長さ・帯域など）はプリセットの値を上書きして当てる。どれもサスティン 0 なので発音の合図だけ送り、オープンハイハットを止めるときだけ消音の合図を送る。キックはサインをピッチ EG で沈め、クリックはフィルター EG で頭だけ通すノイズ。スネアは胴鳴り（三角波・OSC 2 を通さない）＋バンドパスのノイズ。ハイハットは高い矩形波どうしのリング・FM にノイズを重ねたハイパス。
-- パーカッション（Toniq のパート「パーカッション」。ドラムの音源が「lidless」のとき。`src/engine/SynthFactory.ts` の `GROW_PERC`）は「パーカッション …」のプリセット（ID は `drum_shaker` / `drum_tambourine` / `drum_conga` / `drum_ride`）。ドラムと同じく1台で1つの打楽器・サスティン 0 で、`--suggest` では役割 `drum`（ピークをそろえる。ノイズだけのシェイカーは `DRUM_PEAKS` で −7.5dB）。コンガは高い・低いを音の高さ（A3 / E3）で鳴らし分ける。
-- プリセットのカテゴリ：プリセットごとに1つのカテゴリ（`GrowPresets.h` の `PresetCategory`：初期化・リード・和音・パッド・ベース・プラック・質感（ノイズ）・FX・ドラム・パーカッション）を持つ。wasm の `grow_preset_category`（カテゴリの番号）・`grow_category_id`（ASCII の ID。変えない）・`grow_category_name`（表示名）で読む。Toniq はパートごとに選べるカテゴリを `src/engine/Grow.ts` の `PART_CATEGORIES` に決め、コードの音色の選択肢と lidless の音作りのパネルのプリセット（対象のパートのカテゴリ＋初期化）をカテゴリの見出しごとに並べる。ジャンルの標準（`GROW_STANDARD`）もそのパートのカテゴリから選ぶ（`tests/GrowPresets.test.ts` で確かめる）。カテゴリのない古い wasm は `FALLBACK_CATEGORIES`（ID → カテゴリ）で補う。単体版はプリセットの一覧をカテゴリの見出しで分ける。
+- ドラム（ドラムの音源が「grow」のとき。`src/engine/SynthFactory.ts` の `GROW_DRUMS`）は「ドラム …」のプリセット（ID は `drum_…`：キック・スネア・ハイハット（クローズド／オープン）・クラップ・リム）を1つの打楽器につき1台鳴らす。ジャンルのキットの値（高さ・長さ・帯域など）はプリセットの値を上書きして当てる。どれもサスティン 0 なので発音の合図だけ送り、オープンハイハットを止めるときだけ消音の合図を送る。キックはサインをピッチ EG で沈め、クリックはフィルター EG で頭だけ通すノイズ。スネアは胴鳴り（三角波・OSC 2 を通さない）＋バンドパスのノイズ。ハイハットは高い矩形波どうしのリング・FM にノイズを重ねたハイパス。
+- パーカッション（Toniq のパート「パーカッション」。ドラムの音源が「grow」のとき。`src/engine/SynthFactory.ts` の `GROW_PERC`）は「パーカッション …」のプリセット（ID は `drum_shaker` / `drum_tambourine` / `drum_conga` / `drum_ride`）。ドラムと同じく1台で1つの打楽器・サスティン 0 で、`--suggest` では役割 `drum`（ピークをそろえる。ノイズだけのシェイカーは `DRUM_PEAKS` で −7.5dB）。コンガは高い・低いを音の高さ（A3 / E3）で鳴らし分ける。
+- プリセットのカテゴリ：プリセットごとに1つのカテゴリ（`GrowPresets.h` の `PresetCategory`：初期化・リード・和音・パッド・ベース・プラック・質感（ノイズ）・FX・ドラム・パーカッション）を持つ。wasm の `grow_preset_category`（カテゴリの番号）・`grow_category_id`（ASCII の ID。変えない）・`grow_category_name`（表示名）で読む。Toniq はパートごとに選べるカテゴリを `src/engine/Grow.ts` の `PART_CATEGORIES` に決め、コードの音色の選択肢と grow の音作りのパネルのプリセット（対象のパートのカテゴリ＋初期化）をカテゴリの見出しごとに並べる。ジャンルの標準（`GROW_STANDARD`）もそのパートのカテゴリから選ぶ（`tests/GrowPresets.test.ts` で確かめる）。カテゴリのない古い wasm は `FALLBACK_CATEGORIES`（ID → カテゴリ）で補う。単体版はプリセットの一覧をカテゴリの見出しで分ける。
 - パッド・アルペジオ・シグネチャーのジャンルの標準は、`src/engine/Grow.ts` の `GROW_STANDARD` がプリセットを ID で探す（候補を前から順に。今の wasm にない ID は飛ばす）。
 
 ## 確認・測定（`grow/tools/render.mjs`。`npm run grow:render`）

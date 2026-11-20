@@ -28,9 +28,9 @@ import { METER_LABELS, currentMeter } from "../engine/Meter";
 const $ = (id: string) => document.getElementById(id);
 const $select = (id: string) => document.getElementById(id) as HTMLSelectElement;
 
-// コードの音色のセレクト（lidless のプリセット。空 = ジャンルに合わせる）。
+// コードの音色のセレクト（grow のプリセット。空 = ジャンルに合わせる）。
 // 選択肢はコードのパートで選べるカテゴリ（Grow.ts の PART_CATEGORIES）のプリセットを、カテゴリの見出しごとに並べる。
-// lidless の音作りのパネルでほかのカテゴリのプリセットを選んでいたら、その音も「その他」に足す
+// grow の音作りのパネルでほかのカテゴリのプリセットを選んでいたら、その音も「その他」に足す
 function renderChordInstrument(): void {
   const s = getState();
   const select = $select("c-chord-instrument");

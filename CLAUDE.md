@@ -29,7 +29,7 @@ npm run mix:measure     # ミックスの一括計測（全ジャンルのピー
 
 ミックス（`mix_presets.json`・`MixerEngine.ts`・音源・パートの音量）を変えたら、`npm run mix:measure` で前後を比べる（`tools/mix-measure.mjs`。Chrome か Edge が要る。1曲 20〜40 秒、全ジャンルで 10 分ほど）。全ジャンル×雰囲気（激しい・落ち着いた）の曲を書き出し、ピークと統合ラウドネス（LUFS）を測って、聞こえる大きさを目標（−16.5 LUFS）にそろえる `gain` を提案する（`--save before` / `--compare before`、`--genre`・`--mood`・`--seed`・`--runs`・`--drum`・`--parts`（鳴らすパートを絞る）・`--target`）。`gain` はピークが −1dB を超えない範囲で決める（docs/sound.md の「音量」）。
 
-lidless（内部シンセ。C++。旧名 grow で、フォルダ・ファイル・識別子・保存データの値（`grow/`・`Grow.ts`・`growSounds`・`"grow"` など）は grow のまま）は2通りにビルドする（詳しくは `grow/README.md`）：
+grow（内部シンセ。C++。表示名・フォルダ・ファイル・識別子・保存データの値すべて grow で統一する。以前の表示名 lidless は使わない）は2通りにビルドする（詳しくは `grow/README.md`）：
 
 ```bash
 npm run grow:wasm   # Toniq で鳴らす wasm（Emscripten の emcc が必要）→ public/grow/grow.wasm（Git に入れる）
@@ -37,7 +37,7 @@ cd grow && cmake -B build -G "Visual Studio 17 2022" && cmake --build build --co
                     # 単体版（JUCE の Standalone・VST3。Visual Studio 2022・CMake 3.22 以上）
 ```
 
-lidless のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルドし直す（Toniq は wasm を読むので、ビルドしないと変更が鳴らない）。GitHub に push すると `.github/workflows/grow-wasm.yml` が同じ版の Emscripten（7.0.0）でビルドし、全プリセットを確かめる（Git に入れた `grow.wasm` と違えば警告）。
+grow のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルドし直す（Toniq は wasm を読むので、ビルドしないと変更が鳴らない）。GitHub に push すると `.github/workflows/grow-wasm.yml` が同じ版の Emscripten（7.0.0）でビルドし、全プリセットを確かめる（Git に入れた `grow.wasm` と違えば警告）。
 ビルドしたら `npm run grow:render` で全プリセットを Node で鳴らして確かめる（無音・NaN・直流・余韻が消えない・音量。`--wav` で `output/grow/` に WAV、`--suggest` で音量をそろえる master の提案、`--analyze <WAV>` で書き出した曲のピーク・ラウドネス。詳しくは `grow/README.md`）。
 
 ## ディレクトリ構成
@@ -45,13 +45,13 @@ lidless のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビル
 ```
 electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示。インストール版は標準のメニューバーを出さない）と、出力フォルダ output/ への保存・フォルダを開く・書き出したファイルの一覧／読み込み／ごみ箱へ移す IPC（読む・移すのは output/audio・output/midi の直下の WAV・MP3・MIDI だけ）。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
-grow/                   内部シンセ lidless（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
-public/grow/grow.wasm   lidless の wasm（npm run grow:wasm で作る。Grow.ts が読む）
+grow/                   内部シンセ grow（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
+public/grow/grow.wasm   grow の wasm（npm run grow:wasm で作る。Grow.ts が読む）
 output/                 曲の出力フォルダ（audio = WAV / MP3、midi = MIDI、quality = 一括計測の結果・メロディの評価の書き出し。中身は Git 管理外）
 docs/                   詳しい仕様（generation / arrangement / sound / ui。下の「詳しい仕様」）
-.github/workflows/      CI（test.yml = Lint・型チェック・テスト・一括計測、grow-wasm.yml = lidless の wasm のビルドと確認）
+.github/workflows/      CI（test.yml = Lint・型チェック・テスト・一括計測、grow-wasm.yml = grow の wasm のビルドと確認）
 biome.json              Lint（Biome）の設定
-tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（lidless のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
 tools/mix-measure.mjs   ミックスの一括計測（npm run mix:measure。Electron なしの Vite と画面なしの Chrome / Edge で全ジャンルの曲を書き出し、ピーク・統合ラウドネスを測って mix_presets.json の gain を提案する。測る式は tools/loudness.mjs）
@@ -82,8 +82,8 @@ src/ui/
   Glossary.ts             用語のツールチップ（data-term を付けた要素に初心者向けの短い説明を出す。説明は TERMS。曲ごとに変わる説明は data-tip / data-tip-title で直接渡す）
   RatingScreen.ts         メロディの評価（開発用。設定画面の「開発用」から開く。一括計測と同じシードの曲を聴いて 1〜5 の点数・タグ・メモを付け、条件（変更前／変更後など）ごとの平均と同じ曲どうしの差を出す。聴いている間だけ曲の内容を差し替え、離れたら戻す）
   SettingsScreen.ts       設定画面（配色・カスタムモードのスキン・音名の表記・ループ再生・ドラムの音源・用語のツールチップの ON/OFF）
-  GrowPanel.ts            lidless（テスト中）の音作りの暫定パネル（カスタムモードの設定タブの下 #c-grow。対象のパート、カテゴリごとのチップで並べたプリセットの一覧（押すと選んで1音鳴らす。←→ で前後へ送る）、コアの表から作るモジュールごとのつまみ。設定タブ・アレンジャータブでのキーボードの試し弾き）
-  TypingKeys.ts           タイピングピアノのキーの割り当て（TYPING_KEYMAP。ピアノロールの鍵盤入力と lidless の試し弾きで共通）
+  GrowPanel.ts            grow（テスト中）の音作りの暫定パネル（カスタムモードの設定タブの下 #c-grow。対象のパート、カテゴリごとのチップで並べたプリセットの一覧（押すと選んで1音鳴らす。←→ で前後へ送る）、コアの表から作るモジュールごとのつまみ。設定タブ・アレンジャータブでのキーボードの試し弾き）
+  TypingKeys.ts           タイピングピアノのキーの割り当て（TYPING_KEYMAP。ピアノロールの鍵盤入力と grow の試し弾きで共通）
   CustomMore.ts           カスタムモードの設定タブの「もっと調整」（標準のままでも鳴る項目を畳む欄。変更の数・変えた項目の印・欄ごとに標準に戻す・開閉の保存）
   Preferences.ts          端末ごとの設定（音名の表記 toniq.noteNames・ループ再生 toniq.loop・ドラムの音源 toniq.drumSource・テスト中の機能 toniq.test.*）の保存・読み込み
   Theme.ts                ライト／ダーク／OS に合わせるの切り替え（設定画面、<html data-theme>、localStorage の toniq.theme）と、カスタムモードのスキン（デフォルト／フラット／スタジオ／ポップ。設定画面で選ぶ。<html data-skin>、toniq.skin）
@@ -125,9 +125,9 @@ src/engine/
   CounterPlayer.ts        カウンターメロディ（メロディとコード進行から作る。サビはハモり、Aメロは合いの手。counterNotes）
   PercPlayer.ts           パーカッション（シェイカー・タンバリン・コンガ・ライド。ジャンル×セクションのパターン PERC_PATTERNS）
   MelodyGenerator.ts      メロディ生成（ペンタトニック中心＋アクセント音、リズムテンプレート、モチーフの反復）
-  Grow.ts                 lidless（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット・プリセットのカテゴリとパートごとに選べるカテゴリ（PART_CATEGORIES）、AudioWorklet の登録、各パートの音色 GrowInstrument（同じタスクで作ったものを1つのノードにまとめるマルチティンバー）
-  growWorklet.js          lidless の AudioWorklet（1つのノードで最大16の音色を鳴らす。wasm を 128 サンプルずつ描く。音符・時刻を決めたパラメーターは AudioParam の合図で受ける）
-  SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。lidless（GROW_DRUMS）・ワンショット音源で鳴らす音色もここ
+  Grow.ts                 grow（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット・プリセットのカテゴリとパートごとに選べるカテゴリ（PART_CATEGORIES）、AudioWorklet の登録、各パートの音色 GrowInstrument（同じタスクで作ったものを1つのノードにまとめるマルチティンバー）
+  growWorklet.js          grow の AudioWorklet（1つのノードで最大16の音色を鳴らす。wasm を 128 サンプルずつ描く。音符・時刻を決めたパラメーターは AudioParam の合図で受ける）
+  SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。grow（GROW_DRUMS）・ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラム・パーカッションのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）・サイドチェインのゲイン・定位（パン）・レベルメーター。オーディオコンテキストごとに保持
@@ -136,7 +136,7 @@ src/engine/
   TapTempo.ts             タップテンポ（AppState.bpm を更新する。再生中の反映は呼び出し側が Playback.applyBpm()）
   Metronome.ts            BPM 試聴用のクリック音（Web Audio API で直接鳴らす）
   ScalePreview.ts         キー・スケールの試聴（スケールを順に鳴らして主音の和音で終わる。Web Audio API で直接鳴らす）
-  GrowPreview.ts          lidless の音色の試聴（コードの音色・音作りのパネルのプリセットを選び直したら、そのパートの音で主音を1音鳴らす。曲の再生中は鳴らさない）と、キーボードでの試し弾き（growKeyDown / growKeyUp。押している間だけ鳴らす）
+  GrowPreview.ts          grow の音色の試聴（コードの音色・音作りのパネルのプリセットを選び直したら、そのパートの音で主音を1音鳴らす。曲の再生中は鳴らさない）と、キーボードでの試し弾き（growKeyDown / growKeyUp。押している間だけ鳴らす）
   MidiExporter.ts         MIDI書き出し（今の曲を曲全体の長さで。アレンジ・パートの ON/OFF・スウィングを反映）
 ```
 
@@ -195,16 +195,16 @@ src/engine/
 - カウンターメロディ（`CounterPlayer.ts`）はメロディに寄り添うもう1本の旋律。曲全体の並び（`songProgression()` / `songMelody()`）から `counterNotes()` で毎回同じ形に作る（AppState には持たない。メロディを編集すれば追従する。`reloadLayer("melody")` はカウンターメロディも読み込み直す）。
   - サビ（コードの `section` が B）はハモり：メロディの各音と同じ位置・長さで、3度下（なければ6度下・4度下）のスケール音。強拍（1・3拍目）はコード構成音を強く好む。G3 より下になる音は休む。
   - Aメロ（それ以外。試聴・サンプルも）は合いの手（オブリガート）：次の発音まで半小節以上空く所に、発音の1拍あとから8分音符2〜4音のフレーズを G4〜C6 のペンタトニックで入れる（最初と最後はコード構成音、鳴っているメロディと短2度・長7度でぶつけない、次のメロディの発音の前に終わる、サビに食い込まない）。1小節に1つまでで、続く小節には入れない。メロディが細かいジャンル（8bit・テクノ）では Aメロではほとんど鳴らないので、標準アレンジでは主にサビ（とメロディの間が空くジャンルの Aメロ）に置く。
-  - 音は lidless（`growSounds.counter`。ジャンルの標準は `Grow.ts` の `COUNTER_STANDARD`）。MIDI書き出しも同じ音。ジャンルを足すときは `COUNTER_STANDARD` にも足す（なければローファイの定義）。
-- パーカッション（`PercPlayer.ts`）はドラムに重ねる小さな打楽器（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）。ジャンルごとに Aメロ・サビ（`sectionAt(bar)`）の16ステップのパターン（`PERC_PATTERNS`。`X` = 強く、`x` = 普通、`o` = 弱く、`.` = 休み。ないジャンルはローファイ）で鳴らし、サビのほうをにぎやかにする。音はドラムの音源に合わせ、`"grow"` なら lidless の「パーカッション …」のプリセット（`SynthFactory.ts` の `GROW_PERC`）、ワンショット音源（`"sample"`）ならドラムと同じフォルダの `<トラック名>.wav`（`DrumSamples.ts`。ジャンルのフォルダ → `default`。ないトラックは lidless）、シンセ（Tone.js。画面では選べず、測定用）ならシンセ（lidless を鳴らせないときもシンセ）。ドラムのバスは通さず、150Hz から下を削ってジャンルのキットの高域カット（11kHz より下げない `PERC_LOWPASS_MIN`）だけ通し、全体を `PERC_TRIM_DB`（−6dB）下げる（`createPercKit`）。エンディングの小節では鳴らさず、揺らぎはドラムの揺らぎ（`drumHumanize`）に合わせる。サイドチェインでは沈めない。MIDI書き出しはチャンネル10の別トラック（GM の音の番号。シェイカーは Maracas）。ジャンルを足すときは `PERC_PATTERNS` にも足す。
-- サブベース（`AppState.bassSub`。`null` = ジャンルの標準で `bass_params.json` の `sub`。EDM・トランス・テクノが ON。`SONG_FIELDS` に含む）：ベースの各音を E1〜D#2 にたたんだ高さ（`subMidi`。オクターブ上の `O` もルートになる）で、lidless の「サブベース」（なければ Tone.js のサイン）を −6dB（`SUB_LEVEL_DB`）で重ね、本体のベースは 90Hz から下を削る（`BassPlayer.ts`）。カスタムモードの設定タブの「追加パート」欄で選ぶ。音色と同じく再生開始時に反映される（再生中に変えたら再生し直す）。MIDI書き出しはしない。ジャンルを足すときは `bass_params.json` に `sub` も入れる。
+  - 音は grow（`growSounds.counter`。ジャンルの標準は `Grow.ts` の `COUNTER_STANDARD`）。MIDI書き出しも同じ音。ジャンルを足すときは `COUNTER_STANDARD` にも足す（なければローファイの定義）。
+- パーカッション（`PercPlayer.ts`）はドラムに重ねる小さな打楽器（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）。ジャンルごとに Aメロ・サビ（`sectionAt(bar)`）の16ステップのパターン（`PERC_PATTERNS`。`X` = 強く、`x` = 普通、`o` = 弱く、`.` = 休み。ないジャンルはローファイ）で鳴らし、サビのほうをにぎやかにする。音はドラムの音源に合わせ、`"grow"` なら grow の「パーカッション …」のプリセット（`SynthFactory.ts` の `GROW_PERC`）、ワンショット音源（`"sample"`）ならドラムと同じフォルダの `<トラック名>.wav`（`DrumSamples.ts`。ジャンルのフォルダ → `default`。ないトラックは grow）、シンセ（Tone.js。画面では選べず、測定用）ならシンセ（grow を鳴らせないときもシンセ）。ドラムのバスは通さず、150Hz から下を削ってジャンルのキットの高域カット（11kHz より下げない `PERC_LOWPASS_MIN`）だけ通し、全体を `PERC_TRIM_DB`（−6dB）下げる（`createPercKit`）。エンディングの小節では鳴らさず、揺らぎはドラムの揺らぎ（`drumHumanize`）に合わせる。サイドチェインでは沈めない。MIDI書き出しはチャンネル10の別トラック（GM の音の番号。シェイカーは Maracas）。ジャンルを足すときは `PERC_PATTERNS` にも足す。
+- サブベース（`AppState.bassSub`。`null` = ジャンルの標準で `bass_params.json` の `sub`。EDM・トランス・テクノが ON。`SONG_FIELDS` に含む）：ベースの各音を E1〜D#2 にたたんだ高さ（`subMidi`。オクターブ上の `O` もルートになる）で、grow の「サブベース」（なければ Tone.js のサイン）を −6dB（`SUB_LEVEL_DB`）で重ね、本体のベースは 90Hz から下を削る（`BassPlayer.ts`）。カスタムモードの設定タブの「追加パート」欄で選ぶ。音色と同じく再生開始時に反映される（再生中に変えたら再生し直す）。MIDI書き出しはしない。ジャンルを足すときは `bass_params.json` に `sub` も入れる。
 - シグネチャー（`SignaturePlayer.ts`）はジャンルの特徴を出す追加パート。EDM = オフビートのコードスタブ、テクノ = アシッド（16ステップ表記 R/O/F、大文字はアクセント）、8bit = 32分音符の高速アルペジオ、ローファイ = レコードノイズ（ヒス＋ランダムなプチプチ音）、ゲームBGM = ブラス、ハウス = シンコペーションのピアノスタブ、トランス = スーパーソウのコードを16分で刻むトランスゲート、アンビエント = うねる風のノイズ、ワルツ = 2・3拍目の後打ちの和音（ズン・チャッ・チャッの「チャッ・チャッ」。「ズン」はベース）、6/8バラード = 和音を3連符で刻むピアノ、シャッフル = 裏から入るピアノのキメ（1・3拍目の3連符の3つ目で引っかけ、2・4拍目の頭で強く）。ジャンルごとに `label` / `create`（Synth とエフェクト）/ `events`（コードごとの発音）を定義する。音色はほかのパートと同じく再生開始時に反映される。MIDI書き出しは未対応。
 - FX / SE（`FxPlayer.ts`）はループの継ぎ目を演出する効果音。種類は `AppState.fxType`（`SONG_FIELDS` に含む）で、`"auto"` はジャンルの標準（`GENRE_FX`）。カスタムモードのドラム欄の下の「FX / SE」で選び、「▷ 試聴」はループの終わりの盛り上げから次のループの頭の1小節まで鳴らす（`Playback.preview("fx")`）。
   - アレンジャーの FX のブロックは1つずつ種類を持てる（`ArrangeBlock.fx`。ブロックのラベルのセレクトで選ぶ。なし = 曲の設定 `fxType`）。鳴らすときは発音時刻にあるブロックを `arrangementBlockAt("fx")`（`LoopArranger.ts`）で調べて種類を決めるので、再生中の変更もすぐ反映される。音源は種類ごとに1つで、曲の設定とアレンジで使う種類を読み込み時に作る（WAV書き出しでは鳴らしている途中に作れないため）。再生中に新しい種類を選んだときは鳴らす直前に作る。
   - 種類（`FX_DEFS`）：`riser` = ライザー（ノイズのバンドパス掃き上げ＋2オクターブ上がる重ねたノコギリ波、トレモロ・オートパンが加速）、`build` = ライザー＋インパクト、`impact` = インパクト（沈むブーム＋閉じていくノイズ）、`downlifter` = ダウンリフター、`reverse` = リバースシンバル、`chip` = チップSE（8bit。矩形波の駆け上がり＋「ピュン」）。
   - 各種類は `rise`（ループの終わりに向けて鳴り、ループの頭ちょうどで終わる。`riseLen` が `bars` なら1小節＝8小節以上の進行は2小節、`2n` なら最後の2拍）と `hit`（ループの頭）の片方または両方を持つ。音量の山は `setValueCurveAtTime` の曲線でかけ、終わりは短いフェードでクリックを防ぐ。
   - 広がり：ノイズは左右別々のノイズ（`stereoNoise`）で鳴らし、各種類の音は `space()`（左右で揺れのずれたコーラス → 左右に跳ねるディレイ）を通す。インパクトの低音のブームは中央のまま広げない。チップSE はコーラスなし（ディレイだけ）。後ろの響きは自前のリバーブを持たず、マスターのリバーブ送りとロングリバーブで付ける。
-  - 音は lidless で出す（`GROW_FX`。コアの「FX …」のプリセット（ID は `fx_…`）を ID で探し、長さで変わる EG の時間などは、鳴らすたびに `GrowInstrument.setParamAtTime` で発音の少し前（`PARAM_LEAD`）に当てる。AudioParam の合図なので書き出しでもサンプル単位で合う）。lidless の準備ができていない・プリセットがない（wasm が古い）ときは `FX_DEFS`（Tone.js）で鳴らす。ライザー・ダウンリフターの音程は、ピッチ EG を直線のカーブにし、時間を長さいっぱいにして一定の速さで動かす（2オクターブ下から上がる／3オクターブ上から下がる）。
+  - 音は grow で出す（`GROW_FX`。コアの「FX …」のプリセット（ID は `fx_…`）を ID で探し、長さで変わる EG の時間などは、鳴らすたびに `GrowInstrument.setParamAtTime` で発音の少し前（`PARAM_LEAD`）に当てる。AudioParam の合図なので書き出しでもサンプル単位で合う）。grow の準備ができていない・プリセットがない（wasm が古い）ときは `FX_DEFS`（Tone.js）で鳴らす。ライザー・ダウンリフターの音程は、ピッチ EG を直線のカーブにし、時間を長さいっぱいにして一定の速さで動かす（2オクターブ下から上がる／3オクターブ上から下がる）。
   - 種類を足すときは `FxType`（`AppState.ts`）・`FX_DEFS`・`GROW_FX`・`index.html` の `#c-fx-type` にそろえて足す。音色は再生開始時に反映される。
 - ピアノロール（`PianoRollTab.ts`）はコード進行1周分（メロディのループの長さ）を表示し、`AppState.melodyNotes`（サビを選んでいるときは `chorusMelodyNotes`）を直接編集する（鳴る音だけを持ち、休符は持たない）。編集中のセクションは表示上の一時的な状態としてモジュール内に持つ。「自動生成」は Aメロとサビの両方を作り直す。編集すると `melodyMethod` は `"manual"` になり、「自動生成」で `"auto"` に戻る。メロディは単音なので、置いてある音は消さず、ほかの音が鳴っている時刻（同じ時刻を含む）には新しい音を置かない・動かさない（`fitNote`。ピアノロールの下に「ここにはすでに音があります」と数秒出す `showNotice`。鍵盤入力なら入力位置も進めない）。後ろの音にかかる長さは、その手前まで短くする（以前は重なる音を手前で切ったり消したりしていたが、気づかないうちに音が消えるのでやめた）。再生中の編集はメロディだけ読み込み直して（`reloadLayer("melody")`）すぐ反映する。
 - サビのメロディ（`chorusMelodyNotes`）は Aメロ（`melodyNotes`）とは別で、空ならサビではメロディを鳴らさない（Aメロを流用しない。ピアノロールで Aメロだけ入力したときにサビにも同じメロディが入らないように）。項目がない古い曲は `songFields` が Aメロを写す。
@@ -220,7 +220,7 @@ src/engine/
   - 曲を開いた（`loadSong`）・新規作成（`newSong`）・シンプルモードの「生成する」（新しい曲になる）・起動時は履歴を捨てる（`resetHistory`。前の曲の内容に戻せないようにする）。
   - 戻したとき再生中なら、アレンジ・音量・パートON/OFF・メロディだけの変更はその場で反映し、それ以外は各画面の `restartIfPlaying()` で再生し直す。
 - 用語のツールチップ（`Glossary.ts`）：要素に `data-term="キー"` を付けると、カーソルを乗せる（キーボードならフォーカスする）と少し待って `TERMS` の説明を出す。`span` とアレンジャーのレーン名には点線の下線が付く。パート名（`LayerName`）はそのまま `TERMS` のキーとして使う（アレンジャー）。説明は初心者向けに1〜2文で、専門用語を重ねない。新しい用語を画面に出したら `TERMS` に足して `data-term` を付ける。曲ごとに中身が変わる説明（シンプルモードの生成後のコード名・キー。`ChordTips.ts`）は、`data-tip`（本文）・`data-tip-title`（見出し）で文を直接渡す（`TERMS` より優先。`span` には同じ下線が付く）。
-  - ドロップダウンの選択肢（`<option>`）にも `data-term` を付けられる（キーは `scale.<スケール>`・`chordRhythm.<リズム>`・`fx.<種類>`・`sound.<grow のプリセット ID>` の形）。リストの項目にカーソルを乗せる（キーボードで選ぶ）とリストの横に出す。リストはトップレイヤーに描かれるので、ツールチップは popover（`popover="manual"`）で出し直して上に重ねる。`TERMS` にないキーの選択肢は何も出さない。lidless の音作りのパネルのプリセットのチップ（`sound.<ID>`）と行の名前（`growCategory.<カテゴリ>`・`growCategory.standard` / `other`）にも同じ説明を出す。パネルに出るプリセット・カテゴリにはすべて説明を書く（足し忘れは `tests/GrowPresets.test.ts` で落ちる。ドラム・パーカッションのプリセットはパネルに出ないので不要）。
+  - ドロップダウンの選択肢（`<option>`）にも `data-term` を付けられる（キーは `scale.<スケール>`・`chordRhythm.<リズム>`・`fx.<種類>`・`sound.<grow のプリセット ID>` の形）。リストの項目にカーソルを乗せる（キーボードで選ぶ）とリストの横に出す。リストはトップレイヤーに描かれるので、ツールチップは popover（`popover="manual"`）で出し直して上に重ねる。`TERMS` にないキーの選択肢は何も出さない。grow の音作りのパネルのプリセットのチップ（`sound.<ID>`）と行の名前（`growCategory.<カテゴリ>`・`growCategory.standard` / `other`）にも同じ説明を出す。パネルに出るプリセット・カテゴリにはすべて説明を書く（足し忘れは `tests/GrowPresets.test.ts` で落ちる。ドラム・パーカッションのプリセットはパネルに出ないので不要）。
   - ON/OFF は設定画面で切り替える（`AppState.tooltips`、localStorage の `toniq.tooltips` = `on` / `off`、`<html data-tooltips>`。OFF では下線も出さない）。`<head>` でも描画前に `data-tooltips` を付ける。曲の内容ではないので `SONG_FIELDS` には入れない。
 - 設定画面（`SettingsScreen.ts`、`data-screen="settings"`）はメニューの横長の「設定」カードから開く。端末ごとの設定（配色・スキン・音名の表記・ループ再生・ドラムの音源・ツールチップ）を集める。曲に保存する項目は置かない。設定を足すときは AppState に項目を足し、保存は担当のモジュールが localStorage（`toniq.*`）に行い、表示の切り替えは `<html data-*>` で行う。
   - 最後の「ヘルプ」欄（`index.html` の `.settings-help`。`<details>` の開閉式で、JS はなし）に、見ただけではわかりにくい操作（ピアノロール・アレンジャーのマウス・キー操作、ノブの Shift・ホイール、タップテンポ、元に戻すのショートカット、保存の種類、試聴、テスト中の機能）を書いている。操作を足す・変えたらここも直す。
@@ -284,13 +284,13 @@ src/engine/
 
 - [docs/generation.md](docs/generation.md) — 自動生成とパート：メロディの生成規則（跳躍の直し方・音域）、コード進行の選び方、ベース・アルペジオ・サブベース、カウンターメロディ・パーカッション・シグネチャー・FX / SE、自動チェック
 - [docs/arrangement.md](docs/arrangement.md) — 曲の構成：アレンジ（構成のプリセット＋変えた所）、セクション（Aメロ／サビ）・転調・エンディング・フィル、アレンジャーの操作、再生（arrangementGate・再生し直す条件・ループ再生）
-- [docs/sound.md](docs/sound.md) — 音：lidless（内部シンセ）の組み込み、ドラムの音源、音の流れ・ボイシング・音量（`gain` の測り方）、グルーヴ（スウィング・シャッフル・サイドチェイン）、書き出し（WAV / MP3 / MIDI）
+- [docs/sound.md](docs/sound.md) — 音：grow（内部シンセ）の組み込み、ドラムの音源、音の流れ・ボイシング・音量（`gain` の測り方）、グルーヴ（スウィング・シャッフル・サイドチェイン）、書き出し（WAV / MP3 / MIDI）
 - [docs/ui.md](docs/ui.md) — 画面：シンプルモード・カスタムモード（スキン・「もっと調整」・ミキサー）、ピアノロール、ミュージックリスト・曲ファイル・出力フォルダ、元に戻す／やり直す、設定画面、メロディの評価（開発用）、試聴、音楽クイズ
-- [grow/README.md](grow/README.md) — lidless（C++ のシンセ）の作り・ビルド・測定
+- [grow/README.md](grow/README.md) — grow（C++ のシンセ）の作り・ビルド・測定
 
 ## 既知の問題
 
-- ドラムのワンショット音源は `public/samples/drums/default/` にしかなく（`rim` もない）、ジャンルのフォルダは空、`trance/` フォルダはない。パーカッションの音源（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）はまだ1つもないので、ワンショット音源を選んでもパーカッションは lidless で鳴る。
+- ドラムのワンショット音源は `public/samples/drums/default/` にしかなく（`rim` もない）、ジャンルのフォルダは空、`trance/` フォルダはない。パーカッションの音源（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）はまだ1つもないので、ワンショット音源を選んでもパーカッションは grow で鳴る。
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
 - 依存パッケージの `npm audit`：electron-builder の依存（`@electron/rebuild`・`node-gyp`・`minimatch` など。インストーラを作るときだけ使う）と、picomatch（vite・vitest が使う。開発時だけ）の指摘が残っている。どちらも直した版がまだなく、`npm audit fix --force` は大きく古い版に戻すので使わない。
 
@@ -298,9 +298,9 @@ src/engine/
 
 - MIDI書き出し（`exportMidi()`。AppState を読む）は再生と同じ音の並びを使う：曲全体の並び（`songProgression()` / `songMelody()`。セクション・エンディング込み）から、メロディ・コード（`chordEvents()`。コードのリズム込み）・パッド（`padEvents()`）・アルペジオ（`arpNotes()`）・ベース（`bassNotes()`。ジャンル別パターン、強さは `bassVelocity()`）・カウンターメロディ（`counterNotes()`）・ドラム（チャンネル10、GM の音の番号。ブロックごとのパターン・フィル・エンディングも反映。`drumStepHits()`）・パーカッション（チャンネル10 の別トラック。`percStepHits()`）。曲全体（`AppState.bars` 小節）をループで埋め、アレンジのブロックの外・OFF のパートは書き出さない。シグネチャー・FX / SE は音色が特徴のパートなので書き出さない。サブベースはベースと同じ音なので書き出さない。音色（GM の番号）は目安。強さの揺らし・ストラムは入れない。
 - カスタムモードの「雰囲気」はコード進行の「カテゴリ」として選ぶ。スケールは `chordPattern.base_scale` から決まり（別に持たない）、スケールを選ぶとそのスケールのコード進行に切り替わる。
-- コードのリズム（`chordRhythm`）・コードの音色（`growChordPreset`）・メロディの音色（`growPreset`）は ChordPlayer / MelodyPlayer が AppState から読む。どちらの音色も lidless のプリセットで、メロディの音色は lidless の音作りのパネル（`GrowPanel.ts`）で選ぶ（`melodyInstrument` はいつも `"grow"`）。
-  - Tone.js のシンセ（ChordPlayer の `FALLBACK`・MelodyPlayer の `INSTRUMENTS`・各 Player / `FX_DEFS` / `SIGNATURES` の `create`・ドラムのシンセ）は、lidless を鳴らせないとき（wasm がない・AudioWorklet を登録できない・古い wasm にプリセットがない）の予備として残し、画面では選べない。消すとそのとき無音になる。メロディの予備はジャンルの標準（`melody_params.json` の `instrument`。ジャンルを追加するときは指定する）。
-  - 以前の Tone.js のメロディの音色（`auto` / `soft` / `supersaw` など）で保存した曲は、`loadSong()`（`songFields` の `LEGACY_MELODY_PRESETS`）が近い lidless のプリセット（なければジャンルの標準）に読み替える。音色は Synth を作り直したとき（再生開始時）に反映される。
+- コードのリズム（`chordRhythm`）・コードの音色（`growChordPreset`）・メロディの音色（`growPreset`）は ChordPlayer / MelodyPlayer が AppState から読む。どちらの音色も grow のプリセットで、メロディの音色は grow の音作りのパネル（`GrowPanel.ts`）で選ぶ（`melodyInstrument` はいつも `"grow"`）。
+  - Tone.js のシンセ（ChordPlayer の `FALLBACK`・MelodyPlayer の `INSTRUMENTS`・各 Player / `FX_DEFS` / `SIGNATURES` の `create`・ドラムのシンセ）は、grow を鳴らせないとき（wasm がない・AudioWorklet を登録できない・古い wasm にプリセットがない）の予備として残し、画面では選べない。消すとそのとき無音になる。メロディの予備はジャンルの標準（`melody_params.json` の `instrument`。ジャンルを追加するときは指定する）。
+  - 以前の Tone.js のメロディの音色（`auto` / `soft` / `supersaw` など）で保存した曲は、`loadSong()`（`songFields` の `LEGACY_MELODY_PRESETS`）が近い grow のプリセット（なければジャンルの標準）に読み替える。音色は Synth を作り直したとき（再生開始時）に反映される。
 - パートの ON/OFF は `setLayerEnabled` で切り替える（OFF で破棄、再生中に ON にするとすぐ読み込み、アレンジ上ブロックのある小節から鳴る）。アレンジャーで OFF のパートにブロックを置くと ON になる。
 - シンプルモードの曲の長さは 32 小節（`SimpleScreen.ts` の `SIMPLE_SONG_BARS`。生成時・コード進行の差し替え時に設定する）。
 - シンプルモードの「生成する」は（生成後の「✦ 別の曲を生成する」は廃止した。選び直すときは設定画面に戻って生成し直す）、ピアノロールで作った内容（「自分で入力」のメロディ・オリジナルのドラム）を消さずに残す（docs/ui.md）。

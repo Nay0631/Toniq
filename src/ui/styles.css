@@ -4200,7 +4200,7 @@ span[data-tip],
   select option:disabled { color: var(--text-muted); cursor: default; }
   .hw .select option:disabled { color: var(--hw-faint); }
 
-  /* 選択肢の見出し（lidless のプリセットのカテゴリなど）。見出しは控えめの色、中の選択肢は普通の色に戻す */
+  /* 選択肢の見出し（grow のプリセットのカテゴリなど）。見出しは控えめの色、中の選択肢は普通の色に戻す */
   select optgroup {
     padding-top: 4px;
     font-weight: 600;

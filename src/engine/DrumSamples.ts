@@ -104,7 +104,7 @@ export async function prepareDrumSamples(genre: string): Promise<void> {
     console.info(`[ドラム音源] ${genre}: 音源がないので Tone.js のシンセで鳴らすトラック → ${missingDrum.join(", ")}`);
   }
   if (missingPerc.length > 0) {
-    console.info(`[ドラム音源] ${genre}: 音源がないので lidless で鳴らすパーカッション → ${missingPerc.join(", ")}`);
+    console.info(`[ドラム音源] ${genre}: 音源がないので grow で鳴らすパーカッション → ${missingPerc.join(", ")}`);
   }
   loaded.set(genre, result);
 }
