@@ -54,6 +54,19 @@ for r in re.findall(r'<w:tr\b.*?</w:tr>', rt, re.S)[1:]:
         got.append((cs[0], cs[1]))
 report(got == want and want[-1][0] == args.rev, '改訂履歴', ' → '.join(f'{v}（{d}）' for v, d in got))
 
+# 改訂履歴の見出しの「改訂年月日」が1行（1つの段落）か
+hdr = re.findall(r'<w:tr\b.*?</w:tr>', rt, re.S)[0] if rt else ''
+hcs = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)
+hps = [T(p) for p in re.findall(r'<w:p[ >].*?</w:p>', hcs[1], re.S)] if len(hcs) > 1 else []
+report(hps == ['改訂年月日'], '改訂履歴の見出し「改訂年月日」が1行', ' / '.join(hps) or '見つからない')
+
+# 添付資料(別紙)
+allp = [T(p) for p in re.findall(r'<w:p[ >].*?</w:p>', x, re.S)]
+bi = allp.index('添付資料(別紙)') if '添付資料(別紙)' in allp else -1
+bs = [p for p in allp[bi + 1:bi + 4] if p.startswith('別紙')] if bi >= 0 else []
+report(bs == ['別紙1　画面レイアウト.pdf'], '添付資料(別紙)', '・'.join(bs) or '見つからない')
+report('別紙1のPDFを参照' in allp, '10.3.1 画面レイアウトの「別紙1のPDFを参照」')
+
 # 目次
 toc = len(re.findall(r'TOC \\', x))
 report(toc > 0, '目次', 'あり' if toc else '目次のフィールドがない')

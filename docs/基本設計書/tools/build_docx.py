@@ -2,7 +2,8 @@
 #
 # ふつうは build_docx.ps1 から呼ぶ（PNG の用意 → このスクリプト → Word で目次の更新と保存）。
 # 手本の docx の本文を「段落・表の並び」に分け、番号で場所を決めて使っている
-# （表紙・改訂履歴・目次 = 0〜148、裏表紙 = 460〜、機能定義の表の手本 = 203、改訂履歴の表 = 33、表紙の日付 = 23、表紙の文書番号 = 10）。
+# （表紙・改訂履歴・目次 = 0〜148、裏表紙 = 460〜、機能定義の表の手本 = 203、改訂履歴の表 = 33、表紙の日付 = 23、表紙の文書番号 = 10、
+#  添付資料(別紙) = 140〜143）。別紙の一覧は BESSHI に書く。
 # 改訂履歴の 02 以降は tools/改訂履歴.tsv に残し、今回の版（rev）を足して書き戻す。表紙の文書番号の「(01)」は rev にする。
 # 手本の docx を編集すると番号がずれるので、そのときは番号を見直す（ずれると assert で止まる）。
 # 6.2 ユースケース記述の表は手本にないので usecase_table で組み立てる（表の行が足りないと assert で止まる）。
@@ -516,6 +517,32 @@ def merge_summary(row):
 rws = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)
 for r in rws[1:2 + len(rev_list)]:
     front[33] = front[33].replace(r, merge_summary(r), 1)
+
+# 改訂履歴の見出しの「改訂年月日」は1行で示す（手本は「改訂」「年月日」の2つの段落に分かれている。2026-11-20 決定）。
+# 10pt で5文字（1000）なので、列の幅（1260 − 左右の余白 198）に収まる
+hdr = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)[0]
+c = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)[1]
+ps = re.findall(r'<w:p[ >].*?</w:p>', c, re.S)
+TXT = lambda s: ''.join(re.findall(r'<w:t(?: [^>]*)?>([^<]*)</w:t>', s))
+assert [TXT(p) for p in ps] == ['改訂', '年月日'] and ps[0] + ps[1] in c, '改訂履歴の見出し「改訂／年月日」が見つかりません'
+new_c = c.replace(ps[0] + ps[1], ps[0].replace('<w:t>改訂</w:t>', '<w:t>改訂年月日</w:t>'), 1)
+front[33] = front[33].replace(hdr, hdr.replace(c, new_c, 1), 1)
+
+# 添付資料(別紙)。手本の「別紙１　○○…」〜「別紙３」の3行（141〜143）を、BESSHI の行に置き換える（余った行は消す）。
+# 別紙のファイルは docs/基本設計書/ に置く（docx と一緒に渡す）。別紙を足すときはここに足し、仕様書.md の参照する所に「別紙<番号>のPDFを参照」と書く
+BESSHI = [('別紙1', '画面レイアウト.pdf')]   # 10.3.1 画面レイアウト（2026-11-20 決定）
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+assert TXT(front[140]) == '添付資料(別紙)', '手本の添付資料(別紙)の見出しが見つかりません'
+for k in (141, 142, 143):
+    assert TXT(front[k]).startswith('別紙') and '○' in TXT(front[k]), ('手本の別紙の行が見つかりません', k)
+assert len(BESSHI) <= 3, '別紙が4つ以上になったら、手本の行を写して足す処理を書く'
+for no, fname in BESSHI:
+    assert os.path.exists(os.path.join(BASEDIR, fname)), f'{no} のファイル {fname} が docs/基本設計書/ にありません'
+for k, line in zip((141, 142, 143), [f'{no}　{fname}' for no, fname in BESSHI] + [None] * 3):
+    if line is None:
+        front[k] = ''
+    else:
+        front[k] = re.sub(r'<w:t>別紙[^<]*</w:t>', f'<w:t>{escape(line)}</w:t>', front[k], count=1)
 
 # 表紙の文書番号の末尾「(01)」は版数にする
 assert 'アプリオリ(01)' in front[10], '表紙の文書番号が見つかりません'
