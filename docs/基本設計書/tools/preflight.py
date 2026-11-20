@@ -25,6 +25,9 @@ CODE_PATHS = ['src', 'index.html', 'electron', 'public', 'package.json']
 DEV_ONLY = ['テスト中の機能', 'メロディ評価', 'メロディの評価', '自動チェック', '一括計測', '開発用',
             'npm run quality', 'npm run mix:measure', 'npm test', 'npm run lint', 'npm run typecheck',
             'QualityCheck', 'QualityBatch', 'RatingScreen', 'MelodyRatings']
+# 基本設計書は完成したシステムとして書く（2026-11-20 決定）。付録B より前にこれがあれば NG
+STYLE_WORDS = ['以前', '旧名', '廃止', '（追加）', 'lidless', '曲の基本設定システム']
+STYLE_MARKS = re.compile('[\U0001F000-\U0001FFFF☀-➿⬀-⯿⌀-⏿️■◀▶↻▷↺↶↷⇄⟲‹⋮←↑↓]')
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--no-fetch', action='store_true', help='git fetch origin を省く')
@@ -137,6 +140,34 @@ for i, l in enumerate(body.splitlines(), 1):
         hits.append(f'{i}行目（{found[0]}）')
 report(not hits, '開発のテスト・確認用のもの（テスト中の機能切替・自動チェック・メロディの評価・一括計測など）が載っていない',
        '、'.join(hits[:8]) + (f' ほか {len(hits) - 8} 行' if len(hits) > 8 else '') + '。仕様書.md から外す（/update-spec の決まり）' if hits else '')
+
+# ---------- 完成したシステムとしての書き方（2026-11-20 決定） ----------
+# 開発の経緯（以前・旧名・廃止・（追加））、内部シンセの別名（lidless）、絵文字・ボタンの記号を書かない
+style_hits = []
+for i, l in enumerate(body.splitlines(), 1):
+    found = [w for w in STYLE_WORDS if w in l] + STYLE_MARKS.findall(l)
+    if found:
+        style_hits.append(f'{i}行目（{found[0]}）')
+# 5.1 の「画面」列に「両方」と書かない（画面名を並べる）
+s51 = body[body.index('### 5.1'):body.index('### 5.2')] if '### 5.1' in body and '### 5.2' in body else ''
+for l in s51.splitlines():
+    c = [x.strip() for x in l.strip('|').split('|')]
+    if re.match(r'[A-Z]\d\d-\d+$', c[0]) and len(c) > 2 and '両方' in c[2]:
+        style_hits.append(f'5.1 {c[0]} の画面が「両方」')
+# 3.1 適用業務範囲の表に「状況」の列を置かない
+if re.search(r'\| 業務 \| 対象画面 \| 状況 \|', body):
+    style_hits.append('3.1 の表に「状況」の列')
+# 2章は指定の4項目だけ（2026-11-20 決定）
+SEC2_ITEMS = ['- 対象OSは Windows とする（インストーラは NSIS 形式）。',
+              '- インターネット接続は不要とする（オフラインで動作する）。',
+              '- 音声出力デバイス（スピーカー・ヘッドホン）があること。',
+              '- ターゲットは「音楽制作未経験者」「アイデアを得たい作曲経験者」とする。']
+m2 = re.search(r'## 2\. 制約条件・前提条件\n(.*?)\n## 3\. ', body, re.S)
+sec2 = [l.strip() for l in m2.group(1).splitlines() if l.strip()] if m2 else []
+report(sec2 == SEC2_ITEMS, '2章 制約条件・前提条件が指定の4項目だけ',
+       '' if sec2 == SEC2_ITEMS else '手順書の「0. 決まっていること」の4項目に直す（今は ' + str(len(sec2)) + ' 行）')
+report(not style_hits, '完成したシステムとしての書き方（開発の経緯・lidless・絵文字・「両方」・「状況」の列がない）',
+       '、'.join(style_hits[:8]) + (f' ほか {len(style_hits) - 8} 件' if len(style_hits) > 8 else '') + '。仕様書.md を直す（手順書の「0. 決まっていること」の「書き方」）' if style_hits else '')
 
 # ---------- 改訂の概要の材料 ----------
 guide = open(GUIDE, encoding='utf-8').read()

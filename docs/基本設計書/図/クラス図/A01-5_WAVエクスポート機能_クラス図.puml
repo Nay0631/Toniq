@@ -38,8 +38,8 @@ class "ドラム音源読み込み" as C2 <<control>> {
 class "ミックス" as C3 <<control>> {
   {method} <U+002B> ミックスをジャンルに合わせる() : void
 }
-class "lidless" as C9 <<control>> {
-  {method} <U+002B> lidless の準備を待つ() : void
+class "grow" as C9 <<control>> {
+  {method} <U+002B> grow の準備を待つ() : void
 }
 class "各パートの演奏" as C4 <<control>> {
   {method} <U+002B> 演奏の予定を組み立てる() : void
@@ -69,7 +69,7 @@ class "ミックス設定マスタ" as E3 <<entity>> {
   {field} <U+002B> リバーブ・EQ・コンプ・リミッター・音量
   {method} <U+002B> ミックス設定を取得する() : void
 }
-class "lidlessプリセット" as E5 <<entity>> {
+class "growプリセット" as E5 <<entity>> {
   {field} <U+002B> ID
   {field} <U+002B> プリセット名
   {field} <U+002B> 音作りの値

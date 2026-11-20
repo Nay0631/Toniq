@@ -8,7 +8,7 @@ B01-6	ジャンル選択		GenreSelection
 B01-7	ジャンル試聴		GenrePreview
 B01-8	リード選択		LeadSelection
 B01-9	グルーヴ調整		GrooveAdjustment
-B01-10	lidless音作り	Toniqシンセ音作り	LidlessSoundDesign
+B01-10	grow音作り	lidless音作り;Toniqシンセ音作り	GrowSoundDesign
 B01-11	拍子選択		MeterSelection
 K01-1	キー音選択		KeySelection
 K01-2	スケール選択		ScaleSelection
@@ -69,7 +69,7 @@ T07	ベース設定マスタ	bass_params	bass_params
 T08	アルペジオ設定マスタ	arp_params	arp_params
 T09	楽曲データ	toniq_songs	toniq_songs
 T10	端末の設定データ	toniq_theme	toniq_theme
-T11	lidless プリセット	lidless_presets	lidless_presets
+T11	grow プリセット	lidless_presets;lidless プリセット	grow_presets
 T12	ジャンルスケールマスタ	genre_scales	genre_scales
 T13	ジャンルマスタ	genres	genres
 T14	雰囲気マスタ	moods	moods
@@ -78,7 +78,7 @@ T16	シンプルモード候補ドラムパターン	simple_drum_candidates	simp
 T17	楽曲のパートの音色	song_part_sounds	song_part_sounds
 -	（仕様書のテーブルにない）	musicfile	musicfile
 -	（仕様書のテーブルにない）	AppState	AppState
-B01	曲の基本設定システム	楽曲基本設定システム	
+B01	基本設定システム	曲の基本設定システム;楽曲基本設定システム	
 K01	キー・スケール設定システム	スケール・キーシステム	
 C01	コード進行設定システム	コード進行システム	
 D01	ドラム設定システム	ドラムシステム	

@@ -13,7 +13,7 @@ rectangle "Toniq（Windows PC で動くデスクトップアプリ）" as SYS {
   rectangle "<&cog{scale=2}>\nアプリの状態\n（曲の内容・設定）" as ST
   database "<&layers{scale=2}>\nパターンDB\n（コード進行マスタ・ドラムパターンマスタ・\nジャンル別の設定のマスタ）" as DB
   rectangle "自動作曲\n（パターン選出・\nメロディ生成・アレンジ管理）" as P1
-  rectangle "再生\n（各パートの演奏・\nlidless・ミックス）" as P2
+  rectangle "再生\n（各パートの演奏・\ngrow・ミックス）" as P2
   rectangle "書き出し\n（音声合成・音声変換・\nMIDI書き出し）" as P3
   rectangle "曲の管理\n（保存・読み込み）" as P4
   rectangle "履歴管理\n（元に戻す・やり直す）" as P5

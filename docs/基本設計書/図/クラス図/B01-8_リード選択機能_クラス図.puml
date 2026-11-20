@@ -2,7 +2,7 @@
 !include ../astah-class-style.puml
 mainframe **pkg**
 
-class "lidlessパネル" as B1 <<boundary>> {
+class "growパネル" as B1 <<boundary>> {
   {method} <U+002B> プリセットのチップを押下する() : void
   {method} <U+002B> 選んでいるチップを表示する() : void
 }
@@ -12,7 +12,7 @@ class "音色設定" as C1 <<control>> {
 class "音色試聴" as C2 <<control>> {
   {method} <U+002B> 主音を1音鳴らす() : void
 }
-class "lidless" as C3 <<control>> {
+class "grow" as C3 <<control>> {
   {method} <U+002B> 選んだ音色で鳴らす() : void
   {method} <U+002B> 鳴っているメロディにすぐ反映する() : void
 }
@@ -21,7 +21,7 @@ class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> メロディの変えた値
   {method} <U+002B> メロディの音色を更新し、変えた値を捨てる() : void
 }
-class "lidlessプリセット" as E2 <<entity>> {
+class "growプリセット" as E2 <<entity>> {
   {field} <U+002B> ID
   {field} <U+002B> プリセット名
   {field} <U+002B> カテゴリ

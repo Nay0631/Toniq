@@ -35,7 +35,7 @@ alt 名前を変更
   deactivate L3
   deactivate L2
 else お気に入り
-  L1 -> L2 : ☆ ボタンを押下する() : void
+  L1 -> L2 : お気に入りボタンを押下する() : void
   activate L2
   L2 -> L3 : お気に入りを切り替える() : void
   activate L3

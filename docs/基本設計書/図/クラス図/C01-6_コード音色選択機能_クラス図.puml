@@ -18,7 +18,7 @@ class "コード演奏" as C3 <<control>> {
   {method} <U+002B> コードの音源を作り直す() : void
   {method} <U+002D> ソフトパッドで鳴らす() : void
 }
-class "lidless" as C4 <<control>> {
+class "grow" as C4 <<control>> {
   {method} <U+002B> 選んだ音色で鳴らす() : void
   {method} <U+002B> コードの音作りの値で音源を作る() : void
 }
@@ -28,7 +28,7 @@ class "アプリの状態" as E1 <<entity>> {
   {method} <U+002B> コードのプリセットを更新し変えた値を捨てる() : void
   {method} <U+002B> コードの音作りの値を取得する() : void
 }
-class "lidlessプリセット" as E2 <<entity>> {
+class "growプリセット" as E2 <<entity>> {
   {field} <U+002B> ID
   {field} <U+002B> プリセット名
   {field} <U+002B> カテゴリ

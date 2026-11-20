@@ -16,8 +16,8 @@ control ":ジャンル試聴" as L8
 control ":再生" as L9
 control ":ミックス" as L10
 entity ":ミックス設定マスタ" as L11
-control ":lidless" as L12
-entity ":lidlessプリセット" as L13
+control ":grow" as L12
+entity ":growプリセット" as L13
 
 alt シンプルモード画面
   note over L2 : 選んでいる雰囲気に合うジャンルの\nチップだけを雰囲気ごとの順に出す

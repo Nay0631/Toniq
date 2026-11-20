@@ -11,8 +11,8 @@ control ":曲の管理" as L5
 entity ":楽曲データ" as L6
 entity ":アプリの状態" as L7
 control ":再生" as L8
-control ":lidless" as L12
-entity ":lidlessプリセット" as L13
+control ":grow" as L12
+entity ":growプリセット" as L13
 control ":各パートの演奏" as L9
 control ":アレンジ管理" as L10
 
@@ -26,7 +26,7 @@ alt モード画面で再生ボタン
   L8 -> L7 : 曲の内容を取得する() : void
   activate L7
   deactivate L7
-  L8 -> L12 : lidless の準備を待つ() : void
+  L8 -> L12 : grow の準備を待つ() : void
   activate L12
   L12 -> L13 : プリセットを取得する() : void
   activate L13
@@ -90,7 +90,7 @@ else ミュージックリストで再生
   end
   L4 -> L8 : 再生する() : void
   activate L8
-  L8 -> L12 : lidless の準備を待つ() : void
+  L8 -> L12 : grow の準備を待つ() : void
   activate L12
   deactivate L12
   L8 -> L9 : ON のパートを読み込む() : void

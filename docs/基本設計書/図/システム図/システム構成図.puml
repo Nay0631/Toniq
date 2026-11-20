@@ -9,7 +9,7 @@ actor "利用者" as U
 
 node "<&monitor{scale=3}>\n① Windows PC" as PC {
   rectangle "<&browser{scale=3}>\n③ Toniq アプリ\n（Electron）" as APP {
-    rectangle "<&audio{scale=3}>\n④ 音声エンジン\n（Tone.js・lidless）" as ENG
+    rectangle "<&audio{scale=3}>\n④ 音声エンジン\n（Tone.js・grow）" as ENG
   }
   database "<&layers{scale=3}>\n⑤ アプリ内のデータ\n（パターンDB・ドラム音源）" as DATA
   storage "<&list{scale=3}>\n⑥ ミュージックリスト\n（localStorage）" as LIST

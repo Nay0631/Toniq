@@ -12,7 +12,7 @@ control ":メロディ生成" as L8
 entity ":メロディ設定マスタ" as L9
 control ":再生" as L10
 
-note over L2 : ドロップダウンで選んだときも ◀▶ で送ったときも同じ流れ
+note over L2 : ドロップダウンで選んだときも 前後の切り替えボタンで送ったときも同じ流れ
 
 L1 -> L2 : サビの進行を選ぶ() : void
 activate L2
