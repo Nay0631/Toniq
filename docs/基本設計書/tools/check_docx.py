@@ -60,6 +60,17 @@ hcs = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)
 hps = [T(p) for p in re.findall(r'<w:p[ >].*?</w:p>', hcs[1], re.S)] if len(hcs) > 1 else []
 report(hps == ['改訂年月日'], '改訂履歴の見出し「改訂年月日」が1行', ' / '.join(hps) or '見つからない')
 
+# 改訂年月日（日付）が1行に収まる書式か（列の幅 1680 以上・10pt・文字グリッドに合わせない。手本のままだと「2026/10/」「19」の2行になる）
+bad = []
+for r in re.findall(r'<w:tr\b.*?</w:tr>', rt, re.S)[1:]:
+    cs = re.findall(r'<w:tc>.*?</w:tc>', r, re.S)
+    if len(cs) > 1 and T(cs[0]):
+        wm = re.search(r'<w:tcW w:w="(\d+)"', cs[1])
+        if not (wm and int(wm.group(1)) >= 1680 and '<w:snapToGrid w:val="0"/>' in cs[1]
+                and re.search(r'<w:r><w:rPr>(?:(?!</w:rPr>).)*<w:sz w:val="20"/>', cs[1], re.S)):
+            bad.append(T(cs[0]))
+report(rt != '' and not bad, '改訂履歴の改訂年月日が1行', ('2行になる版：' + '・'.join(bad)) if bad else '')
+
 # 添付資料(別紙)
 allp = [T(p) for p in re.findall(r'<w:p[ >].*?</w:p>', x, re.S)]
 bi = allp.index('添付資料(別紙)') if '添付資料(別紙)' in allp else -1
