@@ -1,10 +1,10 @@
 @startuml
 !include ../astah-usecase-style.puml
-mainframe **uc** B01_曲の基本設定システム_ユースケース図
+mainframe **uc** B01_基本設定システム_ユースケース図
 
 actor "利用者" as A1
 
-rectangle "曲の基本設定システム" <<システム名>> {
+rectangle "基本設定システム" <<システム名>> {
   rectangle " " {
     usecase "BPM選択機能" as UC1
     usecase "テンポ選択機能" as UC2
@@ -15,7 +15,7 @@ rectangle "曲の基本設定システム" <<システム名>> {
     usecase "ジャンル試聴機能" as UC7
     usecase "リード選択機能" as UC8
     usecase "グルーヴ調整機能" as UC9
-    usecase "lidless音作り機能" as UC10
+    usecase "grow音作り機能" as UC10
     usecase "拍子選択機能" as UC11
   }
 }

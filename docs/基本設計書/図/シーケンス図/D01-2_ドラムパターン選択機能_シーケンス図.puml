@@ -42,7 +42,7 @@ alt シンプルモード画面（再抽選）
   end
   deactivate L4
   deactivate L2
-else カスタムモード画面（ドロップダウン・◀▶）
+else カスタムモード画面（ドロップダウン・前後の切り替えボタン）
   L1 -> L3 : ドラムパターンを選ぶ() : void
   activate L3
   L3 -> L4 : 選んだパターンに切り替える() : void

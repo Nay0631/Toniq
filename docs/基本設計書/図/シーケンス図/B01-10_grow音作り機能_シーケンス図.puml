@@ -1,16 +1,16 @@
 @startuml
 !include ../astah-sequence-style.puml
-mainframe sd B01-10_lidless音作り機能_シーケンス図
+mainframe sd B01-10_grow音作り機能_シーケンス図
 
 actor ":利用者" as L1
-boundary ":lidlessパネル" as L2
+boundary ":growパネル" as L2
 control ":音作り設定" as L3
-entity ":lidlessプリセット" as L4
+entity ":growプリセット" as L4
 entity ":アプリの状態" as L5
 control ":音色試聴" as L7
-control ":lidless" as L6
+control ":grow" as L6
 
-note over L2 : lidless を読み込めないときは、その旨を表示してつまみを出さない。\n「対象」はメロディ・カウンターメロディ・コード・ベース・パッド・アルペジオ・シグネチャー
+note over L2 : grow を読み込めないときは、その旨を表示してつまみを出さない。\n「対象」はメロディ・カウンターメロディ・コード・ベース・パッド・アルペジオ・シグネチャー
 
 L1 -> L2 : 対象を選ぶ() : void
 activate L2
@@ -44,7 +44,7 @@ end
 L3 -> L5 : 対象のパートの音作りの値を更新する() : void
 activate L5
 deactivate L5
-L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+L3 -> L6 : 鳴っている grow にすぐ反映する() : void
 activate L6
 deactivate L6
 opt 停止中
@@ -68,7 +68,7 @@ activate L3
 L3 -> L5 : 対象のパートの音作りの値を更新する() : void
 activate L5
 deactivate L5
-L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+L3 -> L6 : 鳴っている grow にすぐ反映する() : void
 activate L6
 deactivate L6
 L3 -> L2 : プリセットからの変更を表示する() : void
@@ -85,7 +85,7 @@ alt プリセットに戻すボタン
   L3 -> L5 : 対象のパートの音作りの値を更新する() : void
   activate L5
   deactivate L5
-  L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+  L3 -> L6 : 鳴っている grow にすぐ反映する() : void
   activate L6
   deactivate L6
   deactivate L3
@@ -98,7 +98,7 @@ else すべてのパートをジャンルの標準に戻すボタン
   L3 -> L5 : 全パートの音作りの値を更新する() : void
   activate L5
   deactivate L5
-  L3 -> L6 : 鳴っている lidless にすぐ反映する() : void
+  L3 -> L6 : 鳴っている grow にすぐ反映する() : void
   activate L6
   deactivate L6
   deactivate L3

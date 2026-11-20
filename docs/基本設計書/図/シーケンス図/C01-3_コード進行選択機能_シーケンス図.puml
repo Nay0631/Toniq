@@ -62,7 +62,7 @@ alt シンプルモード画面（再抽選）
   deactivate L2
   deactivate L4
   deactivate L2
-else カスタムモード画面（ドロップダウン・◀▶）
+else カスタムモード画面（ドロップダウン・前後の切り替えボタン）
   L1 -> L3 : コード進行を選ぶ() : void
   activate L3
   L3 -> L4 : 選んだコード進行に切り替える() : void

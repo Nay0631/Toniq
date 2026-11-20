@@ -350,7 +350,7 @@ FIG_INTRO = {
     'シーケンス図': '機能ごとのシーケンス図を、システム（グループ）ごとに示す。',
     'クラス図': '機能ごとのクラス図を、システム（グループ）ごとに示す。',
 }
-SYS_HEAD = re.compile(r'[A-Z]\d\d_')   # 7〜9章のシステムの見出し（### B01_曲の基本設定システム）
+SYS_HEAD = re.compile(r'[A-Z]\d\d_')   # 7〜9章のシステムの見出し（### B01_基本設定システム）
 
 def flush_fig():
     global fig_items
@@ -413,7 +413,7 @@ for b in blocks:
         m = re.match(r'([A-Z]\d\d-\d+)\s+(.*)', text)
         if lvl == 5 and m and chapter and chapter.startswith('5.'):
             func = m.group(1)
-            # 5.2 はシステム（#### B01_曲の基本設定システム → 見出し3）の下に機能（##### → 見出し4）を置く。
+            # 5.2 はシステム（#### B01_基本設定システム → 見出し3）の下に機能（##### → 見出し4）を置く。
             # 見出しは機能名だけにする（機能IDは機能定義の表の「機能ID」の行に書く。「（追加）」などの注記も外す）
             out.append(heading(4, re.sub(r'（[^）]*）$', '', m.group(2)).strip()))
             continue

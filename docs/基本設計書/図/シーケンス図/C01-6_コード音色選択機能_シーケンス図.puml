@@ -9,10 +9,10 @@ entity ":アプリの状態" as L4
 control ":音色試聴" as L9
 control ":再生" as L5
 control ":コード演奏" as L6
-control ":lidless" as L7
-entity ":lidlessプリセット" as L8
+control ":grow" as L7
+entity ":growプリセット" as L8
 
-note over L2 : 選択肢は「ジャンルに合わせる（標準のプリセット名）」と\nlidless の和音・パッドのカテゴリのプリセット
+note over L2 : 選択肢は「ジャンルに合わせる（標準のプリセット名）」と\ngrow の和音・パッドのカテゴリのプリセット
 
 L1 -> L2 : コードの音色を選ぶ() : void
 activate L2
@@ -39,14 +39,14 @@ else 再生中
   L6 -> L4 : コードの音作りの値を取得する() : void
   activate L4
   deactivate L4
-  alt lidless を読み込めている
+  alt grow を読み込めている
     L6 -> L7 : コードの音作りの値で音源を作る() : void
     activate L7
     L7 -> L8 : プリセットを取得する() : void
     activate L8
     deactivate L8
     deactivate L7
-  else lidless を読み込めない
+  else grow を読み込めない
     L6 -> L6 : ソフトパッドで鳴らす() : void
     activate L6
     deactivate L6

@@ -124,8 +124,8 @@ entity "ドラムパターンマスタ" as T02 {
 
 ' ---------- 曲と音色 ----------
 
-entity "lidlessプリセット" as T11 {
-  lidlessプリセットID
+entity "growプリセット" as T11 {
+  growプリセットID
   --
   名前
   カテゴリ
@@ -151,8 +151,8 @@ entity "楽曲データ" as T09 {
   メロディ
   サビのメロディ
   セクション・転調
-  メロディの音色.lidlessプリセットID (FK)
-  コードの音色.lidlessプリセットID (FK)
+  メロディの音色.growプリセットID (FK)
+  コードの音色.growプリセットID (FK)
   グルーヴ（スウィング・サイドチェイン）
   アレンジ（構成のプリセット・変えた所）
   パートのON/OFF・音量・定位
@@ -161,7 +161,7 @@ entity "楽曲のパートの音色" as T17 <<依存>> {
   楽曲ID (FK)
   パート
   --
-  lidlessプリセットID (FK)
+  growプリセットID (FK)
   パラメーターの値[]
 }
 entity "端末の設定データ" as T10 {

@@ -11,7 +11,7 @@ control "ファイル名入力" as C7
 control "再生" as C1
 control "ドラム音源読み込み" as C2
 control "ミックス" as C3
-control "lidless" as C9
+control "grow" as C9
 control "各パートの演奏" as C4
 control "音声合成" as C5
 control "音声変換" as C6
@@ -19,7 +19,7 @@ control "出力ファイル保存" as C8
 entity "ドラム音源ファイル" as E1
 entity "アプリの状態" as E2
 entity "ミックス設定マスタ" as E3
-entity "lidlessプリセット" as E5
+entity "growプリセット" as E5
 entity "WAVファイル" as E4
 
 A1 --> B1 : WAVで書き出すボタンを押下する
@@ -37,7 +37,7 @@ C1 --> C2 : サンプル音源なら読み込む
 C2 --> E1 : ジャンルの音源を取得する
 C1 --> C3 : ミックスをジャンルに合わせる
 C3 --> E3 : ミックス設定を取得する
-C1 --> C9 : lidless の準備を待つ
+C1 --> C9 : grow の準備を待つ
 C9 --> E5 : プリセットを取得する
 C1 --> E2 : ON のパートと曲の内容を取得する
 C1 --> C5 : 曲の長さ＋2秒の音声を区切りながら合成する

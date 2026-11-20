@@ -25,7 +25,7 @@ class "再生" as C4 <<control>> {
 class "ミックス" as C5 <<control>> {
   {method} <U+002B> ミックスをジャンルに合わせる() : void
 }
-class "lidless" as C6 <<control>> {
+class "grow" as C6 <<control>> {
   {method} <U+002B> ジャンルの標準の音で音源を作る() : void
 }
 class "拍子" as C7 <<control>> {
@@ -49,7 +49,7 @@ class "ミックス設定マスタ" as E3 <<entity>> {
   {field} <U+002B> リバーブ・EQ・コンプ・リミッター・音量
   {method} <U+002B> ミックス設定を取得する() : void
 }
-class "lidlessプリセット" as E4 <<entity>> {
+class "growプリセット" as E4 <<entity>> {
   {field} <U+002B> ID
   {field} <U+002B> プリセット名
   {field} <U+002B> 音作りの値

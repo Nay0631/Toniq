@@ -3,12 +3,12 @@
 mainframe sd B01-8_リード選択機能_シーケンス図
 
 actor ":利用者" as L1
-boundary ":lidlessパネル" as L2
+boundary ":growパネル" as L2
 control ":音色設定" as L3
-entity ":lidlessプリセット" as L4
+entity ":growプリセット" as L4
 entity ":アプリの状態" as L5
 control ":音色試聴" as L6
-control ":lidless" as L7
+control ":grow" as L7
 
 note over L2 : 「対象」がメロディのとき。選べるのは「ジャンルの標準」と\nリード・和音・プラック・パッドのカテゴリのプリセット
 

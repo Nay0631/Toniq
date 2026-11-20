@@ -3,12 +3,12 @@
 mainframe **uc** B01-8_リード選択機能_ロバストネス図
 
 actor "利用者" as A1
-boundary "lidlessパネル" as B1
+boundary "growパネル" as B1
 control "音色設定" as C1
 control "音色試聴" as C2
-control "lidless" as C3
+control "grow" as C3
 entity "アプリの状態" as E1
-entity "lidlessプリセット" as E2
+entity "growプリセット" as E2
 
 A1 --> B1 : 対象がメロディのとき\nプリセットのチップを押下する
 B1 --> C1 : メロディの音色を設定する
