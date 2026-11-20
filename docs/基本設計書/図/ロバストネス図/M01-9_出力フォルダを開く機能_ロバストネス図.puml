@@ -1,6 +1,6 @@
 @startuml
 !include ../astah-robustness-style.puml
-mainframe **uc** M01-11_出力フォルダを開く機能_ロバストネス図
+mainframe **uc** M01-9_出力フォルダを開く機能_ロバストネス図
 
 actor "利用者" as A1
 boundary "ミュージックリスト画面" as B1

@@ -36,8 +36,8 @@ A01-4	MP3エクスポート		Mp3Export
 A01-5	WAVエクスポート		WavExport
 A01-6	再生開始位置選択		PlayStartSelection
 A01-7	セクション切替		SectionSwitch
-A01-10	構成選択		StructureSelection
-A01-11	ソロ切替		SoloToggle
+A01-8	構成選択		StructureSelection
+A01-9	ソロ切替		SoloToggle
 L01-1	楽曲再生		SongPlayback
 Q01-1	音楽クイズ		MusicQuiz
 G01-1	楽曲生成		SongGeneration
@@ -49,7 +49,7 @@ M01-5	楽曲情報変更		SongInfoEdit
 M01-6	楽曲削除		SongDelete
 M01-7	曲ファイル書き出し		SongFileExport
 M01-8	曲ファイル読み込み		SongFileImport
-M01-11	出力フォルダを開く		OpenOutputFolder
+M01-9	出力フォルダを開く		OpenOutputFolder
 H01-1	元に戻す・やり直す	リバース	UndoRedo
 U01-1	配色選択		ThemeSelection
 U01-2	スキン選択		SkinSelection
@@ -71,11 +71,11 @@ T09	楽曲データ	toniq_songs	toniq_songs
 T10	端末の設定データ	toniq_theme	toniq_theme
 T11	lidless プリセット	lidless_presets	lidless_presets
 T12	ジャンルスケールマスタ	genre_scales	genre_scales
-T14	ジャンルマスタ	genres	genres
-T15	雰囲気マスタ	moods	moods
-T16	シンプルモード候補コード進行	simple_chord_candidates	simple_chord_candidates
-T17	シンプルモード候補ドラムパターン	simple_drum_candidates	simple_drum_candidates
-T18	楽曲のパートの音色	song_part_sounds	song_part_sounds
+T13	ジャンルマスタ	genres	genres
+T14	雰囲気マスタ	moods	moods
+T15	シンプルモード候補コード進行	simple_chord_candidates	simple_chord_candidates
+T16	シンプルモード候補ドラムパターン	simple_drum_candidates	simple_drum_candidates
+T17	楽曲のパートの音色	song_part_sounds	song_part_sounds
 -	（仕様書のテーブルにない）	musicfile	musicfile
 -	（仕様書のテーブルにない）	AppState	AppState
 B01	曲の基本設定システム	楽曲基本設定システム	
@@ -92,4 +92,4 @@ M01	楽曲管理システム	曲の管理システム
 H01	操作履歴システム	履歴システム	
 U01	環境設定システム	設定システム	
 RESULT-006	シンプルモード生成後	シンプルモード生成完了	
--	（仕様書から外した画面。007 は欠番）	カスタムモード生成完了	
+-	（仕様書から外した画面）	カスタムモード生成完了	

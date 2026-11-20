@@ -1,6 +1,6 @@
 @startuml
 !include ../astah-sequence-style.puml
-mainframe sd A01-11_ソロ切替機能_シーケンス図
+mainframe sd A01-9_ソロ切替機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":アレンジ画面" as L2

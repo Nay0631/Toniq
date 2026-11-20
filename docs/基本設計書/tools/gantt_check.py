@@ -6,6 +6,7 @@
 #   - 7.各種設計図（ユースケース図・ユースケース記述）の行と、仕様書のシステム（5.1 のグループ）
 #   - 各節の担当者（C列）の数と、開始・終了（E列・F列）の組の数（行を足すときの割り振りに使う）
 #   - 「（xxxxx）」「（T_xxxx)」が残っている行、表記を直す名前（「西園」など）
+#   - 各節の行番号（「2-01.」など）が 01 からの連番か（欠番は作らない。消す行を除いて詰めた番号を出す。2026-11-20 決定）
 #
 # 機能IDと、ガントチャートでの別名・英名の対応は gantt_names.tsv（機能を足したらここにも足す）。
 #
@@ -124,12 +125,59 @@ def task_name(b):
     return m.group(1), name
 
 
+def renames_deletes(secs, names):
+    """仕様書と名前が違う行（gantt_names.tsv の別名で書いてある行）と、仕様書にない行（ID が「-」の行）"""
+    renames, deletes = [], []
+    for title, sec in secs.items():
+        if not any(title.startswith(t) for t in FUNC_SECTIONS + NAME_ONLY_SECTIONS + SYSTEM_SECTIONS + [SCREEN_SECTION, DB_SECTION]):
+            continue
+        for x in sec["rows"]:
+            if x["hidden"] or not x["B"]:
+                continue
+            if title.startswith(DB_SECTION):
+                m = re.match(r"^\d+-\d+\.\s*(\S+?)\s*テーブル", x["B"])
+                n = m.group(1) if m else None
+            else:
+                n = task_name(x["B"])[1]
+            if n not in names:
+                continue
+            e = names[n]
+            if e["id"] == "-":
+                deletes.append({"row": x["row"], "B": x["B"], "section": title})
+            elif e["name"] != n and not title.startswith(DB_SECTION):  # テーブルは実体の英名（chord_progressions など）で書く決まり
+                renames.append({"row": x["row"], "B": x["B"], "new": x["B"].replace(n, e["name"], 1)})
+    return renames, deletes
+
+
+def renumbers(secs, deletes, renames):
+    """節ごとに、消す行を除いた見えている行を上から 01, 02 … と数え、番号が違う行を返す（欠番を作らない。2026-11-20 決定）。
+    改名する行は改名したあとの名前に番号を当てる。"""
+    gone = {d["row"] for d in deletes}
+    new_name = {r["row"]: r["new"] for r in renames}
+    out = []
+    for title, sec in secs.items():
+        i = 0
+        for x in sec["rows"]:
+            if x["hidden"] or not x["B"] or x["row"] in gone:
+                continue
+            m = re.match(r"^(\d+)-(\d+)\.", x["B"])
+            if not m:
+                continue
+            i += 1
+            if int(m.group(2)) != i:
+                b = new_name.get(x["row"], x["B"])
+                out.append({"row": x["row"], "B": x["B"], "new": re.sub(r"^(\d+)-\d+\.", rf"\g<1>-{i:02d}.", b), "section": title})
+    return out
+
+
 def main():
     path = sys.argv[sys.argv.index("--xlsx") + 1] if "--xlsx" in sys.argv else find_xlsx()
     rows, ss = read_sheet(path)
     secs = sections(rows)
     funcs, systems, screens, tables = read_spec()
     names = read_names()
+    renames, deletes = renames_deletes(secs, names)
+    gone = {d["row"] for d in deletes}
     result = {"xlsx": os.path.relpath(path, DOC), "sections": {}, "wrong_names": {}, "placeholders": []}
     print(f"ガントチャート: {os.path.basename(path)}（シート {SHEET}）")
 
@@ -146,9 +194,10 @@ def main():
             if x["E"] and x["F"]:
                 k = f"{x['E']}〜{x['F']}"
                 pairs[k] = pairs.get(k, 0) + 1
-        nums = [int(n) for n, _ in (task_name(x["B"]) for x in vis) if n]
+        # 番号は連番（欠番を作らない）なので、次の番号は消さない行の数 + 1
+        nums = [int(n) for n, _ in (task_name(x["B"]) for x in vis if x["row"] not in gone) if n]
         last = max((x["row"] for x in vis), default=sec["header"])
-        info = {"header": sec["header"], "last_row": last, "next_no": (max(nums) + 1) if nums else 1,
+        info = {"header": sec["header"], "last_row": last, "next_no": len(nums) + 1,
                 "assignees": assignees, "pairs": pairs, "missing": []}
         hidden = [x["row"] for x in sec["rows"] if x["hidden"]]
         print(f"\n■ {title}（見出し {sec['header']} 行・最後の行 {last} 行・次の番号 {info['next_no']:02d}"
@@ -217,26 +266,6 @@ def main():
         print(f"  ガントチャートの行 {len(vis)} 個: " + "、".join(x["B"] for x in vis))
         result["sections"][title] = info
 
-    # 仕様書と名前が違う行（gantt_names.tsv の別名で書いてある行）と、仕様書にない行（ID が「-」の行）
-    renames, deletes = [], []
-    for title, sec in secs.items():
-        if not any(title.startswith(t) for t in FUNC_SECTIONS + NAME_ONLY_SECTIONS + SYSTEM_SECTIONS + [SCREEN_SECTION, DB_SECTION]):
-            continue
-        for x in sec["rows"]:
-            if x["hidden"] or not x["B"]:
-                continue
-            if title.startswith(DB_SECTION):
-                m = re.match(r"^\d+-\d+\.\s*(\S+?)\s*テーブル", x["B"])
-                n = m.group(1) if m else None
-            else:
-                n = task_name(x["B"])[1]
-            if n not in names:
-                continue
-            e = names[n]
-            if e["id"] == "-":
-                deletes.append({"row": x["row"], "B": x["B"], "section": title})
-            elif e["name"] != n and not title.startswith(DB_SECTION):  # テーブルは実体の英名（chord_progressions など）で書く決まり
-                renames.append({"row": x["row"], "B": x["B"], "new": x["B"].replace(n, e["name"], 1)})
     result["renames"], result["deletes"] = renames, deletes
     print("\n" + ("[OK] 仕様書と名前が違う行はない" if not renames else f"[要改名] 仕様書と名前が違う行: {len(renames)} 行"))
     for r in renames:
@@ -244,6 +273,13 @@ def main():
     print(("[OK] 仕様書にない行はない" if not deletes else f"[要削除] 仕様書にない（外した）機能・画面・テーブルの行: {len(deletes)} 行"))
     for d in deletes:
         print(f"  {d['row']} 行 {d['B']}")
+
+    # 行番号の振り直し（欠番を作らない。消す行を除いて詰める）
+    renum = renumbers(secs, deletes, renames)
+    result["renumbers"] = renum
+    print(("[OK] 行番号はどの節も 01 からの連番" if not renum else f"[要振り直し] 番号が連番でない行（消す行を除いて詰める）: {len(renum)} 行"))
+    for r in renum:
+        print(f"  {r['row']} 行 {r['B']} → {r['new']}")
 
     # 直す表記
     for wrong, right in WRONG_NAMES.items():
