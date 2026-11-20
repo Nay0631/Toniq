@@ -115,6 +115,52 @@ TBL_W = 9283
 def width_of(s):
     return sum(2 if ord(c) > 0x2000 else 1 for c in s)
 
+def text_w(n):
+    # 半角 n 文字分（全角は2）が1行に入る列の幅（twip。余白込み）
+    return n * 112 + 200
+
+MIN_CHARS = 14   # どの列にも残す幅（全角7文字。「ドロップダウン」「ARRANGE-004」が1行に入る）
+LONG_MIN = 2800  # 長い列（半角27文字以上）に先に確保する幅
+
+def table_widths(need):
+    # need：列ごとのいちばん長い中身の文字数（半角換算）
+    # 1. どの列にも MIN_CHARS 分（中身がそれより短ければ中身の幅）を確保する。
+    #    これより細くすると1〜2文字ずつ折り返して縦書きのように見えるため（以前の 10.1「画面ID」列・10.3.2「種類」列・13 章のコードの表の1列目など）
+    # 2. 長い列を LONG_MIN まで → 3. 短い列（ID・名前など）を折り返さない幅まで → 4. 残りを長い列に中身の長さの比で分ける
+    ncol = len(need)
+    widths = [text_w(min(n, MIN_CHARS)) for n in need]
+    if sum(widths) > TBL_W:   # 列が多すぎて下限も入らないときは比率で縮める
+        k = TBL_W / sum(widths)
+        widths = [int(w * k) for w in widths]
+        widths[-1] += TBL_W - sum(widths)
+        return widths
+    longc = [c for c in range(ncol) if need[c] > 26]
+    short = [c for c in range(ncol) if c not in longc]
+
+    def give(target):
+        # target {列: 目標の幅} まで、足りない分の比率で残りの幅を配る
+        extra = TBL_W - sum(widths)
+        lack = {c: t - widths[c] for c, t in target.items() if t > widths[c]}
+        tot = sum(lack.values())
+        if extra <= 0 or tot <= 0:
+            return
+        k = min(1, extra / tot)
+        for c, d in lack.items():
+            widths[c] += int(d * k)
+
+    give({c: LONG_MIN for c in longc})
+    give({c: text_w(need[c]) for c in short})
+    extra = TBL_W - sum(widths)
+    if longc:
+        tot = sum(min(need[c], 80) for c in longc)
+        for c in longc:
+            widths[c] += int(extra * min(need[c], 80) / tot)
+    else:  # 全部短い列なら比率で広げる
+        tot = sum(widths)
+        widths = [int(w + extra * w / tot) for w in widths]
+    widths[-1] += TBL_W - sum(widths)
+    return widths
+
 def generic_table(rows, title=None):
     # title：表の1行目に、列を全部結合して出す表題（仕様書.md で表の直前に置いた「**…**」だけの行。5.1 のシステム名、10.3.2 の画面名）
     ncol = len(rows[0])
@@ -122,30 +168,7 @@ def generic_table(rows, title=None):
     for c in range(ncol):
         w = max(width_of(inline_plain(r[c])) if c < len(r) else 0 for r in rows)
         need.append(w)
-    # 短い列（ID・名前など）は折り返さない幅にし、残りを長い列で分ける
-    widths = [0] * ncol
-    short = [c for c in range(ncol) if need[c] <= 26]
-    for c in short:
-        widths[c] = need[c] * 112 + 200
-    longc = [c for c in range(ncol) if c not in short]
-    # 長い列には最低 2800 ずつ残し、足りなければ短い列を同じ比率で縮める
-    room = TBL_W - 2800 * len(longc)
-    if sum(widths) > room:
-        fixed = [c for c in short if need[c] <= 10]   # ID などの狭い列は縮めない
-        flex = [c for c in short if need[c] > 10]
-        avail = room - sum(widths[c] for c in fixed)
-        k = avail / max(1, sum(widths[c] for c in flex))
-        for c in flex:
-            widths[c] = int(widths[c] * k)
-    rest = TBL_W - sum(widths)
-    if longc:
-        tot = sum(min(need[c], 80) for c in longc)
-        for c in longc:
-            widths[c] = int(rest * min(need[c], 80) / tot)
-    if not longc:  # 全部短い列なら比率で広げる
-        tot = sum(widths)
-        widths = [int(w * TBL_W / tot) for w in widths]
-    widths[-1] += TBL_W - sum(widths)
+    widths = table_widths(need)
     tblpr = ('<w:tblPr><w:tblW w:w="9283" w:type="dxa"/><w:tblInd w:w="210" w:type="dxa"/><w:tblBorders>'
              + ''.join(f'<w:{b} w:val="single" w:sz="4" w:space="0" w:color="auto"/>' for b in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'])
              + '</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="57" w:type="dxa"/><w:right w:w="57" w:type="dxa"/></w:tblCellMar>'
