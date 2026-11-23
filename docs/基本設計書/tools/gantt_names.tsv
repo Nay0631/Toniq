@@ -76,6 +76,10 @@ T14	雰囲気マスタ	moods	moods
 T15	シンプルモード候補コード進行	simple_chord_candidates	simple_chord_candidates
 T16	シンプルモード候補ドラムパターン	simple_drum_candidates	simple_drum_candidates
 T17	楽曲のパートの音色	song_part_sounds	song_part_sounds
+T18	コード進行のジャンル	chord_progression_genres	chord_progression_genres
+T19	コード進行の雰囲気	chord_progression_moods	chord_progression_moods
+T20	ドラムパターンのジャンル	drum_pattern_genres	drum_pattern_genres
+T21	ドラムパターンの雰囲気	drum_pattern_moods	drum_pattern_moods
 -	（仕様書のテーブルにない）	musicfile	musicfile
 -	（仕様書のテーブルにない）	AppState	AppState
 B01	基本設定システム	曲の基本設定システム;楽曲基本設定システム	

@@ -107,6 +107,19 @@ rows_c = [l for l in appc.splitlines() if l.startswith('| 20')]
 todo = [l for l in rows_c if '要：' in l.rstrip(' |').rsplit('|', 1)[-1]]
 report(not todo, '付録C の図への反映に「要：」がない', f'{len(todo)} 行残っている。先に /update-diagrams を行うか聞く' if todo else '')
 
+# ---------- 仕様書・図を直したのに付録C に行がない ----------
+# 仕様書・図の中身を直したら、その作業の中で付録C に1行足す（2026-11-23 決定）。コミットしていない変更で、
+# 仕様書.md（付録C の外）か図の .puml が変わっているのに付録C の行が増えていなければ知らせる（見た目だけの修正なら足さなくてよい）
+_, changed = git('-c', 'core.quotepath=false', 'diff', '--name-only', 'HEAD', '--', 'docs/基本設計書/仕様書.md', 'docs/基本設計書/図')
+# 図の決まり（図/CLAUDE.md）は中身ではないので数えない
+changed = [f for f in changed.splitlines() if f.endswith(('仕様書.md', '.puml'))]
+_, head_spec = git('show', 'HEAD:docs/基本設計書/仕様書.md')
+head_c = head_spec[head_spec.index('## 付録C'):] if '## 付録C' in head_spec else ''
+head_rows = len([l for l in head_c.splitlines() if l.startswith('| 20')])
+added_c = len(rows_c) > head_rows
+report(not changed or added_c, '直した仕様書・図の付録C の行',
+       '' if not changed or added_c else f'{"・".join(os.path.basename(f) for f in changed)} を直したが付録C に行がない。中身の変更なら付録C に1行足す（見た目だけなら足さずに続ける）')
+
 # ---------- 5.2 と 6.2 ----------
 sec, s52, s62, todo_impl = None, [], [], []
 for l in spec_lines:
