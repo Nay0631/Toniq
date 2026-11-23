@@ -66,6 +66,10 @@ if os.path.exists(REV_FILE):
             revs.append(l.split('\t', 2))
 last = revs[-1] if revs else ['01', '2026/10/19', '初版発行']
 nxt = f'{int(last[0]) + 1:02d}'
+# 改訂履歴には、開発のテスト・確認用の機能（完成したシステムに含めないもの）の追加・削除を書かない（2026-11-23 決定）
+rev_dev = [f'{r[0]}（{w}）' for r in revs for w in DEV_ONLY[:6] if w in r[2]]
+report(not rev_dev, '改訂履歴に開発のテスト・確認用の機能が書かれていない',
+       '、'.join(rev_dev) + '。tools/改訂履歴.tsv の概要から外す' if rev_dev else '')
 
 # ---------- 出力先が開かれていないか ----------
 OUT_DOCX = out_docx(nxt)
@@ -181,7 +185,7 @@ report(not style_hits, '完成したシステムとしての書き方（開発�
 # ---------- 改訂の概要の材料 ----------
 guide = open(GUIDE, encoding='utf-8').read()
 pm = re.search(r'\| 5\. docx を作る \|[^\n]*?(\d+)ページ', guide)
-report(None, '次の版数', f'{nxt}（前回 {last[0]}：{last[1]}、{pm.group(1) + "ページ" if pm else "ページ数不明"}）')
+report(None, '次の版数', f'{nxt}（前回 {last[0]}：{last[1]}、{pm.group(1) + "ページ" if pm else "ページ数不明"}）' + '。中身の改訂がなくレイアウトだけの修正なら、版は上げずに前回の版のまま作り直す（-RevNote を省く）')
 since = [l for l in rows_c if l[2:12].replace('-', '/') > last[1]]
 lines.append(f'[--] 前回（{last[1]}）より後の日付の付録C の行（改訂の概要の材料。前回と同じ日に足した行は入らない）：{len(since)} 行')
 for l in since:
