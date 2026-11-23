@@ -541,8 +541,36 @@ rws = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)
 for r in rws[1:2 + len(rev_list)]:
     front[33] = front[33].replace(r, merge_summary(r), 1)
 
+# 改訂年月日（2026/11/09 など）は1行で示す（2026-11-23 決定。ユーザーの指示）。手本のフォント（UD デジタル 教科書体）は
+# 半角の数字が1文字 6.6pt ほどあり、日付は約 63pt になって列（1260 = 63pt。左右の余白を除くと 53pt）に収まらず
+# 「2026/11/0」「9」に折り返す。日付の列を 1500（75pt）に広げ、同じだけ改訂の概要の列（700 + 4025）を狭める（表の幅は変えない）
+DATE_W, DATE_W0, SUM_A0 = 1500, 1260, 700
+d = DATE_W - DATE_W0
+t33 = front[33]
+assert t33.count(f'<w:gridCol w:w="{DATE_W0}"/>') == 1 and t33.count(f'<w:gridCol w:w="{SUM_A0}"/>') == 1, '改訂履歴の表の列の幅が手本と違います'
+t33 = (t33.replace(f'<w:gridCol w:w="{DATE_W0}"/>', f'<w:gridCol w:w="{DATE_W}"/>')
+          .replace(f'<w:gridCol w:w="{SUM_A0}"/>', f'<w:gridCol w:w="{SUM_A0 - d}"/>')
+          .replace(f'<w:tcW w:w="{DATE_W0}" w:type="dxa"/>', f'<w:tcW w:w="{DATE_W}" w:type="dxa"/>')
+          .replace(f'<w:tcW w:w="{SUM_A0}" w:type="dxa"/>', f'<w:tcW w:w="{SUM_A0 - d}" w:type="dxa"/>')
+          .replace('<w:tcW w:w="4725" w:type="dxa"/>', f'<w:tcW w:w="{4725 - d}" w:type="dxa"/>'))
+# 日付の文字は手本では大きさの指定がなく 10.5pt なので、ほかのセルと同じ 10pt にする
+t33 = re.sub(r'<w:r><w:t>(\d{4}/\d{2}/\d{2})</w:t>', r'<w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>\1</w:t>', t33)
+front[33] = t33
+
+# 改訂履歴の各版の行の承認責任者・作成責任者（2026-11-23 決定。ユーザーの指示）。手本は空のセルなので、段落に名前の文字を入れる
+APPROVER, AUTHOR = '根井', '西薗'
+def fill_names(row):
+    tcs = re.findall(r'<w:tc>.*?</w:tc>', row, re.S)
+    for c, name in ((tcs[-2], APPROVER), (tcs[-1], AUTHOR)):
+        assert c.count('</w:pPr></w:p>') == 1, '改訂履歴の承認責任者・作成責任者のセルが空ではありません'
+        row = row.replace(c, c.replace('</w:pPr></w:p>', f'</w:pPr><w:r><w:rPr><w:rFonts w:hint="eastAsia"/><w:sz w:val="20"/></w:rPr><w:t>{name}</w:t></w:r></w:p>'), 1)
+    return row
+for r in re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S):
+    if re.search(r'<w:t>\d{4}/\d{2}/\d{2}</w:t>', r):
+        front[33] = front[33].replace(r, fill_names(r), 1)
+
 # 改訂履歴の見出しの「改訂年月日」は1行で示す（手本は「改訂」「年月日」の2つの段落に分かれている。2026-11-20 決定）。
-# 10pt で5文字（1000）なので、列の幅（1260 − 左右の余白 198）に収まる
+# 10pt で5文字（1000）なので、列の幅（1500 − 左右の余白 198）に収まる
 hdr = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)[0]
 c = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)[1]
 ps = re.findall(r'<w:p[ >].*?</w:p>', c, re.S)

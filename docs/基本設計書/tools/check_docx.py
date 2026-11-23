@@ -59,6 +59,16 @@ hdr = re.findall(r'<w:tr\b.*?</w:tr>', rt, re.S)[0] if rt else ''
 hcs = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)
 hps = [T(p) for p in re.findall(r'<w:p[ >].*?</w:p>', hcs[1], re.S)] if len(hcs) > 1 else []
 report(hps == ['改訂年月日'], '改訂履歴の見出し「改訂年月日」が1行', ' / '.join(hps) or '見つからない')
+# 改訂年月日の値（2026/11/09 など）が折り返さないよう、日付の列が 1500（75pt）以上か（2026-11-23 決定。
+# 手本のフォントは数字の幅が広く、日付は約 63pt。手本の 1260 = 63pt では左右の余白を除くと収まらない）
+dws = [int(re.findall(r'<w:tcW w:w="(\d+)"', re.findall(r'<w:tc>.*?</w:tc>', r, re.S)[1])[0])
+       for r in re.findall(r'<w:tr\b.*?</w:tr>', rt, re.S) if re.search(r'<w:t>\d{4}/\d{2}/\d{2}</w:t>', r)]
+report(bool(dws) and min(dws) >= 1500, '改訂履歴の日付が1行（日付の列の幅）', f'{len(dws)} 行・幅 {min(dws) if dws else "-"}')
+# 各版の行の承認責任者・作成責任者（2026-11-23 決定）
+names = [tuple(T(c) for c in re.findall(r'<w:tc>.*?</w:tc>', r, re.S)[-2:])
+         for r in re.findall(r'<w:tr\b.*?</w:tr>', rt, re.S) if re.search(r'<w:t>\d{4}/\d{2}/\d{2}</w:t>', r)]
+report(bool(names) and all(n == ('根井', '西薗') for n in names), '改訂履歴の承認責任者・作成責任者（根井・西薗）',
+       f'{len(names)} 行' if names and all(n == ('根井', '西薗') for n in names) else '違う行：' + '・'.join('/'.join(n) for n in names if n != ('根井', '西薗')))
 
 # 添付資料(別紙)
 allp = [T(p) for p in re.findall(r'<w:p[ >].*?</w:p>', x, re.S)]

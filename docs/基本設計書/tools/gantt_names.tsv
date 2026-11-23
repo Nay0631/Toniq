@@ -69,7 +69,7 @@ T07	ベース設定マスタ	bass_params	bass_params
 T08	アルペジオ設定マスタ	arp_params	arp_params
 T09	楽曲データ	toniq_songs	toniq_songs
 T10	端末の設定データ	toniq_theme	toniq_theme
-T11	grow プリセット	lidless_presets;lidless プリセット	grow_presets
+T11	grow プリセット	grow_presets;lidless_presets;lidless プリセット	grow_presets
 T12	ジャンルスケールマスタ	genre_scales	genre_scales
 T13	ジャンルマスタ	genres	genres
 T14	雰囲気マスタ	moods	moods
