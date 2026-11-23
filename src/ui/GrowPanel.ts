@@ -300,8 +300,8 @@ function render(): void {
 
   const status = $("c-grow-status");
   status.textContent =
-    loadState === "failed"  ? "lidless の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色、コードはソフトパッド、ベース・パッド・アルペジオ・シグネチャー・FX / SE は Tone.js の音色で鳴ります。"
-    : loadState === "loading" ? "lidless を読み込んでいます…"
+    loadState === "failed"  ? "grow の wasm（public/grow/grow.wasm）がありません。npm run grow:wasm でビルドしてください。それまでメロディはジャンルの標準の音色、コードはソフトパッド、ベース・パッド・アルペジオ・シグネチャー・FX / SE は Tone.js の音色で鳴ります。"
+    : loadState === "loading" ? "grow を読み込んでいます…"
     : "テスト中の暫定のパネルです。最終的にはプリセットを選ぶだけになる予定です。";
 
   if (!isGrowLoaded()) return;
@@ -313,7 +313,7 @@ export function initGrowPanel(): void {
   // 「もっと調整」と同じ畳める欄にする（開閉・変更の数・標準に戻すは CustomMore.ts）
   $("c-grow").innerHTML = `
     <details class="panel-more grow-more" data-more="grow">
-      <summary class="panel-more-summary"><span class="panel-more-label"><span data-term="grow">lidless</span> の音作り（テスト中）</span><span class="panel-more-items">パートごとのプリセット・つまみ</span><span class="panel-more-badge"></span></summary>
+      <summary class="panel-more-summary"><span class="panel-more-label"><span data-term="grow">grow</span> の音作り（テスト中）</span><span class="panel-more-items">パートごとのプリセット・つまみ</span><span class="panel-more-badge"></span></summary>
       <div class="panel-more-body">
         <p class="grow-status" id="c-grow-status"></p>
         <div class="grow-body"></div>

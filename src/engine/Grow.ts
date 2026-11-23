@@ -100,7 +100,7 @@ const CHORD_STANDARD: Record<string, string[]> = {
 export type GrowCategory = "init" | "lead" | "chord" | "pad" | "bass" | "pluck" | "texture" | "fx" | "drum" | "perc";
 export const GROW_CATEGORIES: readonly GrowCategory[] = ["init", "lead", "chord", "pad", "bass", "pluck", "texture", "fx", "drum", "perc"];
 
-// パートごとに選べるカテゴリ（並びは選択肢に出す順）。コードの音色の選択肢・lidless の音作りのパネルのプリセットはここから作る。
+// パートごとに選べるカテゴリ（並びは選択肢に出す順）。コードの音色の選択肢・grow の音作りのパネルのプリセットはここから作る。
 // ジャンルの標準（GROW_STANDARD）もこのカテゴリのプリセットから選ぶ（tests/GrowPresets.test.ts で確かめる）
 export const PART_CATEGORIES: Record<GrowPart, readonly GrowCategory[]> = {
   melody:    ["lead", "chord", "pluck", "pad"],
@@ -255,7 +255,7 @@ export function loadGrow(): Promise<boolean> {
     try {
       const bytes = await fetchArrayBuffer(WASM_URL);
       if (!bytes) {
-        console.warn(`lidless の wasm（${WASM_URL}）がありません。npm run grow:wasm でビルドしてください`);
+        console.warn(`grow の wasm（${WASM_URL}）がありません。npm run grow:wasm でビルドしてください`);
         return false;
       }
       const module   = await WebAssembly.compile(bytes);
@@ -282,7 +282,7 @@ export function loadGrow(): Promise<boolean> {
       readCategories(ex);
       return true;
     } catch (e) {
-      console.warn("lidless の wasm を読み込めませんでした:", e);
+      console.warn("grow の wasm を読み込めませんでした:", e);
       return false;
     }
   })();
@@ -494,7 +494,7 @@ export async function prepareGrowContext(): Promise<boolean> {
     const url = URL.createObjectURL(new Blob([workletSource], { type: "text/javascript" }));
     p = raw.audioWorklet.addModule(url)
       .then(() => { registered.add(raw); return true; })
-      .catch(e => { console.warn("lidless の AudioWorklet を登録できませんでした:", e); return false; })
+      .catch(e => { console.warn("grow の AudioWorklet を登録できませんでした:", e); return false; })
       .finally(() => URL.revokeObjectURL(url));
     registering.set(raw, p);
   }
