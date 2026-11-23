@@ -3,7 +3,7 @@
 mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
-  {method} <U+002B> ジャンルのチップを押下する() : void
+  {method} <U+002B> ジャンルのボタンを押下する() : void
   {method} <U+002B> ジャンルの一言の説明を表示する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {

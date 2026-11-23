@@ -12,7 +12,7 @@ control ":grow" as L7
 
 note over L2 : 「対象」がメロディのとき。選べるのは「ジャンルの標準」と\nリード・和音・プラック・パッドのカテゴリのプリセット
 
-L1 -> L2 : プリセットのチップを押下する() : void
+L1 -> L2 : プリセットのボタンを押下する() : void
 activate L2
 L2 -> L3 : メロディの音色を設定する() : void
 activate L3
@@ -40,7 +40,7 @@ else 再生中
   activate L7
   deactivate L7
 end
-L3 -> L2 : 選んでいるチップを表示する() : void
+L3 -> L2 : 選んでいるボタンを表示する() : void
 activate L2
 deactivate L2
 deactivate L3

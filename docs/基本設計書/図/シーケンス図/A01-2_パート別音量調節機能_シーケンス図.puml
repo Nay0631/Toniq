@@ -9,14 +9,14 @@ entity ":アプリの状態" as L4
 control ":パート管理" as L5
 control ":ミックス" as L6
 
-note over L2 : 10パート（メロディ・カウンター・コード・ドラム・パーカス・\nベース・パッド・アルペジオ・シグネチャー・FX）のチャンネルと、マスターがある。\nON ボタンの右クリックはソロ（A01-9）
+note over L2 : 10パート（メロディ・カウンター・コード・ドラム・パーカス・\nベース・パッド・アルペジオ・シグネチャー・FX）のチャンネルと、曲全体の音量がある。\nON ボタンの右クリックはソロ（A01-9）
 
-alt フェーダー・定位のノブ
-  L1 -> L2 : フェーダー・定位のノブを動かす() : void
+alt 音量スライダー・左右の位置のつまみ
+  L1 -> L2 : 音量スライダー・左右の位置のつまみを動かす() : void
   activate L2
-  L2 -> L3 : パートの音量・定位を変える() : void
+  L2 -> L3 : パートの音量・左右の位置を変える() : void
   activate L3
-  L3 -> L4 : 音量・定位を更新する() : void
+  L3 -> L4 : 音量・左右の位置を更新する() : void
   activate L4
   deactivate L4
   opt 再生中
@@ -24,7 +24,7 @@ alt フェーダー・定位のノブ
     activate L3
     deactivate L3
   end
-  L3 -> L2 : 音量・定位の値を表示する() : void
+  L3 -> L2 : 音量・左右の位置の値を表示する() : void
   activate L2
   deactivate L2
   deactivate L3
@@ -52,10 +52,10 @@ loop 再生中、画面を描くたび
   L2 -> L3 : パートのレベルを取得する() : void
   activate L3
   deactivate L3
-  L2 -> L6 : マスターの左右のピークを取得する() : void
+  L2 -> L6 : 曲全体の音量の左右のピークを取得する() : void
   activate L6
   deactivate L6
-  L2 -> L2 : メーター・最大のピーク・CLIP を表示する() : void
+  L2 -> L2 : 音量メーター・最大のピーク・CLIP を表示する() : void
   activate L2
   deactivate L2
 end

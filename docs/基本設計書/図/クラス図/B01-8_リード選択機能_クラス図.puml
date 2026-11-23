@@ -3,8 +3,8 @@
 mainframe **pkg**
 
 class "growパネル" as B1 <<boundary>> {
-  {method} <U+002B> プリセットのチップを押下する() : void
-  {method} <U+002B> 選んでいるチップを表示する() : void
+  {method} <U+002B> プリセットのボタンを押下する() : void
+  {method} <U+002B> 選んでいるボタンを表示する() : void
 }
 class "音色設定" as C1 <<control>> {
   {method} <U+002B> メロディの音色を設定する() : void
