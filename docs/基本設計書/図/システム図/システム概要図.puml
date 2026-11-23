@@ -8,7 +8,7 @@ top to bottom direction
 
 actor "利用者" as U
 
-rectangle "Toniq（Windows PC で動くデスクトップアプリ）" as SYS {
+rectangle "Toniq（Windows PC で動くデスクトップアプリ）" as SYS <<box>> {
   rectangle "<&browser{scale=2}>\n画面\n\nシンプルモード画面・カスタムモード画面（アレンジ・ピアノロール・ミキサー）\nミュージックリスト画面・音楽クイズ画面・設定画面" as UI
   rectangle "<&cog{scale=2}>\nアプリの状態\n（曲の内容・設定）" as ST
   database "<&layers{scale=2}>\nパターンDB\n（コード進行マスタ・ドラムパターンマスタ・\nジャンル別の設定のマスタ）" as DB
@@ -45,5 +45,4 @@ P3 --> OUT : 保存する
 P4 --> LIST : 保存・読み込み
 P4 --> FILE : 書き出し・読み込み
 P7 --> PREF : 保存・読み込み
-SPK -[norank]-> U : 聴く
 @enduml
