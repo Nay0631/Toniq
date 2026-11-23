@@ -166,6 +166,15 @@ m2 = re.search(r'## 2\. 制約条件・前提条件\n(.*?)\n## 3\. ', body, re.S
 sec2 = [l.strip() for l in m2.group(1).splitlines() if l.strip()] if m2 else []
 report(sec2 == SEC2_ITEMS, '2章 制約条件・前提条件が指定の4項目だけ',
        '' if sec2 == SEC2_ITEMS else '手順書の「0. 決まっていること」の4項目に直す（今は ' + str(len(sec2)) + ' 行）')
+# 3.2 は指定の3項目だけ・件数を書かない（2026-11-23 決定）
+SEC32_ITEMS = ['パターンDB＋ルールで生成', '曲の構成', '2つの入口']
+m32 = re.search(r'### 3\.2 システム化の考え方\n(.*?)\n### 3\.3 ', body, re.S)
+sec32 = m32.group(1) if m32 else ''
+heads32 = re.findall(r'^- \*\*(.+?)\*\*', sec32, re.M)
+counts32 = re.findall(r'\d+\s*(?:種|件|個|つ)', re.sub(r'2つの入口', '', sec32))
+report(heads32 == SEC32_ITEMS and not counts32, '3.2 システム化の考え方が指定の3項目だけで、件数を書いていない',
+       '' if heads32 == SEC32_ITEMS and not counts32 else
+       f'今の項目：{"・".join(heads32) or "なし"}' + (f'、件数：{"・".join(counts32)}' if counts32 else '') + '。手順書の「0. 決まっていること」の「3.2 システム化の考え方」に直す')
 report(not style_hits, '完成したシステムとしての書き方（開発の経緯・lidless・絵文字・「両方」・「状況」の列がない）',
        '、'.join(style_hits[:8]) + (f' ほか {len(style_hits) - 8} 件' if len(style_hits) > 8 else '') + '。仕様書.md を直す（手順書の「0. 決まっていること」の「書き方」）' if style_hits else '')
 
