@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-// lidless のプリセット（Git に入れた public/grow/grow.wasm をそのまま読む）：ID・カテゴリと、
+// grow のプリセット（Git に入れた public/grow/grow.wasm をそのまま読む）：ID・カテゴリと、
 // Toniq のパートごとのカテゴリ・ジャンルの標準の候補がそろっているか
 const WASM = fileURLToPath(new URL("../public/grow/grow.wasm", import.meta.url));
 const bytes = readFileSync(WASM);
@@ -24,7 +24,7 @@ beforeAll(async () => {
   expect(await loadGrow()).toBe(true);
 });
 
-describe("lidless のプリセット", () => {
+describe("grow のプリセット", () => {
   it("ID は空でない ASCII で、重ならない", () => {
     const ids = growPresetIds();
     expect(ids.length).toBeGreaterThan(0);

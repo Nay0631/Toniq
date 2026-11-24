@@ -6,8 +6,8 @@ import {
   type GrowCategory, type GrowPart,
 } from "./Grow";
 
-// lidless の音色の試聴：音色（プリセット）を選び直したとき、そのパートの今の音作りで1音だけ鳴らす
-// （カスタムモードのコードの音色・lidless の音作りのパネルのプリセット）。
+// grow の音色の試聴：音色（プリセット）を選び直したとき、そのパートの今の音作りで1音だけ鳴らす
+// （カスタムモードのコードの音色・grow の音作りのパネルのプリセット）。
 // 曲の再生中は鳴らさない（音色の変更が再生中のパートにそのまま反映されて聞こえるため）。
 // 次の試聴・曲の再生の開始（Playback.ts）で前の音を短くフェードして止める。
 // 鳴っている音は表示上の一時的な状態としてモジュール内に持つ（保存しない）。
@@ -63,7 +63,7 @@ export async function growKeyDown(part: GrowPart, midi: number): Promise<void> {
       await Tone.start();
       if (!(await prepareGrowContext())) return;
     } catch (e) {
-      console.warn("lidless の試し弾きを鳴らせませんでした:", e);
+      console.warn("grow の試し弾きを鳴らせませんでした:", e);
       return;
     }
     if (my !== keyToken || !keyHeld.has(midi)) return;
@@ -101,7 +101,7 @@ export async function previewGrowSound(part: GrowPart): Promise<boolean> {
     await Tone.start();
     if (!(await prepareGrowContext())) return false;
   } catch (e) {
-    console.warn("lidless の試聴を鳴らせませんでした:", e);
+    console.warn("grow の試聴を鳴らせませんでした:", e);
     return false;
   }
   // 待っている間にほかの試聴・停止・曲の再生が始まったら取りやめる
