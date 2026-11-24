@@ -128,7 +128,7 @@ src/engine/
   Grow.ts                 grow（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット・プリセットのカテゴリとパートごとに選べるカテゴリ（PART_CATEGORIES）、AudioWorklet の登録、各パートの音色 GrowInstrument（同じタスクで作ったものを1つのノードにまとめるマルチティンバー）
   growWorklet.js          grow の AudioWorklet（1つのノードで最大16の音色を鳴らす。wasm を 128 サンプルずつ描く。音符・時刻を決めたパラメーターは AudioParam の合図で受ける）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。grow（GROW_DRUMS）・ワンショット音源で鳴らす音色もここ
-  DrumSamples.ts          ドラム・パーカッションのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
+  DrumSamples.ts          ドラム・パーカッションのワンショット音源の読み込み（ドラム = public/samples/drums/<フォルダ>/<トラック名>.wav、パーカッション = public/samples/perc/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）・サイドチェインのゲイン・定位（パン）・レベルメーター。オーディオコンテキストごとに保持
   VolumeCurve.ts          フェーダーの値と dB の換算（75 で 0dB・100 で +5dB の2乗のカーブ）、以前のカーブで保存した値の読み替え、定位の表示。Tone.js を使わない
@@ -290,7 +290,7 @@ src/engine/
 
 ## 既知の問題
 
-- ドラムのワンショット音源は `public/samples/drums/default/` にしかなく（`rim` もない）、ジャンルのフォルダは空、`trance/` フォルダはない。パーカッションの音源（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）はまだ1つもないので、ワンショット音源を選んでもパーカッションは grow で鳴る。
+- ドラムのワンショット音源は `public/samples/drums/default/` にしかなく、ジャンルのフォルダは空、`trance/`・`waltz/`・`ballad/`・`shuffle/` フォルダはない。パーカッションの音源（`public/samples/perc/<フォルダ>/` の `shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）はまだ1つもないので、ワンショット音源を選んでもパーカッションは grow で鳴る。
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
 - 依存パッケージの `npm audit`：electron-builder の依存（`@electron/rebuild`・`node-gyp`・`minimatch` など。インストーラを作るときだけ使う）と、picomatch（vite・vitest が使う。開発時だけ）の指摘が残っている。どちらも直した版がまだなく、`npm audit fix --force` は大きく古い版に戻すので使わない。
 

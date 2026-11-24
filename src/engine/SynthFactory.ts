@@ -437,7 +437,7 @@ export function createDrumKit(genre: string, trackNames: string[], source: DrumS
 // ドラムのバス（歪み・コンプ）は通さず、低域を削ってジャンルの高域カットだけ通す（キックやベースの帯域を濁さない）。
 // 音はドラムの音源に合わせる：
 //   grow         → コアの「パーカッション …」のプリセット（ID は drum_…）
-//   ワンショット音源 → public/samples/drums/<フォルダ>/<トラック名>.wav（DrumSamples.ts）。音源がないトラックは grow
+//   ワンショット音源 → public/samples/perc/<フォルダ>/<トラック名>.wav（DrumSamples.ts）。音源がないトラックは grow
 //   シンセ        → Tone.js のシンセ
 // grow を鳴らせない（準備ができていない・プリセットのない古い wasm）ときはシンセで鳴らす
 
