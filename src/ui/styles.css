@@ -2532,6 +2532,9 @@ button.mixer-value {
 .pr-sep { width: 1px; height: 22px; margin: 0 4px; background: var(--border); }
 .pr-label { font-size: 13px; color: var(--text-muted); }
 .pr-octave { min-width: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+/* 表示の拡大・縮小（横・縦） */
+.pr-zoom { display: inline-flex; align-items: center; gap: 4px; }
+.pr-zoom-value { min-width: 40px; text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
 
 /* 操作の案内：細く縮めて1文字ずつ折り返さないよう、1行のまま置き、ボタンの横に入らなければ次の行の右端へ回す */
 .pr-hint {
@@ -2569,12 +2572,18 @@ button.mixer-value {
 .pr-solo { color: var(--text-muted); }
 .pr-solo.is-on { color: var(--simple-ink); background: var(--simple-soft); border-color: var(--simple-line); }
 
-/* 縦にスクロールする本体。目盛りは上に固定する */
+/* 縦・横にスクロールする本体。目盛りは上、鍵盤は左に固定する */
 .pr-scroll {
   position: relative;
   height: 460px;
-  overflow-y: auto;
+  overflow: auto;
   overscroll-behavior: contain;
+}
+
+/* 横の拡大：鍵盤を除いた幅を --zoom-x 倍にする（PianoRollTab がメロディの画面に入れる。ドラムは 1 のまま） */
+.pr-scroll > .pr-ruler,
+.pr-scroll > .pr-main {
+  width: calc(var(--keys-w) + (100% - var(--keys-w)) * var(--zoom-x, 1));
 }
 
 .pr-ruler {
@@ -2588,8 +2597,12 @@ button.mixer-value {
 }
 
 .pr-corner {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   flex: none;
   width: var(--keys-w);
+  background: var(--surface);
   border-right: 1px solid var(--border);
 }
 
@@ -2733,6 +2746,7 @@ button.mixer-value {
   flex: 1;
   min-width: 0;
   cursor: crosshair;
+  isolation: isolate;  /* 音・再生位置の z-index をグリッドの中に閉じ、横にスクロールしたとき左の鍵盤の下に潜らせる */
 }
 
 .pr-grid::before {

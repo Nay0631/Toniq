@@ -45,6 +45,11 @@ const lengths = (): LengthDef[] => isTriplet() ? TRIPLET_LENGTHS : STRAIGHT_LENG
 
 const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
 
+// 表示の拡大率（AppState.pianoRollZoomX / pianoRollZoomY）。横は 1 = 画面の幅にコード進行1周、縦は行の高さ ROW_H に掛ける
+const ZOOM_X = [1, 1.5, 2, 3, 4, 6, 8];
+const ZOOM_Y = [0.7, 0.85, 1, 1.25, 1.5, 2];
+const ROW_H  = 22;
+
 // ピアノロール上の音（start / units はマスの数。Meter.ts。メロディは単音なので start は重ならない）
 interface RollNote {
   midi:  number;
@@ -94,10 +99,9 @@ function lengthUnits(): number {
   return lengths().find(l => l.value === getState().pianoRollLength)?.units ?? unitsPerBeat();
 }
 
-// 配置・移動の刻み（2分音符を選んでいても4分音符単位で置ける）
-function snapUnits(): number {
-  return Math.min(lengthUnits(), unitsPerBeat());
-}
+// 配置・移動の刻みは、選んでいる音符長にかかわらず1マス（16分音符。3連符の拍子では8分3連符）。
+// 音符長は新しく置く音の長さだけに使う（以前は音符長（4分なら拍の頭）ごとにしか置けなかった）
+const SNAP_UNITS = 1;
 
 // 休符は持たず、鳴る音だけを扱う。コード進行1周より後ろの音は表示しない
 function readNotes(): RollNote[] {
@@ -236,6 +240,20 @@ function buildSkeleton(root: HTMLElement): void {
       <b class="pr-octave" data-pr-octave-value></b>
       <button class="btn btn-small btn-icon" data-pr-octave="1" aria-label="オクターブを上げる">＋</button>
       <span class="pr-sep"></span>
+      <span class="pr-label" data-term="pianoRollZoom">表示</span>
+      <span class="pr-zoom" title="横の拡大・縮小（Ctrl＋ホイール）">
+        <span class="pr-label">横</span>
+        <button class="btn btn-small btn-icon" data-pr-zoom="x" data-dir="-1" aria-label="横に縮小する">−</button>
+        <b class="pr-zoom-value" data-pr-zoom-value="x"></b>
+        <button class="btn btn-small btn-icon" data-pr-zoom="x" data-dir="1" aria-label="横に拡大する">＋</button>
+      </span>
+      <span class="pr-zoom" title="縦の拡大・縮小（Ctrl＋Shift＋ホイール）">
+        <span class="pr-label">縦</span>
+        <button class="btn btn-small btn-icon" data-pr-zoom="y" data-dir="-1" aria-label="縦に縮小する">−</button>
+        <b class="pr-zoom-value" data-pr-zoom-value="y"></b>
+        <button class="btn btn-small btn-icon" data-pr-zoom="y" data-dir="1" aria-label="縦に拡大する">＋</button>
+      </span>
+      <span class="pr-sep"></span>
       <button class="btn btn-small" data-pr-auto title="ジャンルに合わせてメロディを自動で作り直す">✦ 自動生成</button>
       <button class="btn btn-small" data-pr-clear>${TRASH_ICON}クリア</button>
       <span class="pr-hint">クリック：配置／ドラッグ：移動・長さ／右クリック：削除</span>
@@ -329,6 +347,18 @@ export function renderPianoRoll(): void {
   q(root, "[data-pr-octave-value]").textContent = String(s.pianoRollOctave);
   q<HTMLButtonElement>(root, '[data-pr-octave="-1"]').disabled = s.pianoRollOctave <= OCTAVE_MIN;
   q<HTMLButtonElement>(root, '[data-pr-octave="1"]').disabled  = s.pianoRollOctave >= OCTAVE_MAX;
+
+  // 拡大率：横は目盛り・グリッドの幅、縦は行の高さ（メロディの画面だけ。ドラムは変えない）
+  const melodyPane = pane(root, "melody");
+  melodyPane.style.setProperty("--zoom-x", String(s.pianoRollZoomX));
+  melodyPane.style.setProperty("--row-h", `${ROW_H * s.pianoRollZoomY}px`);
+  for (const axis of ["x", "y"] as const) {
+    const levels = axis === "x" ? ZOOM_X : ZOOM_Y;
+    const value  = axis === "x" ? s.pianoRollZoomX : s.pianoRollZoomY;
+    q(root, `[data-pr-zoom-value="${axis}"]`).textContent = `${Math.round(value * 100)}%`;
+    q<HTMLButtonElement>(root, `[data-pr-zoom="${axis}"][data-dir="-1"]`).disabled = value <= levels[0];
+    q<HTMLButtonElement>(root, `[data-pr-zoom="${axis}"][data-dir="1"]`).disabled  = value >= levels[levels.length - 1];
+  }
 
   // 目盛り：小節番号とその小節のコード
   let chords: { bar: number; bars: number; name: string }[] = [];
@@ -458,6 +488,36 @@ function setOctave(octave: number): void {
   if (root) scrollToOctave(root);
 }
 
+// 拡大・縮小する。anchor（画面上の位置。なければ見えている範囲の真ん中）の下にある所が動かないようにスクロールし直す
+function setZoom(axis: "x" | "y", dir: number, anchor?: { x: number; y: number }): void {
+  const root = currentRoot();
+  if (!root || target !== "melody") return;
+  const s      = getState();
+  const levels = axis === "x" ? ZOOM_X : ZOOM_Y;
+  const value  = axis === "x" ? s.pianoRollZoomX : s.pianoRollZoomY;
+  // 今の値にいちばん近い段から1段動かす
+  const index = levels.reduce((best, v, i) => Math.abs(v - value) < Math.abs(levels[best] - value) ? i : best, 0);
+  const next  = levels[Math.max(0, Math.min(levels.length - 1, index + dir))];
+  if (next === value) return;
+
+  const melody   = pane(root, "melody");
+  const scroller = q(melody, ".pr-scroll");
+  const grid     = q(melody, ".pr-grid");
+  const view   = scroller.getBoundingClientRect();
+  const before = grid.getBoundingClientRect();
+  const ax = anchor?.x ?? Math.max(before.left, view.left) + (view.right - Math.max(before.left, view.left)) / 2;
+  const ay = anchor?.y ?? view.top + view.height / 2;
+  const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+  const fx = clamp01((ax - before.left) / before.width);
+  const fy = clamp01((ay - before.top) / before.height);
+
+  setState(axis === "x" ? { pianoRollZoomX: next } : { pianoRollZoomY: next });
+  renderPianoRoll();
+  const after = grid.getBoundingClientRect();
+  if (axis === "x") scroller.scrollLeft += after.left + fx * after.width - ax;
+  else              scroller.scrollTop  += after.top + fy * after.height - ay;
+}
+
 function removeNote(start: number): void {
   if (selected === start) selected = null;
   writeNotes(readNotes().filter(n => n.start !== start));
@@ -502,7 +562,7 @@ function updateDragElement(): void {
 function startDrag(e: PointerEvent, grid: HTMLElement): void {
   const rect  = grid.getBoundingClientRect();
   const total = loopUnits();
-  const snap  = snapUnits();
+  const snap  = SNAP_UNITS;
   const notes = readNotes();
   const target  = e.target as HTMLElement;
   const noteEl  = target.closest<HTMLElement>(".pr-note");
@@ -553,7 +613,7 @@ function moveDrag(e: PointerEvent): void {
   if (!drag) return;
   const { orig } = drag;
   const total = loopUnits();
-  const snap  = snapUnits();
+  const snap  = SNAP_UNITS;
   const dStep = Math.round((e.clientX - drag.x) / drag.stepPx / snap) * snap;
 
   if (drag.mode === "move") {
@@ -638,6 +698,18 @@ export function initPianoRoll(): void {
     });
     rootEl.querySelectorAll<HTMLElement>("[data-pr-octave]").forEach(btn =>
       btn.addEventListener("click", () => setOctave(getState().pianoRollOctave + Number(btn.dataset.prOctave))));
+    rootEl.querySelectorAll<HTMLElement>("[data-pr-zoom]").forEach(btn =>
+      btn.addEventListener("click", () => setZoom(btn.dataset.prZoom === "y" ? "y" : "x", Number(btn.dataset.dir))));
+
+    // Ctrl＋ホイールで横、Ctrl＋Shift＋ホイールで縦に拡大・縮小する（マウスの下の所を中心に）。
+    // Shift＋ホイールだけなら横にスクロールする（ブラウザの標準）
+    q(pane(rootEl, "melody"), ".pr-scroll").addEventListener("wheel", e => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();  // 画面全体の拡大を止める
+      const delta = e.deltaY || e.deltaX;
+      if (delta === 0) return;
+      setZoom(e.shiftKey ? "y" : "x", delta < 0 ? 1 : -1, { x: e.clientX, y: e.clientY });
+    }, { passive: false });
     q(rootEl, "[data-pr-clear]").addEventListener("click", () => {
       if (readNotes().length > 0 && !confirm("ピアノロールの音をすべて消しますか？")) return;
       selected = null;
@@ -663,7 +735,7 @@ export function initPianoRoll(): void {
     // 目盛りをクリック：鍵盤入力の位置を決める
     q(rootEl, ".pr-ticks").addEventListener("pointerdown", e => {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const snap = snapUnits();
+      const snap = SNAP_UNITS;
       const step = Math.floor(((e.clientX - rect.left) / rect.width) * loopUnits() / snap) * snap;
       cursor = Math.max(0, Math.min(step, loopUnits() - 1));
       renderPianoRoll();

@@ -209,6 +209,8 @@ export interface AppState {
   pianoRollLength:    PianoRollLength;
   pianoRollScaleLock: boolean;  // ON のときはスケール外の音を置けない
   pianoRollOctave:    number;   // 鍵盤入力（タイピングピアノ）の基準のオクターブ（下の段の C。3〜5）
+  pianoRollZoomX:     number;   // ピアノロール（メロディ）の横の拡大率（1 = 画面の幅にコード進行1周。PianoRollTab の ZOOM_X）
+  pianoRollZoomY:     number;   // ピアノロール（メロディ）の縦の拡大率（1 = 行の高さ 22px。PianoRollTab の ZOOM_Y）
   drumRollVelocity:   number;   // ピアノロールのドラムで置く音の強さ（0〜1。強・中・弱）
 
   // パートのON/OFF
@@ -320,6 +322,8 @@ export const defaultState: AppState = {
   pianoRollLength:    "4n",
   pianoRollScaleLock: true,
   pianoRollOctave:    4,
+  pianoRollZoomX:     1,
+  pianoRollZoomY:     1,
   drumRollVelocity:   1,
 
   parts: {
