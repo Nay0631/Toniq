@@ -43,6 +43,13 @@ skinparam roundCorner<<依存>> 20
 skinparam nodesep 60
 skinparam ranksep 70
 
+' 凡例（実体の説明）は白地に黒の細い枠
+skinparam legend {
+  BackgroundColor white
+  BorderColor black
+  FontSize 12
+}
+
 ' エンティティ名は太字。
 ' ※ この行は必ずファイルの最後に置く（クラス図の共通設定と同じ）
 skinparam classFontStyle bold

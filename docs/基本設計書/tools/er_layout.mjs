@@ -6,6 +6,7 @@
 //     横から名前の高さに入る線は、箱の中の高さまで下げる。どちらも、黒丸が箱の縁に付くようにするため（IDEF1X の書き方）
 //   - 名前は箱の左上に置き、名前とぶつかる上から入る線は、左から来る線なら箱の左の縁から入れ（空いていて、ほかの箱を通らないとき）、
 //     そうでなければ黒丸の近くで直角に曲げて名前の右へずらす
+//   - 箱の左右の縁から横へ出る線が近すぎる（多重度の文字が線の間に入らない）ときは、縁の上で等間隔に並べ直す。縁が低ければ箱を下へ伸ばす
 //   - 別々の線が同じ高さ（横位置）で平行に重なっていたら、片方を 10 ずらして離す
 //   - 多重度の文字（UML の「1」「0..1」「0..*」「1..*」。以前の「P」「Z」も）は、形が決まった線の端の横に置き直す
 //   - 線の名前・多重度の文字が、ほかの線・印・箱・ほかの文字と重なるなら、自分の線の近くの空いている位置へずらす
@@ -44,9 +45,10 @@ function fixEntity(g, boxes) {
   const delta = sepY - y;
   if (!(delta > 0 && delta < h)) return g;
   let newRect = setAttr(rect, 'y', f3(sepY));
-  newRect = setAttr(newRect, 'height', f3(h - delta));
   const id = boxes.length;
-  boxes.push({ x, w, oldTop: y, top: sepY, bottom: y + h, nameLen: num(textM[0], 'textLength') ?? 0 });
+  // 高さはあとで置き換える（線を離すために箱を下へ伸ばすことがあるため。spreadSideEnds）
+  newRect = setAttr(newRect, 'height', `@H${id}@`);
+  boxes.push({ x, w, h: h - delta, oldTop: y, top: sepY, bottom: y + h, nameLen: num(textM[0], 'textLength') ?? 0 });
   // 名前の x・箱の幅・区切り線の右端はあとで置き換える（印を付けておく。線をよけて箱を広げることがあるため）
   newRect = setAttr(newRect, 'width', `@W${id}@`);
   const newText = setAttr(textM[0], 'x', `@NAME${id}@`);
@@ -315,6 +317,81 @@ function separateLines(links, boxes) {
   }
 }
 
+// 箱の左右の縁から横へ出る線が2本以上あって、どれかの間が SIDE_GAP より狭い（多重度の文字が入らない）ときは、縁の範囲の中で等間隔に並べ直す。
+// 縁が低くて separateLines（10 ずつ離す）では離せないため（ジャンルマスタの左の縁など）。
+// 遠くで曲がる線ほど縁の外側（上）に置く（すべて同じ向きへ曲がるので、こうすると線どうしが交わらない）。
+// 線の間が SIDE_GAP より狭くなる（多重度の文字が線の間に入らない）ときは、箱を下へ伸ばして縁を高くする
+const SIDE_GAP = 15;
+function growBox(b, extra, all) {
+  // 下の縁から出る（入る）線の端を、伸ばした分だけ下げる。下げると線の向きが変わるなら伸ばさない
+  const moves = [];
+  for (const a of all) {
+    for (const k of [0, a.pts.length - 1]) {
+      const p = a.pts[k];
+      if (Math.abs(p.y - b.bottom) >= 14 || p.x < b.x - 1 || p.x > b.x + b.w + (b.widen ?? 0) + 1) continue;
+      const q = a.pts[k === 0 ? 1 : k - 1];
+      // 横へ出る線（左右の縁の下のほうの端）は下の縁の線ではない
+      if (!q || Math.abs(q.x - p.x) > 0.5) continue;
+      if (q.y < p.y + extra + 4) return false;
+      moves.push(p);
+    }
+  }
+  for (const p of moves) p.y += extra;
+  b.bottom += extra;
+  b.grow = (b.grow ?? 0) + extra;
+  return true;
+}
+function spreadSideEnds(links, boxes) {
+  const all = links.map(l => ({ l, pts: pairsOf(l.final) }));
+  for (const b of boxes) {
+    const r = b.x + b.w + (b.widen ?? 0);
+    for (const sideX of [b.x, r]) {
+      const ends = [];
+      for (const a of all) {
+        for (const run of runsOf(a.pts, 'y')) {
+          const k = run.i === 0 ? 0 : run.j === a.pts.length - 1 ? run.j : -1;
+          if (k < 0) continue;
+          const p = a.pts[k];
+          if (Math.abs(p.x - sideX) >= 14 || p.y < b.top - 1 || p.y > b.bottom + 1) continue;
+          const far = k === 0 ? a.pts[run.j] : a.pts[run.i];
+          const next = k === 0 ? a.pts[run.j + 1] : a.pts[run.i - 1];
+          ends.push({ a, run, dist: Math.abs(far.x - p.x), down: next ? Math.sign(next.y - p.y) : 1 });
+        }
+      }
+      if (ends.length < 2) continue;
+      const ys = ends.map(e => e.run.at).sort((u, v) => u - v);
+      if (ys.every((y, i) => i === 0 || y - ys[i - 1] >= SIDE_GAP)) continue;
+      // 下へ曲がる線は遠いほど上、上へ曲がる線は遠いほど下
+      const downs = ends.filter(e => e.down >= 0).sort((u, v) => v.dist - u.dist);
+      const ups = ends.filter(e => e.down < 0).sort((u, v) => u.dist - v.dist);
+      const order = [...downs, ...ups];
+      const need = SIDE_GAP * (order.length - 1) - (b.bottom - 5 - (b.top + 5));
+      if (need > 0) {
+        if (!growBox(b, Math.ceil(need), all)) continue;
+        for (const x of all) x.l.final = pairsTo(x.l.final, x.pts);
+      }
+      const lo = b.top + 5, hi = b.bottom - 5, step = (hi - lo) / (order.length - 1);
+      const ok = order.every((e, i) => {
+        const at = lo + step * i;
+        const { pts } = e.a;
+        // 曲がった先の区間の向きを逆にしない・短くしすぎない
+        return [e.run.i - 1, e.run.j + 1].every(n => {
+          const q = pts[n];
+          if (!q) return true;
+          const k = n < e.run.i ? e.run.i : e.run.j;
+          return Math.sign(q.y - at) === Math.sign(q.y - pts[k].y) && Math.abs(q.y - at) >= 4;
+        });
+      });
+      if (!ok) continue;
+      order.forEach((e, i) => {
+        const at = lo + step * i;
+        for (let k = e.run.i; k <= e.run.j; k++) e.a.pts[k].y = at;
+        e.a.l.final = pairsTo(e.a.l.final, e.a.pts);
+      });
+    }
+  }
+}
+
 // 多重度の文字を、形が決まった線の端の横に置き直す（線を曲げた・回したあとでも端に付いているように）。
 // 上から入る端は線の右・箱のすぐ上、下から出る端は線の右・箱のすぐ下、横の端は線の上・箱のすぐ外
 function positionMults(l) {
@@ -465,6 +542,7 @@ export function processSvg(svg) {
   for (const l of links) if (l.pts.length >= 2) snapLink(l, boxes);
   for (const b of boxes) { clearName(b); followWiden(b); }
   for (const l of links) l.final = linkPath(l);
+  spreadSideEnds(links, boxes);
   separateLines(links, boxes);
   for (const l of links) positionMults(l);
   const textRight = placeTexts(links, boxes);
@@ -472,6 +550,7 @@ export function processSvg(svg) {
   boxes.forEach((b, i) => {
     out = out.replace(`@NAME${i}@`, f3(placeName(b)));
     out = out.replace(`@W${i}@`, f3(b.w + (b.widen ?? 0)));
+    out = out.replace(`@H${i}@`, f3(b.h + (b.grow ?? 0)));
     out = out.split(`@X2_${i}@`).join(f3(b.x + b.w + (b.widen ?? 0) - 1));
   });
   // 広げた箱・線の文字が図の右端からはみ出すなら、図を広げる
