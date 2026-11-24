@@ -26,7 +26,11 @@ DEV_ONLY = ['テスト中の機能', 'メロディ評価', 'メロディの評�
             'npm run quality', 'npm run mix:measure', 'npm test', 'npm run lint', 'npm run typecheck',
             'QualityCheck', 'QualityBatch', 'RatingScreen', 'MelodyRatings']
 # 基本設計書は完成したシステムとして書く（2026-11-20 決定）。付録B より前にこれがあれば NG
-STYLE_WORDS = ['以前', '旧名', '廃止', '（追加）', 'lidless', '曲の基本設定システム']
+STYLE_WORDS = ['以前', '旧名', '廃止', '（追加）', 'lidless', '曲の基本設定システム',
+               # 作成途中・まだ決まっていないことを表す語も書かない（画面に「テスト中」と出ていても書かない。2026-11-23 決定）
+               'テスト中', '暫定', '試作', '開発中', '作成中', '今後', '将来']
+# 改訂履歴（tools/改訂履歴.tsv）には、削除・廃止したことと、今の文書にない名前を書かない（2026-11-23 決定）
+REV_WORDS = ['削除', '廃止', '置き換え', '改名', 'lidless', 'Toniqシンセ', 'Toniq シンセ']
 STYLE_MARKS = re.compile('[\U0001F000-\U0001FFFF☀-➿⬀-⯿⌀-⏿️■◀▶↻▷↺↶↷⇄⟲‹⋮←↑↓]')
 
 ap = argparse.ArgumentParser()
@@ -70,6 +74,9 @@ nxt = f'{int(last[0]) + 1:02d}'
 rev_dev = [f'{r[0]}（{w}）' for r in revs for w in DEV_ONLY[:6] if w in r[2]]
 report(not rev_dev, '改訂履歴に開発のテスト・確認用の機能が書かれていない',
        '、'.join(rev_dev) + '。tools/改訂履歴.tsv の概要から外す' if rev_dev else '')
+rev_style = [f'{r[0]}（{w}）' for r in revs for w in REV_WORDS if w in r[2]]
+report(not rev_style, '改訂履歴に削除・廃止したことと、今の文書にない名前が書かれていない',
+       '、'.join(rev_style) + '。tools/改訂履歴.tsv の概要を今の名前・番号で書き直す' if rev_style else '')
 
 # ---------- 出力先が開かれていないか ----------
 OUT_DOCX = out_docx(nxt)
@@ -192,7 +199,7 @@ counts32 = re.findall(r'\d+\s*(?:種|件|個|つ)', re.sub(r'2つの入口', '',
 report(heads32 == SEC32_ITEMS and not counts32, '3.2 システム化の考え方が指定の3項目だけで、件数を書いていない',
        '' if heads32 == SEC32_ITEMS and not counts32 else
        f'今の項目：{"・".join(heads32) or "なし"}' + (f'、件数：{"・".join(counts32)}' if counts32 else '') + '。手順書の「0. 決まっていること」の「3.2 システム化の考え方」に直す')
-report(not style_hits, '完成したシステムとしての書き方（開発の経緯・lidless・絵文字・「両方」・「状況」の列がない）',
+report(not style_hits, '完成したシステムとしての書き方（開発の経緯・作成途中の語（テスト中など）・lidless・絵文字・「両方」・「状況」の列がない）',
        '、'.join(style_hits[:8]) + (f' ほか {len(style_hits) - 8} 件' if len(style_hits) > 8 else '') + '。仕様書.md を直す（手順書の「0. 決まっていること」の「書き方」）' if style_hits else '')
 
 # ---------- 改訂の概要の材料 ----------

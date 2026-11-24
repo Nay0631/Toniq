@@ -520,17 +520,6 @@ rev = front[33]
 rws = re.findall(r'<w:tr\b.*?</w:tr>', rev, re.S)
 r1, blanks = rws[1], rws[2:]
 assert '>01<' in r1 and '2026/10/19' in r1 and '初版発行' in r1
-# 改訂年月日（日付）は1行で示す（2026-11-20 決定）。手本の日付の文字はサイズの指定がなく（10.5pt）文字グリッドにも合わせるので、
-# 列の幅（1260）に収まらず「2026/10/」「19」の2行になる。ほかの列と同じ 10pt にし、文字グリッドに合わせない
-DATE_RUN = '<w:r><w:t>2026/10/19</w:t></w:r>'
-assert r1.count(DATE_RUN) == 1, '改訂履歴の 01 の行の日付が見つかりません'
-date_tc = next(t for t in re.findall(r'<w:tc>.*?</w:tc>', r1, re.S) if DATE_RUN in t)
-assert date_tc.count('<w:pPr>') == 1, '改訂履歴の 01 の行の日付の段落が見つかりません'
-new_tc = date_tc.replace(DATE_RUN, '<w:r><w:rPr><w:rFonts w:hAnsiTheme="minorEastAsia"/><w:sz w:val="20"/></w:rPr><w:t>2026/10/19</w:t></w:r>')
-new_tc = new_tc.replace('<w:pPr>', '<w:pPr><w:snapToGrid w:val="0"/>', 1)
-r1_fixed = r1.replace(date_tc, new_tc, 1)
-rev = rev.replace(r1, r1_fixed, 1)
-r1 = r1_fixed
 last = r1
 for k, (v, (d, note)) in enumerate(rev_list):
     new = r1.replace('>01<', f'>{escape(v)}<').replace('2026/10/19', d).replace('初版発行', escape(note))
@@ -552,28 +541,43 @@ rws = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)
 for r in rws[1:2 + len(rev_list)]:
     front[33] = front[33].replace(r, merge_summary(r), 1)
 
+# 改訂年月日（2026/11/09 など）は1行で示す（2026-11-23 決定。ユーザーの指示）。手本のフォント（UD デジタル 教科書体）は
+# 半角の数字が1文字 6.6pt ほどあり、日付は約 63pt になって列（1260 = 63pt。左右の余白を除くと 53pt）に収まらず
+# 「2026/11/0」「9」に折り返す。日付の列を 1500（75pt）に広げ、同じだけ改訂の概要の列（700 + 4025）を狭める（表の幅は変えない）
+DATE_W, DATE_W0, SUM_A0 = 1500, 1260, 700
+d = DATE_W - DATE_W0
+t33 = front[33]
+assert t33.count(f'<w:gridCol w:w="{DATE_W0}"/>') == 1 and t33.count(f'<w:gridCol w:w="{SUM_A0}"/>') == 1, '改訂履歴の表の列の幅が手本と違います'
+t33 = (t33.replace(f'<w:gridCol w:w="{DATE_W0}"/>', f'<w:gridCol w:w="{DATE_W}"/>')
+          .replace(f'<w:gridCol w:w="{SUM_A0}"/>', f'<w:gridCol w:w="{SUM_A0 - d}"/>')
+          .replace(f'<w:tcW w:w="{DATE_W0}" w:type="dxa"/>', f'<w:tcW w:w="{DATE_W}" w:type="dxa"/>')
+          .replace(f'<w:tcW w:w="{SUM_A0}" w:type="dxa"/>', f'<w:tcW w:w="{SUM_A0 - d}" w:type="dxa"/>')
+          .replace('<w:tcW w:w="4725" w:type="dxa"/>', f'<w:tcW w:w="{4725 - d}" w:type="dxa"/>'))
+# 日付の文字は手本では大きさの指定がなく 10.5pt なので、ほかのセルと同じ 10pt にする
+t33 = re.sub(r'<w:r><w:t>(\d{4}/\d{2}/\d{2})</w:t>', r'<w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>\1</w:t>', t33)
+front[33] = t33
+
+# 改訂履歴の各版の行の承認責任者・作成責任者（2026-11-23 決定。ユーザーの指示）。手本は空のセルなので、段落に名前の文字を入れる
+APPROVER, AUTHOR = '根井', '西薗'
+def fill_names(row):
+    tcs = re.findall(r'<w:tc>.*?</w:tc>', row, re.S)
+    for c, name in ((tcs[-2], APPROVER), (tcs[-1], AUTHOR)):
+        assert c.count('</w:pPr></w:p>') == 1, '改訂履歴の承認責任者・作成責任者のセルが空ではありません'
+        row = row.replace(c, c.replace('</w:pPr></w:p>', f'</w:pPr><w:r><w:rPr><w:rFonts w:hint="eastAsia"/><w:sz w:val="20"/></w:rPr><w:t>{name}</w:t></w:r></w:p>'), 1)
+    return row
+for r in re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S):
+    if re.search(r'<w:t>\d{4}/\d{2}/\d{2}</w:t>', r):
+        front[33] = front[33].replace(r, fill_names(r), 1)
+
 # 改訂履歴の見出しの「改訂年月日」は1行で示す（手本は「改訂」「年月日」の2つの段落に分かれている。2026-11-20 決定）。
-# 10pt で5文字（1000）なので、列の幅（1260 − 左右の余白 198）に収まる
+# 10pt で5文字（1000）なので、列の幅（1500 − 左右の余白 198）に収まる
 hdr = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)[0]
 c = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)[1]
 ps = re.findall(r'<w:p[ >].*?</w:p>', c, re.S)
 TXT = lambda s: ''.join(re.findall(r'<w:t(?: [^>]*)?>([^<]*)</w:t>', s))
 assert [TXT(p) for p in ps] == ['改訂', '年月日'] and ps[0] + ps[1] in c, '改訂履歴の見出し「改訂／年月日」が見つかりません'
-# 文字グリッドに合わせると 1文字 210 で 1050 になり幅ぎりぎりなので、グリッドに合わせない（1000）
-new_c = c.replace(ps[0] + ps[1], ps[0].replace('<w:t>改訂</w:t>', '<w:t>改訂年月日</w:t>').replace('<w:pPr>', '<w:pPr><w:snapToGrid w:val="0"/>', 1), 1)
+new_c = c.replace(ps[0] + ps[1], ps[0].replace('<w:t>改訂</w:t>', '<w:t>改訂年月日</w:t>'), 1)
 front[33] = front[33].replace(hdr, hdr.replace(c, new_c, 1), 1)
-
-# 改訂年月日の列を広げる（1260 → 1680。広げた分だけ改訂の概要の列を狭め、表の幅 9555 は変えない。2026-11-20 決定）。
-# 日付はテーマのフォント（UD デジタル 教科書体 NP）で数字の幅が広く、10pt でも「2026/11/20」が約 67pt あり、1260（中は約 53pt）では2行になる
-DATE_W, NOTE_W = 1680, 4725 - (1680 - 1260)
-# 列の定義は 630・1260・700・4025・1470・1470（改訂の概要は 700＋4025 の2列）
-GRID = '<w:gridCol w:w="630"/><w:gridCol w:w="1260"/><w:gridCol w:w="700"/><w:gridCol w:w="4025"/>'
-assert front[33].count(GRID) == 1, '改訂履歴の表の列の幅が見つかりません'
-front[33] = (front[33]
-             .replace(GRID, GRID.replace('"1260"', f'"{DATE_W}"').replace('"4025"', f'"{4025 - (DATE_W - 1260)}"'))
-             .replace('<w:tcW w:w="1260" w:type="dxa"/>', f'<w:tcW w:w="{DATE_W}" w:type="dxa"/>')
-             .replace('<w:tcW w:w="4725" w:type="dxa"/>', f'<w:tcW w:w="{NOTE_W}" w:type="dxa"/>')
-             .replace('<w:tcW w:w="4025" w:type="dxa"/>', f'<w:tcW w:w="{4025 - (DATE_W - 1260)}" w:type="dxa"/>'))
 
 # 添付資料(別紙)。手本の「別紙１　○○…」〜「別紙３」の3行（141〜143）を、BESSHI の行に置き換える（余った行は消す）。
 # 別紙のファイルは docs/基本設計書/ に置く（docx と一緒に渡す）。別紙を足すときはここに足し、仕様書.md の参照する所に「別紙<番号>のPDFを参照」と書く

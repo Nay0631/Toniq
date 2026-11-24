@@ -2,7 +2,7 @@
 #
 #   - 2.機能設計 / 7.各種設計図（クラス図・ロバストネス図・シーケンス図）に、仕様書の 5.1 の機能が全部あるか
 #   - 3.画面設計 に、仕様書の 10.1 の画面が全部あるか
-#   - 4.データベース設計 に、仕様書の 12.1 のテーブルが全部あるか
+#   - 4.データベース設計 に、仕様書の 12.1 のテーブルが全部あるか。行の名前が gantt_names.tsv の英名と違えば [要改名]
 #   - 7.各種設計図（ユースケース図・ユースケース記述）の行と、仕様書のシステム（5.1 のグループ）
 #   - 各節の担当者（C列）の数と、開始・終了（E列・F列）の組の数（行を足すときの割り振りに使う）
 #   - 「（xxxxx）」「（T_xxxx)」が残っている行、表記を直す名前（「西園」など）
@@ -144,7 +144,13 @@ def renames_deletes(secs, names):
             e = names[n]
             if e["id"] == "-":
                 deletes.append({"row": x["row"], "B": x["B"], "section": title})
-            elif e["name"] != n and not title.startswith(DB_SECTION):  # テーブルは実体の英名（chord_progressions など）で書く決まり
+            elif title.startswith(DB_SECTION):
+                # テーブルは実体の英名（chord_progressions など）で書く決まり。英名が変わったら改名する（2026-11-23 決定）
+                en = e["en"]
+                if en and en != n:
+                    new = re.sub(rf"^(\d+-\d+\.\s*){re.escape(n)}(\s*テーブル)", rf"\g<1>{en}\g<2>", x["B"], count=1)
+                    renames.append({"row": x["row"], "B": x["B"], "new": new.replace(f"T_{n}", f"T_{en}")})
+            elif e["name"] != n:
                 renames.append({"row": x["row"], "B": x["B"], "new": x["B"].replace(n, e["name"], 1)})
     return renames, deletes
 
