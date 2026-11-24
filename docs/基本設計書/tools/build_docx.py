@@ -520,6 +520,17 @@ rev = front[33]
 rws = re.findall(r'<w:tr\b.*?</w:tr>', rev, re.S)
 r1, blanks = rws[1], rws[2:]
 assert '>01<' in r1 and '2026/10/19' in r1 and '初版発行' in r1
+# 改訂年月日（日付）は1行で示す（2026-11-20 決定）。手本の日付の文字はサイズの指定がなく（10.5pt）文字グリッドにも合わせるので、
+# 列の幅（1260）に収まらず「2026/10/」「19」の2行になる。ほかの列と同じ 10pt にし、文字グリッドに合わせない
+DATE_RUN = '<w:r><w:t>2026/10/19</w:t></w:r>'
+assert r1.count(DATE_RUN) == 1, '改訂履歴の 01 の行の日付が見つかりません'
+date_tc = next(t for t in re.findall(r'<w:tc>.*?</w:tc>', r1, re.S) if DATE_RUN in t)
+assert date_tc.count('<w:pPr>') == 1, '改訂履歴の 01 の行の日付の段落が見つかりません'
+new_tc = date_tc.replace(DATE_RUN, '<w:r><w:rPr><w:rFonts w:hAnsiTheme="minorEastAsia"/><w:sz w:val="20"/></w:rPr><w:t>2026/10/19</w:t></w:r>')
+new_tc = new_tc.replace('<w:pPr>', '<w:pPr><w:snapToGrid w:val="0"/>', 1)
+r1_fixed = r1.replace(date_tc, new_tc, 1)
+rev = rev.replace(r1, r1_fixed, 1)
+r1 = r1_fixed
 last = r1
 for k, (v, (d, note)) in enumerate(rev_list):
     new = r1.replace('>01<', f'>{escape(v)}<').replace('2026/10/19', d).replace('初版発行', escape(note))
@@ -548,8 +559,21 @@ c = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)[1]
 ps = re.findall(r'<w:p[ >].*?</w:p>', c, re.S)
 TXT = lambda s: ''.join(re.findall(r'<w:t(?: [^>]*)?>([^<]*)</w:t>', s))
 assert [TXT(p) for p in ps] == ['改訂', '年月日'] and ps[0] + ps[1] in c, '改訂履歴の見出し「改訂／年月日」が見つかりません'
-new_c = c.replace(ps[0] + ps[1], ps[0].replace('<w:t>改訂</w:t>', '<w:t>改訂年月日</w:t>'), 1)
+# 文字グリッドに合わせると 1文字 210 で 1050 になり幅ぎりぎりなので、グリッドに合わせない（1000）
+new_c = c.replace(ps[0] + ps[1], ps[0].replace('<w:t>改訂</w:t>', '<w:t>改訂年月日</w:t>').replace('<w:pPr>', '<w:pPr><w:snapToGrid w:val="0"/>', 1), 1)
 front[33] = front[33].replace(hdr, hdr.replace(c, new_c, 1), 1)
+
+# 改訂年月日の列を広げる（1260 → 1680。広げた分だけ改訂の概要の列を狭め、表の幅 9555 は変えない。2026-11-20 決定）。
+# 日付はテーマのフォント（UD デジタル 教科書体 NP）で数字の幅が広く、10pt でも「2026/11/20」が約 67pt あり、1260（中は約 53pt）では2行になる
+DATE_W, NOTE_W = 1680, 4725 - (1680 - 1260)
+# 列の定義は 630・1260・700・4025・1470・1470（改訂の概要は 700＋4025 の2列）
+GRID = '<w:gridCol w:w="630"/><w:gridCol w:w="1260"/><w:gridCol w:w="700"/><w:gridCol w:w="4025"/>'
+assert front[33].count(GRID) == 1, '改訂履歴の表の列の幅が見つかりません'
+front[33] = (front[33]
+             .replace(GRID, GRID.replace('"1260"', f'"{DATE_W}"').replace('"4025"', f'"{4025 - (DATE_W - 1260)}"'))
+             .replace('<w:tcW w:w="1260" w:type="dxa"/>', f'<w:tcW w:w="{DATE_W}" w:type="dxa"/>')
+             .replace('<w:tcW w:w="4725" w:type="dxa"/>', f'<w:tcW w:w="{NOTE_W}" w:type="dxa"/>')
+             .replace('<w:tcW w:w="4025" w:type="dxa"/>', f'<w:tcW w:w="{4025 - (DATE_W - 1260)}" w:type="dxa"/>'))
 
 # 添付資料(別紙)。手本の「別紙１　○○…」〜「別紙３」の3行（141〜143）を、BESSHI の行に置き換える（余った行は消す）。
 # 別紙のファイルは docs/基本設計書/ に置く（docx と一緒に渡す）。別紙を足すときはここに足し、仕様書.md の参照する所に「別紙<番号>のPDFを参照」と書く
