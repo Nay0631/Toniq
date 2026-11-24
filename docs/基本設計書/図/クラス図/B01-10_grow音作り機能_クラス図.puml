@@ -4,12 +4,12 @@ mainframe **pkg**
 
 class "growパネル" as B1 <<boundary>> {
   {method} <U+002B> 対象を選ぶ() : void
-  {method} <U+002B> プリセットのチップを押下する() : void
-  {method} <U+002B> つまみ・セレクト・チェックを動かす() : void
+  {method} <U+002B> プリセットのボタンを押下する() : void
+  {method} <U+002B> つまみ・ドロップダウン・チェックボックスを動かす() : void
   {method} <U+002B> プリセットに戻すボタンを押下する() : void
   {method} <U+002B> すべてのパートを標準に戻すボタンを押下する() : void
   {method} <U+002B> 試し弾きのキーを押す() : void
-  {method} <U+002B> チップとつまみの値を表示する() : void
+  {method} <U+002B> ボタンとつまみの値を表示する() : void
   {method} <U+002B> プリセットからの変更を表示する() : void
 }
 class "音作り設定" as C1 <<control>> {

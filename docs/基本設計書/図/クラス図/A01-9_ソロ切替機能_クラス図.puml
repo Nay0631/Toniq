@@ -3,7 +3,7 @@
 mainframe **pkg**
 
 class "アレンジ画面" as B1 <<boundary>> {
-  {method} <U+002B> レーンの ON/OFF ボタンを右クリックする() : void
+  {method} <U+002B> パートの行の ON/OFF ボタンを右クリックする() : void
   {method} <U+002B> ソロのパートの枠と ON/OFF を表示する() : void
 }
 class "ミキサー" as B2 <<boundary>> {

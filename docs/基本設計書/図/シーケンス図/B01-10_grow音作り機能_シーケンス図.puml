@@ -22,13 +22,13 @@ deactivate L4
 L3 -> L5 : 対象のパートの音作りの値を取得する() : void
 activate L5
 deactivate L5
-L3 -> L2 : チップとつまみの値を表示する() : void
+L3 -> L2 : ボタンとつまみの値を表示する() : void
 activate L2
 deactivate L2
 deactivate L3
 deactivate L2
 
-L1 -> L2 : プリセットのチップを押下する() : void
+L1 -> L2 : プリセットのボタンを押下する() : void
 activate L2
 L2 -> L3 : プリセットを選ぶ() : void
 activate L3
@@ -55,13 +55,13 @@ opt 停止中
   deactivate L6
   deactivate L7
 end
-L3 -> L2 : チップとつまみの値を表示する() : void
+L3 -> L2 : ボタンとつまみの値を表示する() : void
 activate L2
 deactivate L2
 deactivate L3
 deactivate L2
 
-L1 -> L2 : つまみ・セレクト・チェックを動かす() : void
+L1 -> L2 : つまみ・ドロップダウン・チェックボックスを動かす() : void
 activate L2
 L2 -> L3 : 音作りの値を設定する() : void
 activate L3

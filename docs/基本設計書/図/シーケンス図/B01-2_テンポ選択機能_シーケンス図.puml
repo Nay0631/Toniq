@@ -11,7 +11,7 @@ entity ":テンポマスタ" as L6
 entity ":アプリの状態" as L7
 control ":再生" as L8
 
-L1 -> L2 : テンポのチップを押下する() : void
+L1 -> L2 : テンポのボタンを押下する() : void
 activate L2
 L2 -> L3 : テンポを選択する() : void
 activate L3

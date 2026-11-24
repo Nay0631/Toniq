@@ -1,7 +1,7 @@
 ﻿# 仕様書.md と図から基本設計書 docx を作る（手順は ../基本設計書の作成手順.md の「5. docx を作る」）
 #
 #   1. 図（.puml）を PNG にする（Word で SVG が表示できないときの代わりの画像として docx に一緒に入れる）。
-#      ロバストネス図は robustness_labels.mjs で線の文を置き直した SVG から PNG を作る
+#      ロバストネス図は robustness_labels.mjs、画面遷移図は state_layout.mjs で線の文を置き直した SVG から PNG を作る
 #   2. build_docx.py で手本の docx の書式を使った下書きを作る
 #   3. Word で開いて目次・ページ番号を更新し、docx として保存する
 #   4. check_docx.py で、できた docx の表紙・改訂履歴・目次・表と図の数を確かめる（NG があれば失敗で終わる）
@@ -57,7 +57,7 @@ New-Item -ItemType Directory -Force $png | Out-Null
 #    PNG がない・いちばん新しい .puml（スタイルの共通ファイルを含む）が いちばん古い PNG より新しいときだけ作り直す
 $pngs = @(Get-ChildItem $png -Filter *.png -ErrorAction SilentlyContinue)
 #    （ロバストネス図の SVG・robustness_labels.mjs が新しいときも作り直す。PNG はその SVG から作るため）
-$newestPuml = (@(Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml) + @(Get-ChildItem (Join-Path $doc "図\ロバストネス図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "robustness_labels.mjs")) + @(Get-ChildItem (Join-Path $doc "図\ER図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "er_layout.mjs")) | Measure-Object LastWriteTime -Maximum).Maximum
+$newestPuml = (@(Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml) + @(Get-ChildItem (Join-Path $doc "図\ロバストネス図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "robustness_labels.mjs")) + @(Get-ChildItem (Join-Path $doc "図\ER図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "er_layout.mjs")) + @(Get-ChildItem (Join-Path $doc "図\画面遷移図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "state_layout.mjs")) | Measure-Object LastWriteTime -Maximum).Maximum
 $oldestPng = if ($pngs.Count) { ($pngs | Measure-Object LastWriteTime -Minimum).Minimum } else { $null }
 $needPng = $ForcePng -or -not $pngs.Count -or (-not $SkipPng -and $newestPuml -gt $oldestPng)
 if ($needPng) {
@@ -80,6 +80,11 @@ if ($LASTEXITCODE -ne 0) { "（注意）ロバストネス図に文の重なり�
 $erArgs = @((Join-Path $PSScriptRoot "er_layout.mjs"))
 if ($needPng) { $erArgs += @("--png", $png, "--scale", "1.5") }
 & node @erArgs
+# 画面遷移図：線の折れ目を減らし、線の文を自分の線のすぐ横に置き直す（state_layout.mjs。処理済みの SVG は変えない）。PNG もその SVG から作る
+$stArgs = @((Join-Path $PSScriptRoot "state_layout.mjs"))
+if ($needPng) { $stArgs += @("--png", $png, "--scale", "1.5") }
+& node @stArgs
+if ($LASTEXITCODE -ne 0) { "（注意）画面遷移図に置けない線の文があります。上の「置けない文」を確かめてください" }
 "PNG: " + (Get-ChildItem $png -Filter *.png).Count + " 枚"
 
 # 2. 下書き

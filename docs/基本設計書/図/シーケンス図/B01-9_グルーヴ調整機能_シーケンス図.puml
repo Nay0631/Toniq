@@ -12,7 +12,7 @@ control ":ドラム演奏" as L7
 
 note over L2 : 「標準」ボタンも同じ流れ（量を空にして、ジャンルの標準の量に戻す）。\n跳ねる単位（16分音符／8分音符（シャッフル））のドロップダウンも同じ流れ
 
-L1 -> L2 : スウィング・サイドチェインのノブを回す() : void
+L1 -> L2 : スウィング・サイドチェインのつまみを回す() : void
 activate L2
 L2 -> L3 : グルーヴを設定する() : void
 activate L3
@@ -41,7 +41,7 @@ opt スウィング・跳ねる単位を変えた
   end
   deactivate L5
 end
-L3 -> L2 : ノブの値と変更の数を表示する() : void
+L3 -> L2 : つまみの値と変更の数を表示する() : void
 activate L2
 deactivate L2
 deactivate L3

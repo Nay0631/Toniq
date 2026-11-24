@@ -11,7 +11,7 @@ control ":各パートの演奏" as L6
 
 note over L2 : ミキサーの ON/OFF ボタンの右クリック、\nピアノロールの「ソロ」ボタン（編集中のメロディ／ドラム）も同じ流れ
 
-L1 -> L2 : レーンの ON/OFF ボタンを右クリックする() : void
+L1 -> L2 : パートの行の ON/OFF ボタンを右クリックする() : void
 activate L2
 L2 -> L3 : ソロを切り替える() : void
 activate L3

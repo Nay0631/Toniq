@@ -20,8 +20,8 @@ control ":grow" as L12
 entity ":growプリセット" as L13
 
 alt シンプルモード画面
-  note over L2 : 選んでいる雰囲気に合うジャンルの\nチップだけを雰囲気ごとの順に出す
-  L1 -> L2 : ジャンルのチップを押下する() : void
+  note over L2 : 選んでいる雰囲気に合うジャンルの\nボタンだけを雰囲気ごとの順に出す
+  L1 -> L2 : ジャンルのボタンを押下する() : void
   activate L2
   L2 -> L4 : ジャンルを設定する() : void
   activate L4
