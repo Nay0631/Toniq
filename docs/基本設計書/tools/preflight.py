@@ -66,6 +66,10 @@ if os.path.exists(REV_FILE):
             revs.append(l.split('\t', 2))
 last = revs[-1] if revs else ['01', '2026/10/19', '初版発行']
 nxt = f'{int(last[0]) + 1:02d}'
+# 改訂履歴には、開発のテスト・確認用の機能（完成したシステムに含めないもの）の追加・削除を書かない（2026-11-23 決定）
+rev_dev = [f'{r[0]}（{w}）' for r in revs for w in DEV_ONLY[:6] if w in r[2]]
+report(not rev_dev, '改訂履歴に開発のテスト・確認用の機能が書かれていない',
+       '、'.join(rev_dev) + '。tools/改訂履歴.tsv の概要から外す' if rev_dev else '')
 
 # ---------- 出力先が開かれていないか ----------
 OUT_DOCX = out_docx(nxt)
@@ -166,13 +170,22 @@ m2 = re.search(r'## 2\. 制約条件・前提条件\n(.*?)\n## 3\. ', body, re.S
 sec2 = [l.strip() for l in m2.group(1).splitlines() if l.strip()] if m2 else []
 report(sec2 == SEC2_ITEMS, '2章 制約条件・前提条件が指定の4項目だけ',
        '' if sec2 == SEC2_ITEMS else '手順書の「0. 決まっていること」の4項目に直す（今は ' + str(len(sec2)) + ' 行）')
+# 3.2 は指定の3項目だけ・件数を書かない（2026-11-23 決定）
+SEC32_ITEMS = ['パターンDB＋ルールで生成', '曲の構成', '2つの入口']
+m32 = re.search(r'### 3\.2 システム化の考え方\n(.*?)\n### 3\.3 ', body, re.S)
+sec32 = m32.group(1) if m32 else ''
+heads32 = re.findall(r'^- \*\*(.+?)\*\*', sec32, re.M)
+counts32 = re.findall(r'\d+\s*(?:種|件|個|つ)', re.sub(r'2つの入口', '', sec32))
+report(heads32 == SEC32_ITEMS and not counts32, '3.2 システム化の考え方が指定の3項目だけで、件数を書いていない',
+       '' if heads32 == SEC32_ITEMS and not counts32 else
+       f'今の項目：{"・".join(heads32) or "なし"}' + (f'、件数：{"・".join(counts32)}' if counts32 else '') + '。手順書の「0. 決まっていること」の「3.2 システム化の考え方」に直す')
 report(not style_hits, '完成したシステムとしての書き方（開発の経緯・lidless・絵文字・「両方」・「状況」の列がない）',
        '、'.join(style_hits[:8]) + (f' ほか {len(style_hits) - 8} 件' if len(style_hits) > 8 else '') + '。仕様書.md を直す（手順書の「0. 決まっていること」の「書き方」）' if style_hits else '')
 
 # ---------- 改訂の概要の材料 ----------
 guide = open(GUIDE, encoding='utf-8').read()
 pm = re.search(r'\| 5\. docx を作る \|[^\n]*?(\d+)ページ', guide)
-report(None, '次の版数', f'{nxt}（前回 {last[0]}：{last[1]}、{pm.group(1) + "ページ" if pm else "ページ数不明"}）')
+report(None, '次の版数', f'{nxt}（前回 {last[0]}：{last[1]}、{pm.group(1) + "ページ" if pm else "ページ数不明"}）' + '。中身の改訂がなくレイアウトだけの修正なら、版は上げずに前回の版のまま作り直す（-RevNote を省く）')
 since = [l for l in rows_c if l[2:12].replace('-', '/') > last[1]]
 lines.append(f'[--] 前回（{last[1]}）より後の日付の付録C の行（改訂の概要の材料。前回と同じ日に足した行は入らない）：{len(since)} 行')
 for l in since:

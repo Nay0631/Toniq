@@ -45,6 +45,15 @@ skinparam RoundCorner 15
 ' 部品の名前（入れ物ではない四角）は中央にそろえる
 skinparam DefaultTextAlignment center
 
+' 入れ物（中に部品を入れる四角）の名前は枠の左上に置く。入れ物に <<box>> を付けて使う（ステレオタイプの文字は出さない）
+' 例: rectangle "Toniq（…）" as SYS <<box>> { … }
+<style>
+.box {
+  HorizontalAlignment left
+}
+</style>
+hide <<box>> stereotype
+
 ' ステレオタイプは «» ではなく << >> で書く
 skinparam guillemet false
 

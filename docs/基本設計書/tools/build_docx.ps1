@@ -11,13 +11,15 @@
 #
 # 使い方（リポジトリのルートで）:
 #   powershell -ExecutionPolicy Bypass -File "docs/基本設計書/tools/build_docx.ps1" -Rev 03 -RevNote "改訂の概要"
+#   レイアウトだけの修正で作り直すとき（版を上げず、改訂履歴の行も足さない）は、今の版数だけを付けて -RevNote を省く:
+#   powershell -ExecutionPolicy Bypass -File "docs/基本設計書/tools/build_docx.ps1" -Rev 08
 #
 # 必要なもの: Java（tools/plantuml.jar）、Python（py ランチャー）、Node.js、Microsoft Word（365 版。SVG の表示に対応しているもの）、
 #             Edge か Chrome（ロバストネス図の PNG。なければ PlantUML の PNG のまま）
 param(
   [Parameter(Mandatory = $true)][string]$Rev,       # 改訂履歴に足す版数（例 03。tools/改訂履歴.tsv に足す。表紙の文書番号の「(01)」にも使う）
-  [Parameter(Mandatory = $true)][string]$RevNote,   # 改訂履歴に足す改訂の概要
-  [string]$Date = (Get-Date -Format "yyyy/MM/dd"),  # 表紙と改訂履歴の日付
+  [string]$RevNote = "",                            # 改訂履歴に足す改訂の概要（省くと、tools/改訂履歴.tsv にある -Rev の行をそのまま使う＝レイアウトだけの修正）
+  [string]$Date = (Get-Date -Format "yyyy/MM/dd"),  # 表紙と改訂履歴の日付（-RevNote を省いたときは、その版の行の日付）
   [string]$Out = "",                                # 出力先（省略時は 作成ファイル/<版数>_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx）
   [switch]$SkipPng,                                 # PNG を作り直さない（ふつうは不要。図が変わったときだけ自動で作り直す）
   [switch]$ForcePng                                 # 図が変わっていなくても PNG を作り直す
@@ -25,6 +27,16 @@ param(
 $ErrorActionPreference = "Stop"
 # 版数は2桁（作る docx のファイル名の先頭の2桁と、表紙の文書番号に使う）
 if ($Rev -notmatch '^\d{2}$') { throw "版数（-Rev）は 2 桁の数字で指定してください（例 08）: $Rev" }
+# 改訂履歴に残すのは中身の改訂だけ。レイアウトだけの修正は版を上げず、今の版の行（日付・概要）をそのまま使う（2026-11-23 決定）
+if ($RevNote -eq "") {
+  $revRow = Get-Content -LiteralPath (Join-Path $PSScriptRoot "改訂履歴.tsv") -Encoding UTF8 |
+    Where-Object { $_ -notmatch '^#' -and $_.Trim() -ne '' } | ForEach-Object { , ($_ -split "`t", 3) } |
+    Where-Object { $_[0] -eq $Rev } | Select-Object -First 1
+  if (-not $revRow) { throw "-RevNote を省けるのは、tools/改訂履歴.tsv にある版（レイアウトだけの修正で作り直すとき）だけです: $Rev" }
+  $RevNote = $revRow[2]
+  if (-not $PSBoundParameters.ContainsKey('Date')) { $Date = $revRow[1] }
+  "レイアウトだけの修正として作り直す（版 $Rev のまま。改訂履歴の行は変えない）"
+}
 
 $root = (Resolve-Path "$PSScriptRoot\..\..\..").Path
 $doc  = Join-Path $root "docs\基本設計書"
