@@ -7,6 +7,8 @@
 #   - 各節の担当者（C列）の数と、開始・終了（E列・F列）の組の数（行を足すときの割り振りに使う）
 #   - 「（xxxxx）」「（T_xxxx)」が残っている行、表記を直す名前（「西園」など）
 #   - 各節の行番号（「2-01.」など）が 01 からの連番か（欠番は作らない。消す行を除いて詰めた番号を出す。2026-11-20 決定）
+#   - 各節の開始〜終了（E列・F列）が上から昇順か（昇順でなければ、組の数を変えずに割り当て直した日付を出す。
+#     8・9章は担当者ごとに昇順。9章のテストが同じ機能の 8章のプログラミングより前に始まらないか。2026-11-24 決定）
 #
 # 機能IDと、ガントチャートでの別名・英名の対応は gantt_names.tsv（機能を足したらここにも足す）。
 #
@@ -176,6 +178,45 @@ def renumbers(secs, deletes, renames):
     return out
 
 
+def date_orders(secs):
+    """節ごとに、番号の付いた見えている行の開始〜終了（E・F）が上から昇順か確かめ、昇順でない節は
+    組と組ごとの件数を変えずに上から昇順に割り当て直した日付を返す（行は並べ替えない。2026-11-24 決定）"""
+    out = []
+    for title, sec in secs.items():
+        if not any(title.startswith(t) for t in FUNC_SECTIONS + SYSTEM_SECTIONS + [SCREEN_SECTION, DB_SECTION]):
+            continue
+        vis = [x for x in sec["rows"] if not x["hidden"] and task_name(x["B"])[0] and x["E"] and x["F"]]
+        pairs = sorted((x["E"], x["F"]) for x in vis)
+        for x, (e, f) in zip(vis, pairs):
+            if (x["E"], x["F"]) != (e, f):
+                out.append({"row": x["row"], "B": x["B"], "E": e, "F": f, "old": f"{x['E']}〜{x['F']}", "section": title})
+    # 8.プログラミング・9.各種テストは担当者ごとの予定なので、担当者ごとに（その人の行の中で）昇順にする。
+    # 節全体で昇順にすると、担当者の時期ごとの件数が偏るため（2026-11-24 決定）
+    for title, sec in secs.items():
+        if not any(title.startswith(t) for t in NAME_ONLY_SECTIONS):
+            continue
+        by = {}
+        for x in sec["rows"]:
+            if not x["hidden"] and task_name(x["B"])[0] and x["E"] and x["F"]:
+                by.setdefault(x["C"], []).append(x)
+        for who, vis in by.items():
+            pairs = sorted((x["E"], x["F"]) for x in vis)
+            for x, (e, f) in zip(vis, pairs):
+                if (x["E"], x["F"]) != (e, f):
+                    out.append({"row": x["row"], "B": x["B"], "E": e, "F": f, "old": f"{x['E']}〜{x['F']}（{who}）", "section": title})
+    return out
+
+
+def test_before_program(secs):
+    """9.各種テストの行が、同じ機能の 8.プログラミングの終わりより前（同じ日を含む）に始まっていないか"""
+    def by_name(prefix):
+        sec = next((v for k, v in secs.items() if k.startswith(prefix)), None)
+        return {task_name(x["B"])[1]: x for x in (sec["rows"] if sec else []) if not x["hidden"] and task_name(x["B"])[0]}
+    prog, test = by_name(NAME_ONLY_SECTIONS[0]), by_name(NAME_ONLY_SECTIONS[1])
+    return [{"row": t["row"], "B": t["B"], "test": t["E"], "program_end": prog[n]["F"]}
+            for n, t in test.items() if n in prog and t["E"] and prog[n]["F"] and t["E"] <= prog[n]["F"]]
+
+
 def main():
     path = sys.argv[sys.argv.index("--xlsx") + 1] if "--xlsx" in sys.argv else find_xlsx()
     rows, ss = read_sheet(path)
@@ -286,6 +327,18 @@ def main():
     print(("[OK] 行番号はどの節も 01 からの連番" if not renum else f"[要振り直し] 番号が連番でない行（消す行を除いて詰める）: {len(renum)} 行"))
     for r in renum:
         print(f"  {r['row']} 行 {r['B']} → {r['new']}")
+
+    # 開始〜終了の並び（節の中で上から昇順。行は並べ替えず、日付を割り当て直す）
+    dates = date_orders(secs)
+    result["date_orders"] = dates
+    print(("[OK] 開始〜終了はどの節も上から昇順（8・9章は担当者ごと）" if not dates else f"[要並べ直し] 開始〜終了が昇順でない行（日付を割り当て直す。8・9章は担当者ごと）: {len(dates)} 行"))
+    for d in dates:
+        print(f"  {d['row']} 行 {d['B']}: {d['old']} → {d['E']}〜{d['F']}")
+    early = test_before_program(secs)
+    result["test_before_program"] = early
+    print(("[OK] テストはどれも同じ機能のプログラミングが終わってから始まる" if not early else f"[要確認] プログラミングが終わる前に始まるテスト: {len(early)} 行"))
+    for t in early:
+        print(f"  {t['row']} 行 {t['B']}: テスト開始 {t['test']}・プログラミング終了 {t['program_end']}")
 
     # 直す表記
     for wrong, right in WRONG_NAMES.items():
