@@ -80,24 +80,32 @@ const SIDECHAIN_PARTS: Record<string, number> = {
 const DUCK_MAX    = 0.8;    // 100 のときに下げる割合（0.8 = 音量 0.2 倍 ≒ −14dB）
 const DUCK_ATTACK = 0.004;  // 沈むまで（秒）。短いとプチッとなるので数ms
 
-// キックが鳴った時刻に呼ぶ（DrumEngine）。各パートの Volume の後ろのゲインを一瞬下げ、拍の6割ほどで戻す。
+// キックが鳴った時刻に呼ぶ関数を作る（DrumEngine がドラムを読み込むときに1回）。
+// 沈めるゲインと BPM は、作った時点のコンテキスト（再生用か書き出し用）のもの。書き出しの合成中は Tone.getContext() が
+// 再生用に戻っているので、鳴らすときに調べると再生用のゲインを沈めてしまい、書き出した音にサイドチェインが効かない。
+// 各パートの Volume の後ろのゲインを一瞬下げ、拍の6割ほどで戻す。
 // 戻りは dB で見て一定の速さ（コンプレッサーのリリースと同じ形）：キックが鳴っている間は沈んだままで、あとから膨らむように戻る。
 // （以前は音量を直線で戻していた。直線だと dB では戻り始めが速く、最初の 1/4 で半分近く戻ってキックに重なっていた）
 // リバーブの戻りも軽く沈めて、キックの後ろに響きが残らないようにする
-export function sidechainHit(time: number, velocity = 1): void {
-  const amount = sidechainAmount() / 100;
-  if (amount <= 0) return;
-  const gains   = duckGains();
-  const release = (60 / Tone.getTransport().bpm.value) * 0.6;
+export function createSidechain(): (time: number, velocity?: number) => void {
+  const gains     = duckGains();  // コンテキストのゲインの表。あとから鳴らし始めたパートも、この表に足される
+  const reverb    = reverbDuckGain();
+  const transport = Tone.getTransport();
 
-  const duck = (gain: Tone.Gain | null | undefined, weight: number): void => {
-    if (!gain) return;
-    const low = 1 - DUCK_MAX * amount * weight * Math.min(1, velocity);  // 0.2 以上（0 にはならないので指数のカーブで戻せる）
-    gain.gain.cancelAndHoldAtTime(time);
-    gain.gain.linearRampToValueAtTime(low, time + DUCK_ATTACK);
-    gain.gain.exponentialRampToValueAtTime(1, time + DUCK_ATTACK + release);
+  return (time, velocity = 1) => {
+    const amount = sidechainAmount() / 100;
+    if (amount <= 0) return;
+    const release = (60 / transport.bpm.value) * 0.6;
+
+    const duck = (gain: Tone.Gain | null | undefined, weight: number): void => {
+      if (!gain) return;
+      const low = 1 - DUCK_MAX * amount * weight * Math.min(1, velocity);  // 0.2 以上（0 にはならないので指数のカーブで戻せる）
+      gain.gain.cancelAndHoldAtTime(time);
+      gain.gain.linearRampToValueAtTime(low, time + DUCK_ATTACK);
+      gain.gain.exponentialRampToValueAtTime(1, time + DUCK_ATTACK + release);
+    };
+
+    for (const [part, weight] of Object.entries(SIDECHAIN_PARTS)) duck(gains[part], weight);
+    duck(reverb, REVERB_DUCK_WEIGHT);
   };
-
-  for (const [part, weight] of Object.entries(SIDECHAIN_PARTS)) duck(gains[part], weight);
-  duck(reverbDuckGain(), REVERB_DUCK_WEIGHT);
 }

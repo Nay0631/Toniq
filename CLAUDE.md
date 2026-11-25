@@ -43,7 +43,7 @@ grow のコア（`grow/core/`）を変えたら `npm run grow:wasm` でビルド
 ## ディレクトリ構成
 
 ```
-electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示。インストール版は標準のメニューバーを出さない）と、出力フォルダ output/ への保存・フォルダを開く・書き出したファイルの一覧／読み込み／ごみ箱へ移す IPC（読む・移すのは output/audio・output/midi の直下の WAV・MP3・MIDI だけ）。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
+electron/main.ts        Electron メインプロセス（ウィンドウ生成（起動時は最大化で表示。インストール版は標準のメニューバーを出さない。二重起動はせず、2つ目は1つ目のウィンドウを前に出して終わる）と、出力フォルダ output/ への保存・フォルダを開く・書き出したファイルの一覧／読み込み／ごみ箱へ移す IPC（読む・移すのは output/audio・output/midi の直下の WAV・MP3・MIDI だけ）。開発時かどうかは vite-plugin-electron が渡す VITE_DEV_SERVER_URL で判断する）
 electron/preload.ts     画面側に window.toniqFiles を公開する（CJS の preload.cjs にビルド。型は src/toniq-files.d.ts）
 grow/                   内部シンセ grow（C++。core/ = 音を作るコア（JUCE なし）、wasm/ = Toniq 用の WebAssembly、Source/ = JUCE の Standalone・VST3。構成は grow/README.md）
 public/grow/grow.wasm   grow の wasm（npm run grow:wasm で作る。Grow.ts が読む）
@@ -51,7 +51,7 @@ output/                 曲の出力フォルダ（audio = WAV / MP3、midi = MI
 docs/                   詳しい仕様（generation / arrangement / sound / ui。下の「詳しい仕様」）
 .github/workflows/      CI（test.yml = Lint・型チェック・テスト・一括計測、grow-wasm.yml = grow の wasm のビルドと確認）
 biome.json              Lint（Biome）の設定
-tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）/ GrowRest（grow のエフェクトの休み：余韻・ディレイのくり返しを切らない・再開した音が変わらない。Git に入れた grow.wasm を鳴らす）/ GrowSound（grow の折り返しノイズ・同じ高さの弾き直し・LFO のスムーズ・スロットの開き直し）/ GrowWorklet（grow の AudioWorklet）/ GrowSlots（grow のノードの使い回し）。helpers.ts = 共通、growWasm.ts = grow の wasm を鳴らす部品、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）/ GrowRest（grow のエフェクトの休み：余韻・ディレイのくり返しを切らない・再開した音が変わらない。Git に入れた grow.wasm を鳴らす）/ GrowSound（grow の折り返しノイズ・同じ高さの弾き直し・LFO のスムーズ・スロットの開き直し）/ GrowWorklet（grow の AudioWorklet）/ GrowSlots（grow のノードの使い回し）/ RenderContext（書き出しの合成中も、サイドチェイン・長さの換算が書き出し用のコンテキストを使う）/ Playback（描画が止まっていても曲・試聴・サンプルが終わりで止まる・試聴中の書き出しが曲全体になる）。helpers.ts = 共通、growWasm.ts = grow の wasm を鳴らす部品、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
 tools/mix-measure.mjs   ミックスの一括計測（npm run mix:measure。Electron なしの Vite と画面なしの Chrome / Edge で全ジャンルの曲を書き出し、ピーク・統合ラウドネスを測って mix_presets.json の gain を提案する。測る式は tools/loudness.mjs）
@@ -119,7 +119,7 @@ src/engine/
   MelodyRatings.ts        メロディの評価（人が付けた点数）の保存（localStorage の toniq.ratings）・集計（summarize / comparePairs）・CSV / JSON の書き出しと読み込み
   QualityCheck.ts         自動チェック（強拍でコードとぶつかる音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。画面には出さず npm run quality だけで使う。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
   QualityBatch.ts         自動チェックの一括計測（npm run quality が Node から呼ぶ。アプリからはメロディの評価画面が同じ曲を作るのに generateBatchSong だけを使う。シードを決めて全ジャンル×雰囲気の曲を生成し、合格率と多様さを集める）
-  Groove.ts               グルーヴ（スウィング applySwing・MIDI書き出し用のずらし方 swungBeats・サイドチェイン sidechainHit。量はジャンルの標準か AppState.swing / sidechain、単位は AppState.swingUnit）
+  Groove.ts               グルーヴ（スウィング applySwing・MIDI書き出し用のずらし方 swungBeats・サイドチェイン createSidechain。量はジャンルの標準か AppState.swing / sidechain、単位は AppState.swingUnit）
   {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
   CounterPlayer.ts        カウンターメロディ（メロディとコード進行から作る。サビはハモり、Aメロは合いの手。counterNotes）
@@ -311,4 +311,7 @@ src/engine/
 - WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。中断（`signal`）したときは描き直さない（予定の組み立ては `OfflineContext` の内部の `_duration` を負にして抜け、合成は次の `suspend` から再開しない。docs/ui.md）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。
 - MP3書き出し（`Playback.renderMp3(onProgress)`）は WAV と同じ `renderSong()` で合成した音声を `@breezystack/lamejs`（純 JS の MP3 エンコーダ。ES モジュール対応版の lamejs）で 192kbps に変換する。エンコーダは書き出すときだけ動的に読み込む。変換は重いので `MP3_CHUNK` ごとに区切って画面に返し、`encode` の段階の進み具合を知らせる（全体の割合は `STAGE_SPAN.mp3`）。ボタンは両モードの書き出し欄（`s-export-mp3` / `c-export-mp3` / `c-arr-export-mp3`）。
 - `Playback.play()` は開始時点の AppState で各パートを読み込むので、再生中に曲の内容（コード進行・ドラム・メロディ・キーなど）を変えたら先頭から再生し直す（アレンジの編集だけは再生し直さなくてよい）。
+- 二重起動はしない（`electron/main.ts` の `requestSingleInstanceLock`）：2つ目は localStorage を1つ目が使っていて開けないので、ミュージックリストが空で始まり、そこで保存した曲は閉じると消える。2つ目は何もせずに終わり、1つ目のウィンドウを前に出す。開発時とインストール版は保存領域のフォルダが同じなので、片方を開いている間はもう片方も起動できない。
+- 書き出し（WAV / MP3）の合成中は、Tone.js の今のコンテキストが再生用に戻っている（`renderOffline`。Tone.Offline も同じ）。Part / Sequence のコールバックの中で `Tone.getContext()` / `Tone.getTransport()` / `Tone.Time` を使うと、書き出し用ではなく再生用のノード・BPM になる（以前は書き出しにサイドチェインが効かず、アルペジオの音の長さと FX の長さが最後に再生した曲の BPM になっていた）。読み込むとき（コールバックの外）に控えておく：小節の判定は `barAt()` / `positionAt()`、長さの換算は `secondsOf()`（`LoopArranger.ts`）、サイドチェインは `createSidechain()`（`Groove.ts`）、Tone.js のノードを作るときは `context` を渡す。
+- 曲・試聴・サンプルの終わりはオーディオの時計（`Playback.ts` の `stopAt`。`Tone.getContext().setTimeout`）で止める。`Tone.getDraw()` は画面の描画に合わせるので、最小化などで描画が止まっている間の予定は 0.25 秒過ぎると捨てられる。音の鳴り方・止まり方を決める処理には使わない。
 - 再生の開始（`play` / `preview` / `playSample`）は音源の準備を待つ（await）。待っている間にほかの再生・停止が入ったら、その開始は取りやめる（`startToken`。`stop()` も番号を進める）。戻り値は鳴らし始めたら `true`。読み込みの途中で例外が出たら止めて `onPlaybackError` に知らせ、`main.ts` が「再生できませんでした」と出す（壊れた曲で無反応にならないように）。再生を始める所を足すときもこの形にそろえる。

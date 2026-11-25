@@ -26,7 +26,30 @@ async function audioReady(genre: string): Promise<void> {
   ]);
 }
 
+// 曲・試聴の終わりの予定（Transport のイベントの番号）
 let endEventId: number | null = null;
+
+// 終わりの時刻になったら止める合図（オーディオの時計の setTimeout の番号。null = 予定なし）。
+// 画面の描画に合わせる Tone.getDraw() は使わない：最小化するなどで描画が止まっている間の予定は、0.25 秒過ぎると捨てられて、
+// 曲が終わっても止まらなくなる
+let endTimer: number | null = null;
+
+// オーディオの時刻 time（秒）に止めて、onEnded を呼ぶ
+function stopAt(time: number, onEnded?: () => void): void {
+  clearEndTimer();
+  const context = Tone.getContext();
+  endTimer = context.setTimeout(() => {
+    endTimer = null;
+    stop();
+    onEnded?.();
+  }, Math.max(0, time - context.currentTime));
+}
+
+function clearEndTimer(): void {
+  if (endTimer === null) return;
+  Tone.getContext().clearTimeout(endTimer);
+  endTimer = null;
+}
 
 // 再生の開始の番号。play / preview / playSample は音源の準備を待つ（await）あいだに、ほかの再生・停止が入ることがある。
 // 開始と停止のたびに番号を進め、待ったあとで番号が変わっていたら（＝あとから別の操作があったら）その開始を取りやめる
@@ -109,26 +132,24 @@ export function applyLoopPlayback(): void {
   // ピアノロールで選んでいるセクション・アレンジャーで指定した区間だけをくり返す（範囲があるときは曲の終わりで止めない）
   activeRange = currentRange();
   if (activeRange) {
+    clearEndTimer();
     transport.loopStart = `${activeRange.startBar}m`;
     transport.loopEnd   = `${activeRange.startBar + activeRange.bars}m`;
     transport.loop      = true;
     return;
   }
   if (s.loopPlayback) {
+    clearEndTimer();
     transport.loopStart = 0;
     transport.loopEnd   = `${s.bars}m`;
     transport.loop      = true;
   } else {
     transport.loop = false;
+    if (endTimer !== null) return;  // もう終わりの合図が出ている（Transport の終わりの時刻は過ぎているので、予定し直さない）
     const onEnded = songOnEnded;
     // エンディングを使うときは、最後の主和音の余韻が切れないよう1小節待ってから止める
     const endAt = endingBar() !== null ? s.bars + 1 : s.bars;
-    endEventId = transport.scheduleOnce(time => {
-      Tone.getDraw().schedule(() => {
-        stop();
-        onEnded();
-      }, time);
-    }, `${endAt}m`);
+    endEventId = transport.scheduleOnce(time => stopAt(time, onEnded), `${endAt}m`);
   }
 }
 
@@ -207,12 +228,7 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
     const endBar  = layer === "chord" ? s.chordPattern.length_bars
                   : layer === "fx"    ? s.chordPattern.length_bars + 1
                   : 2;
-    endEventId = transport.scheduleOnce(time => {
-      Tone.getDraw().schedule(() => {
-        stop();
-        onEnded?.();
-      }, time);
-    }, `${endBar}m`);
+    endEventId = transport.scheduleOnce(time => stopAt(time, onEnded), `${endBar}m`);
 
     transport.start(undefined, `${fromBar}m`);
     return true;
@@ -240,10 +256,6 @@ const SAMPLE_FADE_SECONDS = 2;
 
 // サンプル中だけ差し替えている曲の内容。stop() で AppState に戻す（null = サンプルを鳴らしていない）
 let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes" | "meter"> | null = null;
-
-// サンプルを止める合図（オーディオの時計の setTimeout の番号。null = 予定なし）。
-// Transport の小節で決めると途中でテンポを変えたときに長さが変わるので、オーディオの時刻（秒）で決める
-let sampleEndTimer: number | null = null;
 
 // ジャンルのサンプルを SAMPLE_SECONDS 秒だけ鳴らす（終わりの SAMPLE_FADE_SECONDS 秒でフェードアウト）。
 // 全パートをアレンジに関係なく同時に鳴らし、コード進行・メロディはループする。
@@ -275,15 +287,12 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
     setArrangementBypass(true);
     SAMPLE_LAYERS.forEach(reloadLayer);
 
-    // Transport は今（Tone.now()）から始まるので、その SAMPLE_SECONDS 秒後に無音になるよう絞り、そこで止める
+    // Transport は今（Tone.now()）から始まるので、その SAMPLE_SECONDS 秒後に無音になるよう絞り、そこで止める。
+    // Transport の小節で決めると途中でテンポを変えたときに長さが変わるので、オーディオの時刻（秒）で決める
     const startAt = Tone.now();
     const endAt   = startAt + SAMPLE_SECONDS;
     fadeOutMaster(endAt, SAMPLE_FADE_SECONDS);
-    sampleEndTimer = Tone.getContext().setTimeout(() => {
-      sampleEndTimer = null;
-      stop();
-      onEnded?.();
-    }, endAt - Tone.now());
+    stopAt(endAt, onEnded);
 
     transport.start(startAt);
     return true;
@@ -318,10 +327,7 @@ export function stop(): void {
     transport.clear(endEventId);
     endEventId = null;
   }
-  if (sampleEndTimer !== null) {
-    Tone.getContext().clearTimeout(sampleEndTimer);
-    sampleEndTimer = null;
-  }
+  clearEndTimer();
   holdMasterFade();  // サンプルのフェードの途中で止めたら、その音量のまま（次の開始で戻す）
   stopLoopArranger();
   setArrangementBypass(false);
@@ -492,6 +498,9 @@ export async function renderSong(onProgress?: RenderProgress, signal?: AbortSign
 }
 
 async function renderSongWithArrangement(onProgress?: RenderProgress, signal?: AbortSignal): Promise<AudioBuffer> {
+  // 各パートの Synth はモジュールに1つずつなので、再生を止めてから書き出し用に作り直す。
+  // 曲の並びを読む前に止める：試聴・サンプル中はアレンジを通さないので、そのまま読むとコード進行1周だけの曲になる
+  stop();
   const s = getState();
   if (!s.chordPattern || !s.drumPattern) throw new Error("曲が生成されていません");
 
@@ -502,8 +511,6 @@ async function renderSongWithArrangement(onProgress?: RenderProgress, signal?: A
   const durationSec  = getSongSeconds() + renderTailSeconds();
 
   onProgress?.("prepare", 0);
-  // 各パートの Synth はモジュールに1つずつなので、再生を止めてから書き出し用に作り直す
-  stop();
   // ドラムの音源は通常のコンテキストで読み込んでおく（AudioBuffer は書き出し用のコンテキストでも使える）
   if (s.drumSource === "sample") await prepareDrumSamples(s.genre);
   throwIfCancelled(signal);

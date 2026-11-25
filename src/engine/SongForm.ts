@@ -5,7 +5,7 @@ import {
   timeToUnits, durationToUnits, unitsToTime, unitsToDuration,
 } from "./MelodyGenerator";
 import { defaultSections, isArrangementBypassed, isArrangedAt, LAYERS } from "./LoopArranger";
-import { NOTE_INDEX } from "../data/degree_resolver";
+import { NOTE_INDEX, scaleSemitones } from "../data/degree_resolver";
 import { unitsPerBar } from "./Meter";
 
 // 曲の構成：セクション（Aメロ／サビ）・エンディング・ドラムのフィルの位置。
@@ -79,9 +79,14 @@ export function endingBar(): number | null {
   return s.bars - 1;
 }
 
-// 主和音（エンディングで鳴らす）。メジャーは I、それ以外は Im
-function tonicChord(scale: string): Pick<ChordDegree, "degree" | "type"> {
-  return scale === "major" ? { degree: "I", type: "major" } : { degree: "I", type: "minor" };
+// 主和音（エンディングで鳴らす）。スケールの3度が短3度なら Im、長3度なら I（5度のない全音音階は Iaug）。
+// ブルースは短3度のスケールだが、セブンスの I7 の上で鳴らすのがふつうなので、進行の主和音に合わせる
+// （I7 なら I7、マイナーブルースの Im7 なら Im）
+function tonicChord(base: ChordProgression): Pick<ChordDegree, "degree" | "type"> {
+  const scale = new Set(scaleSemitones(base.base_scale));
+  if (!scale.has(3)) return { degree: "I", type: scale.has(7) ? "major" : "aug" };
+  const tonic = base.progression.find(c => c.degree === "I" || c.degree === "Im");
+  return { degree: "I", type: tonic?.type.startsWith("dom") ? "dom7" : "minor" };
 }
 
 // ===== 曲全体のコード進行 =====
@@ -116,7 +121,7 @@ export function songProgression(): ChordProgression | null {
       .map(c => c.bar + c.duration_bars > endBar ? { ...c, duration_bars: endBar - c.bar } : c);
     const shift = shifts[Math.floor(end / L)] ?? 0;
     chords.push({
-      bar: endBar, ...tonicChord(base.base_scale), inversion: 0, duration_bars: 1,
+      bar: endBar, ...tonicChord(base), inversion: 0, duration_bars: 1,
       ending: true, section: sections[Math.floor(end / L)] ?? "A", ...(shift ? { keyShift: shift } : {}),
     });
     length = s.bars;

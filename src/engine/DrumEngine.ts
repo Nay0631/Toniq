@@ -7,7 +7,7 @@ import { createVolumeNode } from "./VolumeManager";
 import { prepareGrowContext } from "./Grow";
 import { arrangementBlockAt, findBlock, getArrangement, getForcedPart, isArrangementBypassed, positionAt } from "./LoopArranger";
 import { endingBar, fillKind, FillKind, isFillBar } from "./SongForm";
-import { sidechainHit } from "./Groove";
+import { createSidechain } from "./Groove";
 import {
   Meter, currentMeter, fitPattern, gridStep, gridSteps, isTriplet, sourceSteps, stepSubdivision, unitsPerBar,
 } from "./Meter";
@@ -394,6 +394,7 @@ export function loadDrumPattern(pattern: DrumPattern) {
   // 鳴らすかどうかとパターンは、発音時刻にあるブロックで決める（再生中のアレンジの編集もすぐ反映される）
   const blockAt  = arrangementBlockAt("drum");
   const position = positionAt();
+  const sidechain = createSidechain();  // キックに合わせてベース・コードなどを沈める（読み込んだ時点のコンテキストのゲイン）
   const ghostSteps = gridSteps(GHOST_STEPS);  // 16 ステップでの位置を今の拍子のマスに直す
 
   currentSeq = new Tone.Sequence(
@@ -418,7 +419,7 @@ export function loadDrumPattern(pattern: DrumPattern) {
         const h = s.drumHumanize ? humanize(name, velocity, step) : { velocity, delay: 0 };
         const v = Math.min(1, Math.max(0.05, h.velocity));
         voices[name]?.trigger(time + h.delay, v);
-        if (name === "kick") sidechainHit(time, v);  // キックに合わせてベース・コードなどを沈める
+        if (name === "kick") sidechain(time, v);
         hit.add(name);
       });
       hit.forEach(name => {
