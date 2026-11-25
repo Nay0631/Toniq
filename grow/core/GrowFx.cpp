@@ -52,6 +52,12 @@ constexpr float distFoldDb   = 24.0f;  // 歪み 1 で入口を持ち上げる�
 // コンプレッサー
 constexpr float compKneeDb = 6.0f;  // ソフトニーの幅
 
+constexpr float limiterReleaseSec = 0.1f;  // リミッターの戻り
+
+// 休み：出力がこれより小さいまま restSeconds（＋ディレイの1周）続いたら、計算を止める
+constexpr float restLevel   = 1.0e-6f;  // -120 dB
+constexpr float restSeconds = 0.1f;     // 音がコーラス・リバーブの中を通り抜けるより長い時間
+
 // ドライブ：この値までは元の音と混ぜて、0 から上げ始めたときに音量・音色が急に変わらないようにする
 constexpr float driveFadeIn = 0.1f;
 } // namespace
@@ -65,6 +71,36 @@ float Fx::DelayLine::read (float delay) const
     const auto frac = position - (float) i0;
     const auto a = buffer[(size_t) (i0 % size)];
     const auto b = buffer[(size_t) ((i0 + 1) % size)];
+    return a + (b - a) * frac;
+}
+
+void Fx::EchoLine::pushSilence (int numSamples)
+{
+    written = std::min (size, written + numSamples);
+    while (numSamples > 0)
+    {
+        const auto count = std::min (numSamples, size - write);
+        std::fill_n (buffer.get() + write, count, 0.0f);
+        write = (write + count) % size;
+        numSamples -= count;
+    }
+}
+
+float Fx::EchoLine::read (float delay) const
+{
+    auto position = (float) write - delay;
+    while (position < 0.0f) position += (float) size;
+    const auto i0   = (int) position;
+    const auto frac = position - (float) i0;
+    // index に書いたのが何サンプル前か（1〜size）。まだ書いていない所なら 0
+    auto at = [this] (int index)
+    {
+        auto age = write - index;
+        if (age <= 0) age += size;
+        return age <= written ? buffer[(size_t) index] : 0.0f;
+    };
+    const auto a = at (i0 % size);
+    const auto b = at ((i0 + 1) % size);
     return a + (b - a) * frac;
 }
 
@@ -179,7 +215,6 @@ void Fx::clearReverb()
     for (auto& d : diffusers) std::fill (d.buffer.begin(), d.buffer.end(), 0.0f);
     for (auto& line : reverbLine) line.clear();
     for (auto& d : lineDamp) d = 0.0f;
-    reverbModPhase = 0.0f;
 }
 
 void Fx::reset()
@@ -193,12 +228,21 @@ void Fx::reset()
     clearChorus();
     clearDelay();
     clearReverb();
+    reverbModPhase = 0.0f;
     compGainDb = 0.0f;
     distToneCoeff = 1.0f;
     distIdle = compIdle = chorusIdle = delayIdle = reverbIdle = true;
     masterGain   = 0.0f;
     limiterGain  = 1.0f;
     for (int ch = 0; ch < 2; ++ch) dcIn[ch] = dcOut[ch] = 0.0f;
+    resting = false;
+    quietSamples = 0;
+    snapSmoothers();
+}
+
+// つまみの値を、次は今の目標から始める（途中の値から滑らせない）
+void Fx::snapSmoothers()
+{
     for (auto* s : { &driveSmooth, &distDriveSmooth, &distMixSmooth, &compMixSmooth, &compThresholdSmooth, &compMakeupSmooth,
                      &chorusMixSmooth, &chorusDepthSmooth, &delayMixSmooth, &delayFeedbackSmooth,
                      &reverbMixSmooth, &reverbSizeSmooth })
@@ -243,6 +287,7 @@ void Fx::processDistortion (float* left, float* right, int numSamples, const Gro
     if (mixTarget <= 0.0f && distMixSmooth.isAt (0.0f))
     {
         distIdle = true;  // 量が 0：元の音のまま（FIR も通さない）
+        distMixSmooth.next (0.0f);  // 鳴らしながら量を上げたとき 0 から滑らかに上がるよう、0 で待たせる（ほかのエフェクトも同じ）
         return;
     }
     if (distIdle)
@@ -331,6 +376,7 @@ void Fx::processCompressor (float* left, float* right, int numSamples, const Gro
     if (mixTarget <= 0.0f && compMixSmooth.isAt (0.0f))
     {
         compIdle = true;  // 量が 0：元の音のまま
+        compMixSmooth.next (0.0f);
         return;
     }
     if (compIdle)
@@ -384,6 +430,7 @@ void Fx::processChorus (float* left, float* right, int numSamples, const GrowPar
     if (mixTarget <= 0.0f && chorusMixSmooth.isAt (0.0f))
     {
         chorusIdle = true;  // 量が 0：元の音のまま
+        chorusMixSmooth.next (0.0f);
         return;
     }
     if (chorusIdle)
@@ -417,11 +464,15 @@ void Fx::processChorus (float* left, float* right, int numSamples, const GrowPar
     }
 }
 
-void Fx::processDelay (float* left, float* right, int numSamples, const GrowParams& p)
+float Fx::delayTarget (const GrowParams& p) const
 {
     const auto maxSamples = (float) (maxDelaySeconds * sampleRate) - 2.0f;
-    const auto target     = std::clamp (p.delaySeconds * (float) sampleRate, 1.0f, maxSamples);
-    if (delaySamples <= 0.0f) delaySamples = target;
+    return std::clamp (p.delaySeconds * (float) sampleRate, 1.0f, maxSamples);
+}
+
+void Fx::processDelay (float* left, float* right, int numSamples, const GrowParams& p)
+{
+    const auto target = delayTarget (p);
     // 長さを変えたときに「ブツッ」とならないよう滑らかに（約 80ms）
     const auto smooth   = 1.0f - std::exp (-1.0f / (0.08f * (float) sampleRate / 3.0f));
     const auto feedbackTarget = std::clamp (p.delayFeedback, 0.0f, 0.95f);
@@ -429,6 +480,7 @@ void Fx::processDelay (float* left, float* right, int numSamples, const GrowPara
     if (mixTarget <= 0.0f && delayMixSmooth.isAt (0.0f))
     {
         delayIdle = true;  // 量が 0：くり返しは聞こえないので計算しない
+        delayMixSmooth.next (0.0f);
         return;
     }
     if (delayIdle)
@@ -436,6 +488,7 @@ void Fx::processDelay (float* left, float* right, int numSamples, const GrowPara
         clearDelay();  // 止めていた間の古い音を出さない（量は 0 から滑らかに上がる）
         delayIdle = false;
     }
+    if (delaySamples <= 0.0f) delaySamples = target;  // 始める・再開するときは、今の長さから（滑らせない）
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -484,6 +537,7 @@ void Fx::processReverb (float* left, float* right, int numSamples, const GrowPar
     if (mixTarget <= 0.0f && reverbMixSmooth.isAt (0.0f))
     {
         reverbIdle = true;  // 量が 0：響きは聞こえないので計算しない
+        reverbMixSmooth.next (0.0f);
         return;
     }
     if (reverbIdle)
@@ -542,7 +596,7 @@ void Fx::processOutput (float* left, float* right, int numSamples, const GrowPar
 {
     const auto target  = dbToGain (p.masterDb);
     const auto smooth  = 1.0f - std::exp (-1.0f / (0.02f * (float) sampleRate / 3.0f));
-    const auto release = 1.0f - std::exp (-1.0f / (0.1f * (float) sampleRate));  // リミッターの戻り（約 100ms）
+    const auto release = 1.0f - std::exp (-1.0f / (limiterReleaseSec * (float) sampleRate));
 
     for (int n = 0; n < numSamples; ++n)
     {
@@ -568,8 +622,80 @@ void Fx::processOutput (float* left, float* right, int numSamples, const GrowPar
     }
 }
 
-void Fx::process (float* left, float* right, int numSamples, const GrowParams& p)
+// 入力も出力も無音のまま続いた長さを数え、十分続いたら休みに入る
+void Fx::updateRest (const float* left, const float* right, int numSamples, const GrowParams& p)
 {
+    auto quiet = true;  // NaN も無音とはみなさない
+    for (int n = 0; n < numSamples && quiet; ++n)
+        quiet = std::fabs (left[n]) < restLevel && std::fabs (right[n]) < restLevel;
+    quietSamples = quiet ? quietSamples + numSamples : 0;
+
+    // ディレイのくり返しの間の静かな所で止めないよう、1周より長く待つ
+    const auto gap = delayIdle ? 0.0f : std::max (delaySamples, delayTarget (p));
+    if ((float) quietSamples < gap + restSeconds * (float) sampleRate) return;
+
+    resting = true;
+    quietSamples = 0;
+    // 残った響きは聞こえない大きさなので捨てる（休みの間に量・マスターを上げても出てこないように）
+    if (! reverbIdle) clearReverb();
+    for (int ch = 0; ch < 2; ++ch) dcIn[ch] = dcOut[ch] = 0.0f;
+}
+
+// 休みの間：音は計算せず、無音を通し続けたときと同じように、ゆっくり変わる状態だけを進める
+void Fx::rest (int numSamples, const GrowParams& p)
+{
+    const auto sr = (float) sampleRate;
+    const auto n  = (float) numSamples;
+    auto advance = [n, sr] (float& phase, float hz)
+    {
+        phase += n * hz / sr;
+        phase -= std::floor (phase);
+    };
+
+    if (! distIdle && distDryPower + distWetPower > 0.0f)
+    {
+        const auto decay = std::exp (-n / (distPowerSec * sr));
+        distDryPower = flushDenormal (distDryPower * decay);
+        distWetPower = flushDenormal (distWetPower * decay);
+    }
+    if (! compIdle && compGainDb != 0.0f)
+    {
+        compGainDb *= std::exp (-n / (std::max (0.001f, p.compRelease) * sr));
+        if (compGainDb > -1.0e-4f) compGainDb = 0.0f;
+    }
+    if (! chorusIdle) advance (chorusPhase, p.chorusRate);
+    if (! delayIdle)
+        for (auto& line : delayLine) line.pushSilence (numSamples);
+    if (! reverbIdle) advance (reverbModPhase, reverbModHz);
+    if (limiterGain < 1.0f)
+    {
+        limiterGain = 1.0f - (1.0f - limiterGain) * std::exp (-n / (limiterReleaseSec * sr));
+        if (limiterGain > 0.9999f) limiterGain = 1.0f;
+    }
+}
+
+// 休みから再開する：休みの間に変わったつまみの値（プリセットの差し替え・BPM など）は、滑らせずに今の値から始める
+void Fx::wake (const GrowParams& p)
+{
+    resting = false;
+    quietSamples = 0;
+    snapSmoothers();
+    masterGain   = dbToGain (p.masterDb);
+    delaySamples = 0.0f;  // 次の processDelay で今の長さになる
+}
+
+void Fx::process (float* left, float* right, int numSamples, const GrowParams& p, bool inputSilent)
+{
+    if (resting)
+    {
+        if (inputSilent)
+        {
+            rest (numSamples, p);  // left / right は 0 のまま
+            return;
+        }
+        wake (p);
+    }
+
     processDrive (left, right, numSamples, p);
     processDistortion (left, right, numSamples, p);
     processCompressor (left, right, numSamples, p);
@@ -577,5 +703,8 @@ void Fx::process (float* left, float* right, int numSamples, const GrowParams& p
     processDelay (left, right, numSamples, p);
     processReverb (left, right, numSamples, p);
     processOutput (left, right, numSamples, p);
+
+    if (inputSilent) updateRest (left, right, numSamples, p);
+    else             quietSamples = 0;
 }
 } // namespace grow

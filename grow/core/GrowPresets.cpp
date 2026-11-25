@@ -17,6 +17,7 @@ namespace sync   { constexpr float n4 = 3, n8 = 4, n16 = 5; }
 namespace src    { constexpr float velocity = 1, eg2 = 2, lfo1 = 3, lfo2 = 4, fenv = 5; }
 namespace dest   { constexpr float pitch = 0, cutoff = 2, amp = 4, fm = 5, lfo1Rate = 7; }
 namespace lfoW   { constexpr float saw = 2, square = 3, random = 4; }
+namespace same   { constexpr float restrike = 1; }
 namespace dist   { constexpr float tube = 0, hard = 1, fold = 2, bit = 3; }
 
 // 各プリセットの master（出力の大きさ）は、聞こえる大きさ（モーメンタリーラウドネスの最大）が -18 LUFS になるようにそろえた値
@@ -188,6 +189,7 @@ const Value softPad[] = {
 
 // キーズ：2:1 の FM（OSC 2 は1オクターブ上のサイン）。EG 2 で FM の量を減らし、弾いた瞬間だけ倍音が出る。浅いトレモロ
 const Value keys[] = {
+    { sameNote, same::restrike },
     { osc1Wave, wave::sine }, { osc1Level, 0.8f },
     { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Level, 0 },
     { fmAmount, 0.02f },
@@ -201,11 +203,12 @@ const Value keys[] = {
     { drift, 0.2f },
     // 弾く強さによる段差をならす
     { compMix, 0.6f }, { compThreshold, -18 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.2f },
-    { master, -1.1f },
+    { master, -1 },
 };
 
 // サインに1オクターブ＋5度上（約3倍）のサインを重ね、長く減衰させる鐘のような音
 const Value bell[] = {
+    { sameNote, same::restrike },
     { osc1Wave, wave::sine }, { osc1Level, 0.6f },
     { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Semi, 10 }, { osc2Level, 0.08f },
     { filterType, filter::lp12 }, { filterCutoff, 9000 }, { filterResonance, 0 },
@@ -214,7 +217,7 @@ const Value bell[] = {
     { osc2Fine, -31 },
     { fmAmount, 0.3f },
     { ringAmount, 0.15f },
-    { master, -8.5f },
+    { master, -6.7f },
 };
 
 // 短く切れる矩形波に、クセのあるレゾナンスのフィルター
@@ -291,6 +294,7 @@ const Value wind[] = {
 // エレピ：1:1 の FM（OSC 2 のサインで OSC 1 のサインを変調）。EG 2 で FM の量を減らし、弾いた瞬間だけ明るい。
 // 強く弾くほど FM が深くなる。左右に揺れる深めのトレモロ
 const Value ePiano[] = {
+    { sameNote, same::restrike },
     { osc1Wave, wave::sine }, { osc1Level, 0.8f },
     { osc2Wave, wave::sine }, { osc2Level, 0 },
     { fmAmount, 0.04f },
@@ -305,7 +309,7 @@ const Value ePiano[] = {
     // 強く弾いたときのうなり（チューブ）と、軽いコンプ
     { distType, dist::tube }, { distDrive, 0.25f }, { distTone, 7000 }, { distMix, 0.3f },
     { compMix, 0.7f }, { compThreshold, -16 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.2f },
-    { master, -3.3f },
+    { master, -2.8f },
 };
 
 // オルガン：サインを1オクターブ上と下（サブ）に重ねたドローバー風。押している間は減らない。ビブラート＋トレモロ
@@ -560,7 +564,7 @@ const Value syncLead[] = {
     // チューブでさらに鋭くし、コンプで前に出す
     { distType, dist::tube }, { distDrive, 0.35f }, { distTone, 9000 }, { distMix, 0.4f },
     { compMix, 0.8f }, { compThreshold, -18 }, { compRatio, 3 }, { compAttack, 0.01f }, { compRelease, 0.15f },
-    { master, -0.9f },
+    { master, -1 },
 };
 
 // ===== sleepfreaks のシンセレシピを参考にした音色 =====
@@ -582,18 +586,18 @@ const Value hardPad[] = {
     { master, -4.5f },
 };
 
-// ゲートパッド（途切れながら変化するPAD）：音量を 1/16 の矩形の LFO で刻み、LFO 2 でフィルターをゆっくり動かす
+// ゲートパッド（途切れながら変化するPAD）：音量を 1/16 の矩形の LFO で刻み（クリックにならないよう角を丸める）、LFO 2 でフィルターをゆっくり動かす
 const Value gatePad[] = {
     { osc1Unison, 5 }, { osc1Detune, 22 }, { osc1Width, 1 }, { osc1Level, 0.7f },
     { osc2Wave, wave::saw }, { osc2Octave, 1 }, { osc2Level, 0.25f },
     { filterType, filter::lp24 }, { filterCutoff, 1500 }, { filterResonance, 0.2f },
     { aenvAttack, 0.05f }, { aenvSustain, 1 }, { aenvRelease, 0.5f },
-    { lfoWave, lfoW::square }, { lfoSync, sync::n16 }, { lfoAmp, 0.9f }, { lfoRetrigger, 1 },
+    { lfoWave, lfoW::square }, { lfoSync, sync::n16 }, { lfoAmp, 0.9f }, { lfoRetrigger, 1 }, { lfoSmooth, 0.002f },
     { lfo2Wave, lfo::triangle }, { lfo2Rate, 0.15f },
     { mod1Source, src::lfo2 }, { mod1Dest, dest::cutoff }, { mod1Amount, 0.4f },
     { chorusMix, 0.2f }, { delayMix, 0.2f }, { delayTime, delay::d8dot }, { reverbMix, 0.3f },
     { drift, 0.2f },
-    { master, -3.7f },
+    { master, -3.6f },
 };
 
 // ファットベース（ブリブリしたベース）：ノコギリ波を重ね、1オクターブ下のノコギリ波で厚くする。押している間は減らさない。
@@ -812,6 +816,7 @@ const Value drumRide[] = {
 // ローファイキーズ：キーズ（FM）を暗く・短くし、テープのようにゆっくり音程を揺らす（ローファイのアルペジオ。
 // メロディの標準のキーズと聞き分けられるよう、こもった音で余韻を短くする）
 const Value lofiKeys[] = {
+    { sameNote, same::restrike },
     { osc1Wave, wave::sine }, { osc1Level, 0.8f },
     { osc2Wave, wave::sine }, { osc2Octave, 1 }, { osc2Level, 0 },
     { fmAmount, 0.015f },
@@ -825,7 +830,7 @@ const Value lofiKeys[] = {
     // ビットクラッシャーで粗くし、こもらせ、パラレルコンプで潰す（サンプラー風）
     { distType, dist::bit }, { distDrive, 0.55f }, { distTone, 5000 }, { distMix, 0.35f },
     { compMix, 0.6f }, { compThreshold, -18 }, { compRatio, 3 }, { compAttack, 0.015f }, { compRelease, 0.2f },
-    { master, 2.2f },
+    { master, 2.3f },
 };
 
 // ハウスプラック：ずらしたノコギリ波2枚を丸いフィルターで短くはじく。ピッチ EG なしで、付点8分のディレイを返す
@@ -848,6 +853,7 @@ const Value housePluck[] = {
 
 // オルゴール：1オクターブ上のサインを、約6倍の高さのサインで頭だけ FM して「チン」と鳴らし、澄んだ余韻を長く残す
 const Value musicBox[] = {
+    { sameNote, same::restrike },
     { osc1Wave, wave::sine }, { osc1Octave, 1 }, { osc1Level, 0.7f },
     { osc2Wave, wave::sine }, { osc2Octave, 2 }, { osc2Semi, 7 }, { osc2Fine, 12 }, { osc2Level, 0.05f },
     { fmAmount, 0.03f },
@@ -859,7 +865,7 @@ const Value musicBox[] = {
     { velocity, 0.6f },
     { chorusMix, 0.15f }, { reverbMix, 0.3f }, { reverbSize, 0.7f },
     { drift, 0.1f },
-    { master, -5.6f },
+    { master, -4.6f },
 };
 
 // ウォームパッド：ノコギリ波を少しだけ重ね、三角波で丸みを足して低めのカットオフでこもらせる。
@@ -985,6 +991,7 @@ const Value legatoLead[] = {
 
 // マリンバ：サインに4倍の高さのサインを弱く重ね（木の板の倍音）、頭だけ FM してマレットで叩いた音を出す。短く減衰する
 const Value marimba[] = {
+    { sameNote, same::restrike },
     { osc1Wave, wave::sine }, { osc1Level, 0.8f },
     { osc2Wave, wave::sine }, { osc2Octave, 2 }, { osc2Level, 0.06f },
     { eg2Attack, 0.001f }, { eg2Decay, 0.03f }, { eg2Sustain, 0 }, { eg2Release, 0.03f },
@@ -994,11 +1001,12 @@ const Value marimba[] = {
     { aenvAttack, 0.001f }, { aenvDecay, 0.6f }, { aenvSustain, 0 }, { aenvRelease, 0.4f },
     { velocity, 0.7f },
     { reverbMix, 0.2f },
-    { master, -2.3f },
+    { master, -2.8f },
 };
 
 // カリンバ：サインに約5倍の少しずれた倍音を重ね（金属の舌の響き）、頭だけ FM ではじく。マリンバより長く響く
 const Value kalimba[] = {
+    { sameNote, same::restrike },
     { osc1Wave, wave::sine }, { osc1Level, 0.7f },
     { osc2Wave, wave::sine }, { osc2Octave, 2 }, { osc2Semi, 4 }, { osc2Fine, 40 }, { osc2Level, 0.1f },
     { eg2Attack, 0.001f }, { eg2Decay, 0.05f }, { eg2Sustain, 0 }, { eg2Release, 0.05f },
@@ -1008,7 +1016,7 @@ const Value kalimba[] = {
     { velocity, 0.6f },
     { chorusMix, 0.15f }, { delayMix, 0.1f }, { delayTime, delay::d8dot }, { reverbMix, 0.25f },
     { drift, 0.2f },
-    { master, -3.7f },
+    { master, -4.2f },
 };
 
 // クラビ：細いパルス波を、レゾナンスの効いたフィルターで素早く開閉する。強く弾くほど明るい（ハウス・ファンク）

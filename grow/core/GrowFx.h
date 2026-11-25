@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <memory>
 #include <vector>
 #include "GrowDsp.h"
 #include "GrowParams.h"
@@ -10,13 +11,15 @@ namespace grow
 // 全ボイスを足した後ろのエフェクト（左右）：
 // ドライブ（2倍オーバーサンプリング）→ ディストーション（2倍オーバーサンプリング）→ コンプレッサー → コーラス（左右3本ずつ）→ ディレイ（テンポ同期・左右に跳ねる・くり返しはテープ風）
 //   → リバーブ（8本の FDN）→ マスター → DC カット → ソフトクリップ → リミッター
-// 量・深さなどのつまみの値は数 ms かけて滑らかに変える
+// 量・深さなどのつまみの値は数 ms かけて滑らかに変える。
+// 入力も出力も無音のまま続いたら計算を止め（休み）、次に音が来たら再開する
 class Fx
 {
 public:
     void prepare (double sampleRate);
     void reset();
-    void process (float* left, float* right, int numSamples, const GrowParams& p);
+    // inputSilent = 入力が無音（鳴っているボイスがなく、left / right は 0）
+    void process (float* left, float* right, int numSamples, const GrowParams& p, bool inputSilent);
 
 private:
     // 長さを小数で読めるリングバッファ（1チャンネル）
@@ -31,6 +34,29 @@ private:
             buffer[(size_t) write] = x;
             if (++write >= (int) buffer.size()) write = 0;
         }
+        float read (float delaySamples) const;  // delaySamples サンプル前（1 以上）
+    };
+
+    // ディレイの長い線（1チャンネル）。長い（4秒）ので 0 で埋めず、書いた長さを覚えておいて、まだ書いていない所は 0 として読む
+    // （音色を作る・開き直すのがオーディオスレッドの上なので、長いバッファを埋めると音が途切れる）
+    struct EchoLine
+    {
+        std::unique_ptr<float[]> buffer;
+        int size = 0, write = 0, written = 0;
+        void resize (int newSize)
+        {
+            if (newSize != size) buffer.reset (new float[(size_t) newSize]);  // 中身は不定のまま
+            size = newSize;
+            clear();
+        }
+        void clear() { write = written = 0; }
+        void push (float x)
+        {
+            buffer[(size_t) write] = x;
+            if (++write >= size) write = 0;
+            if (written < size) ++written;
+        }
+        void pushSilence (int numSamples);      // 0 を numSamples 個入れる
         float read (float delaySamples) const;  // delaySamples サンプル前（1 以上）
     };
 
@@ -59,6 +85,15 @@ private:
     void processDelay (float* left, float* right, int numSamples, const GrowParams& p);
     void processReverb (float* left, float* right, int numSamples, const GrowParams& p);
     void processOutput (float* left, float* right, int numSamples, const GrowParams& p);
+    float delayTarget (const GrowParams& p) const;  // ディレイの長さ（サンプル）の目標
+    void snapSmoothers();
+
+    // 休み：入力も出力も無音のまま続いたので、計算を止めている
+    bool resting = false;
+    int  quietSamples = 0;  // 入力も出力も無音のまま続いたサンプル数
+    void updateRest (const float* left, const float* right, int numSamples, const GrowParams& p);
+    void rest (int numSamples, const GrowParams& p);
+    void wake (const GrowParams& p);
 
     double sampleRate = 44100.0;
 
@@ -82,7 +117,7 @@ private:
     DelayLine chorusLine[2];
     float chorusPhase = 0.0f;
 
-    DelayLine delayLine[2];
+    EchoLine delayLine[2];
     float delaySamples = 0.0f;  // 今の長さ（目標へ滑らかに近づける）
     // ディレイのくり返しの中のローパス・ハイパス（1次）の状態
     float delayLow[2] {}, delayHigh[2] {}, delayHighIn[2] {};

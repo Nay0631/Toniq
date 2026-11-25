@@ -29,6 +29,8 @@ public:
     void steal (int midiNote, float velocity);
     // 鳴らしたまま音の高さだけ変える（モノ・レガート）。retrigger なら EG を今の大きさから掛け直す。velocity < 0 なら強さはそのまま
     void changeNote (int midiNote, float velocity, bool retrigger);
+    // 鳴っている（余韻を含む）同じ高さの音を弾き直す。音量は今の大きさから立ち上がり、波形はつながったまま
+    void restrike (float velocity);
     // allowTailOff なら EG のリリースへ。でなければすぐ止める（余韻なし）
     void stopNote (bool allowTailOff);
     // 短くフェードアウトして止める（リリースを待たない。クリックは出さない）
@@ -52,6 +54,9 @@ private:
     void updateBlockSettings (const GrowParams& p, int numSamples);
     void snapSmoothing();
     void finishFade();
+    float edgeSample (int osc, int index, Wave wave, float dt, float pulseWidth, float offset, float offsetStep, float syncAt) noexcept;
+    void addEdgeOsc (int osc, const OscParams& p, float baseHz, float pulseWidth, float offset, float syncAt,
+                     float ring, float mod, float& left, float& right) noexcept;
     static float lfoShape (LfoWave wave, float phase, float hold) noexcept;
 
     VoiceShared* shared = nullptr;
@@ -76,8 +81,13 @@ private:
 
     float phases[2][maxUnison] {};
     float subPhase = 0.0f;
-    // OSC 変調：変調の元（OSC 2 の高さの1本の波）の位相と、ハードシンクの親（OSC 1 の高さ）の位相
-    float modPhase = 0.0f, syncPhase = 0.0f;
+    // OSC 変調：変調の元（OSC 2 の高さの1本の波）の位相と、ハードシンクの親（OSC 1 の高さ）の位相・1サンプルで進む量
+    float modPhase = 0.0f, syncPhase = 0.0f, syncStep = 0.0f;
+    // 段差の位置を求めて PolyBLEP をかける描き方（edgeSample。ハードシンクの OSC 2・FM の OSC 1）。前後のサンプルを直せるよう
+    // 1サンプル遅らせて出す：前のサンプルの位相・進む量・出すのを待っている値、始めた枚数（0 = 使っていない）
+    float edgePos[2][maxUnison] {}, edgeDt[2][maxUnison] {}, edgeHold[2][maxUnison] {};
+    int   edgeCount[2] {};
+    float fmOffsetLast = 0.0f;  // 前のサンプルで FM が位相をずらした量（周期）
     // ユニゾンの1枚ずつの高さの比と左右の音量。target はブロックの頭に求めた目標、cur は今の値（1サンプルずつ inc だけ動かす）
     float targetRatio[2][maxUnison] {}, targetLeft[2][maxUnison] {}, targetRight[2][maxUnison] {};
     float curRatio[2][maxUnison] {}, curLeft[2][maxUnison] {}, curRight[2][maxUnison] {};
@@ -92,6 +102,9 @@ private:
 
     float lfoPhase = 0.0f;
     float lfoHold  = 0.0f;  // ランダム（サンプル＆ホールド）の今の値
+    // 角を丸めた LFO 1 / 2 の今の値（ready が false なら、次は波の値から始める）
+    float lfoValue = 0.0f, lfo2Value = 0.0f;
+    bool  lfoReady = false, lfo2Ready = false;
     float pitchEnvLevel = 0.0f;
     // LFO 2 の位相・ランダムの今の値、LFO 1 / 2 のフェードインの進み具合（0〜1）、音ごとのランダム（-1〜1）
     float lfo2Phase = 0.0f, lfo2Hold = 0.0f;

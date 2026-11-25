@@ -13,6 +13,7 @@ const char* const waveNames[]      = { "サイン", "三角", "ノコギリ", "�
 const char* const filterNames[]    = { "ローパス 12", "ローパス 24", "ハイパス", "バンドパス" };
 const char* const lfoWaveNames[]   = { "サイン", "三角", "ノコギリ", "矩形", "ランダム" };
 const char* const voiceModeNames[] = { "ポリ", "モノ", "レガート" };
+const char* const sameNoteNames[]  = { "重ねる", "弾き直す" };
 const char* const toggleNames[]    = { "オフ", "オン" };
 const char* const modSourceNames[] = { "なし", "ベロシティ", "EG 2", "LFO 1", "LFO 2", "フィルター EG", "キー", "ランダム" };
 const char* const modDestNames[]   = { "高さ", "OSC 2 の高さ", "カットオフ", "パルス幅", "音量", "FM", "リング", "LFO 1 の速さ" };
@@ -89,12 +90,14 @@ const ParamInfo table[] = {
     { "lfo_amp",       "LFO", "→ 音量",       K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
     { "lfo_pw",        "LFO", "→ パルス幅",   K::continuous, 0, 0.45f, 0, 0, U::percent, GROW_NO_CHOICES },
     { "lfo_fade",      "LFO", "フェードイン", K::continuous, 0, 5, 0, 0.5f, U::seconds, GROW_NO_CHOICES },
+    { "lfo_smooth",    "LFO", "スムーズ",     K::continuous, 0, 0.1f, 0, 0.01f, U::seconds, GROW_NO_CHOICES },
 
     { "lfo2_wave",      "LFO 2", "波形",         K::choice,     0, 4, 0, 0, U::none, GROW_CHOICES (lfoWaveNames) },
     { "lfo2_sync",      "LFO 2", "テンポ同期",   K::choice,     0, 9, 0, 0, U::none, GROW_CHOICES (lfoSyncNames) },
     { "lfo2_rate",      "LFO 2", "速さ",         K::continuous, 0.05f, 20, 2, 3, U::hertz, GROW_NO_CHOICES },
     { "lfo2_retrigger", "LFO 2", "リトリガー",   K::toggle,     0, 1, 0, 0, U::none, GROW_CHOICES (toggleNames) },
     { "lfo2_fade",      "LFO 2", "フェードイン", K::continuous, 0, 5, 0, 0.5f, U::seconds, GROW_NO_CHOICES },
+    { "lfo2_smooth",    "LFO 2", "スムーズ",     K::continuous, 0, 0.1f, 0, 0.01f, U::seconds, GROW_NO_CHOICES },
 
     { "eg2_attack",  "EG 2", "A", K::continuous, 0.001f, 10, 0.005f, 0.5f, U::seconds, GROW_NO_CHOICES },
     { "eg2_decay",   "EG 2", "D", K::continuous, 0.001f, 10, 0.3f, 0.5f, U::seconds, GROW_NO_CHOICES },
@@ -119,6 +122,7 @@ const ParamInfo table[] = {
     { "penv_curve",  "ピッチ EG", "カーブ", K::choice,   0, 1, 0, 0, U::none, GROW_CHOICES (curveNames) },
 
     { "voice_mode", "ボイス", "モード",     K::choice,     0, 2, 0, 0, U::none, GROW_CHOICES (voiceModeNames) },
+    { "same_note",  "ボイス", "同じ高さ",   K::choice,     0, 1, 0, 0, U::none, GROW_CHOICES (sameNoteNames) },
     { "glide",      "ボイス", "グライド",   K::continuous, 0, 2, 0, 0.3f, U::seconds, GROW_NO_CHOICES },
     { "velocity",   "ボイス", "ベロシティ", K::continuous, 0, 1, 0.5f, 0, U::percent, GROW_NO_CHOICES },
     { "drift",      "ボイス", "ドリフト",   K::continuous, 0, 1, 0, 0, U::percent, GROW_NO_CHOICES },
@@ -264,6 +268,7 @@ GrowParams makeParams (const float* values, double bpm)
         osc.octave      = intValue (values, (Param) (base + 1));
         osc.semitone    = intValue (values, (Param) (base + 2));
         osc.fineCents   = value (values, (Param) (base + 3));
+        osc.pitchRatio  = std::exp2 (((float) (osc.octave * 12 + osc.semitone) + osc.fineCents / 100.0f) / 12.0f);
         osc.level       = value (values, (Param) (base + 4));
         osc.unison      = std::clamp (intValue (values, (Param) (base + 5)), 1, maxUnison);
         osc.detuneCents = value (values, (Param) (base + 6));
@@ -301,11 +306,13 @@ GrowParams makeParams (const float* values, double bpm)
     p.lfoAmp         = value (values, lfoAmp);
     p.lfoPulseWidth  = value (values, lfoPulseWidth);
     p.lfoFade        = value (values, lfoFade);
+    p.lfoSmooth      = value (values, lfoSmooth);
 
     p.lfo2Wave      = (LfoWave) intValue (values, lfo2Wave);
     p.lfo2Hz        = lfoHz (lfo2Sync, lfo2Rate);
     p.lfo2Retrigger = value (values, lfo2Retrigger) > 0.5f;
     p.lfo2Fade      = value (values, lfo2Fade);
+    p.lfo2Smooth    = value (values, lfo2Smooth);
     p.eg2           = envelope (values, eg2Attack);
 
     for (int m = 0; m < numModSlots; ++m)
@@ -321,6 +328,7 @@ GrowParams makeParams (const float* values, double bpm)
     p.pitchEnvLinear = intValue (values, pitchEnvCurve) == 1;
 
     p.voiceMode    = (VoiceMode) intValue (values, voiceMode);
+    p.restrike     = intValue (values, sameNote) == 1;
     p.glideTime    = value (values, glide);
     p.velocitySens = value (values, velocity);
     p.drift        = value (values, drift);

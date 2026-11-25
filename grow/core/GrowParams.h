@@ -45,13 +45,13 @@ enum Param : int
     filterType, filterCutoff, filterResonance, filterEnvAmount, filterKeyTrack, filterDrive, filterVelocity, osc2Direct,
     fenvAttack, fenvDecay, fenvSustain, fenvRelease,
     aenvAttack, aenvDecay, aenvSustain, aenvRelease,
-    lfoWave, lfoSync, lfoRate, lfoRetrigger, lfoPitch, lfoFilter, lfoAmp, lfoPulseWidth, lfoFade,
-    lfo2Wave, lfo2Sync, lfo2Rate, lfo2Retrigger, lfo2Fade,
+    lfoWave, lfoSync, lfoRate, lfoRetrigger, lfoPitch, lfoFilter, lfoAmp, lfoPulseWidth, lfoFade, lfoSmooth,
+    lfo2Wave, lfo2Sync, lfo2Rate, lfo2Retrigger, lfo2Fade, lfo2Smooth,
     eg2Attack, eg2Decay, eg2Sustain, eg2Release,
     mod1Source, mod1Dest, mod1Amount, mod2Source, mod2Dest, mod2Amount,
     mod3Source, mod3Dest, mod3Amount, mod4Source, mod4Dest, mod4Amount,
     pitchEnvAmount, pitchEnvTime, pitchEnvCurve,
-    voiceMode, glide, velocity, drift,
+    voiceMode, sameNote, glide, velocity, drift,
     drive,
     distType, distDrive, distTone, distMix,
     compMix, compThreshold, compRatio, compAttack, compRelease, compMakeup,
@@ -82,6 +82,7 @@ struct OscParams
     int   octave      = 0;
     int   semitone    = 0;
     float fineCents   = 0.0f;
+    float pitchRatio  = 1.0f;  // オクターブ・半音・微調整をまとめた高さの比（makeParams が求める）
     float level       = 0.0f;  // 0〜1
     int   unison      = 1;     // 重ねる音の数（1〜maxUnison）
     float detuneCents = 0.0f;  // 重ねた音の高さのずれ（いちばん外側の音のずれ）
@@ -121,12 +122,14 @@ struct GrowParams
     float   lfoAmp         = 0.0f;   // 0〜1
     float   lfoPulseWidth  = 0.0f;   // 矩形波の幅を揺らす量（PWM。0〜0.45）
     float   lfoFade        = 0.0f;   // 発音から LFO が最大の深さになるまでの時間（秒。0 = すぐ）
+    float   lfoSmooth      = 0.0f;   // 波の角を丸める時間（秒。時定数。0 = そのまま）
 
     // LFO 2（行き先はモジュレーションの割り当てで決める）
     LfoWave lfo2Wave      = LfoWave::sine;
     float   lfo2Hz        = 2.0f;
     bool    lfo2Retrigger = false;
     float   lfo2Fade      = 0.0f;
+    float   lfo2Smooth    = 0.0f;
 
     // EG 2（モジュレーション用の ADSR。行き先はモジュレーションの割り当てで決める）
     EnvParams eg2;
@@ -145,6 +148,7 @@ struct GrowParams
     bool  pitchEnvLinear = false; // true = 半音で一定の速さで戻る（直線）、false = はじめ速く戻る（指数）
 
     VoiceMode voiceMode    = VoiceMode::poly;
+    bool      restrike     = false; // ポリで、鳴っている音と同じ高さを弾いたら、音を重ねずにその音を弾き直す
     float     glideTime    = 0.0f;  // 前の音から滑らせる時間（秒）
     float     velocitySens = 0.5f;  // 強さ（ベロシティ）で音量を変える量
     float     drift        = 0.0f;  // アナログらしいずれ（0〜1）。音ごとに高さ・カットオフを少しずらし、高さをゆっくり揺らす

@@ -7,6 +7,13 @@
 // grow のコアの部品（JUCE を使わない）：エンベロープ・フィルター・オシレーター・乱数
 namespace grow
 {
+// めったに通らない処理を、よく通る処理（1サンプルごとのくり返し）の中に展開させない（展開されると全体が遅くなる）
+#if defined (_MSC_VER)
+ #define GROW_NOINLINE __declspec (noinline)
+#else
+ #define GROW_NOINLINE __attribute__ ((noinline))
+#endif
+
 inline constexpr float pi    = 3.14159265358979f;
 inline constexpr float twoPi = 6.28318530717959f;
 
@@ -77,6 +84,20 @@ private:
     std::uint32_t state;
 };
 
+// ===== サイン =====
+
+// sin (2π × phase)。phase は 0〜1（範囲の外では使わない）。std::sin より軽い多項式の近似（誤差は最大 -136 dB）
+inline float sinPhase (float phase) noexcept
+{
+    const auto t = phase - 0.5f;  // -0.5〜0.5。sin (2π × phase) = -sin (2πt)
+    // 1/4 周期で折り返して 0〜π/2 の範囲で求め、符号を戻す（分岐なし）
+    const auto y  = twoPi * (0.25f - std::fabs (std::fabs (t) - 0.25f));
+    const auto y2 = y * y;
+    const auto s  = y * (0.9999999766f + y2 * (-0.1666664764f + y2 * (0.008332899871f
+                         + y2 * (-0.0001980090028f + y2 * 0.000002590492947f))));
+    return std::copysign (s, -t);
+}
+
 // ===== オシレーター（ノコギリ・矩形は PolyBLEP で折り返しノイズを抑える） =====
 
 inline float polyBlep (float t, float dt) noexcept
@@ -99,7 +120,7 @@ inline float oscillatorSample (Wave wave, float phase, float dt, float pulseWidt
 {
     switch (wave)
     {
-        case Wave::sine:     return std::sin (twoPi * phase);
+        case Wave::sine:     return sinPhase (phase);
         case Wave::triangle: return 1.0f - 4.0f * std::fabs (phase - 0.5f);
         case Wave::saw:      return 2.0f * phase - 1.0f - polyBlep (phase, dt);
         case Wave::square:
@@ -112,6 +133,47 @@ inline float oscillatorSample (Wave wave, float phase, float dt, float pulseWidt
         }
     }
     return 0.0f;
+}
+
+// PolyBLEP をかけない、そのままの波形（段差の補正は addEdges / addStep で行う）
+inline float rawOscillator (Wave wave, float phase, float pulseWidth) noexcept
+{
+    switch (wave)
+    {
+        case Wave::sine:     return sinPhase (phase);
+        case Wave::triangle: return 1.0f - 4.0f * std::fabs (phase - 0.5f);
+        case Wave::saw:      return 2.0f * phase - 1.0f;
+        case Wave::square:   return (phase < pulseWidth ? 1.0f : -1.0f) - (2.0f * pulseWidth - 1.0f);
+    }
+    return 0.0f;
+}
+
+// サンプルとサンプルの間（before から t サンプルあと。0〜1）にある高さ jump の段差に PolyBLEP をかける（前後のサンプルに足す）
+inline void addStep (float jump, float t, float& before, float& after) noexcept
+{
+    before += 0.5f * jump * (1.0f - t) * (1.0f - t);
+    after  -= 0.5f * jump * t * t;
+}
+
+// 位相が from（0〜1）から delta だけ動く間（時刻 start から length サンプル）に越える、波形の段差すべてに PolyBLEP をかける。
+// FM で位相が逆に進む・1サンプルで何周もするときも、越えた段差を全部数える
+inline void addEdges (Wave wave, float from, float delta, float pulseWidth, float start, float length,
+                      float& before, float& after) noexcept
+{
+    if (delta == 0.0f || (wave != Wave::saw && wave != Wave::square)) return;
+    const auto to = from + delta;
+    auto cross = [&] (float edge, float jump)  // 位相 edge + 整数 にある、上向きに越えると jump だけ跳ぶ段差
+    {
+        if (delta > 0.0f)
+            for (auto at = edge + std::floor (from - edge) + 1.0f; at <= to; at += 1.0f)
+                addStep (jump, start + length * (at - from) / delta, before, after);
+        else
+            for (auto at = edge + std::floor (from - edge); at > to; at -= 1.0f)
+                addStep (-jump, start + length * (at - from) / delta, before, after);
+    };
+    if (wave == Wave::saw) return cross (0.0f, -2.0f);
+    cross (0.0f, 2.0f);
+    cross (pulseWidth, -2.0f);
 }
 
 // 位相を dt 進めて 0〜1 に収める
@@ -153,6 +215,9 @@ public:
 
     void noteOn() noexcept { state = State::attack; }
 
+    // 今の大きさに factor を掛ける（1 を超えたら、アタックはせずそこからディケイする）
+    void scale (float factor) noexcept { value *= factor; }
+
     void noteOff() noexcept
     {
         if (state == State::idle) return;
@@ -175,6 +240,11 @@ public:
             case State::idle:
                 return 0.0f;
             case State::attack:
+                if (value >= 1.0f)  // もう 1 以上（scale）：段差にならないよう、そこからディケイする
+                {
+                    state = State::decay;
+                    break;
+                }
                 value = attackBase + value * attackCoeff;
                 if (value >= 1.0f)
                 {

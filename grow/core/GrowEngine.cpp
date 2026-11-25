@@ -92,7 +92,21 @@ void Engine::noteOn (int midiNote, float velocity)
 
     if (voiceMode == VoiceMode::poly)
     {
-        // 同じ鍵盤がまだ鳴っていれば、余韻にして新しい音を重ねる
+        // 弾き直す：同じ高さの音が余韻でも鳴っていれば、その音を鳴らし直す（重ねると、連打で音量が積み上がり、音も濁る）
+        if (params.restrike)
+        {
+            Voice* same = nullptr;
+            for (auto& v : voices)
+                if (v.isActive() && v.getNote() == midiNote && (same == nullptr || v.age > same->age)) same = &v;
+            if (same != nullptr)
+            {
+                same->restrike (velocity);
+                same->age = ++noteCounter;
+                return;
+            }
+        }
+
+        // 重ねる：同じ鍵盤がまだ鳴っていれば、余韻にして新しい音を重ねる
         for (auto& v : voices)
             if (v.isActive() && ! v.isReleased() && v.getNote() == midiNote) v.stopNote (true);
 
@@ -176,7 +190,13 @@ void Engine::render (float* left, float* right, int numSamples)
     updateParams();
     std::memset (left, 0, sizeof (float) * (size_t) numSamples);
     std::memset (right, 0, sizeof (float) * (size_t) numSamples);
-    for (auto& v : voices) v.render (left, right, numSamples);
-    fx.process (left, right, numSamples, params);
+    auto sounding = false;
+    for (auto& v : voices)
+    {
+        if (! v.isActive()) continue;
+        sounding = true;
+        v.render (left, right, numSamples);
+    }
+    fx.process (left, right, numSamples, params, ! sounding);
 }
 } // namespace grow
