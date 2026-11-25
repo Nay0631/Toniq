@@ -2,7 +2,8 @@
 #
 # ふつうは build_docx.ps1 から呼ぶ（PNG の用意 → このスクリプト → Word で目次の更新と保存）。
 # 手本の docx の本文を「段落・表の並び」に分け、番号で場所を決めて使っている
-# （表紙・改訂履歴・目次 = 0〜148、裏表紙 = 460〜、機能定義の表の手本 = 203、改訂履歴の表 = 33、表紙の日付 = 23、表紙の文書番号 = 10）。
+# （表紙・改訂履歴・目次 = 0〜148、裏表紙 = 460〜、機能定義の表の手本 = 203、改訂履歴の表 = 33、表紙の日付 = 23、表紙の文書番号 = 10、
+#  添付資料(別紙) = 140〜143）。別紙の一覧は BESSHI に書く。
 # 改訂履歴の 02 以降は tools/改訂履歴.tsv に残し、今回の版（rev）を足して書き戻す。表紙の文書番号の「(01)」は rev にする。
 # 手本の docx を編集すると番号がずれるので、そのときは番号を見直す（ずれると assert で止まる）。
 # 6.2 ユースケース記述の表は手本にないので usecase_table で組み立てる（表の行が足りないと assert で止まる）。
@@ -115,6 +116,52 @@ TBL_W = 9283
 def width_of(s):
     return sum(2 if ord(c) > 0x2000 else 1 for c in s)
 
+def text_w(n):
+    # 半角 n 文字分（全角は2）が1行に入る列の幅（twip。余白込み）
+    return n * 112 + 200
+
+MIN_CHARS = 14   # どの列にも残す幅（全角7文字。「ドロップダウン」「ARRANGE-004」が1行に入る）
+LONG_MIN = 2800  # 長い列（半角27文字以上）に先に確保する幅
+
+def table_widths(need):
+    # need：列ごとのいちばん長い中身の文字数（半角換算）
+    # 1. どの列にも MIN_CHARS 分（中身がそれより短ければ中身の幅）を確保する。
+    #    これより細くすると1〜2文字ずつ折り返して縦書きのように見えるため（以前の 10.1「画面ID」列・10.3.2「種類」列・13 章のコードの表の1列目など）
+    # 2. 長い列を LONG_MIN まで → 3. 短い列（ID・名前など）を折り返さない幅まで → 4. 残りを長い列に中身の長さの比で分ける
+    ncol = len(need)
+    widths = [text_w(min(n, MIN_CHARS)) for n in need]
+    if sum(widths) > TBL_W:   # 列が多すぎて下限も入らないときは比率で縮める
+        k = TBL_W / sum(widths)
+        widths = [int(w * k) for w in widths]
+        widths[-1] += TBL_W - sum(widths)
+        return widths
+    longc = [c for c in range(ncol) if need[c] > 26]
+    short = [c for c in range(ncol) if c not in longc]
+
+    def give(target):
+        # target {列: 目標の幅} まで、足りない分の比率で残りの幅を配る
+        extra = TBL_W - sum(widths)
+        lack = {c: t - widths[c] for c, t in target.items() if t > widths[c]}
+        tot = sum(lack.values())
+        if extra <= 0 or tot <= 0:
+            return
+        k = min(1, extra / tot)
+        for c, d in lack.items():
+            widths[c] += int(d * k)
+
+    give({c: LONG_MIN for c in longc})
+    give({c: text_w(need[c]) for c in short})
+    extra = TBL_W - sum(widths)
+    if longc:
+        tot = sum(min(need[c], 80) for c in longc)
+        for c in longc:
+            widths[c] += int(extra * min(need[c], 80) / tot)
+    else:  # 全部短い列なら比率で広げる
+        tot = sum(widths)
+        widths = [int(w + extra * w / tot) for w in widths]
+    widths[-1] += TBL_W - sum(widths)
+    return widths
+
 def generic_table(rows, title=None):
     # title：表の1行目に、列を全部結合して出す表題（仕様書.md で表の直前に置いた「**…**」だけの行。5.1 のシステム名、10.3.2 の画面名）
     ncol = len(rows[0])
@@ -122,30 +169,7 @@ def generic_table(rows, title=None):
     for c in range(ncol):
         w = max(width_of(inline_plain(r[c])) if c < len(r) else 0 for r in rows)
         need.append(w)
-    # 短い列（ID・名前など）は折り返さない幅にし、残りを長い列で分ける
-    widths = [0] * ncol
-    short = [c for c in range(ncol) if need[c] <= 26]
-    for c in short:
-        widths[c] = need[c] * 112 + 200
-    longc = [c for c in range(ncol) if c not in short]
-    # 長い列には最低 2800 ずつ残し、足りなければ短い列を同じ比率で縮める
-    room = TBL_W - 2800 * len(longc)
-    if sum(widths) > room:
-        fixed = [c for c in short if need[c] <= 10]   # ID などの狭い列は縮めない
-        flex = [c for c in short if need[c] > 10]
-        avail = room - sum(widths[c] for c in fixed)
-        k = avail / max(1, sum(widths[c] for c in flex))
-        for c in flex:
-            widths[c] = int(widths[c] * k)
-    rest = TBL_W - sum(widths)
-    if longc:
-        tot = sum(min(need[c], 80) for c in longc)
-        for c in longc:
-            widths[c] = int(rest * min(need[c], 80) / tot)
-    if not longc:  # 全部短い列なら比率で広げる
-        tot = sum(widths)
-        widths = [int(w * TBL_W / tot) for w in widths]
-    widths[-1] += TBL_W - sum(widths)
+    widths = table_widths(need)
     tblpr = ('<w:tblPr><w:tblW w:w="9283" w:type="dxa"/><w:tblInd w:w="210" w:type="dxa"/><w:tblBorders>'
              + ''.join(f'<w:{b} w:val="single" w:sz="4" w:space="0" w:color="auto"/>' for b in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV'])
              + '</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="57" w:type="dxa"/><w:right w:w="57" w:type="dxa"/></w:tblCellMar>'
@@ -348,26 +372,19 @@ def strip_num(t):
 FIG_INTRO = {
     'ロバストネス図': '機能ごとのロバストネス図を、システム（グループ）ごとに示す。',
     'シーケンス図': '機能ごとのシーケンス図を、システム（グループ）ごとに示す。',
-    'クラス図': 'システム全体のクラス図と、機能ごとのクラス図をシステム（グループ）ごとに示す。',
+    'クラス図': '機能ごとのクラス図を、システム（グループ）ごとに示す。',
 }
-SYS_HEAD = re.compile(r'[A-Z]\d\d_')   # 7〜9章のシステムの見出し（### B01_曲の基本設定システム）
+SYS_HEAD = re.compile(r'[A-Z]\d\d_')   # 7〜9章のシステムの見出し（### B01_基本設定システム）
 
 def flush_fig():
     global fig_items
     if not fig_items:
         return
-    whole = [it for it in fig_items if it[0] == '全体のクラス図']
+    # 全体のクラス図は作らない（2026-11-16 決定）。仕様書に節が残っていても docx には入れない
     per = [it for it in fig_items if it[0] != '全体のクラス図']
     for kind in ['ロバストネス図', 'シーケンス図', 'クラス図']:
         out.append(heading(1, kind, page_break=True))
         out.append(para(FIG_INTRO[kind]))
-        if kind == 'クラス図':
-            for h, imgs, paras in whole:
-                out.append(heading(2, '全体のクラス図'))
-                for alt, p in imgs:
-                    out.append(image(p, '全体_クラス図'))
-                for p in paras:
-                    out.append(para(p))
         group = None   # まだ出していないシステムの見出し（その種類の図がある機能が来たら出す）
         for h, imgs, paras in per:
             if SYS_HEAD.match(h):
@@ -420,7 +437,7 @@ for b in blocks:
         m = re.match(r'([A-Z]\d\d-\d+)\s+(.*)', text)
         if lvl == 5 and m and chapter and chapter.startswith('5.'):
             func = m.group(1)
-            # 5.2 はシステム（#### B01_曲の基本設定システム → 見出し3）の下に機能（##### → 見出し4）を置く。
+            # 5.2 はシステム（#### B01_基本設定システム → 見出し3）の下に機能（##### → 見出し4）を置く。
             # 見出しは機能名だけにする（機能IDは機能定義の表の「機能ID」の行に書く。「（追加）」などの注記も外す）
             out.append(heading(4, re.sub(r'（[^）]*）$', '', m.group(2)).strip()))
             continue
@@ -449,7 +466,7 @@ for b in blocks:
     if kind == 'p':
         t = b[1]
         if chapter and chapter.startswith('6.') and 'ファイル名の決まり' in t:
-            t = '全体と、グループ（システム）ごとのユースケース図を示す。'
+            t = 'グループ（システム）ごとのユースケース図を示す。'
         out.append(para(t))
     elif kind == 'b':
         out.append(bullet(b[1]))
@@ -491,6 +508,9 @@ if os.path.exists(REV_FILE):
         revs[v] = (d, note)
 assert '\t' not in args.rev_note, '改訂の概要にタブは使えません'
 revs[args.rev] = (f'{Y:04d}/{M:02d}/{D:02d}', args.rev_note)
+# 改訂の概要には何を変えたかだけを書き、仕様書.md や基準のコミットは書かない（2026-11-16 決定）。tsv の過去の行も確かめる
+for _v, (_d, _note) in revs.items():
+    assert not re.search(r'仕様書\.md|基準：main', _note), f'改訂履歴の {_v} の概要に「仕様書.md」「基準：main …」は書かない（何を変えたかだけを書く）'
 rev_list = sorted(revs.items(), key=lambda kv: int(kv[0]))
 with open(REV_FILE, 'w', encoding='utf-8', newline='\n') as f:
     f.write('\n'.join(rev_head + [f'{v}\t{d}\t{n}' for v, (d, n) in rev_list]) + '\n')
@@ -520,6 +540,60 @@ def merge_summary(row):
 rws = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)
 for r in rws[1:2 + len(rev_list)]:
     front[33] = front[33].replace(r, merge_summary(r), 1)
+
+# 改訂年月日（2026/11/09 など）は1行で示す（2026-11-23 決定。ユーザーの指示）。手本のフォント（UD デジタル 教科書体）は
+# 半角の数字が1文字 6.6pt ほどあり、日付は約 63pt になって列（1260 = 63pt。左右の余白を除くと 53pt）に収まらず
+# 「2026/11/0」「9」に折り返す。日付の列を 1500（75pt）に広げ、同じだけ改訂の概要の列（700 + 4025）を狭める（表の幅は変えない）
+DATE_W, DATE_W0, SUM_A0 = 1500, 1260, 700
+d = DATE_W - DATE_W0
+t33 = front[33]
+assert t33.count(f'<w:gridCol w:w="{DATE_W0}"/>') == 1 and t33.count(f'<w:gridCol w:w="{SUM_A0}"/>') == 1, '改訂履歴の表の列の幅が手本と違います'
+t33 = (t33.replace(f'<w:gridCol w:w="{DATE_W0}"/>', f'<w:gridCol w:w="{DATE_W}"/>')
+          .replace(f'<w:gridCol w:w="{SUM_A0}"/>', f'<w:gridCol w:w="{SUM_A0 - d}"/>')
+          .replace(f'<w:tcW w:w="{DATE_W0}" w:type="dxa"/>', f'<w:tcW w:w="{DATE_W}" w:type="dxa"/>')
+          .replace(f'<w:tcW w:w="{SUM_A0}" w:type="dxa"/>', f'<w:tcW w:w="{SUM_A0 - d}" w:type="dxa"/>')
+          .replace('<w:tcW w:w="4725" w:type="dxa"/>', f'<w:tcW w:w="{4725 - d}" w:type="dxa"/>'))
+# 日付の文字は手本では大きさの指定がなく 10.5pt なので、ほかのセルと同じ 10pt にする
+t33 = re.sub(r'<w:r><w:t>(\d{4}/\d{2}/\d{2})</w:t>', r'<w:r><w:rPr><w:sz w:val="20"/></w:rPr><w:t>\1</w:t>', t33)
+front[33] = t33
+
+# 改訂履歴の各版の行の承認責任者・作成責任者（2026-11-23 決定。ユーザーの指示）。手本は空のセルなので、段落に名前の文字を入れる
+APPROVER, AUTHOR = '根井', '西薗'
+def fill_names(row):
+    tcs = re.findall(r'<w:tc>.*?</w:tc>', row, re.S)
+    for c, name in ((tcs[-2], APPROVER), (tcs[-1], AUTHOR)):
+        assert c.count('</w:pPr></w:p>') == 1, '改訂履歴の承認責任者・作成責任者のセルが空ではありません'
+        row = row.replace(c, c.replace('</w:pPr></w:p>', f'</w:pPr><w:r><w:rPr><w:rFonts w:hint="eastAsia"/><w:sz w:val="20"/></w:rPr><w:t>{name}</w:t></w:r></w:p>'), 1)
+    return row
+for r in re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S):
+    if re.search(r'<w:t>\d{4}/\d{2}/\d{2}</w:t>', r):
+        front[33] = front[33].replace(r, fill_names(r), 1)
+
+# 改訂履歴の見出しの「改訂年月日」は1行で示す（手本は「改訂」「年月日」の2つの段落に分かれている。2026-11-20 決定）。
+# 10pt で5文字（1000）なので、列の幅（1500 − 左右の余白 198）に収まる
+hdr = re.findall(r'<w:tr\b.*?</w:tr>', front[33], re.S)[0]
+c = re.findall(r'<w:tc>.*?</w:tc>', hdr, re.S)[1]
+ps = re.findall(r'<w:p[ >].*?</w:p>', c, re.S)
+TXT = lambda s: ''.join(re.findall(r'<w:t(?: [^>]*)?>([^<]*)</w:t>', s))
+assert [TXT(p) for p in ps] == ['改訂', '年月日'] and ps[0] + ps[1] in c, '改訂履歴の見出し「改訂／年月日」が見つかりません'
+new_c = c.replace(ps[0] + ps[1], ps[0].replace('<w:t>改訂</w:t>', '<w:t>改訂年月日</w:t>'), 1)
+front[33] = front[33].replace(hdr, hdr.replace(c, new_c, 1), 1)
+
+# 添付資料(別紙)。手本の「別紙１　○○…」〜「別紙３」の3行（141〜143）を、BESSHI の行に置き換える（余った行は消す）。
+# 別紙のファイルは docs/基本設計書/ に置く（docx と一緒に渡す）。別紙を足すときはここに足し、仕様書.md の参照する所に「別紙<番号>のPDFを参照」と書く
+BESSHI = [('別紙1', '画面レイアウト.pdf')]   # 10.3.1 画面レイアウト（2026-11-20 決定）
+BASEDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+assert TXT(front[140]) == '添付資料(別紙)', '手本の添付資料(別紙)の見出しが見つかりません'
+for k in (141, 142, 143):
+    assert TXT(front[k]).startswith('別紙') and '○' in TXT(front[k]), ('手本の別紙の行が見つかりません', k)
+assert len(BESSHI) <= 3, '別紙が4つ以上になったら、手本の行を写して足す処理を書く'
+for no, fname in BESSHI:
+    assert os.path.exists(os.path.join(BASEDIR, fname)), f'{no} のファイル {fname} が docs/基本設計書/ にありません'
+for k, line in zip((141, 142, 143), [f'{no}　{fname}' for no, fname in BESSHI] + [None] * 3):
+    if line is None:
+        front[k] = ''
+    else:
+        front[k] = re.sub(r'<w:t>別紙[^<]*</w:t>', f'<w:t>{escape(line)}</w:t>', front[k], count=1)
 
 # 表紙の文書番号の末尾「(01)」は版数にする
 assert 'アプリオリ(01)' in front[10], '表紙の文書番号が見つかりません'

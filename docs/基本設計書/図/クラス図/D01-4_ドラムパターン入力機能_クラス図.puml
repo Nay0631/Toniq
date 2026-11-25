@@ -1,0 +1,37 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "ドラムロール" as B1 <<boundary>> {
+  {method} <U+002B> マスをクリック・ドラッグ・右クリックする() : void
+  {method} <U+002B> パターンを読み込む・クリアを押下する() : void
+  {method} <U+002B> 行の見出しを押下する() : void
+  {method} <U+002B> 置いた音と注意を表示する() : void
+}
+class "ドラム編集" as C1 <<control>> {
+  {method} <U+002B> ドラムを編集する() : void
+  {method} <U+002D> 置き換える・消すか確認する() : void
+}
+class "ドラム演奏" as C2 <<control>> {
+  {method} <U+002B> その音を試聴する() : void
+  {method} <U+002B> 次の音からすぐ反映する() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> ドラムパターン（オリジナル）
+  {field} <U+002B> 置く強さ
+  {method} <U+002B> オリジナルのドラムと置く強さを更新する() : void
+}
+class "ドラムパターンマスタ" as E2 <<entity>> {
+  {field} <U+002B> ジャンルのタグ
+  {field} <U+002B> 16ステップのパターン
+  {method} <U+002B> 読み込むパターンを取得する() : void
+}
+
+B1 --> C1
+B1 --> C2
+C1 --> E2
+C1 --> E1
+C1 --> C2
+C1 --> B1
+
+@enduml

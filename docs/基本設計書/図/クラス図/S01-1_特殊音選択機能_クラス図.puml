@@ -2,15 +2,25 @@
 !include ../astah-class-style.puml
 mainframe **pkg**
 
-class "カスタムモード画面" as B1 <<boundary>> {
-  {method} <U+002B> ON/OFF ボタンを押下する() : void
+class "もっと調整" as B2 <<boundary>> {
+  {method} <U+002B> 追加パートを使うボタンを押下する() : void
+  {method} <U+002B> アレンジャーで → を押下する() : void
   {method} <U+002B> サブベースを選ぶ() : void
+  {method} <U+002B> ON のパートの名前と変更の数を表示する() : void
+}
+class "カスタムモード画面" as B1 <<boundary>> {
   {method} <U+002B> FX / SE の種類を選ぶ() : void
   {method} <U+002B> FX / SE の試聴ボタンを押下する() : void
 }
+class "アレンジ画面" as B3 <<boundary>> {
+  {method} <U+002B> アレンジャーを表示する() : void
+}
 class "追加パート設定" as C5 <<control>> {
-  {method} <U+002B> 追加パートを ON/OFF する() : void
+  {method} <U+002B> 追加パートをまとめて ON/OFF する() : void
   {method} <U+002B> サブベースを設定する() : void
+}
+class "画面切り替え" as C6 <<control>> {
+  {method} <U+002B> アレンジャータブを開く() : void
 }
 class "パート管理" as C1 <<control>> {
   {method} <U+002B> パートを ON/OFF する() : void
@@ -40,13 +50,16 @@ class "ベース設定マスタ" as E2 <<entity>> {
   {method} <U+002B> ジャンルのサブベースの標準を取得する() : void
 }
 
-B1 --> C5
+B2 --> C5
+B2 --> C6
+C6 --> B3
 C5 --> C1
 C1 --> E1
 C1 --> C2
 C5 --> E1
 C5 --> E2
 C5 --> C4
+C5 --> B2
 B1 --> C3
 C3 --> E1
 C3 --> C4

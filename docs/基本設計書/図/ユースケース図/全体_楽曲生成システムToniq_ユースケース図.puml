@@ -6,7 +6,7 @@ actor "利用者" as A1
 
 rectangle "楽曲生成システム Toniq" <<システム名>> {
   rectangle " " {
-    usecase "曲の基本設定システム" as UC1
+    usecase "基本設定システム" as UC1
     usecase "キー・スケール設定システム" as UC2
     usecase "コード進行設定システム" as UC3
     usecase "ドラム設定システム" as UC4

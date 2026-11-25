@@ -1,7 +1,7 @@
 ﻿# 仕様書.md と図から基本設計書 docx を作る（手順は ../基本設計書の作成手順.md の「5. docx を作る」）
 #
 #   1. 図（.puml）を PNG にする（Word で SVG が表示できないときの代わりの画像として docx に一緒に入れる）。
-#      ロバストネス図は robustness_labels.mjs で線の文を置き直した SVG から PNG を作る
+#      ロバストネス図は robustness_labels.mjs、画面遷移図は state_layout.mjs で線の文を置き直した SVG から PNG を作る
 #   2. build_docx.py で手本の docx の書式を使った下書きを作る
 #   3. Word で開いて目次・ページ番号を更新し、docx として保存する
 #   4. check_docx.py で、できた docx の表紙・改訂履歴・目次・表と図の数を確かめる（NG があれば失敗で終わる）
@@ -11,23 +11,38 @@
 #
 # 使い方（リポジトリのルートで）:
 #   powershell -ExecutionPolicy Bypass -File "docs/基本設計書/tools/build_docx.ps1" -Rev 03 -RevNote "改訂の概要"
+#   レイアウトだけの修正で作り直すとき（版を上げず、改訂履歴の行も足さない）は、今の版数だけを付けて -RevNote を省く:
+#   powershell -ExecutionPolicy Bypass -File "docs/基本設計書/tools/build_docx.ps1" -Rev 08
 #
 # 必要なもの: Java（tools/plantuml.jar）、Python（py ランチャー）、Node.js、Microsoft Word（365 版。SVG の表示に対応しているもの）、
 #             Edge か Chrome（ロバストネス図の PNG。なければ PlantUML の PNG のまま）
 param(
   [Parameter(Mandatory = $true)][string]$Rev,       # 改訂履歴に足す版数（例 03。tools/改訂履歴.tsv に足す。表紙の文書番号の「(01)」にも使う）
-  [Parameter(Mandatory = $true)][string]$RevNote,   # 改訂履歴に足す改訂の概要
-  [string]$Date = (Get-Date -Format "yyyy/MM/dd"),  # 表紙と改訂履歴の日付
-  [string]$Out = "",                                # 出力先（省略時は 作成ファイル/…_仕様書から作成.docx）
+  [string]$RevNote = "",                            # 改訂履歴に足す改訂の概要（省くと、tools/改訂履歴.tsv にある -Rev の行をそのまま使う＝レイアウトだけの修正）
+  [string]$Date = (Get-Date -Format "yyyy/MM/dd"),  # 表紙と改訂履歴の日付（-RevNote を省いたときは、その版の行の日付）
+  [string]$Out = "",                                # 出力先（省略時は 作成ファイル/<版数>_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx）
   [switch]$SkipPng,                                 # PNG を作り直さない（ふつうは不要。図が変わったときだけ自動で作り直す）
   [switch]$ForcePng                                 # 図が変わっていなくても PNG を作り直す
 )
 $ErrorActionPreference = "Stop"
+# 版数は2桁（作る docx のファイル名の先頭の2桁と、表紙の文書番号に使う）
+if ($Rev -notmatch '^\d{2}$') { throw "版数（-Rev）は 2 桁の数字で指定してください（例 08）: $Rev" }
+# 改訂履歴に残すのは中身の改訂だけ。レイアウトだけの修正は版を上げず、今の版の行（日付・概要）をそのまま使う（2026-11-23 決定）
+if ($RevNote -eq "") {
+  $revRow = Get-Content -LiteralPath (Join-Path $PSScriptRoot "改訂履歴.tsv") -Encoding UTF8 |
+    Where-Object { $_ -notmatch '^#' -and $_.Trim() -ne '' } | ForEach-Object { , ($_ -split "`t", 3) } |
+    Where-Object { $_[0] -eq $Rev } | Select-Object -First 1
+  if (-not $revRow) { throw "-RevNote を省けるのは、tools/改訂履歴.tsv にある版（レイアウトだけの修正で作り直すとき）だけです: $Rev" }
+  $RevNote = $revRow[2]
+  if (-not $PSBoundParameters.ContainsKey('Date')) { $Date = $revRow[1] }
+  "レイアウトだけの修正として作り直す（版 $Rev のまま。改訂履歴の行は変えない）"
+}
 
 $root = (Resolve-Path "$PSScriptRoot\..\..\..").Path
 $doc  = Join-Path $root "docs\基本設計書"
 $template = Join-Path $doc "作成ファイル\04_2026_卒研_基本設計書(R4SA_アプリオリ).docx"
-if ($Out -eq "") { $Out = Join-Path $doc "作成ファイル\04_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx" }
+# 作る docx のファイル名の先頭の2桁は、改訂履歴の版数にする（2026-11-19 決定。手本の docx の「04_」はそのまま）
+if ($Out -eq "") { $Out = Join-Path $doc ("作成ファイル\" + $Rev + "_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx") }
 # 出力先を Word で開いたままだと最後の保存で失敗するので、先に確かめて止める
 if (Test-Path -LiteralPath $Out) {
   try { $fs = [System.IO.File]::Open($Out, 'Open', 'ReadWrite', 'None'); $fs.Close() }
@@ -42,7 +57,7 @@ New-Item -ItemType Directory -Force $png | Out-Null
 #    PNG がない・いちばん新しい .puml（スタイルの共通ファイルを含む）が いちばん古い PNG より新しいときだけ作り直す
 $pngs = @(Get-ChildItem $png -Filter *.png -ErrorAction SilentlyContinue)
 #    （ロバストネス図の SVG・robustness_labels.mjs が新しいときも作り直す。PNG はその SVG から作るため）
-$newestPuml = (@(Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml) + @(Get-ChildItem (Join-Path $doc "図\ロバストネス図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "robustness_labels.mjs")) | Measure-Object LastWriteTime -Maximum).Maximum
+$newestPuml = (@(Get-ChildItem (Join-Path $doc "図") -Recurse -Filter *.puml) + @(Get-ChildItem (Join-Path $doc "図\ロバストネス図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "robustness_labels.mjs")) + @(Get-ChildItem (Join-Path $doc "図\ER図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "er_layout.mjs")) + @(Get-ChildItem (Join-Path $doc "図\画面遷移図") -Filter *.svg) + @(Get-Item (Join-Path $PSScriptRoot "state_layout.mjs")) | Measure-Object LastWriteTime -Maximum).Maximum
 $oldestPng = if ($pngs.Count) { ($pngs | Measure-Object LastWriteTime -Minimum).Minimum } else { $null }
 $needPng = $ForcePng -or -not $pngs.Count -or (-not $SkipPng -and $newestPuml -gt $oldestPng)
 if ($needPng) {
@@ -61,6 +76,15 @@ $labelArgs = @((Join-Path $PSScriptRoot "robustness_labels.mjs"))
 if ($needPng) { $labelArgs += @("--png", $png, "--scale", "1.5") }
 & node @labelArgs
 if ($LASTEXITCODE -ne 0) { "（注意）ロバストネス図に文の重なりが残っています。上の「重なり」の図を確かめてください" }
+# ER図：名前を箱の上に出し、子の側の丸を黒丸にする（er_layout.mjs。処理済みの SVG は変えない）。PNG もその SVG から作る
+$erArgs = @((Join-Path $PSScriptRoot "er_layout.mjs"))
+if ($needPng) { $erArgs += @("--png", $png, "--scale", "1.5") }
+& node @erArgs
+# 画面遷移図：線の折れ目を減らし、線の文を自分の線のすぐ横に置き直す（state_layout.mjs。処理済みの SVG は変えない）。PNG もその SVG から作る
+$stArgs = @((Join-Path $PSScriptRoot "state_layout.mjs"))
+if ($needPng) { $stArgs += @("--png", $png, "--scale", "1.5") }
+& node @stArgs
+if ($LASTEXITCODE -ne 0) { "（注意）画面遷移図に置けない線の文があります。上の「置けない文」を確かめてください" }
 "PNG: " + (Get-ChildItem $png -Filter *.png).Count + " 枚"
 
 # 2. 下書き
@@ -91,6 +115,11 @@ try {
 }
 Remove-Item -LiteralPath $draft -ErrorAction SilentlyContinue
 "完成: $Out"
+# 前の版の docx（先頭の2桁が違うもの）が残っていれば知らせる（消すかどうかは利用者が決める）
+$outName = Split-Path -Leaf $Out
+foreach ($f in @(Get-ChildItem (Join-Path $doc "作成ファイル") -Filter "*_2026_卒研_基本設計書(R4SA_アプリオリ)_仕様書から作成.docx" | Where-Object { $_.Name -ne $outName -and $_.Name -notlike '~$*' })) {
+  "前の版の docx が残っています: " + $f.Name
+}
 
 # 4. できた docx を確かめる（結果は UTF-8 のファイルを経由して出す。端末の文字化け対策）
 "確認中..."

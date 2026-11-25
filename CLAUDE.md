@@ -30,6 +30,7 @@ npm run mix:measure     # ミックスの一括計測（全ジャンルのピー
 ミックス（`mix_presets.json`・`MixerEngine.ts`・音源・パートの音量）を変えたら、`npm run mix:measure` で前後を比べる（`tools/mix-measure.mjs`。Chrome か Edge が要る。1曲 20〜40 秒、全ジャンルで 10 分ほど）。全ジャンル×雰囲気（激しい・落ち着いた）の曲を書き出し、ピークと統合ラウドネス（LUFS）を測って、聞こえる大きさを目標（−16.5 LUFS）にそろえる `gain` を提案する（`--save before` / `--compare before`、`--genre`・`--mood`・`--seed`・`--runs`・`--drum`・`--parts`（鳴らすパートを絞る）・`--target`）。`gain` はピークが −1dB を超えない範囲で決める（docs/sound.md の「音量」）。
 
 grow（内部シンセ。C++。表示名・フォルダ・ファイル・識別子・保存データの値すべて grow で統一する。以前の表示名 lidless は使わない）は2通りにビルドする（詳しくは `grow/README.md`）：
+grow（内部シンセ。C++）は2通りにビルドする（詳しくは `grow/README.md`）：
 
 ```bash
 npm run grow:wasm   # Toniq で鳴らす wasm（Emscripten の emcc が必要）→ public/grow/grow.wasm（Git に入れる）
@@ -52,6 +53,8 @@ docs/                   詳しい仕様（generation / arrangement / sound / ui�
 .github/workflows/      CI（test.yml = Lint・型チェック・テスト・一括計測、grow-wasm.yml = grow の wasm のビルドと確認）
 biome.json              Lint（Biome）の設定
 tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）/ GrowRest（grow のエフェクトの休み：余韻・ディレイのくり返しを切らない・再開した音が変わらない。Git に入れた grow.wasm を鳴らす）/ GrowSound（grow の折り返しノイズ・同じ高さの弾き直し・LFO のスムーズ・スロットの開き直し）/ GrowWorklet（grow の AudioWorklet）/ GrowSlots（grow のノードの使い回し）/ RenderContext（書き出しの合成中も、サイドチェイン・長さの換算が書き出し用のコンテキストを使う）/ Playback（描画が止まっていても曲・試聴・サンプルが終わりで止まる・試聴中の書き出しが曲全体になる）。helpers.ts = 共通、growWasm.ts = grow の wasm を鳴らす部品、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）/ GrowRest（grow のエフェクトの休み：余韻・ディレイのくり返しを切らない・再開した音が変わらない。Git に入れた grow.wasm を鳴らす）/ GrowSound（grow の折り返しノイズ・同じ高さの弾き直し・LFO のスムーズ・スロットの開き直し）/ GrowWorklet（grow の AudioWorklet）/ GrowSlots（grow のノードの使い回し）。helpers.ts = 共通、growWasm.ts = grow の wasm を鳴らす部品、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）。helpers.ts = 共通、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
 tools/mix-measure.mjs   ミックスの一括計測（npm run mix:measure。Electron なしの Vite と画面なしの Chrome / Edge で全ジャンルの曲を書き出し、ピーク・統合ラウドネスを測って mix_presets.json の gain を提案する。測る式は tools/loudness.mjs）
@@ -129,6 +132,10 @@ src/engine/
   growWorklet.js          grow の AudioWorklet（1つのノードで最大16の音色を鳴らす。wasm を 128 サンプルずつ描く。音符・時刻を決めたパラメーターは AudioParam の合図で受ける。スロットを閉じて開き直せる）
   SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。grow（GROW_DRUMS）・ワンショット音源で鳴らす音色もここ
   DrumSamples.ts          ドラム・パーカッションのワンショット音源の読み込み（ドラム = public/samples/drums/<フォルダ>/<トラック名>.wav、パーカッション = public/samples/perc/<フォルダ>/<トラック名>.wav）
+  Grow.ts                 grow（C++ のコアの wasm）を鳴らす：wasm の読み込み・表とプリセット・プリセットのカテゴリとパートごとに選べるカテゴリ（PART_CATEGORIES）、AudioWorklet の登録、各パートの音色 GrowInstrument（同じタスクで作ったものを1つのノードにまとめるマルチティンバー）
+  growWorklet.js          grow の AudioWorklet（1つのノードで最大16の音色を鳴らす。wasm を 128 サンプルずつ描く。音符・時刻を決めたパラメーターは AudioParam の合図で受ける）
+  SynthFactory.ts         ドラム音源（ジャンル別キット DRUM_KITS ＋バス：高域カット→歪み→コンプ→持ち上げ）。grow（GROW_DRUMS）・ワンショット音源で鳴らす音色もここ
+  DrumSamples.ts          ドラム・パーカッションのワンショット音源の読み込み（public/samples/drums/<フォルダ>/<トラック名>.wav）
   Playback.ts             再生・停止（AppState.bars 小節で自動停止。ループ再生なら先頭へ戻る）、再生位置、WAV / MP3 レンダリング
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）・サイドチェインのゲイン・定位（パン）・レベルメーター。オーディオコンテキストごとに保持
   VolumeCurve.ts          フェーダーの値と dB の換算（75 で 0dB・100 で +5dB の2乗のカーブ）、以前のカーブで保存した値の読み替え、定位の表示。Tone.js を使わない
@@ -220,6 +227,7 @@ src/engine/
   - 曲を開いた（`loadSong`）・新規作成（`newSong`）・シンプルモードの「生成する」（新しい曲になる）・起動時は履歴を捨てる（`resetHistory`。前の曲の内容に戻せないようにする）。
   - 戻したとき再生中なら、アレンジ・音量・パートON/OFF・メロディだけの変更はその場で反映し、それ以外は各画面の `restartIfPlaying()` で再生し直す。
 - 用語のツールチップ（`Glossary.ts`）：要素に `data-term="キー"` を付けると、カーソルを乗せる（キーボードならフォーカスする）と少し待って `TERMS` の説明を出す。`span` とアレンジャーのレーン名には点線の下線が付く。パート名（`LayerName`）はそのまま `TERMS` のキーとして使う（アレンジャー）。説明は初心者向けに1〜2文で、専門用語を重ねない。新しい用語を画面に出したら `TERMS` に足して `data-term` を付ける。曲ごとに中身が変わる説明（シンプルモードの生成後のコード名・キー。`ChordTips.ts`）は、`data-tip`（本文）・`data-tip-title`（見出し）で文を直接渡す（`TERMS` より優先。`span` には同じ下線が付く）。
+- 用語のツールチップ（`Glossary.ts`）：要素に `data-term="キー"` を付けると、カーソルを乗せる（キーボードならフォーカスする）と少し待って `TERMS` の説明を出す。`span` とアレンジャーのレーン名には点線の下線が付く。パート名（`LayerName`）はそのまま `TERMS` のキーとして使う（アレンジャー）。説明は初心者向けに1〜2文で、専門用語を重ねない。新しい用語を画面に出したら `TERMS` に足して `data-term` を付ける。
   - ドロップダウンの選択肢（`<option>`）にも `data-term` を付けられる（キーは `scale.<スケール>`・`chordRhythm.<リズム>`・`fx.<種類>`・`sound.<grow のプリセット ID>` の形）。リストの項目にカーソルを乗せる（キーボードで選ぶ）とリストの横に出す。リストはトップレイヤーに描かれるので、ツールチップは popover（`popover="manual"`）で出し直して上に重ねる。`TERMS` にないキーの選択肢は何も出さない。grow の音作りのパネルのプリセットのチップ（`sound.<ID>`）と行の名前（`growCategory.<カテゴリ>`・`growCategory.standard` / `other`）にも同じ説明を出す。パネルに出るプリセット・カテゴリにはすべて説明を書く（足し忘れは `tests/GrowPresets.test.ts` で落ちる。ドラム・パーカッションのプリセットはパネルに出ないので不要）。
   - ON/OFF は設定画面で切り替える（`AppState.tooltips`、localStorage の `toniq.tooltips` = `on` / `off`、`<html data-tooltips>`。OFF では下線も出さない）。`<head>` でも描画前に `data-tooltips` を付ける。曲の内容ではないので `SONG_FIELDS` には入れない。
 - 設定画面（`SettingsScreen.ts`、`data-screen="settings"`）はメニューの横長の「設定」カードから開く。端末ごとの設定（配色・スキン・音名の表記・ループ再生・ドラムの音源・ツールチップ）を集める。曲に保存する項目は置かない。設定を足すときは AppState に項目を足し、保存は担当のモジュールが localStorage（`toniq.*`）に行い、表示の切り替えは `<html data-*>` で行う。
@@ -269,7 +277,7 @@ src/engine/
   - 各パートは AppState から読むので、鳴らしている間だけ `chordPattern` / `drumPattern` / `meter`（ジャンルの標準の拍子）/ `melodyNotes`（拍子を差し替えてから作る）を差し替え、`Playback.stop()` で元に戻す（曲の内容は変わらない）。
   - サンプル中にジャンルを選び直すとそのジャンルのサンプルに切り替わり、テンポを変えるとすぐ反映される。画面の切り替え（`stopSample()`）・生成・ほかの再生で止まる。
 - クイズの音は曲の再生（Tone.js）とは別のオーディオコンテキストで鳴らす。新しい音を鳴らす・次の問題へ進む・画面を離れると前の音を止める。クイズ画面に入ると曲の再生は止める。
-- 基本設計書（仕様書・図）を作る・直すときは `docs/基本設計書/基本設計書の作成手順.md` に従う。仕様書.md の更新・図の作成と更新・docx の作成は、それぞれスキル `update-spec` / `update-diagrams` / `build-design-doc`（`.claude/skills/`）の手順で行う。コードは `git fetch origin` のあと `origin/main` を見る（ローカルの `main` は古いことがある）。
+- 基本設計書（仕様書・図）を作る・直すときは `docs/基本設計書/基本設計書の作成手順.md` に従う。仕様書・図の中身を直したら、スキルを使わない直しでも、その作業の中で仕様書.md の付録C 更新履歴に1行足す（見た目だけの修正は足さない。手順書の「0. 決まっていること」）。仕様書.md の更新・図の作成と更新・docx の作成は、それぞれスキル `update-spec` / `update-diagrams` / `build-design-doc`（`.claude/skills/`）の手順で行う。コードは `git fetch origin` のあと `origin/main` を見る（ローカルの `main` は古いことがある）。
 - 設計書の図（PlantUML。`docs/基本設計書/図/`）を作る・直すときは、`docs/基本設計書/図/CLAUDE.md` の決まりに従う。
 - Git のコミット・push はユーザーが自分で行う。Claude はコミット・push しない。
 - ある程度まとまった作業（機能の追加・画面の作成・不具合修正など）が終わったら、作業報告の最後にコミットメッセージ案を日本語で提示する。1行目に変更の要約（`feat:` / `fix:` / `refactor:` / `docs:` などの接頭辞付き）、空行のあとに主な変更点を箇条書きにする。
@@ -291,6 +299,7 @@ src/engine/
 ## 既知の問題
 
 - ドラムのワンショット音源は `public/samples/drums/default/` にしかなく、ジャンルのフォルダは空、`trance/`・`waltz/`・`ballad/`・`shuffle/` フォルダはない。パーカッションの音源（`public/samples/perc/<フォルダ>/` の `shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）はまだ1つもないので、ワンショット音源を選んでもパーカッションは grow で鳴る。
+- ドラムのワンショット音源は `public/samples/drums/default/` にしかなく（`rim` もない）、ジャンルのフォルダは空、`trance/` フォルダはない。パーカッションの音源（`shaker` / `tambourine` / `conga_high` / `conga_low` / `ride`）はまだ1つもないので、ワンショット音源を選んでもパーカッションは grow で鳴る。
 - `npm run dev` は Electron も起動し、Electron を閉じると Vite も終了する。VS Code の拡張機能など `ELECTRON_RUN_AS_NODE=1` が設定された環境から起動すると Electron が起動に失敗する。
 - 依存パッケージの `npm audit`：electron-builder の依存（`@electron/rebuild`・`node-gyp`・`minimatch` など。インストーラを作るときだけ使う）と、picomatch（vite・vitest が使う。開発時だけ）の指摘が残っている。どちらも直した版がまだなく、`npm audit fix --force` は大きく古い版に戻すので使わない。
 

@@ -8,6 +8,7 @@ boundary ":カスタムモード画面" as L3
 control ":コード進行設定" as L4
 control ":パターン選出" as L5
 entity ":シンプルモード表マスタ" as L6
+entity ":ジャンルスケールマスタ" as L12
 entity ":コード進行マスタ" as L7
 entity ":アプリの状態" as L8
 control ":曲の構成" as L9
@@ -24,6 +25,9 @@ alt シンプルモード画面（再抽選）
   L5 -> L6 : ジャンル×雰囲気の候補を取得する() : void
   activate L6
   deactivate L6
+  L5 -> L12 : ジャンルに合うスケールを取得する() : void
+  activate L12
+  deactivate L12
   L5 -> L7 : 候補のコード進行を取得する() : void
   activate L7
   deactivate L7
@@ -58,7 +62,7 @@ alt シンプルモード画面（再抽選）
   deactivate L2
   deactivate L4
   deactivate L2
-else カスタムモード画面（ドロップダウン・◀▶）
+else カスタムモード画面（ドロップダウン・前後の切り替えボタン）
   L1 -> L3 : コード進行を選ぶ() : void
   activate L3
   L3 -> L4 : 選んだコード進行に切り替える() : void

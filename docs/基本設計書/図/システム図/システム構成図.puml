@@ -1,0 +1,26 @@
+@startuml
+!include ../astah-system-style.puml
+mainframe **deployment** システム構成図
+left to right direction
+
+' 番号（①〜⑦）は 4.2 システム構成表の図番号と対応させる
+
+actor "利用者" as U
+
+node "<&monitor{scale=3}>\n① Windows PC" as PC {
+  rectangle "<&browser{scale=3}>\n③ Toniq アプリ\n（Electron）" as APP {
+    rectangle "<&audio{scale=3}>\n④ 音声エンジン\n（Tone.js・grow）" as ENG
+  }
+  database "<&layers{scale=3}>\n⑤ アプリ内のデータ\n（パターンDB・ドラム音源）" as DATA
+  storage "<&list{scale=3}>\n⑥ ミュージックリスト\n（localStorage）" as LIST
+  folder "<&folder{scale=3}>\n⑦ 出力フォルダ\n（WAV・MP3・MIDI）" as OUT
+}
+
+rectangle "<&volume-high{scale=3}>\n② スピーカー・\nヘッドホン" as SPK
+
+U --> APP : 操作する
+APP --> DATA : 読み込む
+APP --> LIST : 保存・読み込み
+APP --> OUT : 書き出す
+ENG --> SPK : 音を出す
+@enduml

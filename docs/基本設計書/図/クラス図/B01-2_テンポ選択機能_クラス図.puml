@@ -3,7 +3,7 @@
 mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
-  {method} <U+002B> テンポのチップを押下する() : void
+  {method} <U+002B> テンポのボタンを押下する() : void
 }
 class "テンポ選択" as C1 <<control>> {
   {method} <U+002B> テンポを選択する() : void

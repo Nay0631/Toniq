@@ -34,6 +34,17 @@ skinparam guillemet false
 skinparam DiagramBorderColor black
 skinparam DiagramBorderThickness 1
 
+' 画面どうしの間を広げ、線の文が線・ほかの文と重ならないようにする
+skinparam nodesep 120
+skinparam ranksep 180
+
+' 図全体の枠と中身の間をあける（一番外側の線が枠に重ならないように）
+<style>
+mainframe {
+  Padding 30
+}
+</style>
+
 ' 画面名は太字、entry / do / exit の行は普通の文字。
 ' ※ 文字の太さの設定はファイルの最後に置く（前のほうに書くと効かないことがある）。
 skinparam StateFontStyle bold

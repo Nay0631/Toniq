@@ -4,7 +4,7 @@ mainframe sd L01-1_楽曲再生機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
-boundary ":アレンジ画面" as L11
+control ":スペースキー" as L11
 boundary ":ミュージックリスト画面" as L3
 control ":楽曲切り替え" as L4
 control ":曲の管理" as L5
@@ -16,9 +16,9 @@ entity ":growプリセット" as L13
 control ":各パートの演奏" as L9
 control ":アレンジ管理" as L10
 
-note over L2 : シンプルモード画面の再生ボタンも同じ流れ
+note over L2 : シンプルモード画面（生成後）の再生ボタン・スペースキーも同じ流れ
 
-alt モード画面で再生
+alt モード画面で再生ボタン
   L1 -> L2 : 再生ボタンを押下する() : void
   activate L2
   L2 -> L8 : 再生する() : void
@@ -32,33 +32,33 @@ alt モード画面で再生
   activate L13
   deactivate L13
   deactivate L12
-  L8 -> L9 : ON のパートを読み込む() : void
-  activate L9
-  deactivate L9
-  L8 -> L10 : 周回を数える() : void
-  activate L10
-  deactivate L10
-  L8 -> L8 : 小節数で止める予約をする() : void
-  activate L8
-  deactivate L8
-  deactivate L8
-  deactivate L2
-else アレンジャーでスペースキー
-  note over L11 : 文字の入力欄・ドロップダウンの操作中、\nダイアログの表示中は効かない。押し続けても繰り返さない
-  L1 -> L11 : スペースキーを押下する() : void
-  activate L11
-  alt 停止中
-    L11 -> L8 : 再生開始位置から再生する() : void
-    activate L8
-    L8 -> L7 : 曲の内容を取得する() : void
-    activate L7
-    deactivate L7
-    L8 -> L12 : grow の準備を待つ() : void
-    activate L12
-    deactivate L12
+  alt 読み込めた
     L8 -> L9 : ON のパートを読み込む() : void
     activate L9
     deactivate L9
+    L8 -> L10 : 周回を数える() : void
+    activate L10
+    deactivate L10
+    L8 -> L8 : 小節数で止める予約をする() : void
+    activate L8
+    deactivate L8
+  else 読み込みで例外が出た
+    L8 -> L2 : 再生できなかったことを知らせる() : void
+    activate L2
+    deactivate L2
+  end
+  deactivate L8
+  deactivate L2
+else スペースキー（どのタブでも）
+  L1 -> L2 : スペースキーを押下する() : void
+  activate L2
+  L2 -> L11 : 再生／停止を切り替える() : void
+  activate L11
+  note right of L11 : 文字の入力欄・ドロップダウンの操作中、\nダイアログの表示中は効かない。押し続けても繰り返さない
+  alt 停止中
+    L11 -> L8 : 再生する() : void
+    activate L8
+    note right of L8 : アレンジャータブは再生開始位置から、\nほかは先頭から（以降は再生ボタンと同じ）
     deactivate L8
   else 再生中
     L11 -> L8 : 停止する() : void
@@ -66,14 +66,15 @@ else アレンジャーでスペースキー
     deactivate L8
   end
   deactivate L11
+  deactivate L2
 else ミュージックリストで再生
   L1 -> L3 : 曲の再生ボタンを押下する() : void
   activate L3
   L3 -> L4 : 選んだ曲を今の曲にする() : void
   activate L4
   opt 今の曲と別の曲
-    opt 今の曲がリストに保存されていない
-      L4 -> L1 : 失われてよいか確認する() : void
+    opt 今の曲に保存していない変更がある
+      L4 -> L1 : 別の曲を開くか確認する() : void
       activate L1
       deactivate L1
     end

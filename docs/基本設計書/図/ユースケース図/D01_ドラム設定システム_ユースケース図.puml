@@ -9,11 +9,13 @@ rectangle "ドラム設定システム" <<システム名>> {
     usecase "ドラムカテゴリ選択機能" as UC1
     usecase "ドラムパターン選択機能" as UC2
     usecase "ドラム試聴機能" as UC3
+    usecase "ドラムパターン入力機能" as UC4
   }
 }
 
 A1 -- UC1
 A1 -- UC2
 A1 -- UC3
+A1 -- UC4
 
 @enduml

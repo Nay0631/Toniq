@@ -8,7 +8,7 @@ control ":BPM設定" as L3
 entity ":アプリの状態" as L4
 control ":再生" as L5
 
-L1 -> L2 : BPMノブを回す() : void
+L1 -> L2 : BPMつまみを回す() : void
 activate L2
 L2 -> L3 : BPMを設定する() : void
 activate L3

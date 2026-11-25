@@ -3,11 +3,12 @@
 mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
-  {method} <U+002B> ジャンルのチップを押下する() : void
+  {method} <U+002B> ジャンルのボタンを押下する() : void
   {method} <U+002B> ジャンルの一言の説明を表示する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> ジャンルを選ぶ() : void
+  {method} <U+002B> おすすめのスケールを表示する() : void
 }
 class "ジャンル設定" as C1 <<control>> {
   {method} <U+002B> ジャンルを設定する() : void
@@ -27,6 +28,9 @@ class "ミックス" as C5 <<control>> {
 class "grow" as C6 <<control>> {
   {method} <U+002B> ジャンルの標準の音で音源を作る() : void
 }
+class "拍子" as C7 <<control>> {
+  {method} <U+002B> 標準の拍子にする() : void
+}
 class "テンポマスタ" as E1 <<entity>> {
   {field} <U+002B> ジャンル
   {field} <U+002B> ゆっくり・普通・速いのBPM
@@ -36,8 +40,9 @@ class "アプリの状態" as E2 <<entity>> {
   {field} <U+002B> ジャンル
   {field} <U+002B> BPM
   {field} <U+002B> ドラムのカテゴリ
+  {field} <U+002B> 拍子
   {method} <U+002B> ジャンルとBPMを更新する() : void
-  {method} <U+002B> ジャンル・BPM・ドラムのカテゴリを更新する() : void
+  {method} <U+002B> ジャンル・BPM・ドラムのカテゴリ・拍子を更新する() : void
 }
 class "ミックス設定マスタ" as E3 <<entity>> {
   {field} <U+002B> ジャンル
@@ -50,13 +55,27 @@ class "growプリセット" as E4 <<entity>> {
   {field} <U+002B> 音作りの値
   {method} <U+002B> ジャンルの標準のプリセットを取得する() : void
 }
+class "メロディ設定マスタ" as E5 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 標準の拍子
+  {method} <U+002B> 標準の拍子を取得する() : void
+}
+class "ジャンルスケールマスタ" as E6 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 合うスケール
+  {method} <U+002B> 合うスケールを取得する() : void
+}
 
 B1 --> C1
 B2 --> C1
 C1 --> C2
 C2 --> E1
+C1 --> C7
+C7 --> E5
+C1 --> E6
 C1 --> E2
 C1 --> B1
+C1 --> B2
 C1 --> C3
 C1 --> C4
 C4 --> C5
