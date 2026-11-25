@@ -90,6 +90,9 @@ void Voice::startNote (int midiNote, float velocity)
     subPhase  = 0.0f;
     modPhase  = 0.0f;
     syncPhase = 0.0f;
+    syncStep  = 0.0f;
+    edgeCount[0] = edgeCount[1] = 0;
+    lfoReady = lfo2Ready = false;
     // ドリフト：音ごとに少しずれた高さ・明るさで鳴らす（量が 0 なら使わないが、乱数の並びは量によらずそろえる）
     driftPitch    = random.bipolar();
     driftCutoff   = random.bipolar();
@@ -155,6 +158,19 @@ void Voice::changeNote (int midiNote, float velocity, bool retrigger)
 
     if (retrigger || released)
         trigger (velocity);  // ADSR は今の大きさから立ち上がり直す
+}
+
+void Voice::restrike (float velocity)
+{
+    if (! active || fading)
+    {
+        steal (getNote(), velocity);
+        return;
+    }
+    const auto previousGain = velocityGain;
+    changeNote (targetNote, velocity, true);
+    // 強さが変わっても音量が段差にならないよう、EG の今の大きさで合わせる
+    if (velocityGain > 0.0f) ampEnv.scale (previousGain / velocityGain);
 }
 
 void Voice::trigger (float velocity)
@@ -248,13 +264,76 @@ float Voice::lfoShape (LfoWave wave, float phase, float hold) noexcept
 {
     switch (wave)
     {
-        case LfoWave::sine:     return std::sin (twoPi * phase);
+        case LfoWave::sine:     return sinPhase (phase);
         case LfoWave::triangle: return 1.0f - 4.0f * std::fabs (phase - 0.5f);
         case LfoWave::saw:      return 2.0f * phase - 1.0f;
         case LfoWave::square:   return phase < 0.5f ? 1.0f : -1.0f;
         case LfoWave::random:   return hold;
     }
     return 0.0f;
+}
+
+// 段差の位置をサンプルより細かく求めて PolyBLEP をかける、OSC の1枚の1サンプル（1サンプル遅れて出す）。
+// offset = 位相をずらす量（FM）、offsetStep = 前のサンプルからの変化、
+// syncAt = 前のサンプルと今の間で位相を頭に戻す位置（0〜1。負なら戻さない）
+float Voice::edgeSample (int osc, int index, Wave wave, float dt, float pulseWidth, float offset, float offsetStep, float syncAt) noexcept
+{
+    auto& pos  = edgePos[osc][index];
+    auto& hold = edgeHold[osc][index];
+    auto wrap = [] (float phase) { return phase - std::floor (phase); };
+
+    auto out = 0.0f, after = 0.0f;
+    if (index >= edgeCount[osc])
+    {
+        pos = wrap (phases[osc][index] + offset);  // 使い始め（前のサンプルがない）
+    }
+    else
+    {
+        out = hold;
+        const auto delta = edgeDt[osc][index] + offsetStep;
+        if (syncAt < 0.0f)
+        {
+            addEdges (wave, pos, delta, pulseWidth, 0.0f, 1.0f, out, after);
+            pos = wrap (pos + delta);
+        }
+        else
+        {
+            // 頭に戻す位置まで進み、そこで波形が跳ぶ高さに PolyBLEP をかけ、残りを頭から進む
+            const auto toSync = delta * syncAt, rest = delta - toSync;
+            addEdges (wave, pos, toSync, pulseWidth, 0.0f, syncAt, out, after);
+            const auto jump = rawOscillator (wave, 0.0f, pulseWidth) - rawOscillator (wave, wrap (pos + toSync), pulseWidth);
+            addStep (jump, syncAt, out, after);
+            addEdges (wave, 0.0f, rest, pulseWidth, syncAt, 1.0f - syncAt, out, after);
+            pos = wrap (rest);
+        }
+    }
+    hold = rawOscillator (wave, pos, pulseWidth) + after;
+    edgeDt[osc][index] = dt;
+    return out;
+}
+
+// 段差の位置を求める描き方で、OSC の全部の枚数の1サンプルを left / right に足す。
+// offset = FM で OSC 1 の位相をずらす量、syncAt = ハードシンクで OSC 2 の位相を頭に戻す位置
+GROW_NOINLINE void Voice::addEdgeOsc (int osc, const OscParams& p, float baseHz, float pulseWidth, float offset, float syncAt,
+                                      float ring, float mod, float& left, float& right) noexcept
+{
+    const auto count = renderCount[osc];
+    for (int i = 0; i < count; ++i)
+    {
+        curRatio[osc][i] += incRatio[osc][i];
+        curLeft[osc][i]  += incLeft[osc][i];
+        curRight[osc][i] += incRight[osc][i];
+        const auto dt = std::min (0.5f, baseHz * curRatio[osc][i] / (float) sampleRate);
+        auto s = osc == 0 ? edgeSample (0, i, p.wave, dt, pulseWidth, offset, offset - fmOffsetLast, -1.0f)
+                          : edgeSample (1, i, p.wave, dt, pulseWidth, 0.0f, 0.0f, syncAt);
+        if (osc == 0) s += (s * mod - s) * ring;    // リング
+        else          phases[1][i] = edgePos[1][i];  // 頭に戻した位相
+        advancePhase (phases[osc][i], dt);
+        left  += s * curLeft[osc][i];
+        right += s * curRight[osc][i];
+    }
+    edgeCount[osc] = count;
+    if (osc == 0) fmOffsetLast = offset;
 }
 
 void Voice::updateBlockSettings (const GrowParams& p, int numSamples)
@@ -420,6 +499,52 @@ void Voice::render (float* left, float* right, int numSamples)
 
     auto lastResonance = -1.0f, q = 0.7071f;
 
+    // 使っていない LFO は波の形を計算しない（位相・フェードインは進めておく）。
+    // つまみを 0 に戻した直後（スムージングで量が残っている間）は、まだ使っているとみなす
+    auto modUses = [this, &p] (ModSource source)
+    {
+        for (int m = 0; m < numModSlots; ++m)
+            if (p.mods[m].source == source && (p.mods[m].amount != 0.0f || ! modAmountSmooth[m].isAt (0.0f))) return true;
+        return false;
+    };
+    const auto lfoUsed = p.lfoPitchSemis != 0.0f || p.lfoFilterSemis != 0.0f || p.lfoAmp != 0.0f || p.lfoPulseWidth != 0.0f
+                         || ! lfoPitchSmooth.isAt (0.0f) || ! lfoFilterSmooth.isAt (0.0f)
+                         || ! lfoAmpSmooth.isAt (0.0f) || ! lfoPwSmooth.isAt (0.0f)
+                         || modUses (ModSource::lfo1);
+    const auto lfo2Used = modUses (ModSource::lfo2);
+    if (! lfoUsed)  lfoReady  = false;
+    if (! lfo2Used) lfo2Ready = false;
+    // 角を丸める：波の値へ1次で近づける（0 なら波の値のまま）
+    auto smoothCoeff = [sr] (float seconds) { return seconds > 0.0f ? 1.0f - std::exp (-1.0f / (seconds * sr)) : 1.0f; };
+    const auto lfoCoeff = smoothCoeff (p.lfoSmooth), lfo2Coeff = smoothCoeff (p.lfo2Smooth);
+    auto smoothLfo = [] (float shape, float coeff, float& value, bool& ready)
+    {
+        value = ready && coeff < 1.0f ? value + (shape - value) * coeff : shape;
+        ready = true;
+        return value;
+    };
+
+    // ノコギリ・矩形に、なめらかな波（サイン・三角）で FM をかけるときは、段差の位置を求めて描く（折り返しノイズを抑える）。
+    // 矩形・ノコギリの波で FM をかける音（ハイハットなど）は、折り返しも音のうちなので今までの描き方のまま
+    auto modTargets = [this, &p] (ModDest dest)
+    {
+        for (int m = 0; m < numModSlots; ++m)
+            if (p.mods[m].source != ModSource::none && p.mods[m].dest == dest
+                && (p.mods[m].amount != 0.0f || ! modAmountSmooth[m].isAt (0.0f))) return true;
+        return false;
+    };
+    const auto isEdged = [] (Wave wave) { return wave == Wave::saw || wave == Wave::square; };
+    const auto fmEdges = isEdged (p.osc[0].wave) && ! isEdged (p.osc[1].wave)
+                         && (p.fmAmount > 0.0f || ! fmSmooth.isAt (0.0f) || modTargets (ModDest::fm));
+    const bool edgeOsc[2] = { fmEdges, p.hardSync };
+    for (int o = 0; o < 2; ++o)
+        if (! edgeOsc[o]) edgeCount[o] = 0;
+
+    // 高さ・カットオフ → Hz の指数計算は、値が変わったときだけ行う（前に求めた値を持っておく）
+    auto lastNote = -1.0e9f, noteHz = 0.0f;
+    auto lastOsc2Mod = 0.0f, osc2ModRatio = 1.0f;
+    auto lastCutoff = -1.0e9f, lastCutoffHz = 20.0f;
+
     for (int n = 0; n < numSamples; ++n)
     {
         if (fading)
@@ -452,8 +577,8 @@ void Voice::render (float* left, float* right, int numSamples)
         }
         if (lfoFadeLevel  < 1.0f) lfoFadeLevel  = std::min (1.0f, lfoFadeLevel  + lfoFadeStep);
         if (lfo2FadeLevel < 1.0f) lfo2FadeLevel = std::min (1.0f, lfo2FadeLevel + lfo2FadeStep);
-        const auto lfo  = lfoShape (p.lfoWave,  lfoPhase,  lfoHold)  * lfoFadeLevel;
-        const auto lfo2 = lfoShape (p.lfo2Wave, lfo2Phase, lfo2Hold) * lfo2FadeLevel;
+        const auto lfo  = lfoUsed  ? smoothLfo (lfoShape (p.lfoWave,  lfoPhase,  lfoHold),  lfoCoeff,  lfoValue,  lfoReady)  * lfoFadeLevel  : 0.0f;
+        const auto lfo2 = lfo2Used ? smoothLfo (lfoShape (p.lfo2Wave, lfo2Phase, lfo2Hold), lfo2Coeff, lfo2Value, lfo2Ready) * lfo2FadeLevel : 0.0f;
 
         pitchEnvLevel = p.pitchEnvLinear ? std::max (0.0f, pitchEnvLevel - pitchEnvStep)
                                          : flushDenormal (pitchEnvLevel * pitchEnvCoeff);
@@ -467,8 +592,9 @@ void Voice::render (float* left, float* right, int numSamples)
         for (int m = 0; m < numModSlots; ++m)
         {
             const auto& slot   = p.mods[m];
+            if (slot.source == ModSource::none) continue;
             const auto  amount = modAmountSmooth[m].next (slot.amount);
-            if (slot.source == ModSource::none || amount == 0.0f) continue;
+            if (amount == 0.0f) continue;
             auto source = 0.0f;
             switch (slot.source)
             {
@@ -502,13 +628,18 @@ void Voice::render (float* left, float* right, int numSamples)
                           + lfo * lfoPitchSmooth.next (p.lfoPitchSemis) + modTo[(int) ModDest::pitch];
 
         // OSC ごとの基準の高さ（Hz）
-        float baseHz[2];
-        for (int o = 0; o < 2; ++o)
+        if (note != lastNote)
         {
-            const auto& osc = p.osc[o];
-            baseHz[o] = noteToHz (note + (float) (osc.octave * 12 + osc.semitone) + osc.fineCents / 100.0f
-                                  + (o == 1 ? modTo[(int) ModDest::osc2Pitch] : 0.0f));
+            lastNote = note;
+            noteHz   = noteToHz (note);
         }
+        const auto osc2Mod = modTo[(int) ModDest::osc2Pitch];
+        if (osc2Mod != lastOsc2Mod)
+        {
+            lastOsc2Mod  = osc2Mod;
+            osc2ModRatio = std::exp2 (osc2Mod / 12.0f);
+        }
+        const float baseHz[2] = { noteHz * p.osc[0].pitchRatio, noteHz * p.osc[1].pitchRatio * osc2ModRatio };
 
         // OSC 変調：変調の元（OSC 2 の高さで鳴る1本の波。OSC 2 の音量・ユニゾンによらない）
         const auto fm   = std::clamp (fmSmooth.next (p.fmAmount) + modTo[(int) ModDest::fm], 0.0f, 1.0f);
@@ -520,12 +651,14 @@ void Voice::render (float* left, float* right, int numSamples)
             mod = oscillatorSample (p.osc[1].wave, modPhase, dt, p.osc[1].pulseWidth);
             advancePhase (modPhase, dt);
         }
-        // ハードシンク：OSC 1 の高さで回る位相が1周したら、OSC 2 の位相を頭に戻す
-        auto syncReset = false;
+        // ハードシンク：OSC 1 の高さで回る位相が1周した所（前のサンプルと今の間の 0〜1）で、OSC 2 の位相を頭に戻す
+        auto syncAt = -1.0f;
         if (p.hardSync)
         {
-            syncPhase += std::min (0.5f, baseHz[0] / sr);
-            if (syncPhase >= 1.0f) { syncPhase -= std::floor (syncPhase); syncReset = true; }
+            const auto next = syncPhase + syncStep;
+            if (next >= 1.0f) syncAt = (1.0f - syncPhase) / syncStep;
+            syncPhase = next - std::floor (next);
+            syncStep  = std::min (0.5f, baseHz[0] / sr);
         }
 
         const auto lfoPw = lfo * lfoPwSmooth.next (p.lfoPulseWidth) + modTo[(int) ModDest::pulseWidth];
@@ -536,9 +669,14 @@ void Voice::render (float* left, float* right, int numSamples)
             const auto count = renderCount[o];
             const auto& osc = p.osc[o];
             const auto pulseWidth = std::clamp (pwSmooth[o].next (osc.pulseWidth) + lfoPw, 0.05f, 0.95f);
-            if (o == 1 && syncReset)
-                for (int i = 0; i < maxUnison; ++i) phases[1][i] = 0.0f;
             if (count == 0) continue;
+            if (edgeOsc[o])
+            {
+                const auto direct = o == 1 && p.osc2Direct;
+                addEdgeOsc (o, osc, baseHz[o], pulseWidth, fm * fmDepth * mod, syncAt, ring, mod,
+                            direct ? directL : l, direct ? directR : r);
+                continue;
+            }
             for (int i = 0; i < count; ++i)
             {
                 curRatio[o][i] += incRatio[o][i];
@@ -573,8 +711,8 @@ void Voice::render (float* left, float* right, int numSamples)
         const auto subLevel = subSmooth.next (p.subLevel);
         if (subLevel > 0.0f)
         {
-            const auto s = std::sin (twoPi * subPhase) * subLevel;
-            advancePhase (subPhase, std::min (0.5f, noteToHz (note - 12.0f) / sr));
+            const auto s = sinPhase (subPhase) * subLevel;
+            advancePhase (subPhase, std::min (0.5f, noteHz * 0.5f / sr));  // 1オクターブ下
             l += s;
             r += s;
         }
@@ -596,7 +734,12 @@ void Voice::render (float* left, float* right, int numSamples)
                                 + driftCut
                                 - (1.0f - noteVelocity) * p.velocitySemis
                                 + modTo[(int) ModDest::cutoff];
-            const auto hz = std::clamp (noteToHz (cutoff), 20.0f, maxCutoff);
+            if (cutoff != lastCutoff)
+            {
+                lastCutoff   = cutoff;
+                lastCutoffHz = std::clamp (noteToHz (cutoff), 20.0f, maxCutoff);
+            }
+            const auto hz = lastCutoffHz;
             const auto resonance = qSmooth.next (p.resonance);
             const auto filterDrive = driveSmooth.next (p.filterDrive);
             filter1.setDrive (filterDrive);

@@ -214,14 +214,18 @@ export function renderArranger(): void {
   const unitLines = units.slice(1)
     .map(u => `<div class="arr-unit-line" style="left:${(u.start / bars) * 100}%"></div>`).join("");
   const startLeft = `${(Math.min(s.startBar, bars - 1) / bars) * 100}%`;
+  // ループする区間（目盛りの帯と、レーンに重ねる薄い面）
+  const range = loopRangeIn(bars);
+  const rangeStyle = range ? `left:${(range.startBar / bars) * 100}%;width:${(range.bars / bars) * 100}%` : "";
   root.innerHTML = `
     <div class="arr-ruler">
       <div class="arr-head arr-ruler-head">再生開始 <b>${Math.min(s.startBar, bars - 1) + 1}</b> 小節目</div>
-      <div class="arr-ticks" title="クリックで再生開始位置を指定">${ticks}<span class="arr-start-marker" style="left:${startLeft}"></span></div>
+      <div class="arr-ticks" title="クリックで再生開始位置を指定・ドラッグでループする区間を指定">${ticks}${range ? `<span class="arr-range-mark" style="${rangeStyle}"></span>` : ""}<span class="arr-start-marker" style="left:${startLeft}"></span></div>
     </div>
     ${sectionLane(bars)}
     ${lanes}
     <div class="arr-overlay">
+      ${range ? `<div class="arr-range-area" style="${rangeStyle}"></div>` : ""}
       ${unitLines}
       <div class="arr-start-line" style="left:${startLeft}"></div>
       <div class="arr-playhead" id="c-arr-playhead" hidden></div>
@@ -236,6 +240,12 @@ export function renderArranger(): void {
     : `${s.genre} の${arrangePresetLabel(s.arrangePreset)}の構成`;
   $("c-arr-mode")!.classList.toggle("is-edited", changed);
   ($("c-arr-reset") as HTMLButtonElement).disabled = !changed;
+  // 区間ループの表示（「区間ループ 5〜8 小節 ×」）
+  const rangeChip = $("c-arr-range");
+  if (rangeChip) {
+    rangeChip.hidden = !range;
+    if (range) $("c-arr-range-value")!.textContent = `${range.startBar + 1}〜${range.startBar + range.bars} 小節`;
+  }
   const loop = $("c-arr-loop");
   loop?.classList.toggle("is-on", s.loopPlayback);
   loop?.setAttribute("aria-pressed", String(s.loopPlayback));
@@ -396,6 +406,13 @@ function unitsOfBlock(start: number, part: LayerName): ArrangeUnit[] {
 }
 
 // トラックの上の位置（clientX）の小節
+// ループする区間（AppState.loopRange）を曲の長さに収めたもの。なければ null
+function loopRangeIn(bars: number): { startBar: number; bars: number } | null {
+  const r = getState().loopRange;
+  if (!r || r.startBar >= bars) return null;
+  return { startBar: r.startBar, bars: Math.max(1, Math.min(r.bars, bars - r.startBar)) };
+}
+
 function barAt(track: HTMLElement, clientX: number): number {
   const rect = track.getBoundingClientRect();
   const bars = getState().bars;
@@ -427,6 +444,50 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
   root.addEventListener("pointerup", endDrag);
   root.addEventListener("pointercancel", endDrag);
 
+  // 小節番号の目盛りをドラッグ：ループする区間（AppState.loopRange）を決める。動かさずに離したらクリック（再生開始位置）。
+  // ドラッグ中は描き直しで目盛りの要素が入れ替わるので、移動・離すは window で受け、目盛りはその都度探す
+  let rangeDrag: { from: number; moved: boolean } | null = null;
+  let suppressTickClick = false;
+  root.addEventListener("pointerdown", e => {
+    const ticks = (e.target as HTMLElement).closest<HTMLElement>(".arr-ticks");
+    if (e.button !== 0 || !ticks) return;
+    rangeDrag = { from: barAt(ticks, e.clientX), moved: false };
+  });
+  window.addEventListener("pointermove", e => {
+    if (!rangeDrag) return;
+    const ticks = root.querySelector<HTMLElement>(".arr-ticks");
+    if (!ticks) return;
+    const bar = barAt(ticks, e.clientX);
+    if (!rangeDrag.moved && bar === rangeDrag.from) return;
+    rangeDrag.moved = true;
+    const start = Math.min(bar, rangeDrag.from);
+    const loopRange = { startBar: start, bars: Math.abs(bar - rangeDrag.from) + 1 };
+    const prev = getState().loopRange;
+    if (prev?.startBar === loopRange.startBar && prev.bars === loopRange.bars) return;
+    setState({ loopRange });
+    render();
+  });
+  const endRangeDrag = () => {
+    if (!rangeDrag) return;
+    const moved = rangeDrag.moved;
+    rangeDrag = null;
+    if (!moved) return;
+    // 離したあとのクリックで再生開始位置を変えない（クリックは pointerup の直後に同期で届く）
+    suppressTickClick = true;
+    window.setTimeout(() => { suppressTickClick = false; }, 0);
+    // 区間の頭から鳴らす（再生中ならそこから再生し直す）
+    setState({ startBar: getState().loopRange?.startBar ?? 0 });
+    onSeek();
+  };
+  window.addEventListener("pointerup", endRangeDrag);
+  window.addEventListener("pointercancel", endRangeDrag);
+
+  $("c-arr-range-clear")?.addEventListener("click", () => {
+    setState({ loopRange: null });
+    Playback.refreshPlayRange();  // 再生中なら今の位置から曲全体の再生に戻す
+    render();
+  });
+
   root.addEventListener("click", e => {
     const target = e.target as HTMLElement;
     if (target.closest(BLOCK_SELECT)) return;
@@ -434,6 +495,7 @@ export function initArranger(onSeek: () => void, onSongChange: () => void): void
     // 小節番号の目盛りをクリック：その小節を再生開始位置にする
     const ticks = target.closest<HTMLElement>(".arr-ticks");
     if (ticks) {
+      if (suppressTickClick) return;
       setState({ startBar: barAt(ticks, e.clientX) });
       onSeek();
       return;

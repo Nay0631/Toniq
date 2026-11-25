@@ -38,6 +38,10 @@ export type PianoRollLength = "2n" | "4n" | "8n" | "16n";
 // ミュージックリストの並び順
 export type MusicListSort = "newest" | "oldest" | "name";
 
+// ミュージックリストの表示（songs = 保存した曲、files = 書き出したファイル）と、書き出したファイルの種類の絞り込み（"" = すべて）
+export type MusicListView = "songs" | "files";
+export type MusicListFileType = "" | "wav" | "mp3" | "midi";
+
 // 音名の表記（CDE／ドレミ）。ピアノロール・ルート音・音楽クイズの単音に使う
 export type NoteNames = "cde" | "doremi";
 
@@ -72,8 +76,8 @@ export type SwingUnit = "16n" | "8n";
 export type ModulationScope = "last" | "chorus";
 
 // 構成のプリセット（LoopArranger.ts の ARRANGE_PRESETS。ジャンルの標準の構成 LOOP_SCHEDULE に変形を足したもの）
-// standard = 標準、quiet = 静かに始まる、drop = サビを強く、short = 短く繰り返す、buildup = だんだん盛り上がる
-export type ArrangePreset = "standard" | "quiet" | "drop" | "short" | "buildup";
+// standard = 標準、quiet = 静かに始まる、drop = サビを強く、short = 短く繰り返す、buildup = だんだん盛り上がる、chorusFirst = サビ頭
+export type ArrangePreset = "standard" | "quiet" | "drop" | "short" | "buildup" | "chorusFirst";
 
 // アレンジの「変えた所」。セクション単位（何回目の Aメロ／サビか）で、パートを足す・抜く、ドラムのパターン・FX の種類を変える。
 // 標準（プリセット）を組み直してから当て直すので、ジャンル・小節数・進行の長さを変えても追従する
@@ -116,6 +120,9 @@ export interface AppState {
   musicListGenre:     string;
   musicListFavorites: boolean;
   musicListSort:      MusicListSort;
+  // 保存した曲／書き出したファイル（WAV・MP3・MIDI）のどちらを見ているかと、ファイルの種類の絞り込み。並び順は曲と共通
+  musicListView:      MusicListView;
+  musicListFileType:  MusicListFileType;
 
   // 音楽クイズで選んでいる出題モード（QuizModes.ts の id）
   quizMode:      string;
@@ -144,7 +151,8 @@ export interface AppState {
 
   // サビ（セクション B）のコード進行とメロディ。
   // chorusPattern は chordPattern と同じ長さ・スケールのものだけ使う（null・合わないときは chordPattern で鳴らす）。
-  // chorusMelodyNotes が空なら、サビでも melodyNotes を鳴らす
+  // chorusMelodyNotes は Aメロとは別のメロディ（空ならサビではメロディを鳴らさない。Aメロを流用しない）。
+  // サビのメロディの項目がない頃に保存した曲は、読み込み時（SongLibrary の songFields）に melodyNotes を写す
   chorusPattern:     ChordProgression | null;
   chorusMelodyNotes: MelodyNote[];
   // 周回ごとのセクション（null = ジャンルの標準。LoopArranger の LOOP_SCHEDULE）
@@ -193,11 +201,16 @@ export interface AppState {
   arrangePreset: ArrangePreset;
   arrangeEdits:  ArrangeEdit[];
   startBar:    number;  // アレンジャーでの再生開始位置（小節・0始まり）
+  // アレンジャーで指定したループする区間（小節・0始まり。null = なし）。カスタムモードの再生だけで使う。
+  // 曲の内容ではないので SONG_FIELDS には入れない（曲を開く・新規作成で消す）
+  loopRange:   { startBar: number; bars: number } | null;
 
   // ピアノロールの入力設定（スケールロックはコード進行の scaleLock とは別）
   pianoRollLength:    PianoRollLength;
   pianoRollScaleLock: boolean;  // ON のときはスケール外の音を置けない
   pianoRollOctave:    number;   // 鍵盤入力（タイピングピアノ）の基準のオクターブ（下の段の C。3〜5）
+  pianoRollZoomX:     number;   // ピアノロール（メロディ）の横の拡大率（1 = 画面の幅にコード進行1周。PianoRollTab の ZOOM_X）
+  pianoRollZoomY:     number;   // ピアノロール（メロディ）の縦の拡大率（1 = 行の高さ 22px。PianoRollTab の ZOOM_Y）
   drumRollVelocity:   number;   // ピアノロールのドラムで置く音の強さ（0〜1。強・中・弱）
 
   // パートのON/OFF
@@ -248,6 +261,8 @@ export const defaultState: AppState = {
   musicListGenre:     "",
   musicListFavorites: false,
   musicListSort:      "newest",
+  musicListView:      "songs",
+  musicListFileType:  "",
 
   quizMode:      "doremi_cde",
   noteNames:     "doremi",
@@ -302,10 +317,13 @@ export const defaultState: AppState = {
   arrangePreset: "standard",
   arrangeEdits:  [],
   startBar:    0,
+  loopRange:   null,
 
   pianoRollLength:    "4n",
   pianoRollScaleLock: true,
   pianoRollOctave:    4,
+  pianoRollZoomX:     1,
+  pianoRollZoomY:     1,
   drumRollVelocity:   1,
 
   parts: {

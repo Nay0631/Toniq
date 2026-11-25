@@ -1,19 +1,23 @@
-import { getState, setState, MusicListSort } from "../engine/AppState";
+import { getState, setState, MusicListSort, type MusicListView } from "../engine/AppState";
 import {
-  listSongs, findSong, saveCurrentSong, renameSong, deleteSong, loadSong, newSong, toggleFavorite, SavedSong,
-  songsToFile, songFileName, importSongFile, SongStorageError, currentSongFields, hasUnsavedChanges,
+  listSongs, findSong, renameSong, deleteSong, loadSong, newSong, toggleFavorite, SavedSong,
 } from "../engine/SongLibrary";
-import { songBeforeRating } from "./RatingScreen";
 import { hasOutputFolder, openOutputFolder } from "../engine/OutputFiles";
 import * as Playback from "../engine/Playback";
-import { onRender, render as renderAll, showScreen } from "./Router";
+import type { AudioFormat } from "../engine/Playback";
+import { onRender, onScreenChange, render as renderAll, renderBreadcrumb, setMenuGuard, showScreen } from "./Router";
 import { formatTime, SCALE_LABELS } from "./format";
 import { beatsPerBar } from "../engine/Meter";
+import { hasUnsavedSong, isListedSong, lossMessage, saveToList, withStorage } from "./SongSave";
+import { askChoice } from "./ChoiceDialog";
+import { exportAudioWithProgress, exportMidiWithName } from "./ExportProgress";
+import { initOutputFileList, refreshOutputFiles, renderOutputFiles, stopFilePlayback } from "./OutputFileList";
 
 const $ = (id: string) => document.getElementById(id);
 
 // 並び順の選択肢（index.html の #ml-sort の option と同じ値）
 const SORT_VALUES: readonly MusicListSort[] = ["newest", "oldest", "name"];
+const VIEW_VALUES: readonly MusicListView[] = ["songs", "files"];
 const MODE_LABELS = { simple: "シンプルモード", custom: "カスタムモード" };
 
 const ICON_PLAY = `<svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>`;
@@ -28,22 +32,9 @@ let renameSongId: string | null = null;
 
 // ===== 状態の更新 =====
 
-// 保存していない変更があるか。サンプルの試聴・メロディの評価で一時的に差し替えているときは、差し替える前の内容で比べる
-function unsaved(): boolean {
-  const fields = { ...(songBeforeRating() ?? currentSongFields()), ...Playback.sampleOriginal() };
-  return hasUnsavedChanges(fields);
-}
-
-// 失われる変更の説明（リストにある曲なら保存したあとの変更、ない曲なら曲そのもの）
-function lossMessage(): string {
-  return findSong(getState().songId)
-    ? "最後に保存したあとの変更は失われます。"
-    : "この曲はミュージックリストに保存されていないため失われます。";
-}
-
 // 保存していない変更を、別の曲の読み込みで捨ててよいか確かめる
 function confirmDiscard(nextId: string): boolean {
-  if (getState().songId === nextId || !unsaved()) return true;
+  if (getState().songId === nextId || !hasUnsavedSong()) return true;
   return confirm(`別の曲を開きますか？\n編集中の曲の${lossMessage()}`);
 }
 
@@ -66,6 +57,7 @@ async function togglePlay(id: string): Promise<void> {
     return;
   }
   if (!useSong(id)) return;
+  stopFilePlayback();  // 書き出したファイルを聴いていたら止める
   await Playback.play({ onEnded: render });
   startProgressLoop();
   render();
@@ -78,32 +70,65 @@ function openSong(id: string): void {
   showScreen(song.mode);
 }
 
-// ミュージックリストに書き込めなかったときの案内
-const STORAGE_HINT = "不要な曲を削除するか、ミュージックリストの「すべて書き出す」でファイルに残してから整理してください。";
-
-// ミュージックリストを書き換える操作を行う。書き込めなかったら知らせて false を返す
-function withStorage(action: () => void): boolean {
-  try {
-    action();
-    return true;
-  } catch (e) {
-    if (!(e instanceof SongStorageError)) throw e;
-    alert(`${e.message}。変更は保存されていません。\n${STORAGE_HINT}`);
-    return false;
-  }
+// 曲を WAV / MP3 / MIDI で書き出す（⋮ メニュー）。曲を今の曲として読み込んでから書き出し、書き出したファイルの一覧を読み直す
+async function exportSongAs(id: string, format: AudioFormat | "midi"): Promise<void> {
+  if (!useSong(id)) return;
+  Playback.stop();
+  stopFilePlayback();
+  render();
+  const saved = format === "midi" ? await exportMidiWithName() : await exportAudioWithProgress(format);
+  if (saved) await refreshOutputFiles();
 }
 
-// 今の曲をミュージックリストに保存する。書き込めなければ知らせる（編集中の曲は消えないので、整理してから保存し直せる）
-function saveToList(): boolean {
-  try {
-    saveCurrentSong();
-    return true;
-  } catch (e) {
-    if (!(e instanceof SongStorageError)) throw e;
-    alert(`${e.message}。この曲はミュージックリストに保存されていません。\n${STORAGE_HINT}\n`
-        + "編集中の曲は消えていないので、整理したあとにもう一度「♪ 保存」してください。");
-    return false;
-  }
+// 「＋ 新規作成」：今の曲の編集内容が消えることを、実行する前にダイアログで知らせる。
+// 保存していない変更があれば「保存してから新規作成」も選べる。新規作成してよければ true
+async function confirmNewSong(): Promise<boolean> {
+  const unsaved   = hasUnsavedSong();
+  const saveLabel = isListedSong() ? "上書き保存してから新規作成" : "保存してから新規作成";
+  const choice = await askChoice(unsaved
+    ? {
+      title:   "新しい曲をつくりますか？",
+      message: "今つくっている曲の編集内容は消え、設定が初めの状態に戻ります。",
+      detail:  `${lossMessage()}\n残しておきたいときは「${saveLabel}」を選んでください（ミュージックリストに保存され、あとで続きを編集できます）。`,
+      choices: [
+        { id: "discard", label: "保存せずに新規作成", kind: "danger" },
+        { id: "save",    label: saveLabel, kind: "primary" },
+      ],
+    }
+    : {
+      title:   "新しい曲をつくりますか？",
+      message: "今の曲を閉じて、設定を初めの状態に戻します。",
+      detail:  isListedSong()
+        ? "この曲はミュージックリストに保存してあるので、あとでミュージックリストの「編集」から続きを編集できます。"
+        : "保存していない変更はないので、消える内容はありません。",
+      choices: [{ id: "new", label: "新規作成", kind: "primary" }],
+    });
+  if (choice === null) return false;
+  if (choice === "save") return saveToList();
+  return true;
+}
+
+// シンプルモード・カスタムモードから「‹ メニューに戻る」を押したとき：保存していない変更があれば「楽曲を保存しますか？」と聞く。
+// メニューに戻るだけでは曲は消えない（もう一度開けば続きを編集できる）ので、保存せずに戻ることもできる。戻ってよければ true
+async function confirmBackToMenu(): Promise<boolean> {
+  const s = getState();
+  if (s.screen !== "simple" && s.screen !== "custom") return true;
+  if (s.screen === "simple" && !s.generated) return true;  // シンプルモードの生成前は、保存する曲がまだない
+  if (!hasUnsavedSong()) return true;
+  const saveLabel = isListedSong() ? "上書き保存して戻る" : "保存して戻る";
+  const choice = await askChoice({
+    title:   "楽曲を保存しますか？",
+    message: "保存していない変更があります。メニューに戻る前に、ミュージックリストに保存できます。",
+    detail:  "保存せずに戻っても、今の曲はこの画面を開き直せば続きを編集できます。\n"
+           + "ただし、新規作成・別の曲を開く・アプリを閉じると、保存していない変更は失われます。",
+    choices: [
+      { id: "discard", label: "保存せずに戻る" },
+      { id: "save",    label: saveLabel, kind: "primary" },
+    ],
+  });
+  if (choice === null) return false;
+  if (choice === "save") return saveToList();
+  return true;
 }
 
 function removeSong(id: string): void {
@@ -111,43 +136,6 @@ function removeSong(id: string): void {
   if (!song || !confirm(`「${song.name}」をミュージックリストから削除しますか？`)) return;
   if (isPlayingSong(id)) Playback.stop();
   withStorage(() => deleteSong(id));
-  render();
-}
-
-// ===== 曲ファイル =====
-
-function exportSong(id: string): void {
-  const song = findSong(id);
-  if (song) Playback.downloadBlob(songsToFile([song]), songFileName(song.name));
-}
-
-function exportAllSongs(): void {
-  const songs = listSongs();
-  if (songs.length === 0) {
-    alert("書き出す曲がありません");
-    return;
-  }
-  const date = new Date().toISOString().slice(0, 10);
-  Playback.downloadBlob(songsToFile(songs), songFileName(`toniq_ミュージックリスト_${date}`));
-}
-
-async function importFiles(files: FileList): Promise<void> {
-  let added = 0, skipped = 0;
-  const errors: string[] = [];
-  for (const file of Array.from(files)) {
-    try {
-      const result = importSongFile(await file.text());
-      added   += result.added;
-      skipped += result.skipped;
-    } catch (e) {
-      errors.push(`${file.name}：${e instanceof Error ? e.message : String(e)}`);
-    }
-  }
-  const lines = [];
-  if (added > 0)   lines.push(`${added}曲をミュージックリストに追加しました。`);
-  if (skipped > 0) lines.push(`${skipped}曲は内容が足りないため読み込めませんでした。`);
-  lines.push(...errors);
-  alert(lines.join("\n") || "読み込める曲がありませんでした。");
   render();
 }
 
@@ -236,7 +224,9 @@ function songRow(song: SavedSong): string {
         <button class="song-icon-btn" data-action="menu" aria-label="メニュー">${ICON_MORE}</button>
         <div class="song-menu" ${menuSongId === song.id ? "" : "hidden"}>
           <button data-action="start-rename">名前を変更</button>
-          <button data-action="export">ファイルに書き出す</button>
+          <button data-action="export-wav">WAV で書き出す</button>
+          <button data-action="export-mp3">MP3 で書き出す</button>
+          <button data-action="export-midi">MIDI で書き出す</button>
           <button class="is-danger" data-action="delete">削除</button>
         </div>
       </div>
@@ -298,6 +288,22 @@ function render(): void {
   const onList = s.screen === "musiclist";
   document.querySelectorAll<HTMLElement>("[data-musiclist-only]").forEach(el => { el.hidden = !onList; });
   if (!onList) return;
+  renderBreadcrumb();  // 「保存した曲／書き出したファイル」の段が変わる
+
+  // 保存した曲／書き出したファイルの切り替え
+  const filesView = s.musicListView === "files";
+  document.querySelectorAll<HTMLElement>("[data-ml-view]").forEach(tab => {
+    const active = tab.dataset.mlView === s.musicListView;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+  $("ml-songs-view")!.hidden = filesView;
+  $("ml-files-view")!.hidden = !filesView;
+  if (filesView) {
+    const count = renderOutputFiles();
+    $("ml-count")!.textContent = hasOutputFolder() ? `${count}ファイル` : "";
+    return;
+  }
 
   const songs   = listSongs();
   const visible = visibleSongs(songs);
@@ -321,11 +327,12 @@ function render(): void {
 
 export function initMusicListScreen(): void {
   onRender(render);
+  setMenuGuard(confirmBackToMenu);
 
   // 保存していない変更があれば、ウィンドウを閉じる・読み込み直す前に確かめる。
   // ブラウザは標準の確認を出し、Electron はメインプロセス（will-prevent-unload）が確認のダイアログを出す
   window.addEventListener("beforeunload", e => {
-    if (!unsaved()) return;
+    if (!hasUnsavedSong()) return;
     e.preventDefault();
     e.returnValue = "";  // 古いブラウザ・Electron は returnValue で止める
   });
@@ -342,16 +349,34 @@ export function initMusicListScreen(): void {
       renderAll();
     }));
 
-  // 新規作成（シンプルモード・カスタムモードの情報バー）：曲の内容を初期状態に戻す
+  // 新規作成（シンプルモード・カスタムモードの情報バー）：曲の内容を初期状態に戻す。
+  // 何が消えるかを、実行する前にいつもダイアログで知らせる
   document.querySelectorAll<HTMLButtonElement>("[data-new-song]").forEach(btn =>
-    btn.addEventListener("click", () => {
-      // 保存していない変更がなければ、失うものがないので確かめない
-      if (unsaved() && !confirm(`設定をリセットして新しい曲をつくりますか？\n${lossMessage()}`)) return;
+    btn.addEventListener("click", async () => {
+      if (!await confirmNewSong()) return;
       Playback.stop();
       newSong();
       setState({ tab: "settings" });
       renderAll();
     }));
+
+  // 保存した曲／書き出したファイルの切り替え
+  document.querySelectorAll<HTMLElement>("[data-ml-view]").forEach(tab =>
+    tab.addEventListener("click", () => {
+      const view = tab.dataset.mlView as MusicListView;
+      if (!VIEW_VALUES.includes(view) || view === getState().musicListView) return;
+      stopFilePlayback();
+      menuSongId = null;
+      setState({ musicListView: view });
+      if (view === "files") void refreshOutputFiles();
+      render();
+    }));
+  initOutputFileList(render);
+  // ミュージックリストに入ったら書き出したファイルを読み直し、離れたら聴いているファイルを止める
+  onScreenChange((prev, next) => {
+    if (next === "musiclist" && getState().musicListView === "files") void refreshOutputFiles();
+    if (prev === "musiclist" && next !== "musiclist") stopFilePlayback();
+  });
 
   // 絞り込み・並び替え
   $("ml-search")?.addEventListener("input", e => {
@@ -374,21 +399,10 @@ export function initMusicListScreen(): void {
       render();
     }));
 
-  // 曲ファイルの読み込み・すべて書き出す
-  const fileInput = $("ml-import-file") as HTMLInputElement | null;
-  $("ml-import")?.addEventListener("click", () => fileInput?.click());
-  fileInput?.addEventListener("change", async () => {
-    if (fileInput.files && fileInput.files.length > 0) await importFiles(fileInput.files);
-    fileInput.value = "";  // 同じファイルをもう一度選んでも change が起きるようにする
-  });
-  $("ml-export-all")?.addEventListener("click", exportAllSongs);
-
-  // 出力フォルダ（Electron のときだけ）
-  const outputFolder = $("ml-output-folder");
-  if (outputFolder) {
-    outputFolder.hidden = !hasOutputFolder();
-    outputFolder.addEventListener("click", () => { void openOutputFolder(); });
-  }
+  // 出力フォルダを表示（Electron のときだけ。ブラウザでは欄ごと隠す）
+  const filesBar = $("ml-files-bar");
+  if (filesBar) filesBar.hidden = !hasOutputFolder();
+  $("ml-output-folder")?.addEventListener("click", () => { void openOutputFolder(); });
 
   // 曲の操作
   const list = $("ml-list")!;
@@ -413,7 +427,9 @@ export function initMusicListScreen(): void {
     if (action === "menu")         render();
     if (action === "open")         openSong(id);
     if (action === "start-rename") startRename(id);
-    if (action === "export")       { exportSong(id); render(); }
+    if (action === "export-wav")   void exportSongAs(id, "wav");
+    if (action === "export-mp3")   void exportSongAs(id, "mp3");
+    if (action === "export-midi")  void exportSongAs(id, "midi");
     if (action === "delete")       removeSong(id);
   });
   document.addEventListener("click", () => {

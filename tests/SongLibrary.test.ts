@@ -68,6 +68,16 @@ describe("loadSong：古い形式の曲の読み替え", () => {
     expect(s.growSounds.bass.preset).toBe("sub_bass");
   });
 
+  it("サビのメロディの項目がない曲は Aメロのメロディを写す（以前はサビでも Aメロが鳴っていた）", () => {
+    expect(getState().chorusMelodyNotes).toEqual([{ note: "D5", duration: "4n", time: "0:0:0" }]);
+  });
+
+  it("サビのメロディが空で保存した曲は空のまま（Aメロを写さない）", () => {
+    storeRaw([legacySong({ chorusMelodyNotes: [] })]);
+    loadSong("song_old");
+    expect(getState().chorusMelodyNotes).toEqual([]);
+  });
+
   it("無いパートの grow の音作りは初期値で補う", () => {
     const s = getState();
     expect(s.growSounds.pad).toEqual(defaultState.growSounds.pad);

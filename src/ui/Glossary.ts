@@ -12,6 +12,7 @@ export const TERMS: Record<string, Term> = {
   bpm:         { title: "BPM", desc: "1分間に刻む拍の数で、曲の速さを表します。数字が大きいほど速い曲になります（120 なら1秒に2拍）。" },
   tempo:       { title: "テンポ", desc: "曲の速さのことです。Toniq では BPM の数字で表します。" },
   tap:         { title: "タップテンポ", desc: "ボタンを曲のリズムに合わせて何回か押すと、その速さを BPM にします。" },
+  metronome:   { title: "メトロノーム", desc: "「カッ・カッ・カッ」と一定の間隔で鳴る音で、曲の速さ（テンポ）を耳で確かめられます。音と音の間が短いほど速い曲になります。1小節の頭（1拍目）だけ高い音で鳴ります。" },
   meter:       { title: "拍子", desc: "1小節に何拍あるかを表します。4/4 拍子は「1・2・3・4」と4拍で1小節で、ポップスやダンス音楽のほとんどがこれです。" },
   "meter.4/4":  { title: "4/4", desc: "4拍で1小節。いちばんよく使われる拍子で、パターンはこの拍子に合わせて作ってあります。" },
   "meter.3/4":  { title: "3/4", desc: "3拍で1小節。ワルツの「ズン・チャッ・チャッ」の拍子です。ドラムやベースのパターンは頭の3拍を使って鳴らします。" },
@@ -57,12 +58,14 @@ export const TERMS: Record<string, Term> = {
   pianoroll:   { title: "ピアノロール", desc: "縦が音の高さ、横が時間のマス目です。マスに音符を置いてメロディを作ります。「ドラム」に切り替えると、キックやスネアを置いてオリジナルのドラムを作れます。" },
   pianorollDrum: { title: "ドラムを作る", desc: "マスにキックやスネアを置いて、自分だけのドラムを作れます。作ったドラムは、生成されたドラムの代わりに鳴ります。" },
   section:     { title: "セクション", desc: "曲の部分のことです。Aメロ（落ち着いた部分）とサビ（いちばん盛り上がる部分）で、コード進行とメロディを切り替えます。" },
+  loopRange:   { title: "区間ループ", desc: "曲の一部だけをくり返し再生します。アレンジャーの小節番号の目盛りを横にドラッグして、くり返す小節を選びます。× で解除すると曲全体を鳴らします。" },
   arrangePreset: { title: "構成", desc: "曲の流れ（どこで静かにして、どこで盛り上げるか）です。選ぶだけで、セクションごとに鳴らすパートが決まります。" },
   "arrangePreset.standard": { title: "標準", desc: "ジャンルに合わせた構成です。Aメロ → Aメロ → サビ → Aメロ の順に、少しずつパートを入れ替えます。" },
   "arrangePreset.quiet":    { title: "静かに始まる", desc: "コードとパッドだけで静かに始まり、途中からドラムなどほかのパートが入ります。" },
   "arrangePreset.drop":     { title: "サビを強く", desc: "サビの前でドラムとベースを抜いて「ため」を作り、サビで全部のパートが一気に鳴ります。" },
   "arrangePreset.short":    { title: "短く繰り返す", desc: "Aメロ1回ですぐサビに入り、Aメロ → サビ をくり返します。短い曲に向いています。" },
   "arrangePreset.buildup":  { title: "だんだん盛り上がる", desc: "少ないパートから始めて、セクションごとにパートを足していきます。最後まで盛り上がりが続きます。" },
+  "arrangePreset.chorusFirst": { title: "サビ頭", desc: "曲がいきなりサビから始まります。そのあとは Aメロ → サビ → Aメロ と続きます。聴く人の耳をすぐにつかみたいときに向いています。" },
   chorus:      { title: "サビ", desc: "曲でいちばん盛り上がる部分です。Aメロとは別のコード進行にすると、曲に展開が生まれます（同じ長さ・スケールの進行から選べます）。" },
   ending:      { title: "エンディング", desc: "曲の終わり方です。最後の小節を主和音（その曲の「家」のコード）でのばすと、きれいに終わった感じになります。" },
   drumFill:    { title: "フィル", desc: "区切りの直前にドラムが入れる短い「おかず」です。次の部分へ進む合図になります。" },
@@ -70,6 +73,8 @@ export const TERMS: Record<string, Term> = {
   qualityCheck: { title: "自動チェック", desc: "作曲でよくある決まりごと（強い拍ではコードの音を使う、最後は主音で終わる など）に合っているかを調べた結果です。" },
   layer:       { title: "レイヤー", desc: "曲を作っているパート（ドラム・コード・メロディなど）のことです。重ねて1曲になります。" },
   octave:      { title: "オクターブ", desc: "「ド」から次の高い「ド」までの音の幅です。オクターブを上げると、同じ音名のまま高い音になります。" },
+  pianoRollLength: { title: "音符の長さ（音を置くとき）", desc: "マスをクリックしたり鍵盤で入力したりして音を置くときに使う長さです。ここで選んだ長さの音が置かれます（4分音符が1拍、8分音符はその半分）。置く場所は長さにかかわらず16分音符のマスごとに選べ、置いたあとの長さも音の右端をドラッグして16分音符ずつ変えられます。" },
+  pianoRollZoom: { title: "表示の拡大・縮小", desc: "ピアノロールを横（時間）・縦（音の高さ）に大きくしたり小さくしたりします。Ctrl を押しながらホイールで横、Ctrl＋Shift を押しながらホイールで縦に変えられます。" },
   noteLength:  { title: "音符の長さ", desc: "音を伸ばす長さです。4分音符が1拍、8分音符はその半分、2分音符は2拍です。" },
   midi:        { title: "MIDI", desc: "音そのものではなく「どの高さの音をいつ・どれくらい鳴らすか」の楽譜のようなデータです。ほかの作曲ソフト（DAW）で読み込んで編集できます。" },
   wav:         { title: "WAV", desc: "音声のファイルです。そのまま再生したり、動画やゲームに使ったりできます。" },
@@ -229,7 +234,10 @@ let tip: HTMLElement | null = null;
 let current: HTMLElement | null = null;
 let showTimer: ReturnType<typeof setTimeout> | null = null;
 
+// data-tip（説明）と data-tip-title（見出し）を付けた要素は、TERMS の代わりにその文を出す
+// （コード名など、曲ごとに中身が変わる説明。シンプルモードのコード進行・キー）
 function termOf(el: HTMLElement): Term | undefined {
+  if (el.dataset.tip) return { title: el.dataset.tipTitle ?? "", desc: el.dataset.tip };
   return TERMS[el.dataset.term ?? ""];
 }
 
@@ -293,7 +301,7 @@ function schedule(el: HTMLElement): void {
 }
 
 const termTarget = (target: EventTarget | null): HTMLElement | null =>
-  target instanceof Element ? target.closest<HTMLElement>("[data-term]") : null;
+  target instanceof Element ? target.closest<HTMLElement>("[data-term], [data-tip]") : null;
 
 export function initGlossary(): void {
   setState({ tooltips: loadTooltips() });

@@ -238,6 +238,9 @@ function songFields(song: Partial<SongFields>): SongFields {
     growSounds:      growSoundsFromSaved(loaded.growSounds),
     // 旧 grow（Tone.js 版の Toniq シンセ）の音作りの値 toniqSynth は読み捨てる（SONG_FIELDS にないので取り出さない）
     // 以前はアレンジをブロックの並び（arrangement）で保存していた。ジャンルの標準と比べて「変えた所」に読み替える
+    // サビのメロディ（chorusMelodyNotes）の項目がない頃の曲は、サビでも Aメロのメロディが鳴っていた。同じに鳴るよう写す
+    // （今はサビのメロディが空ならサビでは鳴らさない）
+    chorusMelodyNotes: song.chorusMelodyNotes === undefined ? structuredClone(loaded.melodyNotes) : loaded.chorusMelodyNotes,
     arrangeEdits: legacyArrangement && loaded.chordPattern
       ? editsFromLegacy(legacyArrangement, loaded.genre, loaded.chordPattern.length_bars, loaded.bars, loaded.sections)
       : loaded.arrangeEdits,
@@ -254,6 +257,7 @@ export function loadSong(id: string): boolean {
     songId:    song.id,
     generated: true,  // シンプルモードで開いたときは生成結果の画面を出す
     startBar:  0,
+    loopRange: null,
   });
   applyAllVolumes();
   resetHistory();  // 別の曲の編集は元に戻せないようにする
@@ -261,35 +265,17 @@ export function loadSong(id: string): boolean {
   return true;
 }
 
-// ===== 曲ファイル（.toniq.json）の書き出し・読み込み =====
-// ミュージックリストの曲を JSON ファイルにして、バックアップや別の PC への持ち運びに使う
-
-const FILE_FORMAT  = "toniq-song";
+// ===== 曲ファイル（.toniq.json）の読み込み =====
+// 以前の Toniq で書き出した曲ファイル（JSON）をミュージックリストに追加する。
+// 曲ファイルへの書き出し（「曲ファイルに書き出す」「すべて書き出す」）は廃止した（読み込みは古いファイルのために残す）。
+// 形式は { format: "toniq-song", version, exportedAt, songs: SavedSong[] }。version は書き出したときの形式で、
 // 2：grow のプリセットを番号ではなく ID で保存する（1 の番号は読み込み時に ID へ読み替える）
 // 3：アレンジを構成のプリセット（arrangePreset）と変えた所（arrangeEdits）で保存する
 //    （2 までのブロックの並び arrangement は、読み込み時に songFields が変えた所に読み替える）
 // 4：定位（pans）を足し、音量（volumes）をフェーダーの新しいカーブ（75 で 0dB）の値で保存する
 //    （3 までの pans のない曲は、読み込み時に songFields が音量を読み替える）
-const FILE_VERSION = 4;
-export const SONG_FILE_EXT = ".toniq.json";
 
-interface SongFile {
-  format:     typeof FILE_FORMAT;
-  version:    number;
-  exportedAt: number;
-  songs:      SavedSong[];
-}
-
-// 曲（1曲またはリスト全体）をファイルの中身にする
-export function songsToFile(songs: SavedSong[]): Blob {
-  const file: SongFile = { format: FILE_FORMAT, version: FILE_VERSION, exportedAt: Date.now(), songs };
-  return new Blob([JSON.stringify(file, null, 2)], { type: "application/json" });
-}
-
-// ファイル名に使えない文字を置き換える
-export function songFileName(name: string): string {
-  return `${name.replace(/[\\/:*?"<>|]/g, "_").trim() || "toniq"}${SONG_FILE_EXT}`;
-}
+const FILE_FORMAT  = "toniq-song";
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -366,6 +352,7 @@ export function newSong(): void {
     songId:    null,
     generated: false,  // シンプルモードは設定画面に戻る
     startBar:  0,
+    loopRange: null,
   });
 
   // カスタムモードはパターンがないと編集できないので、起動時と同じく初期のジャンル・雰囲気で決めておく

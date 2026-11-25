@@ -4,6 +4,7 @@
 
 ## grow（内部シンセ）
 
+- Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメント・識別子・保存データのすべてで「grow」と呼ぶ（以前の表示名 lidless は使わない）。
 - Toniq の内部シンセサイザーの名称は **grow**（グロウ）とする。UI 表示・コメント・ドキュメントでは「grow」と呼ぶ。
 - grow（`grow/`）は C++ のシンセサイザー。音を作るコア（`grow/core/`。JUCE なし）を、Toniq では WebAssembly＋AudioWorklet で、単体では JUCE の Standalone・VST3 で鳴らす。作り・決まりごとは `grow/README.md`。
   - Toniq ではメロディ・コード・ベース・パッド・アルペジオ・シグネチャー・カウンターメロディ・FX / SE はいつも grow で鳴らす（ドラムは音源 `drumSource` が `"grow"` のとき）（準備ができていない・wasm がないときは各 Player の Tone.js の音色。シグネチャーは `SIGNATURES` の `create`）。シグネチャーはジャンルの鳴り方（`events`）のまま、音だけ grow で出す（`growTrigger`。ノイズのイベントは `NOISE_NOTE`。レコードノイズはプチプチ音をプリセット「レコードプチ」の2台目で鳴らす `growCreate`）。コードは16音ポリで和音を鳴らし、`GrowInstrument` は同じサンプルに重なる合図（和音の発音・消音）を2サンプルずつずらして渡す。準備ができていない・wasm がないとき、コードはソフトパッドで鳴る。`Grow.ts` が `public/grow/grow.wasm` を読み込み、AudioWorklet（`growWorklet.js`。`?raw` で読み込んで Blob の URL で登録）をオーディオコンテキストごとに登録する。再生・試聴・サンプルは `Playback.audioReady`、WAV / MP3 書き出しは `renderSong` の `schedule` で、`prepareGrowContext()` を待つ（パッドなどはいつも grow なので毎回）。準備ができていない・wasm がないときは `resolveMelodySound()` が予備の Tone.js の音色（`INSTRUMENTS`）のうちジャンルの標準にする。Tone.js の音色は画面では選べない（以前はカスタムモードの「インスト」で選べた。その曲は `loadSong()` が近い grow のプリセットに読み替える）。
@@ -19,13 +20,14 @@
 - ドラムの音源（テスト中）：`AppState.drumSource` が `"grow"`（grow）か `"sample"`（ワンショット音源、初期値）。設定画面の「ドラムの音源」で切り替え、`Preferences.ts` が localStorage の `toniq.drumSource` に保存する（保存がなければサンプル音源。grow を選んで保存した端末はそのまま。以前選べたシンセ（`"synth"`）を保存した端末はサンプル音源にする）。ファイルがないドラムの音（今は `rim`）は grow で鳴る（grow を鳴らせなければ Tone.js のシンセ）。`"synth"`（Tone.js のシンセ）は画面では選べず、`npm run mix:measure -- --drum synth` で測るときだけ使う。曲の内容ではないので `SONG_FIELDS` には入れない。パーカッションも同じ音源に合わせて鳴らす（ワンショット音源でファイルがないパーカッションは grow）。再生中に切り替えたら（サンプル音源なら読み込みを待って）ドラムとパーカッションだけ読み込み直す。
   - grow：トラックごとに grow を1台ずつ鳴らす（`SynthFactory.ts` の `createGrowVoice`。コアの「ドラム …」のプリセット、ID は `drum_…`。トラック名 → ID は `GROW_DRUMS`）。ジャンルのキット（`DRUM_KITS`）の値（キックの高さ・ピッチの下がり方・長さ・クリック、スネアの高さ・長さ・響き線の帯域、ハイハットの長さ・帯域）は `growDrumSound()` がプリセットの値に上書きして当てる。どの音もサスティン 0 で鳴り終わるので発音の合図だけ送り（`GrowInstrument.triggerAttack`）、オープンハイハットのチョークだけ消音の合図（`triggerRelease`）を送る。クラップは短い音を3回重ねてから余韻を鳴らす。grow を鳴らせない（準備ができていない・プリセットのない古い wasm）トラックはシンセで鳴る。
   - grow のドラムは強さ 1 のピークが −6dB 前後で出るので、`GROW_TRIM_DB` で1打の聞こえる大きさをシンセのドラムにそろえている（差は全ジャンルで ±1dB ほど。2026-11-12 に測定）。プリセット・`DRUM_KITS` を変えたら測り直す。
+  - 音源はドラムが `public/samples/drums/<フォルダ>/<トラック名>.wav`、パーカッションが `public/samples/perc/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient / waltz / ballad / shuffle。ドラムとパーカッションで同じ名前）で、ない音は `default` フォルダ、それもなければそのトラックだけ grow で鳴る（grow を鳴らせなければドラムはシンセ）。ジャンルを追加したら `DRUM_SAMPLE_DIRS` と両方のフォルダにも足す。
   - 音源は `public/samples/drums/<フォルダ>/<トラック名>.wav`。フォルダはジャンルごと（`DrumSamples.ts` の `DRUM_SAMPLE_DIRS`：edm / 8bit / lofi / gamebgm / techno / house / trance / ambient）で、ない音は `default` フォルダ、それもなければそのトラックだけシンセで鳴る。ジャンルを追加したら `DRUM_SAMPLE_DIRS` にも足す。
   - 再生・試聴・WAV書き出しの前に `prepareDrumSamples(genre)` で読み込みを待つ（`Playback.ts` の `audioReady`）。読み込んだ AudioBuffer は Tone.Offline でもそのまま使う。file:// でも読めるよう XMLHttpRequest で相対パスから読む。
   - 音源はジャンルのドラムバス（高域カット→歪み→コンプ→持ち上げ）を通る。音源の音量は `SynthFactory.ts` の `SAMPLE_TRIM_DB` で下げており、`mix_presets.json` の `gain` はシンセのドラムで測った値のまま。
 
 ## 音の流れ・ボイシング・音量
 
-- 音の流れ：各パートの Volume ノード（`VolumeManager.createVolumeNode`。フェーダーの値 → dB は `VolumeCurve.ts`：75 で 0dB、100 で +5dB）→ サイドチェイン用の Gain → `connectToMixer`（`MixerEngine.ts`）がパートの EQ（低域カット → 中域のへこみ）→ 定位（パン。`Tone.Panner`。左右の広がりを残すため2チャンネルで受ける）とつなぎ、そこからマスター入口とリバーブ送りに出す。マスターは 入口 → EQ → コンプ → 持ち上げ（`gain`）→ リミッター。マスター（`MixerEngine.ts`）はコンテキストごとに1つで作り直さない。WAV書き出しと再生開始前は `mixerReady()` でリバーブの準備を待つ。
+- 音の流れ：各パートの Volume ノード（`VolumeManager.createVolumeNode`。フェーダーの値 → dB は `VolumeCurve.ts`：75 で 0dB、100 で +5dB）→ サイドチェイン用の Gain → `connectToMixer`（`MixerEngine.ts`）がパートの EQ（低域カット → 中域のへこみ）→ 定位（パン。`Tone.Panner`。左右の広がりを残すため2チャンネルで受ける）とつなぎ、そこからマスター入口とリバーブ送りに出す。マスターは 入口 → EQ → コンプ → 持ち上げ（`gain`）→ リミッター → フェード（ジャンルのサンプルの終わりのフェードアウト用。ふだんは 1 で素通し。docs/ui.md）。マスター（`MixerEngine.ts`）はコンテキストごとに1つで作り直さない。WAV書き出しと再生開始前は `mixerReady()` でリバーブの準備を待つ。
   - パートの低域カット（`PART_LOW_CUT`。12dB/oct のハイパス）：コード・パッド 140Hz、アルペジオ 200Hz、メロディ 150Hz、カウンターメロディ 160Hz、シグネチャー 90Hz（テクノのアシッドが低い音を鳴らすので浅く）。どれもそのパートの最低音（`VOICING_RANGES` など）より下に置き、キック・ベースの帯域に和音やメロディの低い成分を重ねない。ドラム・ベース・FX / SE（インパクトの低いブーム）は削らない。パーカッションは自分のキットの中で 150Hz から削る。
   - 伴奏の中域のへこみ（`PART_MID_DIP`）：コード・パッドの 2kHz（Q 0.8）を 2dB 引いて、メロディのいちばん聞こえる帯域を空ける（ボイシングでメロディを避けるのと同じねらい）。
   - 定位（`AppState.pans`。−100 = 左 〜 100 = 右。`SONG_FIELDS` に含む。ミキサーのパンのノブ）：初期値はアルペジオ L30・カウンターメロディ R30、ほか（ドラム・ベース・メロディ・コード・パッドなど）は中央。パーカッションはキットの中で楽器ごとにも振る（`SynthFactory.ts` の `PERC_PAN`：シェイカー右・ライド左・タンバリン左・コンガは高いほうが右、低いほうが左。パート全体のパンはその上にかかる）。MIDI書き出しには入れない。

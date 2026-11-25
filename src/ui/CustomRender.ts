@@ -95,8 +95,8 @@ export function render(): void {
   $("c-info-bpm")!.textContent  = `${s.bpm}`;
   $("c-info-key")!.textContent  = `${s.key}${SCALE_LABELS[scale] ?? ""}`;
   $("c-info-bars")!.textContent = `${s.bars}`;
-  $("c-info-loop")!.hidden = !playing;
   const fromBar = playFromBar();
+  $("c-stop")!.hidden = !playing;  // 停止ボタンは鳴っている間だけ出す
   $("c-play")!.textContent = fromBar > 0
     ? `${playing ? "↺" : "▷"} ${fromBar + 1}小節目から`
     : playing ? "↺ 最初から" : "▷ 再生";
@@ -120,7 +120,7 @@ export function render(): void {
   syncControls();
   $("c-tap")!.classList.toggle("is-active", s.tempoPreset === "custom");
   const metronomeOn = isMetronomeOn();
-  $("c-metronome")!.textContent = metronomeOn ? "■ 停止" : "♪ 試聴";
+  $("c-metronome")!.textContent = metronomeOn ? "■ 停止" : "♪ メトロノーム";
   $("c-metronome")!.classList.toggle("is-active", metronomeOn);
 
   // 小節数：選択肢にない値（シンプルモードから引き継いだ値など）も表示できるようにする

@@ -7,4 +7,7 @@ contextBridge.exposeInMainWorld("toniqFiles", {
     ipcRenderer.invoke("toniq:write-output", kind, name, data),
   showFile:    (file: string) => ipcRenderer.invoke("toniq:show-file", file),
   openOutput:  (kind?: string) => ipcRenderer.invoke("toniq:open-output", kind),
+  listOutputFiles: () => ipcRenderer.invoke("toniq:list-output-files"),
+  readOutputFile:  (file: string) => ipcRenderer.invoke("toniq:read-output-file", file),
+  trashOutputFile: (file: string) => ipcRenderer.invoke("toniq:trash-output-file", file),
 });

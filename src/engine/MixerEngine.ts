@@ -58,7 +58,7 @@ const MID_DIP = { frequency: 2000, Q: 0.8 };
 // リバーブの戻りをキックに合わせて沈める割合（サイドチェインの量に掛ける。Groove.ts）
 export const REVERB_DUCK_WEIGHT = 0.5;
 
-// マスター：入口 → EQ → コンプ → 持ち上げ → リミッター → スピーカー
+// マスター：入口 → EQ → コンプ → 持ち上げ → リミッター → フェード → スピーカー
 // リバーブ：送り → 低域カット → リバーブ → 戻り →（キックで沈める）→ 戻りの EQ → 持ち上げ
 // （戻りはコンプを通さない。通すと、ドラムでコンプが動くたびに響きまで一緒に沈んで揺れる。
 //   EQ はマスターと同じ設定の別の EQ を通し、持ち上げ・リミッターは一緒に通る）
@@ -68,6 +68,7 @@ interface Mixer {
   compressor: Tone.Compressor;
   makeup:     Tone.Gain<"decibels">;
   limiter:    Tone.Limiter;
+  fade:       Tone.Gain;    // フェードアウト（ジャンルのサンプルの終わり）。ふだんは 1 で素通し
   returnEq:   Tone.EQ3;     // リバーブの戻りの EQ（マスターの EQ と同じ設定）
   reverbIn:   Tone.Filter;
   reverb:     Tone.Reverb;
@@ -89,7 +90,8 @@ function getMixer(): Mixer {
   const existing = mixers.get(ctx);
   if (existing) return existing;
 
-  const limiter    = new Tone.Limiter(-1).toDestination();
+  const fade       = new Tone.Gain(1).toDestination();
+  const limiter    = new Tone.Limiter(-1).connect(fade);
   const makeup     = new Tone.Gain(0, "decibels").connect(limiter);
   const compressor = new Tone.Compressor().connect(makeup);
   const eq         = new Tone.EQ3().connect(compressor);
@@ -111,7 +113,7 @@ function getMixer(): Mixer {
   if (peak) limiter.connect(peak);
 
   const mixer: Mixer = {
-    input, eq, compressor, makeup, limiter, returnEq, reverbIn, reverb, reverbOut, reverbDuck, longIn, longReverb,
+    input, eq, compressor, makeup, limiter, fade, returnEq, reverbIn, reverb, reverbOut, reverbDuck, longIn, longReverb,
     sends: {}, genre: "", peak,
   };
   mixers.set(ctx, mixer);
@@ -137,6 +139,33 @@ export function getMasterPeaks(): [number, number] {
     return [db, db];
   }
   return [peakDb(waves[0] as Float32Array), peakDb((waves[1] ?? waves[0]) as Float32Array)];
+}
+
+// ===== マスターのフェードアウト（ジャンルのサンプルの終わり） =====
+// リミッターのあと（スピーカーの直前）で絞るので、リバーブの響きも一緒に消える。
+// 止めたあとも絞ったままにし（resetMasterFade まで）、残っている響きが戻ってこないようにする
+
+// endTime（オーディオの時刻。秒）にちょうど無音になるよう、seconds 秒かけて絞る（dB で一定の速さ。−60dB まで下げてから 0）
+export function fadeOutMaster(endTime: number, seconds: number): void {
+  const gain = getMixer().fade.gain;
+  gain.cancelScheduledValues(0);
+  gain.setValueAtTime(1, Math.max(0, endTime - seconds));
+  gain.exponentialRampToValueAtTime(0.001, endTime);
+  gain.setValueAtTime(0, endTime);
+}
+
+// 予定しているフェードを取りやめ、今の音量のまま止めておく（再生・サンプルを止めたとき。途中で止めても音量が跳ね上がらない）
+export function holdMasterFade(): void {
+  const mixer = mixers.get(Tone.getContext());
+  mixer?.fade.gain.cancelAndHoldAtTime(Tone.now());
+}
+
+// フェードを戻して素通しにする（再生・試聴・サンプルの開始）
+export function resetMasterFade(): void {
+  const mixer = mixers.get(Tone.getContext());
+  if (!mixer) return;
+  mixer.fade.gain.cancelScheduledValues(0);
+  mixer.fade.gain.setValueAtTime(1, Tone.getContext().currentTime);
 }
 
 // リバーブの戻りをキックに合わせて沈めるゲイン（Groove.ts のサイドチェイン）。ミキサーをまだ作っていなければ null

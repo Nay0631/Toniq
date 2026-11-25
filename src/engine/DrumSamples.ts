@@ -2,8 +2,9 @@ import * as Tone from "tone";
 
 // ===== ドラムのワンショット音源（WAV など）の読み込み =====
 //
-// 置き場所：public/samples/drums/<フォルダ>/<トラック名>.wav
-//   フォルダはジャンルごと（DRUM_SAMPLE_DIRS）。ジャンルのフォルダにない音は default フォルダの音を使い、
+// 置き場所：ドラムは public/samples/drums/<フォルダ>/<トラック名>.wav、
+//           パーカッションは public/samples/perc/<フォルダ>/<トラック名>.wav
+//   フォルダはジャンルごと（DRUM_SAMPLE_DIRS。ドラムとパーカッションで同じ名前）。ジャンルのフォルダにない音は default フォルダの音を使い、
 //   どちらにもなければ、ドラムはそのトラックだけ Tone.js のシンセで、パーカッションは grow で鳴らす（SynthFactory.ts）。
 //   トラック名はドラムが kick / snare / hihat_closed / hihat_open / clap / rim、
 //   パーカッション（PercPlayer.ts）が shaker / tambourine / conga_high / conga_low / ride。
@@ -36,7 +37,8 @@ const cache = new Map<string, Promise<AudioBuffer | null>>();
 
 function sampleUrl(dir: string, track: string, ext: string): string {
   // 相対パスにして、開発サーバー（http）とビルド後の Electron（file://）の両方で読めるようにする
-  return `samples/drums/${dir}/${track}.${ext}`;
+  const root = PERC_TRACKS.includes(track) ? "perc" : "drums";
+  return `samples/${root}/${dir}/${track}.${ext}`;
 }
 
 // file:// では fetch が使えないので XMLHttpRequest で読む（grow の wasm の読み込みにも使う）
