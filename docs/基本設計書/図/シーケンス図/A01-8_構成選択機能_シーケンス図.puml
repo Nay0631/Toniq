@@ -1,0 +1,43 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-8_構成選択機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":構成選択" as L3
+entity ":アプリの状態" as L4
+control ":アレンジ管理" as L5
+entity ":標準アレンジマスタ" as L6
+entity ":構成プリセットマスタ" as L7
+control ":再生" as L8
+
+note over L2 : 構成：標準／静かに始まる／サビを強く／短く繰り返す／だんだん盛り上がる
+
+L1 -> L2 : 構成を選ぶ() : void
+activate L2
+L2 -> L3 : 構成を設定する() : void
+activate L3
+L3 -> L4 : 構成のプリセットを更新する() : void
+activate L4
+deactivate L4
+L3 -> L5 : アレンジを組み直し、変えた所を当て直す() : void
+activate L5
+L5 -> L6 : ジャンルの標準アレンジを取得する() : void
+activate L6
+deactivate L6
+L5 -> L7 : 構成のプリセットの変形を取得する() : void
+activate L7
+deactivate L7
+deactivate L5
+opt 再生中
+  L3 -> L8 : 再生し直す() : void
+  activate L8
+  deactivate L8
+end
+L3 -> L2 : タイムライン・セクションの行・構成の表示を出す() : void
+activate L2
+deactivate L2
+deactivate L3
+deactivate L2
+
+@enduml

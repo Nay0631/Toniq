@@ -14,6 +14,8 @@ entity ":growプリセット" as L10
 control ":パート管理" as L8
 control ":ドラムキット作成" as L11
 
+note over L2 : 選択肢は grow／サンプル音源。\nパーカッションも同じ音源で鳴らす（サンプル音源にないトラックは grow）
+
 L1 -> L2 : ドラムの音源を押下する() : void
 activate L2
 L2 -> L3 : ドラムの音源を選ぶ() : void

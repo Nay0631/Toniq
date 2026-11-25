@@ -3,18 +3,18 @@
 mainframe **pkg**
 
 class "アレンジ画面" as B1 <<boundary>> {
-  {method} <U+002B> タイムラインの空いている所を押下する() : void
-  {method} <U+002B> ブロックをドラッグする・右クリックする() : void
-  {method} <U+002B> 標準に戻すボタンを押下する() : void
+  {method} <U+002B> タイムラインを押下・ドラッグ・右クリックする() : void
+  {method} <U+002B> 変えた所を消すボタンを押下する() : void
+  {method} <U+002B> タイムラインと変更の数を表示する() : void
 }
 class "ブロック編集" as C1 <<control>> {
-  {method} <U+002B> ブロックを置く() : void
-  {method} <U+002B> ブロックを動かす・削除する() : void
-  {method} <U+002B> 標準に戻す() : void
-  {method} <U+002D> 周回1周分の空きを求める() : void
+  {method} <U+002B> ブロックを置く・動かす・削除する() : void
+  {method} <U+002B> 変えた所を消す() : void
+  {method} <U+002D> 1小節単位で前後に重ならないように置く() : void
 }
 class "アレンジ管理" as C2 <<control>> {
-  {method} <U+002B> 今のアレンジを取得する() : void
+  {method} <U+002B> 今のアレンジを組み立てる() : void
+  {method} <U+002B> セクションごとにプリセットと比べる() : void
   {method} <U+002B> 鳴らす小節か確かめる() : void
 }
 class "パート管理" as C3 <<control>> {
@@ -24,30 +24,35 @@ class "各パートの演奏" as C4 <<control>> {
   {method} <U+002B> 音を鳴らす() : void
 }
 class "アプリの状態" as E1 <<entity>> {
-  {field} <U+002B> アレンジ（パートごとのブロック）
+  {field} <U+002B> 構成のプリセット
+  {field} <U+002B> 変えた所（セクション単位）
   {field} <U+002B> ジャンル・小節数
   {field} <U+002B> セクション
-  {method} <U+002B> アレンジ・ジャンル・小節数を取得する() : void
-  {method} <U+002B> アレンジを更新する() : void
-  {method} <U+002B> アレンジとセクションを空にする() : void
-}
-class "再生" as C5 <<control>> {
-  {method} <U+002B> 再生し直す() : void
+  {method} <U+002B> 構成・変えた所・小節数を取得する() : void
+  {method} <U+002B> 構成・変えた所を取得する() : void
+  {method} <U+002B> 変えた所を更新する() : void
+  {method} <U+002B> 変えた所とセクションを空にする() : void
 }
 class "標準アレンジマスタ" as E2 <<entity>> {
   {field} <U+002B> ジャンル
-  {field} <U+002B> 周回ごとのセクション・鳴らすパート
-  {field} <U+002B> サビ前に抜くパート・ブレイクの終わりに足すパート
+  {field} <U+002B> セクションごとの鳴らすパート
+  {field} <U+002B> 足す・抜くパート
   {method} <U+002B> ジャンルの標準アレンジを取得する() : void
+}
+class "構成プリセットマスタ" as E3 <<entity>> {
+  {field} <U+002B> 構成（標準・静かに始まる・サビを強く・短く繰り返す・だんだん盛り上がる）
+  {field} <U+002B> 標準アレンジへの変形
+  {method} <U+002B> 構成のプリセットを取得する() : void
 }
 
 B1 --> C1
 C1 --> C2
 C2 --> E1
 C2 --> E2
+C2 --> E3
 C1 --> E1
 C1 --> C3
-C1 --> C5
+C1 --> B1
 C4 --> C2
 
 @enduml

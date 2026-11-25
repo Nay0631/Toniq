@@ -3,14 +3,15 @@
 mainframe **pkg**
 
 class "ミキサー" as B1 <<boundary>> {
-  {method} <U+002B> フェーダーを動かす() : void
+  {method} <U+002B> 音量スライダー・左右の位置のつまみを動かす() : void
   {method} <U+002B> ON ボタンを押下する() : void
-  {method} <U+002B> 音量の数値を表示する() : void
-  {method} <U+002D> レベルメーターを表示する() : void
+  {method} <U+002B> CLIP・最大のピークを押下する() : void
+  {method} <U+002B> 音量・左右の位置の値を表示する() : void
+  {method} <U+002D> 音量メーター・最大のピーク・CLIP を表示する() : void
 }
 class "音量管理" as C1 <<control>> {
-  {field} <U+002D> パートの音量ノード・レベルメーター
-  {method} <U+002B> パートの音量を変える() : void
+  {field} <U+002D> パートの音量・左右の位置のノード・音量メーター
+  {method} <U+002B> パートの音量・左右の位置を変える() : void
   {method} <U+002B> パートのレベルを取得する() : void
   {method} <U+002D> dB に変換して再生中の音量に反映する() : void
 }
@@ -18,13 +19,15 @@ class "パート管理" as C2 <<control>> {
   {method} <U+002B> パートを ON/OFF する() : void
 }
 class "ミックス" as C3 <<control>> {
-  {field} <U+002D> マスターのレベルメーター
-  {method} <U+002B> マスターのレベルを取得する() : void
+  {field} <U+002D> 曲全体の音量の左右のピーク・最大のピーク
+  {method} <U+002B> 曲全体の音量の左右のピークを取得する() : void
+  {method} <U+002B> 最大のピークと CLIP を消す() : void
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> 10パートの音量（0〜100）
+  {field} <U+002B> 10パートの左右の位置（−100〜100）
   {field} <U+002B> パートの ON/OFF
-  {method} <U+002B> 音量を更新する() : void
+  {method} <U+002B> 音量・左右の位置を更新する() : void
   {method} <U+002B> パートの ON/OFF を更新する() : void
 }
 

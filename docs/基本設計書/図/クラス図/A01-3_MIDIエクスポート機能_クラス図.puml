@@ -39,15 +39,18 @@ class "コード変換" as C4 <<control>> {
 class "各パートの演奏" as C5 <<control>> {
   {method} <U+002B> コード・パッド・アルペジオ・ベース・カウンターメロディ・ドラム・パーカッションの音を並べる() : void
 }
+class "拍子" as C8 <<control>> {
+  {method} <U+002B> 拍子と3連符の位置を求める() : void
+}
 class "出力ファイル保存" as C7 <<control>> {
   {method} <U+002B> 出力フォルダに保存する() : void
   {method} <U+002B> ファイルをフォルダで表示する() : void
 }
 class "アプリの状態" as E1 <<entity>> {
-  {field} <U+002B> キー・BPM・小節数
+  {field} <U+002B> キー・BPM・拍子・小節数
   {field} <U+002B> パートの ON/OFF
   {field} <U+002B> スウィング
-  {method} <U+002B> キー・BPM・小節数・パートの ON/OFF・スウィングを取得する() : void
+  {method} <U+002B> キー・BPM・拍子・小節数・パートの ON/OFF・スウィングを取得する() : void
 }
 class "標準アレンジマスタ" as E2 <<entity>> {
   {field} <U+002B> ジャンル
@@ -74,6 +77,11 @@ class "アルペジオ設定マスタ" as E6 <<entity>> {
   {field} <U+002B> 刻み・パターン・オクターブ数
   {method} <U+002B> ジャンルのアルペジオの設定を取得する() : void
 }
+class "構成プリセットマスタ" as E8 <<entity>> {
+  {field} <U+002B> 構成
+  {field} <U+002B> 標準アレンジへの変形
+  {method} <U+002B> 構成のプリセットを取得する() : void
+}
 class "MIDIファイル" as E7 <<entity>> {
   {field} <U+002B> Melody・Chord・Pad・Arpeggio・Bass・Counter Melody・Drums・Percussion のトラック
   {field} <U+002B> 保存先（output/midi）
@@ -91,6 +99,8 @@ C1 --> C2
 C2 --> E2
 C1 --> C3
 C3 --> E2
+C3 --> E8
+C1 --> C8
 C1 --> C4
 C4 --> E3
 C1 --> C5

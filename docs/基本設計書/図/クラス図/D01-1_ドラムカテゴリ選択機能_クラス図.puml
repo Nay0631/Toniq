@@ -7,6 +7,7 @@ class "カスタムモード画面" as B1 <<boundary>> {
 }
 class "ドラムカテゴリ設定" as C1 <<control>> {
   {method} <U+002B> カテゴリを設定する() : void
+  {method} <U+002D> パターンを置き換えない() : void
 }
 class "再生" as C2 <<control>> {
   {method} <U+002B> 再生し直す() : void

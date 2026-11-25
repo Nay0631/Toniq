@@ -13,6 +13,9 @@ class "曲の管理" as C2 <<control>> {
   {method} <U+002B> 曲を追加する() : void
   {method} <U+002D> 読み込めない理由を返す() : void
 }
+class "曲の内容の確認" as C3 <<control>> {
+  {method} <U+002B> 中身を確かめて直す() : void
+}
 class "曲ファイル" as E1 <<entity>> {
   {field} <U+002B> 形式名・版・書き出した日時
   {field} <U+002B> 曲の一覧
@@ -27,6 +30,7 @@ B1 --> C1
 C1 --> E1
 C1 --> C2
 C2 --> E2
+C2 --> C3
 C1 --> B1
 
 @enduml

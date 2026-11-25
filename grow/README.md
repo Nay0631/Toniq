@@ -1,6 +1,7 @@
 # grow
 
 Toniq の内部シンセサイザー（表示名・フォルダ・ファイル・識別子すべて grow）。C++ で作り、同じ「コア」から2つの形で動く。
+Toniq の内部シンセサイザー。C++ で作り、同じ「コア」から2つの形で動く。
 
 - **Toniq の中**：コアを WebAssembly にして AudioWorklet で鳴らす（メロディの音色「grow（テスト中）」）。再生・ミキサー・WAV / MP3 書き出しにそのまま入る。
 - **単体**：[JUCE](https://juce.com/) で **Standalone（grow.exe）** と **VST3 プラグイン** にする。

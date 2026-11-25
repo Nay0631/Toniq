@@ -18,8 +18,9 @@ class "再生" as C3 <<control>> {
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> セクション（周回ごとの Aメロ／サビ）
+  {field} <U+002B> 構成のプリセット
   {field} <U+002B> ジャンル・小節数
-  {method} <U+002B> セクション・ジャンル・小節数を取得する() : void
+  {method} <U+002B> セクション・構成・ジャンル・小節数を取得する() : void
   {method} <U+002B> セクションを更新する() : void
 }
 class "標準アレンジマスタ" as E2 <<entity>> {
@@ -27,11 +28,17 @@ class "標準アレンジマスタ" as E2 <<entity>> {
   {field} <U+002B> 周回ごとのセクション
   {method} <U+002B> 標準のセクションを取得する() : void
 }
+class "構成プリセットマスタ" as E3 <<entity>> {
+  {field} <U+002B> 構成
+  {field} <U+002B> セクションの並び
+  {method} <U+002B> 構成のプリセットのセクションの並びを取得する() : void
+}
 
 B1 --> C1
 C1 --> C2
 C2 --> E1
 C2 --> E2
+C2 --> E3
 C1 --> E1
 C1 --> C3
 C1 --> B1

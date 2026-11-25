@@ -4,10 +4,13 @@ mainframe sd U01-4_ループ再生切替機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":設定画面" as L2
+boundary ":アレンジ画面" as L7
 control ":端末の設定" as L3
 entity ":アプリの状態" as L4
 entity ":端末の設定データ" as L5
 control ":再生" as L6
+
+note over L7 : アレンジャーのツールバーの「ループ」を押したときも同じ流れ\n（設定画面のスイッチと同じ設定）
 
 L1 -> L2 : ループ再生のスイッチを押下する() : void
 activate L2
@@ -33,6 +36,9 @@ opt 曲を再生中
   end
   deactivate L6
 end
+L3 -> L7 : ON の間はループボタンを点ける() : void
+activate L7
+deactivate L7
 deactivate L3
 deactivate L2
 

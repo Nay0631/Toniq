@@ -20,16 +20,22 @@ L1 -> L2 : 新規作成ボタンを押下する() : void
 activate L2
 L2 -> L3 : 新しい曲を作る() : void
 activate L3
-L3 -> L1 : 設定をリセットしてよいか確認する() : void
-activate L1
-deactivate L1
-alt OK
+L3 -> L5 : 保存していない変更があるか確かめる() : void
+activate L5
+deactivate L5
+opt 保存していない変更がある
+  L3 -> L1 : 設定をリセットしてよいか確認する() : void
+  activate L1
+  deactivate L1
+end
+alt OK・変更がない
   L3 -> L4 : 再生を止める() : void
   activate L4
   deactivate L4
   L3 -> L5 : 曲の内容を初期状態に戻す() : void
   activate L5
   L5 -> L6 : 曲の内容を初期値にし、未保存の曲にする() : void
+  note right of L6 : メロディは空にする
   activate L6
   deactivate L6
   L5 -> L7 : パターンとテンポを選ぶ() : void

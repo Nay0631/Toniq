@@ -13,10 +13,10 @@ control ":パート管理" as L8
 control ":曲の構成" as L9
 control ":メロディ生成" as L10
 
-note over L2 : 編集するセクション（Aメロ／サビ）はツールバーで選ぶ。\nサビを選んでいるときはサビのメロディを編集する
+note over L2 : 編集するセクション（Aメロ／サビ）・音符の長さ（3連符の拍子では「4分3連」「8分3連」）は\nツールバーで選ぶ。タイピングピアノは Z〜/ の段と Q〜] の段（上の段が黒鍵）、↓↑ でオクターブ
 
 alt 音を置く
-  L1 -> L2 : グリッドの空いている所を押下する() : void
+  L1 -> L2 : グリッドを押下する・タイピングピアノのキーを押す() : void
   activate L2
   L2 -> L3 : 音を置く() : void
   activate L3
@@ -30,7 +30,7 @@ alt 音を置く
   deactivate L6
   deactivate L4
   alt 置ける音
-    L3 -> L7 : 置いた音を試聴する() : void
+    L3 -> L7 : 置いた音を今の音色で試聴する() : void
     activate L7
     deactivate L7
     L3 -> L3 : 重なる音を手前で切る() : void
@@ -59,6 +59,12 @@ else 自動生成
   activate L2
   L2 -> L3 : 自動生成のメロディに置き換える() : void
   activate L3
+  opt 手入力のメロディがある
+    L3 -> L3 : 置き換えるか確認する() : void
+    activate L3
+    deactivate L3
+    note right of L3 : 取り消したら何もしない
+  end
   L3 -> L9 : Aメロとサビのメロディを作る() : void
   activate L9
   L9 -> L10 : メロディを作る() : void
@@ -66,6 +72,30 @@ else 自動生成
   deactivate L10
   deactivate L9
   L3 -> L5 : メロディとサビのメロディを更新し「自動生成」にする() : void
+  activate L5
+  deactivate L5
+  opt 再生中
+    L3 -> L8 : メロディを読み込み直す() : void
+    activate L8
+    deactivate L8
+  end
+  L3 -> L2 : 音符を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+else クリア
+  L1 -> L2 : クリアボタンを押下する() : void
+  activate L2
+  L2 -> L3 : すべて消す() : void
+  activate L3
+  opt 音がある
+    L3 -> L3 : 消すか確認する() : void
+    activate L3
+    deactivate L3
+    note right of L3 : 取り消したら何もしない
+  end
+  L3 -> L5 : 編集中のセクションのメロディを更新し「自分で入力」にする() : void
   activate L5
   deactivate L5
   opt 再生中

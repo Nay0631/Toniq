@@ -1,0 +1,27 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** B01-11_拍子選択機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "もっと調整" as B1
+control "拍子設定" as C1
+control "拍子" as C2
+control "メロディ生成" as C3
+control "再生" as C4
+control "標準に戻す" as C5
+entity "アプリの状態" as E1
+entity "メロディ設定マスタ" as E2
+
+A1 --> B1 : 拍子を選ぶ
+A1 --> B1 : この欄を標準に戻す\nボタンを押下する
+B1 --> C1 : 拍子を設定する
+B1 --> C5 : 拍子・グルーヴを\n標準に戻す
+C5 --> E2 : ジャンルの標準の\n拍子を取得する
+C5 --> C1 : 標準の拍子を設定する
+C1 --> C2 : メロディとオリジナルの\nドラムを置き直す
+C1 --> C3 : 自動生成のメロディを\n作り直す
+C1 --> E1 : 拍子・メロディ・\nドラムを更新する
+C1 --> B1 : 拍子と変更の数を表示する
+C1 --> C4 : 再生中なら再生し直す
+
+@enduml
