@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { voiceProgression, VOICING_RANGES, noteToMidi, midiToNote } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
-import { arrangementGate } from "./LoopArranger";
+import { arrangementGate, secondsOf } from "./LoopArranger";
 import { getState } from "./AppState";
 import arpParams from "../data/arp_params.json";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
@@ -156,10 +156,11 @@ export function loadArpPattern(progression: ChordProgression, key: string = "A")
   const events = arpNotes(progression, key, param).map((n) => ({ ...n, time: unitTime(n.sixteenth) }));
 
   const arranged = arrangementGate("arp");
+  const seconds  = secondsOf();
   arpPart = new Tone.Part((time, event: ArpNote) => {
     if (!arranged(time)) return;
     // BPM が変わっても合うよう、長さは鳴らすときに秒にする
-    const dur = Tone.Time(param.step).toSeconds() * param.gate;
+    const dur = seconds(param.step) * param.gate;
     const velocity = Math.min(1, Math.max(0.1, event.velocity + (Math.random() - 0.5) * 0.1));
     arpSynth?.triggerAttackRelease(event.note, dur, time, velocity);
   }, events);

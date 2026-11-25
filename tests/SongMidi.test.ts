@@ -16,7 +16,7 @@ import { exportMidi, durationToBeats } from "../src/engine/MidiExporter";
 import { saveOutput } from "../src/engine/OutputFiles";
 import { swungBeats, SWING_MAX } from "../src/engine/Groove";
 import { getState, setState, defaultState } from "../src/engine/AppState";
-import { setArrangementBypass } from "../src/engine/LoopArranger";
+import { isArrangementBypassed, setArrangementBypass } from "../src/engine/LoopArranger";
 import { generateSongMelodies } from "../src/engine/SongForm";
 import { resolveChord, NOTE_INDEX } from "../src/data/degree_resolver";
 import { noteToMidi, timeToUnits } from "../src/engine/MelodyGenerator";
@@ -81,6 +81,45 @@ describe("songProgression（曲全体のコードの並び）", () => {
     // 小節がすき間なく埋まっている
     const covered = p.progression.reduce((sum, c) => sum + c.duration_bars, 0);
     expect(covered).toBe(32);
+  });
+
+  // 長調系のスケールを短三和音で終わらせない（以前は major 以外をすべて Im にしていた）
+  it.each([
+    ["major", "major"], ["mixolydian", "major"], ["lydian", "major"], ["major_pentatonic", "major"], ["whole_tone", "aug"],
+    ["minor", "minor"], ["dorian", "minor"], ["phrygian", "minor"], ["harmonic_minor", "minor"], ["melodic_minor", "minor"],
+  ])("エンディングの主和音：%s は %s", (scale, type) => {
+    const bases = chords.filter(c => c.base_scale === scale);
+    expect(bases.length).toBeGreaterThan(0);
+    for (const base of bases) {
+      song(4);
+      setState({ chordPattern: base, chorusPattern: null });
+      const last = songProgression()!.progression.slice(-1)[0];
+      expect(last.ending).toBe(true);
+      expect(last.degree).toBe("I");
+      expect(last.type, base.id).toBe(type);
+    }
+  });
+
+  it("エンディングの主和音：ブルースは進行の主和音に合わせる（I7 は I7、マイナーブルースは Im）", () => {
+    const types = new Set<string>();
+    for (const base of chords.filter(c => c.base_scale === "blues")) {
+      song(4);
+      setState({ chordPattern: base, chorusPattern: null });
+      const tonic = base.progression.find(c => c.degree === "I" || c.degree === "Im")!;
+      const last  = songProgression()!.progression.slice(-1)[0];
+      expect(last.type, base.id).toBe(tonic.type === "dom7" ? "dom7" : "minor");
+      types.add(last.type);
+    }
+    expect([...types].sort()).toEqual(["dom7", "minor"]);  // 両方の進行がある
+  });
+
+  it("エンディングの主和音は、どの進行でも実音にでき、主音が根音になる", () => {
+    for (const base of chords) {
+      song(4);
+      setState({ chordPattern: base, chorusPattern: null, key: "C" });
+      const last = songProgression()!.progression.slice(-1)[0];
+      expect(resolveChord(last.degree, last.type, 0, "C", base.base_scale, 4).root, base.id).toBe("C");
+    }
   });
 
   it("エンディングを使わないときは周回をそのまま並べ、主和音を足さない", () => {
@@ -197,6 +236,16 @@ describe("exportMidi（MIDI書き出し）", () => {
     expect(name).toBe("test.mid");
     return new Midi(new Uint8Array(await (blob as Blob).arrayBuffer()));
   }
+
+  it("試聴中（アレンジを通していないとき）でも、曲全体を書き出す。試聴はそのまま", async () => {
+    generated("EDM");
+    const normal = await exported();
+    vi.mocked(saveOutput).mockReset();
+    setArrangementBypass(true);
+    const during = await exported();
+    expect(isArrangementBypassed()).toBe(true);
+    expect(during.tracks.map(t => [t.name, t.notes.length])).toEqual(normal.tracks.map(t => [t.name, t.notes.length]));
+  });
 
   function generated(genre: string): void {
     song(4, { genre });

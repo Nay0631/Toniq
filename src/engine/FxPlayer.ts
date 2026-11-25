@@ -1,7 +1,7 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { createVolumeNode } from "./VolumeManager";
-import { arrangementBlockAt, getArrangement, positionAt } from "./LoopArranger";
+import { arrangementBlockAt, getArrangement, positionAt, secondsOf } from "./LoopArranger";
 import { endingBar } from "./SongForm";
 import { getState, FxType, ArrangeBlock } from "./AppState";
 import { GrowInstrument, isGrowReady, findGrowPreset, growPresetValuesWith } from "./Grow";
@@ -204,8 +204,9 @@ const FX_DEFS: Record<Exclude<FxType, "auto">, FxDef> = {
       const toneAmp = new Tone.Gain(0).connect(sp.input);
       const osc     = new Tone.Oscillator({ type: "triangle", frequency: 700, volume: -16 }).connect(toneAmp);
 
+      const seconds = secondsOf();
       const hit = (time: number) => {
-        const dur = Tone.Time("1m").toSeconds();
+        const dur = seconds("1m");
         const end = time + dur;
         band.frequency.cancelScheduledValues(time);
         band.frequency.setValueAtTime(9000, time);
@@ -513,6 +514,7 @@ export function loadFx(progression: ChordProgression) {
   // 鳴らすかどうかと種類は、発音時刻にあるブロックで決める（再生中のアレンジの編集もすぐ反映される）
   const blockAt  = arrangementBlockAt("fx");
   const position = positionAt();
+  const seconds  = secondsOf();
   fxPart = new Tone.Part((time, event: FxEvent) => {
     const block = blockAt(time);
     if (block === undefined) return;
@@ -522,7 +524,7 @@ export function loadFx(progression: ChordProgression) {
     if (event.kind === "hit") {
       voice.hit?.(time);
     } else if (voice.rise && event.kind === (voice.riseLen ?? "bars")) {
-      const dur = event.kind === "2n" ? Tone.Time("2n").toSeconds() : Tone.Time(`${rise}m`).toSeconds();
+      const dur = seconds(event.kind === "2n" ? "2n" : `${rise}m`);
       voice.rise(time, dur);
     }
   }, events);

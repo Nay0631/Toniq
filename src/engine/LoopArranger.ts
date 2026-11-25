@@ -476,6 +476,17 @@ export function isArrangementBypassed(): boolean {
   return bypass;
 }
 
+// 試聴・サンプル中でも、アレンジを通した内容で fn（同期で終わるもの）を実行する（MIDI書き出し）
+export function withArrangement<T>(fn: () => T): T {
+  const before = bypass;
+  bypass = false;
+  try {
+    return fn();
+  } finally {
+    bypass = before;
+  }
+}
+
 // 発音時刻（秒）が曲の何小節目か。読み込んだ時点の Transport と拍子（1小節の拍の数）で調べる
 export function barAt(): (time: number) => number {
   const transport = Tone.getTransport();
@@ -493,6 +504,14 @@ export function positionAt(): (time: number) => { bar: number; step: number } {
     const units = Math.floor(transport.getTicksAtTime(time) / unitTicks + 1e-6);
     return { bar: Math.floor(units / perBar), step: units % perBar };
   };
+}
+
+// 長さ（"16n"・"2m" など）を秒にする。読み込んだ時点のコンテキストの BPM・拍子で換算する（鳴らすたびに換算するので、
+// 再生中に BPM を変えても合う）。コールバックの中で Tone.Time を使うと、書き出しの合成中は Tone.getContext() が再生用に
+// 戻っているので、書き出す曲ではなく最後に再生した曲の BPM で換算してしまう
+export function secondsOf(): (duration: Tone.Unit.Time) => number {
+  const context = Tone.getContext();
+  return duration => new Tone.TimeClass(context, duration).toSeconds();
 }
 
 // 各パートの Part / Sequence のコールバックで使う判定。

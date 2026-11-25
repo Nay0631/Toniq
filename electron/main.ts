@@ -169,19 +169,35 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
-  outputRoot = prepareOutputRoot();
-  console.log("出力フォルダ:", outputRoot);
-  registerFileHandlers();
-  // インストール版では Electron 標準のメニューバー（File・Edit・View・Window）を出さない。
-  // 開発時は再読み込み（Ctrl+R）・開発者ツール（Ctrl+Shift+I）を使うので残す
-  if (!isDev) Menu.setApplicationMenu(null);
-  createWindow();
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+// 起動できるのは1つだけ。2つ目は、保存領域（localStorage）を1つ目が使っていて開けないので、ミュージックリストが空で始まり、
+// そこで保存した曲は閉じると消えてしまう。2つ目は何もせずに終わり、1つ目のウィンドウを前に出す
+// （開発時とインストール版は保存領域のフォルダが同じなので、片方を開いている間はもう片方も起動できない）
+if (!app.requestSingleInstanceLock()) {
+  console.error("Toniq はすでに起動しています。開いているウィンドウを使ってください");
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
   });
-});
 
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});
+  app.whenReady().then(() => {
+    outputRoot = prepareOutputRoot();
+    console.log("出力フォルダ:", outputRoot);
+    registerFileHandlers();
+    // インストール版では Electron 標準のメニューバー（File・Edit・View・Window）を出さない。
+    // 開発時は再読み込み（Ctrl+R）・開発者ツール（Ctrl+Shift+I）を使うので残す
+    if (!isDev) Menu.setApplicationMenu(null);
+    createWindow();
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit();
+  });
+}

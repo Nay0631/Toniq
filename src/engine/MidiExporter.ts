@@ -9,7 +9,7 @@ import { counterNotes } from "./CounterPlayer";
 import { percStepHits } from "./PercPlayer";
 import { blockDrumPattern, drumStepHits } from "./DrumEngine";
 import { songMelody, songProgression } from "./SongForm";
-import { getArrangement, findBlock } from "./LoopArranger";
+import { getArrangement, findBlock, withArrangement } from "./LoopArranger";
 import { swungBeats } from "./Groove";
 import type { LayerName } from "./LayerManager";
 import { saveOutput } from "./OutputFiles";
@@ -70,9 +70,25 @@ const TRACKS: Record<Exclude<LayerName, "signature" | "fx">, { name: string; cha
 
 // ===== MIDIエクスポート本体 =====
 export async function exportMidi(filename?: string): Promise<void> {
+  // コード進行・ドラムの試聴中はアレンジを通していないので、通した内容で作る（試聴は鳴らしたまま）
+  const midi = withArrangement(buildMidi);
+  if (!midi) return;
+
+  // 保存（Electron は output/midi フォルダ、ブラウザはダウンロード）
+  const s = getState();
+  const name   = filename ?? `toniq_${s.genre}_${s.key}.mid`;
+  const bytes  = midi.toArray();
+  const blob   = new Blob([new Uint8Array(bytes)], { type: "audio/midi" });
+  await saveOutput("midi", blob, name);
+
+  console.log("MIDIエクスポート完了:", name);
+}
+
+// 今の曲の MIDI（曲がなければ null）
+function buildMidi(): Midi | null {
   const s = getState();
   const progression = songProgression();  // 曲全体の並び（再生と同じ）
-  if (!progression) return;
+  if (!progression) return null;
 
   const midi = new Midi();
   midi.header.setTempo(s.bpm);
@@ -215,11 +231,5 @@ export async function exportMidi(filename?: string): Promise<void> {
     }
   }
 
-  // ===== 保存（Electron は output/midi フォルダ、ブラウザはダウンロード） =====
-  const name   = filename ?? `toniq_${s.genre}_${s.key}.mid`;
-  const bytes  = midi.toArray();
-  const blob   = new Blob([new Uint8Array(bytes)], { type: "audio/midi" });
-  await saveOutput("midi", blob, name);
-
-  console.log("MIDIエクスポート完了:", name);
+  return midi;
 }

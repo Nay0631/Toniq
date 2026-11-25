@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 // 音を出す部分（Web Audio）は使わないので外す
 vi.mock("../src/engine/VolumeManager", () => ({ createVolumeNode: vi.fn() }));
 vi.mock("../src/engine/SynthFactory", () => ({ createDrumKit: vi.fn() }));
-vi.mock("../src/engine/Groove", () => ({ sidechainHit: vi.fn() }));
+vi.mock("../src/engine/Groove", () => ({ createSidechain: vi.fn() }));
 
 import {
   customDrumPattern, drumStepHits, fillAt, fillSize, FILLS, FILL_SIZES, isCustomDrum, withDrumHit,

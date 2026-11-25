@@ -2,7 +2,7 @@ import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { resolveChord, chordKey } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
-import { arrangementGate } from "./LoopArranger";
+import { arrangementGate, secondsOf } from "./LoopArranger";
 import { getState } from "./AppState";
 import { GrowInstrument, growValues, isGrowReady, findGrowPreset, growPresetValues } from "./Grow";
 import { barTime, fitPattern, gridSteps, unitsPerBar } from "./Meter";
@@ -154,6 +154,7 @@ const chipArp: SignatureDef = {
 const vinylNoise: SignatureDef = {
   label: "レコードノイズ",
   create: out => {
+    const seconds = secondsOf();
     const hissFilter = new Tone.Filter({ type: "lowpass", frequency: 5000 }).connect(out);
     const hiss = new Tone.NoiseSynth({
       noise:    { type: "pink" },
@@ -174,7 +175,7 @@ const vinylNoise: SignatureDef = {
         }
         // プチプチ音は毎回ランダムに鳴らす（同じ周回でも同じにならない）
         if (Math.random() < 0.35) {
-          const jitter = Math.random() * Tone.Time("32n").toSeconds();
+          const jitter = Math.random() * seconds("32n");
           crackle.triggerAttackRelease(0.01, time + jitter, 0.3 + Math.random() * 0.7);
         }
       },
@@ -185,6 +186,7 @@ const vinylNoise: SignatureDef = {
   growCreate: (out, main) => {
     const preset = findGrowPreset("vinyl_crackle");  // レコードプチ
     if (preset < 0) return null;
+    const seconds = secondsOf();
     const crackle = new GrowInstrument(() => growPresetValues(preset)).connect(out);
     return {
       trigger: (e, time) => {
@@ -193,7 +195,7 @@ const vinylNoise: SignatureDef = {
           return;
         }
         if (Math.random() < 0.35) {
-          const jitter = Math.random() * Tone.Time("32n").toSeconds();
+          const jitter = Math.random() * seconds("32n");
           crackle.triggerAttackRelease(NOISE_NOTE, 0.01, time + jitter, 0.3 + Math.random() * 0.7);
         }
       },
