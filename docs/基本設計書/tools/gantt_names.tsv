@@ -38,6 +38,7 @@ A01-6	再生開始位置選択		PlayStartSelection
 A01-7	セクション切替		SectionSwitch
 A01-8	構成選択		StructureSelection
 A01-9	ソロ切替		SoloToggle
+A01-10	区間ループ		LoopRange
 L01-1	楽曲再生		SongPlayback
 Q01-1	音楽クイズ		MusicQuiz
 G01-1	楽曲生成		SongGeneration
@@ -47,9 +48,8 @@ M01-3	楽曲検索		SongSearch
 M01-4	楽曲を開く	楽曲読み込み	SongOpen
 M01-5	楽曲情報変更		SongInfoEdit
 M01-6	楽曲削除		SongDelete
-M01-7	曲ファイル書き出し		SongFileExport
-M01-8	曲ファイル読み込み		SongFileImport
-M01-9	出力フォルダを開く		OpenOutputFolder
+M01-7	出力フォルダを開く		OpenOutputFolder
+M01-8	書き出しファイル管理		ExportedFileManagement
 H01-1	元に戻す・やり直す	リバース	UndoRedo
 U01-1	配色選択		ThemeSelection
 U01-2	スキン選択		SkinSelection
@@ -59,6 +59,8 @@ U01-5	ドラム音源選択		DrumSourceSelection
 U01-6	用語ツールチップ切替		TooltipToggle
 -	（仕様書から外した機能）	自動チェック	QualityCheck
 -	（仕様書から外した機能）	Toniqシンセ切替	LidlessToggle
+-	（仕様書から外した機能）	曲ファイル書き出し	SongFileExport
+-	（仕様書から外した機能）	曲ファイル読み込み	SongFileImport
 T01	コード進行マスタ	chord_progressions	chord_progressions
 T02	ドラムパターンマスタ	drum_patterns	drum_patterns
 T03	シンプルモード表マスタ	easy_mode_table	easy_mode_table
