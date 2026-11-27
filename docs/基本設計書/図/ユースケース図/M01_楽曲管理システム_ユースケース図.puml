@@ -12,9 +12,8 @@ rectangle "楽曲管理システム" <<システム名>> {
     usecase "楽曲を開く機能" as UC4
     usecase "楽曲情報変更機能" as UC5
     usecase "楽曲削除機能" as UC6
-    usecase "曲ファイル書き出し機能" as UC7
-    usecase "曲ファイル読み込み機能" as UC8
-    usecase "出力フォルダを開く機能" as UC9
+    usecase "出力フォルダを開く機能" as UC7
+    usecase "書き出しファイル管理機能" as UC8
   }
 }
 
@@ -26,6 +25,5 @@ A1 -- UC5
 A1 -- UC6
 A1 -- UC7
 A1 -- UC8
-A1 -- UC9
 
 @enduml

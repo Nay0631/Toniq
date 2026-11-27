@@ -75,8 +75,13 @@ java -jar tools/plantuml.jar -tsvg -charset UTF-8 "<変えた .puml のパス>" 
   ```
   node docs/基本設計書/tools/robustness_labels.mjs
   ```
-  「重なり N 件」と出た図は、`図/CLAUDE.md` の決まり（ラベルを短くする・13文字くらいで `\n` で改行、自己ループは1つの処理に1本まで、処理の手順は別の処理に分ける）に合わせて .puml を直し、変換からやり直す。置き直した SVG は手で直さない。
+  「重なり N 件」と出た図は、`図/CLAUDE.md` の決まり（ラベルを短くする・13文字くらいで `\n` で改行、自己ループは使わない、処理の手順は別の処理に分ける）に合わせて .puml を直し、変換からやり直す。置き直した SVG は手で直さない。
 - ロバストネス図は、文字（線のラベル・名前）どうし・文字と線が重なっていないか画像で確かめる。PNG は `node docs/基本設計書/tools/robustness_labels.mjs <変えた SVG …> --png <スクラッチパッドのフォルダ>` で作る（Edge か Chrome で描く。PlantUML の `-tpng` は置き直す前の配置になるので使わない）。
+- ロバストネス図を変換したら、**必ず**別々の線が同じ道を通っていないか（線がつながって1本に見えないか）も確かめる（SVG は変えない）：
+  ```
+  node docs/基本設計書/tools/line_overlap.mjs
+  ```
+  「不合格」と出た図は、`node docs/基本設計書/tools/line_overlap.mjs --suggest <その .puml>`（足りなければ `--two`）で部品の宣言の順番を変えた案を比べ、`--apply` で書き込んで変換からやり直す（`図/CLAUDE.md` の決まり）。
 - ER図を変換したら、**必ず**続けて名前を箱の上に出し、子の側の丸を黒丸にする（処理済みの SVG は変えないので、いつも引数なしでよい）。書き換えた SVG は手で直さない：
   ```
   node docs/基本設計書/tools/er_layout.mjs

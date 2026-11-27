@@ -20,7 +20,7 @@ alt 音量スライダー・左右の位置のつまみ
   activate L4
   deactivate L4
   opt 再生中
-    L3 -> L3 : dB に変換して再生中の音量に反映する() : void
+    L3 -> L3 : 音量を dB に直して再生中の音量・左右の位置に反映する() : void
     activate L3
     deactivate L3
   end

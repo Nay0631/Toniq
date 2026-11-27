@@ -1,0 +1,118 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd M01-8_書き出しファイル管理機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":ミュージックリスト画面" as L2
+boundary ":書き出したファイル一覧" as L3
+control ":ファイルの絞り込み" as L4
+control ":ファイルの試聴" as L5
+control ":ごみ箱へ移す" as L6
+control ":出力ファイル保存" as L7
+control ":再生" as L8
+entity ":アプリの状態" as L9
+
+note over L3 : 読む・ごみ箱へ移すのは出力フォルダの audio・midi の直下の\nWAV・MP3・MIDI ファイルだけ。ブラウザで開いたときは\nダウンロードフォルダに保存されるためここには出ないと案内する
+
+L1 -> L2 : 「書き出したファイル」に切り替える() : void
+activate L2
+L2 -> L4 : 表示を切り替える() : void
+activate L4
+L4 -> L9 : 表示を書き出したファイルにする() : void
+activate L9
+deactivate L9
+L4 -> L7 : 書き出したファイルの一覧を読む() : void
+activate L7
+deactivate L7
+alt 読めた
+  L4 -> L3 : 一覧と種類ごとのファイル数を表示する() : void
+  activate L3
+  deactivate L3
+else 読めない
+  L4 -> L3 : 一覧を読めなかったことを表示する() : void
+  activate L3
+  deactivate L3
+end
+deactivate L4
+deactivate L2
+
+L1 -> L3 : 種類・並び順・「更新」を押下する() : void
+activate L3
+L3 -> L4 : 絞り込みの条件を変える() : void
+activate L4
+L4 -> L9 : 種類・並び順を更新する() : void
+activate L9
+deactivate L9
+L4 -> L7 : 書き出したファイルの一覧を読む() : void
+activate L7
+deactivate L7
+L4 -> L3 : 一覧と種類ごとのファイル数を表示する() : void
+activate L3
+deactivate L3
+deactivate L4
+deactivate L3
+
+L1 -> L3 : 再生ボタンを押下する() : void
+activate L3
+L3 -> L5 : ファイルを聴く・止める() : void
+activate L5
+alt 聴いていないファイル（WAV・MP3）
+  L5 -> L8 : 曲の再生を止める() : void
+  activate L8
+  deactivate L8
+  L5 -> L7 : WAV・MP3 を読み込む() : void
+  activate L7
+  deactivate L7
+  alt 読み込めた
+    L5 -> L3 : 再生位置と長さを表示する() : void
+    activate L3
+    deactivate L3
+  else 読み込めない（移動・削除された）
+    L5 -> L3 : 再生できなかったことを知らせる() : void
+    activate L3
+    deactivate L3
+  end
+else 聴いているファイル
+  L5 -> L5 : 聴くのを止める() : void
+  activate L5
+  deactivate L5
+end
+deactivate L5
+deactivate L3
+
+L1 -> L3 : 「場所を開く」を押下する() : void
+activate L3
+L3 -> L7 : ファイルをエクスプローラーで表示する() : void
+activate L7
+deactivate L7
+deactivate L3
+
+L1 -> L3 : ごみ箱へ移すボタンを押下する() : void
+activate L3
+L3 -> L6 : ファイルをごみ箱へ移す() : void
+activate L6
+L6 -> L1 : ごみ箱へ移してよいか確認する() : void
+activate L1
+deactivate L1
+alt OK
+  L6 -> L7 : ごみ箱へ移す() : void
+  activate L7
+  deactivate L7
+  alt 移せた
+    L6 -> L4 : 一覧を読み直す() : void
+    activate L4
+    deactivate L4
+  else 移せない
+    L6 -> L3 : 移せなかったことを知らせる() : void
+    activate L3
+    deactivate L3
+  end
+else 取り消し
+  L6 -> L6 : 移さない() : void
+  activate L6
+  deactivate L6
+end
+deactivate L6
+deactivate L3
+
+@enduml

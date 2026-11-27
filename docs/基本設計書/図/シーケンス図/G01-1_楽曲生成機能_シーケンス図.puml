@@ -4,6 +4,7 @@ mainframe sd G01-1_楽曲生成機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":シンプルモード画面" as L2
+boundary ":確認ダイアログ" as L3
 control ":楽曲生成" as L4
 control ":再生" as L5
 control ":拍子" as L16
@@ -18,8 +19,13 @@ control ":曲の構成" as L12
 control ":メロディ生成" as L13
 entity ":メロディ設定マスタ" as L14
 entity ":アプリの状態" as L15
+control ":履歴管理" as L18
+control ":コードの説明" as L19
+control ":設定画面に戻る" as L20
+control ":保存の確認" as L21
+entity ":楽曲データ" as L22
 
-note over L2 : 「別の曲を生成する」も同じ流れ。カスタムモードでメロディを\n作り直すときはピアノロールの「自動生成」（P01-1）を使う
+note over L2 : カスタムモードでメロディを作り直すときは\nピアノロールの「自動生成」（P01-1）を使う
 
 L1 -> L2 : 生成するボタンを押下する() : void
 activate L2
@@ -78,10 +84,51 @@ L4 -> L15 : 曲の内容を更新し生成済みにする() : void
 activate L15
 note right of L15 : 構成は標準に、変えた所・セクションは空に、\n今の曲は未保存に戻す
 deactivate L15
+L4 -> L18 : 元に戻すの履歴を捨てる() : void
+activate L18
+deactivate L18
+L4 -> L19 : キー・コード名の説明を作る() : void
+activate L19
+deactivate L19
 L4 -> L2 : 生成結果と残した内容を表示する() : void
 activate L2
 deactivate L2
 deactivate L4
+deactivate L2
+
+L1 -> L2 : 「雰囲気・ジャンル・テンポを変更」ボタンを押下する() : void
+activate L2
+L2 -> L20 : 設定画面に戻る() : void
+activate L20
+L20 -> L3 : 今の曲が置き換わることを知らせる() : void
+activate L3
+deactivate L3
+note right of L3 : 保存していない変更があれば「保存せずに戻る」\n「保存してから戻る」、なければ「設定画面に戻る」
+L1 -> L3 : 戻り方を選ぶ() : void
+activate L3
+L3 -> L20 : 選んだ戻り方を渡す() : void
+activate L20
+deactivate L20
+deactivate L3
+alt 戻る
+  opt 保存してから戻る
+    L20 -> L21 : ミュージックリストに保存する() : void
+    activate L21
+    L21 -> L22 : 曲を保存する() : void
+    activate L22
+    deactivate L22
+    deactivate L21
+    note right of L21 : 保存できなければ戻らない
+  end
+  L20 -> L2 : 設定画面（生成前）を表示する() : void
+  activate L2
+  deactivate L2
+else キャンセル・Esc・ダイアログの外のクリック
+  L20 -> L20 : 戻らない() : void
+  activate L20
+  deactivate L20
+end
+deactivate L20
 deactivate L2
 
 @enduml

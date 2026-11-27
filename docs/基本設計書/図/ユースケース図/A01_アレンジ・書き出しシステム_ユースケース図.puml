@@ -15,6 +15,7 @@ rectangle "アレンジ・書き出しシステム" <<システム名>> {
     usecase "セクション切替機能" as UC7
     usecase "構成選択機能" as UC8
     usecase "ソロ切替機能" as UC9
+    usecase "区間ループ機能" as UC10
   }
 }
 
@@ -27,5 +28,6 @@ A1 -- UC6
 A1 -- UC7
 A1 -- UC8
 A1 -- UC9
+A1 -- UC10
 
 @enduml

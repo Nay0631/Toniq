@@ -7,8 +7,11 @@ boundary ":カスタムモード画面" as L2
 control ":曲の管理" as L3
 entity ":アプリの状態" as L4
 entity ":楽曲データ" as L5
+control ":メニューに戻る確認" as L6
+boundary ":確認ダイアログ" as L7
+control ":画面切り替え" as L8
 
-note over L2 : シンプルモード画面の保存ボタンも同じ流れ
+note over L2 : シンプルモード画面（生成後は「保存・書き出し」の欄）の保存ボタン・\n「メニューに戻る」も同じ流れ
 
 L1 -> L2 : 保存ボタンを押下する() : void
 activate L2
@@ -40,10 +43,46 @@ else 書き込めない（保存容量がいっぱいなど）
   note over L3 : 楽曲データと今の曲は変えない
   L3 -> L2 : 保存容量の案内と保存し直すよう知らせる() : void
   activate L2
-  note right of L2 : 不要な曲を削除するか「すべて書き出す」で\nファイルに残してから整理し、もう一度「保存」する
+  note right of L2 : ミュージックリストの不要な曲を削除して整理し、\n編集中の曲は消えていないので、もう一度「保存」する
   deactivate L2
 end
 deactivate L3
+deactivate L2
+
+L1 -> L2 : 「メニューに戻る」を押下する() : void
+activate L2
+L2 -> L6 : メニューに戻る() : void
+activate L6
+opt 保存していない変更がある
+  L6 -> L7 : 楽曲を保存するか聞く() : void
+  activate L7
+  deactivate L7
+  note right of L7 : メニューに戻るだけでは曲は消えないが、新規作成・\n別の曲を開く・アプリを閉じると失われることを添える
+  L1 -> L7 : 戻り方を選ぶ() : void
+  activate L7
+  L7 -> L6 : 選んだ戻り方を渡す() : void
+  activate L6
+  deactivate L6
+  deactivate L7
+end
+alt 保存して戻る（リストの曲なら上書き保存して戻る）
+  L6 -> L3 : 今の曲を保存する() : void
+  activate L3
+  deactivate L3
+  note right of L3 : 保存できなければ戻らない
+  L6 -> L8 : メニューに戻る() : void
+  activate L8
+  deactivate L8
+else 保存せずに戻る・変更がない
+  L6 -> L8 : メニューに戻る() : void
+  activate L8
+  deactivate L8
+else キャンセル・Esc・ダイアログの外のクリック
+  L6 -> L6 : 戻らない() : void
+  activate L6
+  deactivate L6
+end
+deactivate L6
 deactivate L2
 
 @enduml

@@ -5,6 +5,8 @@ mainframe **pkg**
 class "カスタムモード画面" as B1 <<boundary>> {
   {method} <U+002B> 再生ボタンを押下する() : void
   {method} <U+002B> スペースキーを押下する() : void
+  {method} <U+002B> ほかの画面へ移る() : void
+  {method} <U+002B> 停止ボタンを出す() : void
   {method} <U+002B> 再生できなかったことを知らせる() : void
 }
 class "ミュージックリスト画面" as B2 <<boundary>> {
@@ -23,7 +25,7 @@ class "曲の管理" as C2 <<control>> {
 class "再生" as C3 <<control>> {
   {method} <U+002B> 再生する() : void
   {method} <U+002B> 停止する() : void
-  {method} <U+002D> 小節数で止める予約をする() : void
+  {method} <U+002D> 曲の終わりで止める予約をする() : void
 }
 class "grow" as C6 <<control>> {
   {method} <U+002B> grow の準備を待つ() : void
@@ -32,7 +34,13 @@ class "各パートの演奏" as C4 <<control>> {
   {method} <U+002B> ON のパートを読み込む() : void
 }
 class "アレンジ管理" as C5 <<control>> {
-  {method} <U+002B> 周回を数える() : void
+  {method} <U+002B> 周回を数え、くり返す範囲を決める() : void
+}
+class "ファイルの試聴" as C8 <<control>> {
+  {method} <U+002B> 書き出したファイルを聴いていたら止める() : void
+}
+class "画面切り替え" as C9 <<control>> {
+  {method} <U+002B> 画面を切り替える() : void
 }
 class "楽曲データ" as E1 <<entity>> {
   {field} <U+002B> 曲名・お気に入り・日時
@@ -68,5 +76,8 @@ C3 --> C4
 C3 --> C5
 C3 --> B2
 C3 --> B1
+C1 --> C8
+B1 --> C9
+C9 --> C3
 
 @enduml

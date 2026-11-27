@@ -6,6 +6,8 @@ actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
 control ":ファイル名入力" as L15
 boundary ":ファイル名ダイアログ" as L16
+control ":保存の確認" as L30
+entity ":楽曲データ" as L31
 control ":MIDI書き出し" as L3
 entity ":アプリの状態" as L4
 control ":曲の構成" as L5
@@ -13,6 +15,7 @@ control ":アレンジ管理" as L6
 entity ":標準アレンジマスタ" as L7
 entity ":構成プリセットマスタ" as L18
 control ":拍子" as L19
+control ":グルーヴ" as L20
 control ":コード変換" as L8
 entity ":スケールマスタ" as L9
 control ":各パートの演奏" as L10
@@ -22,13 +25,13 @@ entity ":アルペジオ設定マスタ" as L13
 control ":出力ファイル保存" as L17
 entity ":MIDIファイル" as L14
 
-note over L2 : シンプルモード画面の「MIDIで書き出す」も同じ流れ。\nブラウザで開いたときは出力フォルダを使わずダウンロードにする（確認は出さない）
+note over L2 : シンプルモード画面の「MIDIで書き出す」も同じ流れ。\nミュージックリスト画面の曲のメニューから書き出すときは、先にその曲を今の曲として読み込み（M01-4 と同じ確認）、\n保存したあとは書き出したファイルの一覧を読み直す。\nブラウザで開いたときは出力フォルダを使わずダウンロードにする（確認は出さない）
 
 L1 -> L2 : MIDI ボタンを押下する() : void
 activate L2
 L2 -> L15 : ファイル名を聞く() : void
 activate L15
-L15 -> L16 : 初期値のファイル名でダイアログを表示する() : void
+L15 -> L16 : 初期値のファイル名と注意書きでダイアログを表示する() : void
 activate L16
 deactivate L16
 alt 書き出す
@@ -37,6 +40,15 @@ alt 書き出す
   activate L16
   L16 -> L15 : ファイル名を確定する() : void
   activate L15
+  opt 「ミュージックリストにも保存する」を入れている（保存していない変更があるとき）
+    L15 -> L30 : ミュージックリストに保存する() : void
+    activate L30
+    L30 -> L31 : 曲を保存する() : void
+    activate L31
+    deactivate L31
+    deactivate L30
+    note right of L30 : 保存できなければ書き出さない
+  end
   deactivate L15
   deactivate L16
 else キャンセル・Esc・ダイアログの外のクリック
@@ -94,9 +106,9 @@ opt ファイル名を決めた
     activate L18
     deactivate L18
     deactivate L6
-    L3 -> L3 : スウィングに合わせて発音位置をずらす() : void
-    activate L3
-    deactivate L3
+    L3 -> L20 : 発音位置をスウィングでずらす() : void
+    activate L20
+    deactivate L20
   end
   L3 -> L3 : テンポ・拍子と8トラックを書く() : void
   activate L3

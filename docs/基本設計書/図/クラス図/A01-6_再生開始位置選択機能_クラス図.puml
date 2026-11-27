@@ -7,11 +7,19 @@ class "アレンジ画面" as B1 <<boundary>> {
   {method} <U+002B> 先頭へボタンを押下する() : void
   {method} <U+002B> 再生ボタンの表示を「○小節目から」にする() : void
 }
+class "シンプルモード画面" as B2 <<boundary>> {
+  {method} <U+002B> 生成された楽曲の波形をクリック・ドラッグする() : void
+  {method} <U+002B> 再生位置の線と「○小節目 0:12」を表示する() : void
+}
 class "再生開始位置設定" as C1 <<control>> {
   {method} <U+002B> 再生開始位置を設定する() : void
 }
+class "再生位置の選択" as C3 <<control>> {
+  {method} <U+002B> 再生する小節を選ぶ() : void
+}
 class "再生" as C2 <<control>> {
   {method} <U+002B> その位置から再生し直す() : void
+  {method} <U+002B> 選んだ小節の頭から再生する() : void
 }
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> 再生開始位置（小節）
@@ -22,5 +30,8 @@ B1 --> C1
 C1 --> E1
 C1 --> C2
 C1 --> B1
+B2 --> C3
+C3 --> B2
+C3 --> C2
 
 @enduml

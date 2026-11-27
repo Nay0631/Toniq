@@ -2,28 +2,35 @@
 !include ../astah-robustness-style.puml
 mainframe **uc** M01-2_新規作成機能_ロバストネス図
 
-actor "利用者" as A1
 boundary "シンプルモード画面" as B1
 boundary "カスタムモード画面" as B2
+boundary "確認ダイアログ" as B3
 control "新規作成" as C1
 control "再生" as C2
 control "曲の管理" as C3
 control "パターン選出" as C4
 control "音量管理" as C5
 control "履歴管理" as C6
+control "保存の確認" as C7
 entity "アプリの状態" as E1
 entity "シンプルモード表マスタ" as E2
 entity "テンポマスタ" as E3
+entity "楽曲データ" as E4
+actor "利用者" as A1
 
 A1 --> B1 : 新規作成ボタンを押下する
 A1 --> B2 : 新規作成ボタンを押下する
 B1 --> C1 : 新しい曲を作る
 B2 --> C1 : 新しい曲を作る
-C1 --> C1 : 保存していない変更を\n捨てる確認で取り消した\n（何もしない）
 C1 --> C3 : 保存していない変更が\nあるか確かめる
+C1 --> B3 : 編集内容が消えることと\n失われるものを知らせる
+A1 --> B3 : 新規作成のしかたを選ぶ
+B3 --> C1 : 選んだしかたを渡す
+C1 --> C7 : 「保存してから新規作成」\nなら先に保存する
+C7 --> E4 : 曲を保存する
 C1 --> C2 : 再生を止める
 C1 --> C3 : 曲の内容を初期状態に戻す
-C3 --> E1 : 曲の内容を初期値にし、\n未保存の曲にする
+C3 --> E1 : 曲の内容を初期値にし、\n未保存の曲にする\n（区間ループも消す）
 C3 --> C4 : 初期のジャンル・雰囲気で\nパターンとテンポを選ぶ
 C4 --> E2 : 候補を取得する
 C4 --> E3 : BPMを取得する

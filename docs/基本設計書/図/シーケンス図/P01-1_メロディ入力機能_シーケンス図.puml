@@ -12,8 +12,10 @@ control ":メロディ演奏" as L7
 control ":パート管理" as L8
 control ":曲の構成" as L9
 control ":メロディ生成" as L10
+control ":再生" as L11
+control ":アレンジ管理" as L12
 
-note over L2 : 編集するセクション（Aメロ／サビ）・音符の長さ（3連符の拍子では「4分3連」「8分3連」）は\nツールバーで選ぶ。タイピングピアノは Z〜/ の段と Q〜] の段（上の段が黒鍵）、↓↑ でオクターブ
+note over L2 : 編集するセクション（Aメロ／サビ）・音符の長さ（3連符の拍子では「4分3連」「8分3連」）は\nツールバーで選ぶ。タイピングピアノは Z〜/ の段と Q〜] の段（上の段が黒鍵）、↓↑ でオクターブ。\n置く場所は音符長にかかわらず1マスごとに選べる（音符長は新しく置く音の長さ）
 
 alt 音を置く
   L1 -> L2 : グリッドを押下する・タイピングピアノのキーを押す() : void
@@ -33,7 +35,7 @@ alt 音を置く
     L3 -> L7 : 置いた音を今の音色で試聴する() : void
     activate L7
     deactivate L7
-    L3 -> L3 : 重なる音を手前で切る() : void
+    L3 -> L3 : 後ろの音にかかる長さを手前まで短くする() : void
     activate L3
     deactivate L3
     L3 -> L5 : 編集中のセクションのメロディを更新し「自分で入力」にする() : void
@@ -47,6 +49,11 @@ alt 音を置く
     L3 -> L2 : 音符を表示する() : void
     activate L2
     deactivate L2
+  else ほかの音が鳴っている所（同じ時刻を含む）
+    L3 -> L2 : 「ここにはすでに音があります」の注意を5秒出す() : void
+    activate L2
+    deactivate L2
+    note right of L2 : 置いてある音は消さない。\n鍵盤入力なら入力位置も進めない
   else 音域外・スケール外
     L3 -> L3 : 置かずに終わる() : void
     activate L3
@@ -107,6 +114,31 @@ else クリア
   activate L2
   deactivate L2
   deactivate L3
+  deactivate L2
+else 表示の拡大・縮小
+  L1 -> L2 : 表示の拡大・縮小ボタンを押下する() : void
+  activate L2
+  note right of L2 : Ctrl＋ホイール（横）・Ctrl＋Shift＋ホイール（縦）でも。\n横 100〜800％・縦 70〜200％
+  L2 -> L3 : 表示を拡大・縮小する() : void
+  activate L3
+  L3 -> L5 : 拡大率を更新する() : void
+  activate L5
+  deactivate L5
+  L3 -> L2 : 音符と拡大率を表示する() : void
+  activate L2
+  deactivate L2
+  deactivate L3
+  deactivate L2
+else 再生
+  L1 -> L2 : 情報バーの「再生」・スペースキーを押下する() : void
+  activate L2
+  L2 -> L11 : 選んでいるセクションの最初の周回をくり返し鳴らす() : void
+  activate L11
+  note right of L11 : 選んだセクションの周回が曲にないときは\n曲全体を鳴らす（そのことを下に出す）
+  L11 -> L12 : メロディを置いていない小節でもメロディを鳴らす() : void
+  activate L12
+  deactivate L12
+  deactivate L11
   deactivate L2
 end
 

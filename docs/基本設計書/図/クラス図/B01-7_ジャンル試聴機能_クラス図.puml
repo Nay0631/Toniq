@@ -16,7 +16,8 @@ class "メロディ生成" as C3 <<control>> {
   {method} <U+002B> メロディを生成する() : void
 }
 class "再生" as C4 <<control>> {
-  {method} <U+002B> サンプルを1周再生する() : void
+  {method} <U+002B> サンプルを15秒鳴らす() : void
+  {method} <U+002D> 終わりの2秒でだんだん小さくして止める() : void
   {method} <U+002B> 停止する() : void
 }
 class "拍子" as C5 <<control>> {

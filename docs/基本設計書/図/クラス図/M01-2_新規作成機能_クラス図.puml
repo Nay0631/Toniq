@@ -10,8 +10,17 @@ class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> 新規作成ボタンを押下する() : void
   {method} <U+002B> 設定タブを表示する() : void
 }
+class "確認ダイアログ" as B3 <<boundary>> {
+  {method} <U+002B> 編集内容が消えることと失われるものを知らせる() : void
+  {method} <U+002B> 新規作成のしかたを選ぶ() : void
+}
 class "新規作成" as C1 <<control>> {
   {method} <U+002B> 新しい曲を作る() : void
+  {method} <U+002B> 選んだしかたを渡す() : void
+  {method} <U+002D> 何もしない() : void
+}
+class "保存の確認" as C7 <<control>> {
+  {method} <U+002B> ミュージックリストに保存する() : void
 }
 class "再生" as C2 <<control>> {
   {method} <U+002B> 再生を止める() : void
@@ -32,7 +41,12 @@ class "履歴管理" as C6 <<control>> {
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> 曲の内容
   {field} <U+002B> 今の曲（リストの曲か）
+  {field} <U+002B> 区間ループ
   {method} <U+002B> 曲の内容を初期値にし、未保存の曲にする() : void
+}
+class "楽曲データ" as E4 <<entity>> {
+  {field} <U+002B> 保存した曲
+  {method} <U+002B> 曲を保存する() : void
 }
 class "シンプルモード表マスタ" as E2 <<entity>> {
   {field} <U+002B> ジャンル×雰囲気
@@ -55,5 +69,9 @@ C3 --> C5
 C3 --> C6
 C1 --> B1
 C1 --> B2
+C1 --> B3
+B3 --> C1
+C1 --> C7
+C7 --> E4
 
 @enduml

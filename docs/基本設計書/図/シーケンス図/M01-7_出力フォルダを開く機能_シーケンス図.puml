@@ -1,15 +1,15 @@
 @startuml
 !include ../astah-sequence-style.puml
-mainframe sd M01-9_出力フォルダを開く機能_シーケンス図
+mainframe sd M01-7_出力フォルダを開く機能_シーケンス図
 
 actor ":利用者" as L1
 boundary ":ミュージックリスト画面" as L2
 control ":出力フォルダを開く" as L3
 control ":出力ファイル保存" as L4
 
-note over L2 : ブラウザで開いたときはボタンを出さない。\n出力フォルダには audio（WAV・MP3）と midi（MIDI）がある
+note over L2 : ボタンは保存した曲・書き出したファイルのどちらの表示にもある。\nブラウザで開いたときはボタンを出さない。\n出力フォルダには audio（WAV・MP3）と midi（MIDI）がある
 
-L1 -> L2 : 出力フォルダボタンを押下する() : void
+L1 -> L2 : 「出力フォルダを表示」ボタンを押下する() : void
 activate L2
 L2 -> L3 : 出力フォルダを開く() : void
 activate L3

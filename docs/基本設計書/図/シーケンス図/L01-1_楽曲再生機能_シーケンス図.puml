@@ -15,8 +15,10 @@ control ":grow" as L12
 entity ":growプリセット" as L13
 control ":各パートの演奏" as L9
 control ":アレンジ管理" as L10
+control ":ファイルの試聴" as L14
+control ":画面切り替え" as L15
 
-note over L2 : シンプルモード画面（生成後）の再生ボタン・スペースキーも同じ流れ
+note over L2 : シンプルモード画面（生成後）の再生ボタン・スペースキーも同じ流れ。\n曲の最後の小節は主和音の全音符で終わり（エンディング）、ドラムはセクションの変わり目などにフィルを入れる
 
 alt モード画面で再生ボタン
   L1 -> L2 : 再生ボタンを押下する() : void
@@ -36,12 +38,17 @@ alt モード画面で再生ボタン
     L8 -> L9 : ON のパートを読み込む() : void
     activate L9
     deactivate L9
-    L8 -> L10 : 周回を数える() : void
+    L8 -> L10 : 周回を数え、くり返す範囲を決める() : void
     activate L10
     deactivate L10
-    L8 -> L8 : 小節数で止める予約をする() : void
+    note right of L10 : ピアノロールでメロディを編集している間は\n選んでいるセクション、区間ループがあるときは\nその区間をくり返す
+    L8 -> L8 : 曲の終わりで止める予約をする() : void
     activate L8
     deactivate L8
+    note right of L8 : 終わりの時刻はオーディオの時計で決める\n（最小化していても止まる）。エンディングは\n1小節あとに止める。ループ再生なら先頭へ戻る
+    L8 -> L2 : 停止ボタンを出す() : void
+    activate L2
+    deactivate L2
   else 読み込みで例外が出た
     L8 -> L2 : 再生できなかったことを知らせる() : void
     activate L2
@@ -88,6 +95,9 @@ else ミュージックリストで再生
     deactivate L7
     deactivate L5
   end
+  L4 -> L14 : 書き出したファイルを聴いていたら止める() : void
+  activate L14
+  deactivate L14
   L4 -> L8 : 再生する() : void
   activate L8
   L8 -> L12 : grow の準備を待つ() : void
@@ -102,6 +112,16 @@ else ミュージックリストで再生
   deactivate L8
   deactivate L4
   deactivate L3
+else ほかの画面へ移る
+  L1 -> L2 : ほかの画面へ移る() : void
+  activate L2
+  L2 -> L15 : 画面を切り替える() : void
+  activate L15
+  L15 -> L8 : 停止する() : void
+  activate L8
+  deactivate L8
+  deactivate L15
+  deactivate L2
 end
 
 @enduml

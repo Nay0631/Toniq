@@ -48,10 +48,16 @@ alt サンプルが止まっている
   activate L9
   deactivate L9
   deactivate L8
-  L3 -> L10 : サンプルを1周再生する() : void
+  L3 -> L10 : サンプルを15秒鳴らす() : void
   activate L10
-  note right of L10 : ドラム・パーカッション・コード・ベース・\nパッド・シグネチャー・メロディを\nアレンジに関係なく同時に鳴らす
+  note right of L10 : ドラム・パーカッション・コード・ベース・\nパッド・シグネチャー・メロディを\nアレンジに関係なく同時に鳴らす。\nテンポ・進行の長さ・拍子によらず15秒（短い進行はくり返す）
   L10 -> L11 : 曲の内容を一時的に差し替える() : void
+  activate L11
+  deactivate L11
+  L10 -> L10 : 終わりの2秒でだんだん小さくして止める() : void
+  activate L10
+  deactivate L10
+  L10 -> L11 : 曲の内容を元に戻す() : void
   activate L11
   deactivate L11
   deactivate L10
