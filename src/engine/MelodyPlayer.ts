@@ -2,13 +2,13 @@ import * as Tone from "tone";
 import { MelodyNote } from "./MelodyGenerator";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { getState } from "./AppState";
 import melodyParams from "../data/melody_params.json";
 import { GrowInstrument, growValues, isGrowReady, prepareGrowContext } from "./Grow";
 import { beatsPerBar } from "./Meter";
 
-
-let melodyPart:  Tone.Part | null = null;
+let melodyTrack: Track | null = null;
 let melodySynth: MelodySynth | GrowInstrument | null = null;
 let melodyFx:    Tone.ToneAudioNode[] = [];  // Synth の後ろにつなぐエフェクト（Synth と一緒に破棄する）
 let melodyVol:   Tone.Volume | null = null;
@@ -185,8 +185,9 @@ function velocityAt(time: string): number {
   return 0.72;
 }
 
-export function loadMelody(notes: MelodyNote[], loopEnd: string) {
-  if (melodyPart) { melodyPart.dispose(); melodyPart = null; }
+// notes を loopBars 小節ごとにくり返す
+export function loadMelody(notes: MelodyNote[], loopBars: number) {
+  melodyTrack?.dispose();
   if (!melodySynth) initMelodySynth();
 
   const events = notes
@@ -194,28 +195,19 @@ export function loadMelody(notes: MelodyNote[], loopEnd: string) {
     .map(n => ({ time: n.time, note: n.note!, dur: n.duration, vel: velocityAt(n.time) }));
 
   const arranged = arrangementGate("melody");
-  melodyPart = new Tone.Part((time, event: any) => {
+  melodyTrack = createTrack(events, loopBars, (time, event) => {
     if (!arranged(time)) return;
     melodySynth?.triggerAttackRelease(event.note, event.dur, time, event.vel);
-  }, events);
-
-  melodyPart.loop    = true;
-  melodyPart.loopEnd = loopEnd;
-  melodyPart.start(0);
+  });
 }
 
 // ピアノロールで置いた音を試聴する（Synth がなければ作る。再生中は鳴っているメロディの Synth で鳴らす）
 export async function previewMelodyNote(note: string) {
   await Tone.start();
   await prepareGrowContext();
-  // 起動時（grow の準備前）に作った Synth や、音色・ジャンルを変える前の Synth なら今の設定で作り直す
+  // grow の準備前に作った Synth や、音色・ジャンルを変える前の Synth なら今の設定で作り直す
   if (!melodySynth || melodySound !== resolveMelodySound()) initMelodySynth();
   melodySynth?.triggerAttackRelease(note, "8n", undefined, 0.8);
-}
-
-// メロディの Synth を今の設定で作り直す（再生中なら鳴っている Part はそのまま新しい Synth で鳴る）
-export function refreshMelodySynth(): void {
-  if (melodySynth) initMelodySynth();
 }
 
 function disposeMelodySynth() {
@@ -227,7 +219,7 @@ function disposeMelodySynth() {
 }
 
 export function disposeMelody() {
-  melodyPart?.dispose();
-  melodyPart = null;
+  melodyTrack?.dispose();
+  melodyTrack = null;
   disposeMelodySynth();
 }

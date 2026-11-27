@@ -514,14 +514,19 @@ export function growValues(part: GrowPart): () => number[] | null {
 // 今鳴らせる状態の GrowInstrument（音作りの値・BPM の変更をすぐ当てるため）
 const live = new Set<GrowInstrument>();
 
-// 音作りの値と BPM（テンポ同期の LFO・ディレイ）を、鳴っている grow（全パート）にすぐ当てる（作り直さない）
+// 音作りの値を、鳴っている grow（全パート）にすぐ当てる（作り直さない）。送るのは前に送った値から変わったものだけ
+// （変わっていない音色まで送ると、時刻を決めて当てた値（ライザーの長さなど。setParamAtTime）が初期値に戻ってしまう）
 export function applyGrowLive(): void {
-  const bpm = getState().bpm;
   live.forEach(inst => {
     const values = inst.values();
     if (values) inst.setValues(values);
-    inst.setBpm(bpm);
   });
+}
+
+// BPM（テンポ同期の LFO・ディレイ）を、鳴っている grow（全パート）にすぐ当てる
+export function applyGrowBpm(): void {
+  const bpm = getState().bpm;
+  live.forEach(inst => inst.setBpm(bpm));
 }
 
 // ===== マルチティンバー：1つの AudioWorkletNode（1つの wasm）で複数の GrowInstrument を鳴らす =====
@@ -631,7 +636,7 @@ export class GrowInstrument {
   private ready = false;  // 発音の合図を入れてよいか（使い回すスロットは、開き終わるまで false）
   private id = 0;         // 使い回すスロットを開いたときの番号
   private disposed = false;
-  private latestValues: number[] | null = null;  // setValues された値（まだノードがないとき・開き直すときに渡す）
+  private latestValues: number[] | null = null;  // ワークレットに渡した（渡す）いちばん新しい値。まだ渡していなければ null
   private pending: (() => void)[] = [];          // 鳴らせるようになる前に呼ばれた発音・パラメーター
   private onParam!: AudioParam;
   private offParam!: AudioParam;
@@ -652,9 +657,10 @@ export class GrowInstrument {
     live.add(this);
   }
 
-  // ノードを作るときに渡す最初の値
+  // ノードを作る・スロットを開くときに渡す最初の値
   currentValues(): number[] {
-    return this.latestValues ?? this.values() ?? [];
+    this.latestValues ??= this.values() ?? [];
+    return this.latestValues;
   }
 
   // 新しいノードのスロットにつなぐ（flush から呼ぶ。スロットはノードと一緒に開いている）
@@ -786,13 +792,18 @@ export class GrowInstrument {
     return frame;
   }
 
-  // 音作りの値（番号順）と BPM を当てる（鳴っている音にもすぐ反映される）
+  // 音作りの値（番号順）を当てる（鳴っている音にもすぐ反映される）。変わった値だけ送る
   setValues(values: number[]): void {
+    const before = this.latestValues;
     this.latestValues = values;
-    this.hub?.node.port.postMessage({ type: "params", slot: this.slot, values: values.map((v, i) => [i, v]) });
+    if (!this.hub) return;  // まだノードがない。ノードを作る・スロットを開くときに渡す
+    const changed = values.flatMap((v, i) => (v === before?.[i] ? [] : [[i, v]]));
+    if (changed.length > 0) this.hub.node.port.postMessage({ type: "params", slot: this.slot, values: changed });
   }
 
+  // BPM を当てる
   setBpm(bpm: number): void {
+    if (bpm === this.bpm) return;
     this.bpm = bpm;
     this.hub?.node.port.postMessage({ type: "bpm", slot: this.slot, bpm });
   }

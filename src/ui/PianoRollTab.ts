@@ -16,6 +16,7 @@ import { buildDrumRoll, initDrumRoll, renderDrumPlayhead, renderDrumRoll } from 
 import { beatsPerBar, isTriplet, unitsPerBar, unitsPerBeat } from "../engine/Meter";
 import { typingKeyMidi } from "./TypingKeys";
 import { soloPart, toggleSolo } from "./Solo";
+import { modalOpen } from "./SpaceKey";
 
 // 表示する音域（MIDI ノート番号。C3〜C7）
 const LOW  = 48;
@@ -112,13 +113,13 @@ function readNotes(): RollNote[] {
     .filter(n => n.start < total);
 }
 
-// 編集したらメロディは「自分で入力」になる。再生中ならメロディだけ読み込み直してすぐ反映する
+// 編集したらメロディは「自分で入力」になる。曲の再生中ならメロディだけ読み込み直してすぐ反映する
 function writeNotes(notes: RollNote[]): void {
   const melodyNotes: MelodyNote[] = [...notes]
     .sort((a, b) => a.start - b.start)
     .map(n => ({ note: midiToNote(n.midi), duration: unitsToDuration(n.units), time: unitsToTime(n.start) }));
   setState(section === "B" ? { chorusMelodyNotes: melodyNotes, melodyMethod: "manual" } : { melodyNotes, melodyMethod: "manual" });
-  if (Playback.isPlaying() && getState().parts.melody) reloadLayer("melody");
+  if (Playback.isSongPlaying() && getState().parts.melody) reloadLayer("melody");
   render();
 }
 
@@ -728,7 +729,7 @@ export function initPianoRoll(): void {
         melodyMethod:  "auto",
         melodyVersion: s.melodyVersion + 1,
       });
-      if (Playback.isPlaying() && getState().parts.melody) reloadLayer("melody");
+      if (Playback.isSongPlaying() && getState().parts.melody) reloadLayer("melody");
       render();
     });
 
@@ -767,6 +768,7 @@ export function initPianoRoll(): void {
   // キーボード：タイピングピアノ（TypingKeys.ts）で鍵盤入力、↓ / ↑ でオクターブ切替、Delete で選択中の音を削除
   document.addEventListener("keydown", e => {
     if (!currentRoot() || target !== "melody" || isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey || drag) return;
+    if (modalOpen()) return;  // 書き出しの進み具合などのダイアログが出ている間は、曲を変えない
     const midi = typingKeyMidi(e.code, getState().pianoRollOctave);
 
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {

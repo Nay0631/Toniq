@@ -1,7 +1,7 @@
 // キー・スケールの試聴（スケールを主音から1オクターブ上まで順に鳴らし、最後に主音の和音を鳴らす）
 // 曲の再生（Tone.js の Transport）とは別のオーディオコンテキストで Web Audio API から直接鳴らす。
 // 鳴っているかどうか・何音目かは表示上の一時的な状態としてモジュール内に持つ（保存しない）
-import { NOTE_INDEX, scaleSemitones } from "../data/degree_resolver";
+import { NOTE_INDEX, scaleSemitones, scaleTriad } from "../data/degree_resolver";
 
 const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 
@@ -38,7 +38,7 @@ export function scalePreviewStep(): number {
   return current;
 }
 
-// 鳴らす音の並び（主音〜1オクターブ上の主音の8音）。主音は A3〜G#4 に収める
+// 鳴らす音の並び（主音〜1オクターブ上の主音。7音のスケールなら8音）。主音は A3〜G#4 に収める
 export function scalePreviewNotes(key: string, scale: string): ScalePreviewNote[] {
   const root = NOTE_INDEX[key] ?? 0;
   const base = 57 + ((root - 9 + 12) % 12);  // 57 = A3
@@ -46,6 +46,12 @@ export function scalePreviewNotes(key: string, scale: string): ScalePreviewNote[
     const midi = base + d;
     return { midi, name: `${NOTE_NAMES[midi % 12]}${Math.floor(midi / 12) - 1}` };
   });
+}
+
+// 最後に鳴らす主音の和音の音（MIDI。主音・3度・5度）。1オクターブ上の主音は鳴らさない（表示では一緒に光らせる）
+export function scalePreviewChord(key: string, scale: string): number[] {
+  const root = scalePreviewNotes(key, scale)[0].midi;
+  return scaleTriad(scale).map(d => root + d);
 }
 
 function midiToFreq(midi: number): number {
@@ -89,9 +95,9 @@ export function playScalePreview(key: string, scale: string): void {
   const t0 = c.currentTime + 0.05;
   notes.forEach((n, i) => tone(c, bus!, n.midi, t0 + i * STEP_SEC, 0.6, 0.24));
 
-  // 最後に主音の和音（主音・3度・5度。スケールの1・3・5番目の音）を低い主音と一緒に鳴らす
+  // 最後に主音の和音（主音・3度・5度）を低い主音と一緒に鳴らす
   const chordAt = t0 + notes.length * STEP_SEC + 0.1;
-  const chord = [notes[0].midi - 12, notes[0].midi, notes[2].midi, notes[4].midi];
+  const chord = [notes[0].midi - 12, ...scalePreviewChord(key, scale)];
   chord.forEach(m => tone(c, bus!, m, chordAt, CHORD_SEC, 0.15));
 
   // 表示：何音目を鳴らしているか（音と同じ時刻に切り替える）

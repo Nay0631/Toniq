@@ -6,7 +6,7 @@ vi.mock("../src/engine/History", () => ({ resetHistory: vi.fn() }));
 
 import { getState, setState, defaultState, SONG_FIELDS } from "../src/engine/AppState";
 import {
-  listSongs, loadSong, saveCurrentSong, renameSong, importSongFile, deleteSong, newSong,
+  findSong, listSongs, loadSong, saveCurrentSong, renameSong, importSongFile, deleteSong, newSong,
   SongStorageError, SavedSong, markSongClean, hasUnsavedChanges, hasHandmadeContent, currentSongFields,
 } from "../src/engine/SongLibrary";
 import { LEGACY_PRESET_IDS } from "../src/engine/Grow";
@@ -491,5 +491,46 @@ describe("保存していない変更（hasUnsavedChanges）", () => {
     setState({ melodyNotes: [{ note: "C5", duration: "4n", time: "0:0:0" }] });  // サンプルの試聴などの一時的な差し替え
     expect(hasUnsavedChanges()).toBe(true);
     expect(hasUnsavedChanges(original)).toBe(false);
+  });
+});
+
+describe("一覧の読み込み（同じ内容なら解析し直さない）", () => {
+  function saveOne(): string {
+    setState({ chordPattern: chords[0], drumPattern: drums[0] });
+    return saveCurrentSong().id;
+  }
+
+  it("続けて読むときは、保存した文字列を1回だけ解析する", () => {
+    const id = saveOne();
+    listSongs();
+    const parse = vi.spyOn(JSON, "parse");
+    for (let i = 0; i < 5; i++) expect(findSong(id)?.id).toBe(id);
+    expect(listSongs()).toHaveLength(1);
+    expect(parse).not.toHaveBeenCalled();
+    parse.mockRestore();
+  });
+
+  it("保存・名前の変更・削除・ほかの場所での書き換えは、次に読んだときに反映される", () => {
+    const id = saveOne();
+    expect(findSong(id)?.name).not.toBe("新しい名前");
+    renameSong(id, "新しい名前");
+    expect(findSong(id)?.name).toBe("新しい名前");
+    storage.setItem(STORAGE_KEY, JSON.stringify([{ ...findSong(id)!, name: "別のウィンドウで変えた名前" }]));
+    expect(findSong(id)?.name).toBe("別のウィンドウで変えた名前");
+    deleteSong(id);
+    expect(findSong(id)).toBeUndefined();
+    storage.setItem(STORAGE_KEY, "壊れた文字列");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(listSongs()).toEqual([]);
+    error.mockRestore();
+  });
+
+  it("一覧を並べ替えても、次に読む一覧の並びは変わらない（新しいものが先頭）", () => {
+    const first = saveOne();
+    setState({ songId: null });
+    const second = saveOne();
+    storage.setItem(STORAGE_KEY, JSON.stringify(listSongs().map(s => ({ ...s, updatedAt: s.id === second ? 20 : 10 }))));
+    listSongs().reverse();
+    expect(listSongs().map(s => s.id)).toEqual([second, first]);
   });
 });

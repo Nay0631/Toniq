@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
-  resolveChord, voiceProgression, VOICING_RANGES, noteToMidi, midiToNote, scaleSemitones, SCALE_TONES,
+  resolveChord, voiceProgression, VOICING_RANGES, noteToMidi, midiToNote, scaleSemitones, scaleTriad, SCALE_TONES,
 } from "../src/data/degree_resolver";
+import { scalePreviewChord, scalePreviewNotes } from "../src/engine/ScalePreview";
 import { chords, chordById } from "./helpers";
 
 const pcs = (notes: string[]) => notes.map(n => noteToMidi(n) % 12);
@@ -154,6 +155,24 @@ describe("voiceProgression（ボイシング）", () => {
     voiced.forEach((v, i) => expect([...pcs(v)].sort()).toEqual([...pcs(free[i])].sort()));
   });
 
+  // 3/4・3連符の拍子ではメロディの位置が1小節 12 マスになる。マスの数が違っても、同じ小節のメロディを避ける
+  it("unitsPerBar：1小節のマスの数が違っても、同じ所のメロディなら同じ転回形になる", () => {
+    const top = (v: string[]) => Math.max(...v.map(noteToMidi));
+    let moved = 0;
+    for (const c of chords.filter(c => c.length_bars === 4)) {
+      const free = voiceProgression(c, "C", VOICING_RANGES.chord);
+      // 1つのコードの上でだけ、最高音のすぐ下でメロディが鳴る
+      c.progression.forEach((d, i) => {
+        const melody = (bar: number) => [{ midi: top(free[i]) - 2, start: (d.bar - 1) * bar, end: (d.bar - 1 + d.duration_bars) * bar }];
+        const four  = voiceProgression(c, "C", VOICING_RANGES.chord, { melody: melody(16) });
+        const three = voiceProgression(c, "C", VOICING_RANGES.chord, { melody: melody(12), unitsPerBar: 12 });
+        expect(three, `${c.id} ${i}`).toEqual(four);
+        if (JSON.stringify(four) !== JSON.stringify(free)) moved++;
+      });
+    }
+    expect(moved).toBeGreaterThan(0);  // メロディを避けて転回形が変わったことがある
+  });
+
   it("メロディと同じ高さ（ユニゾン）はぶつかりとして扱わない", () => {
     const c = chordById("chord_003");
     const top = (v: string[]) => Math.max(...v.map(noteToMidi));
@@ -173,5 +192,31 @@ describe("voiceProgression（ボイシング）", () => {
       expected[1] += 12;
       expect(v).toEqual(expected.sort((a, b) => a - b));
     });
+  });
+});
+
+describe("scaleTriad（スケールの主和音）と、スケールの試聴の最後の和音", () => {
+  it.each([
+    ["major", [0, 4, 7]], ["mixolydian", [0, 4, 7]], ["lydian", [0, 4, 7]], ["major_pentatonic", [0, 4, 7]],
+    ["minor", [0, 3, 7]], ["dorian", [0, 3, 7]], ["phrygian", [0, 3, 7]], ["harmonic_minor", [0, 3, 7]], ["melodic_minor", [0, 3, 7]],
+    ["blues", [0, 3, 7]], ["whole_tone", [0, 4, 8]],
+  ])("%s は %j", (scale, triad) => {
+    expect(scaleTriad(scale as string)).toEqual(triad);
+  });
+
+  it("どのスケールでも、和音の音はスケールの中の音で、試聴の音の並びに入っている", () => {
+    for (const scale of Object.keys(SCALE_TONES)) {
+      const tones = scaleSemitones(scale);
+      for (const d of scaleTriad(scale)) expect(tones, scale).toContain(d);
+      const notes = scalePreviewNotes("C", scale).map(n => n.midi);
+      for (const midi of scalePreviewChord("C", scale)) expect(notes, scale).toContain(midi);
+    }
+  });
+
+  it("ブルースは C–D#–G、ペンタトニックは C–E–G（1・3・5番目の音ではない）", () => {
+    const names = (scale: string) => scalePreviewChord("C", scale).map(m => midiToNote(m).slice(0, -1));
+    expect(names("blues")).toEqual(["C", "D#", "G"]);
+    expect(names("major_pentatonic")).toEqual(["C", "E", "G"]);
+    expect(names("whole_tone")).toEqual(["C", "E", "G#"]);
   });
 });

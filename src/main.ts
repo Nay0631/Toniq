@@ -1,10 +1,3 @@
-import { initChordSynth }                           from "./engine/ChordPlayer";
-import { initBassSynth }                            from "./engine/BassPlayer";
-import { initArpSynth }                             from "./engine/ArpPlayer";
-import { initPadSynth }                             from "./engine/PadPlayer";
-import { initSignatureSynth }                       from "./engine/SignaturePlayer";
-import { initMelodySynth }                          from "./engine/MelodyPlayer";
-import { initFxSynth }                              from "./engine/FxPlayer";
 import { setState }                                 from "./engine/AppState";
 import { resolveSimpleMode, resolveTempoPreset, pickChorus } from "./engine/SimpleModeResolver";
 import { onPlaybackError }                          from "./engine/Playback";
@@ -39,15 +32,8 @@ setState({
 markSongClean();  // 起動したままの曲は、閉じても失うものがない
 
 window.addEventListener("load", () => {
-  initChordSynth();
-  initBassSynth();
-  initArpSynth();
-  initPadSynth();
-  initSignatureSynth();
-  initMelodySynth();
-  initFxSynth();
-
-  // メロディは起動時には作らない（自動生成ボタンを押したときに初めて作る）
+  // 各パートの音色は起動時には作らない（再生・試聴を始めるとき、grow の準備ができてから作る）。
+  // メロディも起動時には作らない（自動生成ボタンを押したときに初めて作る）
 
   initTheme();
   initPreferences();  // 音名の表記・ループ再生・ドラムの音源（各画面の初期化より先に読む）

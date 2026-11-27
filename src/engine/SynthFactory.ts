@@ -272,6 +272,9 @@ const CHOKE_FADE = 0.03;
 function createSampleVoice(buffer: AudioBuffer): DrumVoice {
   const output = new Tone.Gain(SAMPLE_TRIM_DB, "decibels");
   const active = new Set<Tone.ToneBufferSource>();
+  // 止める予約をした音。もう一度 stop を呼ぶと、Tone.js は前の予約（フェードアウト）を取り消して新しい時刻まで鳴らし続けるので、
+  // クローズドハイハットが細かく続くときに、1つ目で止めたオープンハイハットが鳴り直さないよう、2回目からは何もしない
+  const choked = new Set<Tone.ToneBufferSource>();
 
   return {
     output,
@@ -281,14 +284,22 @@ function createSampleVoice(buffer: AudioBuffer): DrumVoice {
     trigger: (time, velocity) => {
       const src = new Tone.ToneBufferSource({ context: output.context, url: buffer, fadeOut: CHOKE_FADE }).connect(output);
       // 鳴り終わったノードは Tone.js が自動で破棄する（通常のコンテキストのみ）
-      src.onended = () => active.delete(src);
+      src.onended = () => {
+        active.delete(src);
+        choked.delete(src);
+      };
       active.add(src);
       src.start(time, 0, undefined, velGain(velocity));
     },
-    choke: time => active.forEach(src => src.stop(time)),
+    choke: time => active.forEach(src => {
+      if (choked.has(src)) return;
+      choked.add(src);
+      src.stop(time);
+    }),
     dispose: () => {
       active.forEach(src => { if (!src.disposed) src.dispose(); });
       active.clear();
+      choked.clear();
       output.dispose();
     },
   };

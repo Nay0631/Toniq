@@ -7,6 +7,7 @@ import * as Playback from "../engine/Playback";
 import { restartIfPlaying as restartCustom } from "./CustomScreen";
 import { restartIfPlaying as restartSimple } from "./SimpleScreen";
 import { onRender, render } from "./Router";
+import { modalOpen } from "./SpaceKey";
 
 // 元に戻す／やり直す（シンプルモード・カスタムモードの情報バーのボタンと Ctrl+Z / Ctrl+Shift+Z・Ctrl+Y）
 
@@ -33,7 +34,8 @@ async function applyChanges(changed: TrackedField[], before: Record<LayerName, b
       (Object.keys(before) as LayerName[]).forEach(part => {
         if (before[part] !== s.parts[part]) withoutHistory(() => setLayerEnabled(part, s.parts[part]));
       });
-      if (changed.some(f => f.startsWith("melody") || f === "chorusMelodyNotes") && s.parts.melody) reloadLayer("melody");
+      const melodyChanged = changed.some(f => f.startsWith("melody") || f === "chorusMelodyNotes");
+      if (melodyChanged && s.parts.melody && Playback.isSongPlaying()) reloadLayer("melody");  // 試聴中はメロディを鳴らさない
     } else if (getState().screen === "custom") {
       await restartCustom();
     } else {
@@ -75,6 +77,7 @@ export function initHistoryControls(): void {
     const isUndo = key === "z" && !e.shiftKey;
     const isRedo = (key === "z" && e.shiftKey) || key === "y";
     if (!isUndo && !isRedo) return;
+    if (modalOpen()) return;  // 書き出しの進み具合などのダイアログが出ている間は、曲を変えない
     const screen = getState().screen;
     if (screen !== "simple" && screen !== "custom") return;
     e.preventDefault();

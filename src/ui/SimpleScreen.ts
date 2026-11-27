@@ -188,7 +188,9 @@ async function playGenreSample(): Promise<void> {
   const s = getState();
   const { chordPattern, drumPattern } = resolveSimpleMode(s.genre, s.mood);
   const melody = () => generateMelody(chordPattern, s.key, s.genre);
-  await Playback.playSample({ chordPattern, drumPattern, meter: genreMeter(s.genre), melody }, render);
+  const started = Playback.playSample({ chordPattern, drumPattern, meter: genreMeter(s.genre), melody }, render);
+  render();  // 音源の準備を待っている間もボタンを「止める」にする
+  await started;
   render();
 }
 

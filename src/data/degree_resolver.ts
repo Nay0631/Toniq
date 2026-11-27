@@ -80,6 +80,13 @@ export function scaleSemitones(scale: string): number[] {
   return [...tones.core, ...Object.keys(tones.accent).map(Number)].sort((a, b) => a - b);
 }
 
+// スケールの主和音（主音・3度・5度。主音からの半音数）。3度は短3度があれば短3度、なければ長3度。
+// 5度は完全5度、ないスケール（全音音階）は増5度。スケールの1・3・5番目の音とは限らない（ペンタトニック・ブルースは音の数が違う）
+export function scaleTriad(scale: string): [number, number, number] {
+  const tones = scaleSemitones(scale);
+  return [0, tones.includes(3) ? 3 : 4, tones.includes(7) ? 7 : 8];
+}
+
 const CHORD_INTERVALS: Record<string, number[]> = {
   major: [0, 4, 7],
   minor: [0, 3, 7],
@@ -204,7 +211,7 @@ function spreadVoicing(notes: number[]): number[] {
   return v.sort((a, b) => a - b);
 }
 
-// ボイシングを決めるときに避けるメロディの音（位置は進行の頭からの16分音符の数）
+// ボイシングを決めるときに避けるメロディの音（位置は進行の頭からのマスの数。1小節のマスの数は拍子で変わる）
 export interface VoicingMelodyNote { midi: number; start: number; end: number }
 
 // ボイシングの選び方の重み（単位は半音。movement と足し合わせる）
@@ -240,23 +247,25 @@ function melodyConflict(notes: number[], melody: VoicingMelodyNote[], start: num
 // - コードの間は、各音の動きの合計（movement）が小さく、同じ高さのまま保てる共通音が多く、最高音の動きが小さい並べ方を選ぶ
 // - 進行に書かれた inversion は動きが同じくらいなら優先する
 // - melody を渡すと、最高音がメロディより上に出る・メロディと半音でぶつかる転回形を避ける
+//   （unitsPerBar は melody の位置の1小節のマスの数。4/4 は 16、3/4・3連符の拍子は 12。Meter.ts）
 // 1つずつ近いものを選ぶのではなく、ループの継ぎ目（最後 → 最初）も含めた1周の合計が最小の組み合わせを求める。
 // 戻り値は progression.progression と同じ並びの音名
 export function voiceProgression(
   progression: ChordProgression,
   key: string,
   range: VoicingRange,
-  options: { spread?: boolean; melody?: VoicingMelodyNote[] } = {}
+  options: { spread?: boolean; melody?: VoicingMelodyNote[]; unitsPerBar?: number } = {}
 ): string[][] {
   const melody = options.melody ?? [];
+  const BAR    = options.unitsPerBar ?? 16;
   // コードごとの候補（転回形）と、その候補だけで決まるコスト
   const cands = progression.progression.map((c) => {
     const notes = resolveChord(c.degree, c.type, 0, chordKey(key, c), progression.base_scale, 4).notes.map(noteToMidi);
-    const start = (c.bar - 1) * 16;
+    const start = (c.bar - 1) * BAR;
     return voicingCandidates(notes, range).map((v) => ({
       notes: v.notes,
       cost:  (v.inversion === c.inversion % notes.length ? 0 : VOICE_COST.inversion)
-           + (melody.length > 0 ? melodyConflict(v.notes, melody, start, start + c.duration_bars * 16) : 0),
+           + (melody.length > 0 ? melodyConflict(v.notes, melody, start, start + c.duration_bars * BAR) : 0),
     }));
   });
   if (cands.length === 0) return [];

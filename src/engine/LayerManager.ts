@@ -1,6 +1,4 @@
 import * as Tone from "tone";
-import { ChordProgression, DrumPattern } from "../data/types";
-import { MelodyNote } from "./MelodyGenerator";
 import { loadDrumPattern, disposeDrum }       from "./DrumEngine";
 import { loadChordProgression, disposeChord } from "./ChordPlayer";
 import { loadBassLine, disposeBass }          from "./BassPlayer";
@@ -13,7 +11,7 @@ import { loadCounter, disposeCounter }         from "./CounterPlayer";
 import { loadPerc, disposePerc }               from "./PercPlayer";
 import { getState, setState }                 from "./AppState";
 import { songProgression, songMelody }         from "./SongForm";
-import { LAYERS }                             from "./LoopArranger";
+import { LAYERS, isArrangementBypassed }       from "./LoopArranger";
 
 // パートの一覧（並び）は LoopArranger.ts の LAYERS
 export type LayerName =
@@ -25,6 +23,8 @@ export function setLayerEnabled(layer: LayerName, enabled: boolean) {
   setState({
     parts: { ...state.parts, [layer]: enabled }
   });
+  // 試聴・サンプル中は、鳴らすパートを ON/OFF と関係なく決めているので、鳴っているものは変えない（次の曲の再生から効く）
+  if (isArrangementBypassed()) return;
 
   if (!enabled) {
     disposeLayer(layer);
@@ -53,106 +53,57 @@ function disposeLayer(layer: LayerName) {
 }
 
 // ===== レイヤー再ロード（現在のStateから） =====
+
+// layers を1回ずつ読み込む。
 // コードに沿うパートには曲全体の並び（セクションごとの進行・エンディング。SongForm.songProgression）を渡す。
 // FX はループの継ぎ目の効果音なので、コード進行1周で読み込む
-export function reloadLayer(layer: LayerName) {
+export function loadLayers(layers: readonly LayerName[]) {
   const s = getState();
   const song = songProgression();
   if (!s.chordPattern || !s.drumPattern || !song) return;
+  const { chordPattern, drumPattern, key } = s;
+  const melody = layers.includes("melody") || layers.includes("counter") ? songMelody() : [];
 
-  switch (layer) {
+  for (const layer of layers) switch (layer) {
     case "drum":
-      loadDrumPattern(s.drumPattern);
+      loadDrumPattern(drumPattern);
       break;
     case "chord":
-      loadChordProgression(song, s.key);
+      loadChordProgression(song, key);
       break;
     case "bass":
-      loadBassLine(song, s.key, 2);
+      loadBassLine(song, key, 2);
       break;
     case "arp":
-      loadArpPattern(song, s.key);
+      loadArpPattern(song, key);
       break;
     case "pad":
-      loadPadPattern(song, s.key);
+      loadPadPattern(song, key);
       break;
     case "signature":
-      loadSignature(song, s.key);
+      loadSignature(song, key);
       break;
     case "melody":
-      loadMelody(songMelody(), `${song.length_bars}m`);
-      // カウンターメロディはメロディから作るので、メロディを読み込み直したら一緒に作り直す（ピアノロールの編集など）
-      if (s.parts.counter) loadCounter(song, songMelody(), s.key);
-      // コードのボイシングはメロディを避けて決めるので、同じく作り直す
-      if (s.parts.chord) loadChordProgression(song, s.key);
+      loadMelody(melody, song.length_bars);
       break;
     case "counter":
-      loadCounter(song, songMelody(), s.key);
+      loadCounter(song, melody, key);
       break;
     case "perc":
       loadPerc();
       break;
     case "fx":
-      loadFx(s.chordPattern);
+      loadFx(chordPattern);
       break;
   }
 }
 
-// ===== ドラムパターンを差し替え =====
-export function replaceDrumPattern(newPattern: DrumPattern) {
-  setState({ drumPattern: newPattern });
-  disposeDrum();
-  loadDrumPattern(newPattern);
-  console.log(`ドラム差し替え: ${newPattern.name}`);
-}
-
-// ===== コード進行を差し替え =====
-export function replaceChordProgression(
-  newProgression: ChordProgression,
-  checkScale: boolean = true
-) {
-  const state = getState();
-
-  // スケール整合チェック
-  if (checkScale && newProgression.base_scale !== state.chordPattern?.base_scale) {
-    console.warn(
-      `スケール不一致: 現在=${state.chordPattern?.base_scale} / 新=${newProgression.base_scale}`
-    );
-    return {
-      success: false,
-      warning: `スケールが変わります（${state.chordPattern?.base_scale} → ${newProgression.base_scale}）。メロディの再生成を推奨します。`,
-    };
-  }
-
-  // Stateを先に更新
-  setState({ chordPattern: newProgression });
-
-  // 既存のPartを破棄
-  disposeChord();
-  disposeBass();
-  disposeArp();
-  disposePad();
-  disposeSignature();
-  disposeCounter();
-  disposeFx();
-
-  // Transport動作中でも正しく再開始できるよう少し遅延して再ロード（曲全体の並びで読み込む）
-  setTimeout(() => {
-    (["chord", "bass", "arp", "pad", "signature", "counter", "fx"] as LayerName[]).forEach(layer => {
-      if (getState().parts[layer]) reloadLayer(layer);
-    });
-    console.log(`コード進行差し替え完了: ${newProgression.name}`);
-  }, 50);
-
-  return { success: true, warning: null };
-}
-
-// ===== メロディを差し替え =====
-export function replaceMelody(newNotes: MelodyNote[]) {
-  setState({ melodyNotes: newNotes });
-  disposeMelody();
-  reloadLayer("melody");
-  console.log("メロディ差し替え完了");
+// 1つのパートを読み込み直す。メロディを変えたら、メロディから決まるパート（カウンターメロディと、メロディを避けて
+// 転回形を決めるコード）も一緒に読み込み直す（どちらも、音の並びが変わらなければ作り直さない）
+export function reloadLayer(layer: LayerName) {
+  const { parts } = getState();
+  const followers = (["counter", "chord"] as const).filter(name => layer === "melody" && parts[name]);
+  loadLayers([layer, ...followers]);
 }
 
 // ===== 全レイヤーを一括破棄（停止時に前回の Part を残さない） =====
@@ -160,12 +111,8 @@ export function disposeAllLayers() {
   LAYERS.forEach(disposeLayer);
 }
 
-// ===== 全レイヤーを一括再ロード =====
+// ===== 全レイヤーを一括再ロード（ON のパートだけ） =====
 export function reloadAllLayers() {
-  const s = getState();
-  if (!s.chordPattern || !s.drumPattern) return;
-  // メロディを読み込むとカウンターメロディも作るので、カウンターメロディだけを2度読み込まない
-  LAYERS.filter(layer => !(layer === "counter" && s.parts.melody)).forEach(layer => {
-    if (s.parts[layer]) reloadLayer(layer);
-  });
+  const { parts } = getState();
+  loadLayers(LAYERS.filter(layer => parts[layer]));
 }

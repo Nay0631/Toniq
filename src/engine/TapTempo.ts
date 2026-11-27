@@ -46,7 +46,3 @@ export function resetTap(): void {
   tapTimes    = [];
   lastTapTime = null;
 }
-
-export function getTapCount(): number {
-  return tapTimes.length;
-}

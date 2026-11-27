@@ -9,6 +9,8 @@ import { signatureLabel } from "../engine/SignaturePlayer";
 import { fxLabel, FX_OPTIONS } from "../engine/FxPlayer";
 import { percLabel } from "../engine/PercPlayer";
 import { bassSubOn } from "../engine/BassPlayer";
+import { arpParam } from "../engine/ArpPlayer";
+import { isTriplet } from "../engine/Meter";
 import drumDB from "../data/drum_patterns.json";
 import { CUSTOM_DRUM_ID, DrumPattern } from "../data/types";
 import { render } from "./Router";
@@ -49,6 +51,15 @@ function patternNo(id: string): string {
   return `#${id.replace(/\D/g, "")}`;
 }
 
+// アルペジオの刻み（ジャンルごとの arp_params.json の step。3連符の拍子では16分の刻みが3連符になる）
+function arpStepLabel(): string {
+  switch (arpParam().step) {
+    case "16n": return isTriplet() ? "3連符" : "16分音符";
+    case "8n":  return "8分音符";
+    case "4n":  return "4分音符";
+  }
+}
+
 // レーン見出しの2行目とブロックに書く内容
 function laneLabels(part: LayerName): { sub: string; block: string } {
   const s = getState();
@@ -74,7 +85,7 @@ function laneLabels(part: LayerName): { sub: string; block: string } {
       return { sub: label, block: label };
     }
     case "pad":  return { sub: "コード追従", block: "パッド" };
-    case "arp":  return { sub: "8分音符",   block: "アルペジオ" };
+    case "arp":  return { sub: arpStepLabel(), block: "アルペジオ" };
     case "signature": {
       const label = signatureLabel(s.genre);
       return { sub: label, block: label };
@@ -274,7 +285,7 @@ function renderTime(playing: boolean, total: number): void {
   const time = $("c-arr-time");
   if (!time) return;
   const s = getState();
-  const startSec = (Math.min(s.startBar, s.bars - 1) * 4 * 60) / s.bpm;
+  const startSec = (total * Math.min(s.startBar, s.bars - 1)) / s.bars;
   const sec = playing ? Math.min(total, Playback.getPositionSeconds()) : startSec;
   const text = `${formatTimePrecise(sec)} / ${formatTimePrecise(total)}`;
   if (time.textContent !== text) time.textContent = text;

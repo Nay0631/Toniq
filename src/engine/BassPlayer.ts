@@ -3,6 +3,7 @@ import { ChordProgression } from "../data/types";
 import { resolveChord, chordKey } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate, positionAt } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { kickAt } from "./DrumEngine";
 import { getState } from "./AppState";
 import bassParams from "../data/bass_params.json";
@@ -26,7 +27,7 @@ interface BassParam {
   };
 }
 
-let bassPart: Tone.Part | null = null;
+let bassTrack: Track | null = null;
 let bassSynth: Tone.MonoSynth | GrowInstrument | null = null;
 let bassVol: Tone.Volume | null = null;
 // サブベース（bassSubOn() のとき）。本体のベースは bassLowCut で低域を削り、いちばん下の帯域はサブに任せる
@@ -182,7 +183,7 @@ export function loadBassLine(
   key: string = "A",
   octave: number = 2
 ) {
-  if (bassPart) { bassPart.dispose(); bassPart = null; }
+  bassTrack?.dispose();
   if (!bassSynth) initBassSynth();
 
   const events = bassNotes(progression, key, octave).map(n => ({
@@ -194,17 +195,13 @@ export function loadBassLine(
   const arranged = arrangementGate("bass");
   const position = positionAt();
   const sub = subSynth;
-  bassPart = new Tone.Part((time, event: any) => {
+  bassTrack = createTrack(events, progression.length_bars, (time, event) => {
     if (!arranged(time)) return;
     const { bar, step } = position(time);
     const velocity = bassVelocity(bar, step);
     bassSynth?.triggerAttackRelease(event.note, event.dur, time, velocity);
     sub?.triggerAttackRelease(Tone.Frequency(subMidi(event.note), "midi").toFrequency(), event.dur, time, velocity);
-  }, events);
-
-  bassPart.loop = true;
-  bassPart.loopEnd = `${progression.length_bars}m`;
-  bassPart.start(0);
+  });
 }
 
 function disposeSynths() {
@@ -219,7 +216,7 @@ function disposeSynths() {
 }
 
 export function disposeBass() {
-  bassPart?.dispose();
-  bassPart = null;
+  bassTrack?.dispose();
+  bassTrack = null;
   disposeSynths();
 }

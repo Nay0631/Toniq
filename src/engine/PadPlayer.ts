@@ -3,13 +3,14 @@ import { ChordProgression } from "../data/types";
 import { voiceProgression, VOICING_RANGES } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 import { unitTime, unitsPerBar } from "./Meter";
 
 // ストラム：音を下から少しずつずらして鳴らす間隔（秒）。立ち上がりの遅いパッドなのでゆったりめ
 const STRUM_SEC = 0.025;
 
-let padPart:    Tone.Part | null = null;
+let padTrack:   Track | null = null;
 let padSynth:   Tone.PolySynth | GrowInstrument | null = null;
 let padVol:     Tone.Volume | null = null;
 let padEffects: Tone.ToneAudioNode[] = [];
@@ -57,7 +58,7 @@ interface PadEvent {
 
 // コードとぶつからないよう開離配置にする（voiceProgression の spread）
 export function loadPadPattern(progression: ChordProgression, key: string = "A") {
-  if (padPart) { padPart.dispose(); padPart = null; }
+  padTrack?.dispose();
   if (!padSynth) initPadSynth();
 
   const events: PadEvent[] = padEvents(progression, key).map(h => ({
@@ -67,17 +68,13 @@ export function loadPadPattern(progression: ChordProgression, key: string = "A")
   }));
 
   const arranged = arrangementGate("pad");
-  padPart = new Tone.Part((time, event: PadEvent) => {
+  padTrack = createTrack(events, progression.length_bars, (time, event) => {
     if (!arranged(time)) return;
     const velocity = 0.7 + (Math.random() - 0.5) * 0.1;
     event.notes.forEach((note, i) => {
       padSynth?.triggerAttackRelease(note, event.dur, time + i * STRUM_SEC, velocity);
     });
-  }, events);
-
-  padPart.loop    = true;
-  padPart.loopEnd = `${progression.length_bars}m`;
-  padPart.start(0);
+  });
 }
 
 function disposeSynth() {
@@ -88,7 +85,7 @@ function disposeSynth() {
 }
 
 export function disposePad() {
-  padPart?.dispose();
-  padPart = null;
+  padTrack?.dispose();
+  padTrack = null;
   disposeSynth();
 }

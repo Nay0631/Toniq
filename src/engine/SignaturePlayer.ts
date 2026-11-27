@@ -3,6 +3,7 @@ import { ChordProgression } from "../data/types";
 import { resolveChord, chordKey } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate, secondsOf } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { getState } from "./AppState";
 import { GrowInstrument, growValues, isGrowReady, findGrowPreset, growPresetValues } from "./Grow";
 import { barTime, fitPattern, gridSteps, unitsPerBar } from "./Meter";
@@ -416,7 +417,7 @@ export function signatureLabel(genre?: string): string {
 
 // ===== パート =====
 
-let sigPart:  Tone.Part | null = null;
+let sigTrack: Track | null = null;
 let sigVoice: SignatureVoice | null = null;
 
 // 音色は AppState.genre（grow なら AppState.growSounds.signature も）から決める
@@ -436,7 +437,7 @@ function growVoice(def: SignatureDef, out: Tone.ToneAudioNode): SignatureVoice |
 }
 
 export function loadSignature(progression: ChordProgression, key: string = "A") {
-  if (sigPart) { sigPart.dispose(); sigPart = null; }
+  sigTrack?.dispose();
   if (!sigVoice) initSignatureSynth();
 
   const def = signatureDef();
@@ -448,19 +449,15 @@ export function loadSignature(progression: ChordProgression, key: string = "A") 
   });
 
   const arranged = arrangementGate("signature");
-  sigPart = new Tone.Part((time, event: SignatureEvent) => {
+  sigTrack = createTrack(events, progression.length_bars, (time, event) => {
     if (!arranged(time)) return;
     sigVoice?.trigger(event, time);
-  }, events);
-
-  sigPart.loop    = true;
-  sigPart.loopEnd = `${progression.length_bars}m`;
-  sigPart.start(0);
+  });
 }
 
 export function disposeSignature() {
-  sigPart?.dispose();
+  sigTrack?.dispose();
   sigVoice?.nodes.forEach(n => n.dispose());
-  sigPart  = null;
+  sigTrack = null;
   sigVoice = null;
 }

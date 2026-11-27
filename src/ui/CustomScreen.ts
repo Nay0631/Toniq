@@ -34,9 +34,17 @@ import { render, notifyChordChange } from "./CustomRender";
 const $ = (id: string) => document.getElementById(id);
 const $select = (id: string) => document.getElementById(id) as HTMLSelectElement;
 
-// 再生中に曲の内容が変わったら先頭から再生し直す
+// 再生中に曲の内容が変わったら先頭から再生し直す。試聴中なら、変えた内容でその試聴をやり直す（◀ ▶ での聴き比べ）
 export async function restartIfPlaying(): Promise<void> {
-  if (Playback.isPlaying()) await startPlayback();
+  const layer = Playback.currentPreview();
+  if (layer) await startPreview(layer);
+  else if (Playback.isPlaying()) await startPlayback();
+}
+
+// 1つのパートだけを試聴する
+async function startPreview(layer: Playback.PreviewLayer): Promise<void> {
+  await Playback.preview(layer, render);
+  render();
 }
 
 async function startPlayback(): Promise<void> {
@@ -237,10 +245,7 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  $("c-chord-preview")?.addEventListener("click", async () => {
-    await Playback.preview("chord", render);
-    render();
-  });
+  $("c-chord-preview")?.addEventListener("click", () => startPreview("chord"));
 
   $select("c-rhythm").addEventListener("change", async e => {
     setState({ chordRhythm: (e.target as HTMLSelectElement).value as ChordRhythm });
@@ -289,10 +294,7 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  $("c-drum-preview")?.addEventListener("click", async () => {
-    await Playback.preview("drum", render);
-    render();
-  });
+  $("c-drum-preview")?.addEventListener("click", () => startPreview("drum"));
 
   // ===== FX / SE =====
   // 種類：Synth は再生開始時に作り直されるので、再生中なら再生し直す
@@ -302,10 +304,7 @@ export function initCustomScreen(): void {
     await restartIfPlaying();
   });
 
-  $("c-fx-preview")?.addEventListener("click", async () => {
-    await Playback.preview("fx", render);
-    render();
-  });
+  $("c-fx-preview")?.addEventListener("click", () => startPreview("fx"));
 
   // サブベース（音色は再生開始時に作るので、再生中なら再生し直す）
   $select("c-bass-sub").addEventListener("change", async e => {
@@ -341,9 +340,9 @@ export function initCustomScreen(): void {
   initMixer(["c-arr-mixer"], render);
 
   // ===== アレンジャー =====
-  // 再生開始位置を変えたら、再生中ならその位置から再生し直す
+  // 再生開始位置を変えたら、曲の再生中ならその位置から再生し直す（試聴には関係しない）
   initArranger(async () => {
-    if (Playback.isPlaying()) await startPlayback();
+    if (Playback.isSongPlaying()) await startPlayback();
     else render();
   }, async () => {
     render();

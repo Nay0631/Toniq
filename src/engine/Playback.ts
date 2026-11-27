@@ -2,9 +2,9 @@ import * as Tone from "tone";
 import { AppState, getState, setState } from "./AppState";
 import { ChordProgression, DrumPattern } from "../data/types";
 import { MelodyNote } from "./MelodyGenerator";
-import { applyMixPreset, fadeOutMaster, holdMasterFade, mixerReady, resetMasterFade } from "./MixerEngine";
-import { getForcedPart, setArrangementBypass, setForcedPart, startLoopArranger, stopLoopArranger } from "./LoopArranger";
-import { disposeAllLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
+import { applyMixPreset, fadeOutMaster, holdMasterFade, resetMasterFade } from "./MixerEngine";
+import { findBlock, getArrangement, getForcedPart, setArrangementBypass, setForcedPart } from "./LoopArranger";
+import { disposeAllLayers, loadLayers, reloadLayer, reloadAllLayers, LayerName } from "./LayerManager";
 import { stopMetronome } from "./Metronome";
 import { stopScalePreview } from "./ScalePreview";
 import { stopGrowPreview } from "./GrowPreview";
@@ -13,14 +13,14 @@ import { fxPreviewStartBar } from "./FxPlayer";
 import { withoutHistory } from "./History";
 import { applySwing } from "./Groove";
 import { endingBar, songMelody, songProgression } from "./SongForm";
-import { prepareGrowContext, applyGrowLive } from "./Grow";
-import { beatsPerBar, type Meter } from "./Meter";
+import { prepareGrowContext, applyGrowBpm } from "./Grow";
+import { beatsPerBar, timeToBeats, type Meter } from "./Meter";
+import { blockDrumPattern } from "./DrumEngine";
 
-// 再生前の準備：リバーブの生成と、ドラムを音源で鳴らすときは音源の読み込み、grow（wasm と AudioWorklet）の準備を待つ
+// 再生前の準備：ドラムを音源で鳴らすときは音源の読み込み、grow（wasm と AudioWorklet）の準備を待つ
 // （パッド・アルペジオ・シグネチャーはいつも grow で鳴らすので、grow の準備は毎回待つ。2回目からはすぐ終わる）
 async function audioReady(genre: string): Promise<void> {
   await Promise.all([
-    mixerReady(),
     getState().drumSource === "sample" ? prepareDrumSamples(genre) : Promise.resolve(),
     prepareGrowContext(),
   ]);
@@ -55,6 +55,38 @@ function clearEndTimer(): void {
 // 開始と停止のたびに番号を進め、待ったあとで番号が変わっていたら（＝あとから別の操作があったら）その開始を取りやめる
 let startToken = 0;
 
+// 始めようとしているもの（音源の準備を待っている間だけ。null = なし）
+let starting: "song" | "preview" | "sample" | null = null;
+
+export function isStarting(): boolean {
+  return starting !== null;
+}
+
+// 再生・試聴・サンプルを始める前の準備：ほかの音を止め、音源とミックスの準備を待つ。
+// 待っている間に別の再生・停止が入ったら false。待っている間にジャンル・ドラムの音源が変わったら、変わったほうで準備し直す
+// （BPM・曲の内容は、待ったあとに呼び出し側が AppState を読むので、いつも今の値で鳴る）
+async function prepareStart(kind: "song" | "preview" | "sample"): Promise<boolean> {
+  stopMetronome();     // BPM のクリック音と重ねない
+  stopScalePreview();  // キー・スケールの試聴とも重ねない
+  stopGrowPreview();   // grow の音色の試聴の1音とも重ねない
+  stop();
+  const token = ++startToken;
+  starting = kind;
+  try {
+    await Tone.start();
+    while (token === startToken) {
+      const { genre, drumSource } = getState();
+      applyMixPreset(genre);
+      await audioReady(genre);
+      const now = getState();
+      if (now.genre === genre && now.drumSource === drumSource) break;
+    }
+    return token === startToken;
+  } finally {
+    if (token === startToken) starting = null;
+  }
+}
+
 // 再生を始められなかったとき（壊れた曲ファイルのコード進行など）に呼ぶ関数。画面側（main.ts）が知らせる
 let errorHandler: ((error: unknown) => void) | null = null;
 
@@ -71,9 +103,8 @@ function failStart(error: unknown): false {
 }
 
 interface PlayOptions {
-  fromBar?:      number;  // 再生を始める小節（0始まり）。省略すると先頭から
-  onLoopChange?: (loop: number, parts: string[]) => void;
-  onEnded?:      () => void;
+  fromBar?: number;  // 再生を始める小節（0始まり）。省略すると先頭から
+  onEnded?: () => void;
 }
 
 // 曲の再生（play）中の終わったときの処理。null = 曲を再生していない（試聴・サンプル・停止中）
@@ -156,18 +187,9 @@ export function applyLoopPlayback(): void {
 // 曲の先頭（または fromBar 小節目）から再生する。AppState.bars 小節で自動停止する（ループ再生なら先頭へ戻る）。
 // 鳴らし始めたら true（準備を待つあいだに別の再生・停止が入った、読み込みに失敗したときは false）
 export async function play(options: PlayOptions = {}): Promise<boolean> {
-  await Tone.start();
+  if (!hasSong() || !await prepareStart("song")) return false;
   const s = getState();
-  if (!s.chordPattern || !s.drumPattern) return false;
-
-  stopMetronome();     // BPM のクリック音と重ねない
-  stopScalePreview();  // キー・スケールの試聴とも重ねない
-  stopGrowPreview();   // grow の音色の試聴の1音とも重ねない
-  stop();
-  const token = ++startToken;
-  applyMixPreset(s.genre);
-  await audioReady(s.genre);
-  if (token !== startToken) return false;  // 待っている間に別の再生・停止が入った
+  if (!s.chordPattern) return false;
 
   try {
     resetMasterFade();  // サンプルの終わりで絞ったマスターを戻す
@@ -182,16 +204,11 @@ export async function play(options: PlayOptions = {}): Promise<boolean> {
     const asked = options.fromBar ?? 0;
     const start = range && (asked < range.startBar || asked >= range.startBar + range.bars) ? range.startBar : asked;
     const fromBar = Math.max(0, Math.min(start, s.bars - 1));
-    startLoopArranger({
-      loopBars:     s.chordPattern.length_bars,
-      fromBar,
-      onLoopChange: options.onLoopChange,
-    });
 
     songOnEnded = () => options.onEnded?.();
     applyLoopPlayback();
 
-    // ループする Part は Transport の位置に合わせて途中から鳴る
+    // 各パートの予定は Transport の位置に合わせて途中から鳴る
     transport.start(undefined, `${fromBar}m`);
     return true;
   } catch (e) {
@@ -199,22 +216,32 @@ export async function play(options: PlayOptions = {}): Promise<boolean> {
   }
 }
 
+// 鳴らせる曲があるか
+function hasSong(): boolean {
+  const s = getState();
+  return s.chordPattern !== null && s.drumPattern !== null;
+}
+
+// 試聴しているパート（null = 試聴していない）
+export type PreviewLayer = "chord" | "drum" | "fx";
+let previewLayer: PreviewLayer | null = null;
+
+export function currentPreview(): PreviewLayer | null {
+  return isPlaying() ? previewLayer : null;
+}
+
+// 曲を再生しているか（試聴・サンプルは含まない）
+export function isSongPlaying(): boolean {
+  return songOnEnded !== null && isPlaying();
+}
+
 // 1つのパートだけを試聴する（コード進行は1周、ドラムは2小節）。曲の再生中なら止めてから鳴らす
 // アレンジに関係なく鳴らすので、試聴中はアレンジの判定を外す
 // FX はループの終わりの盛り上げ（ライザーなど）から次のループの頭の1小節まで鳴らす
-export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => void): Promise<boolean> {
-  await Tone.start();
+export async function preview(layer: PreviewLayer, onEnded?: () => void): Promise<boolean> {
+  if (!hasSong() || !await prepareStart("preview")) return false;
   const s = getState();
-  if (!s.chordPattern || !s.drumPattern) return false;
-
-  stopMetronome();     // BPM のクリック音と重ねない
-  stopScalePreview();  // キー・スケールの試聴とも重ねない
-  stopGrowPreview();   // grow の音色の試聴の1音とも重ねない
-  stop();
-  const token = ++startToken;
-  applyMixPreset(s.genre);
-  await audioReady(s.genre);
-  if (token !== startToken) return false;  // 待っている間に別の再生・停止が入った
+  if (!s.chordPattern) return false;
 
   try {
     resetMasterFade();  // サンプルの終わりで絞ったマスターを戻す
@@ -222,6 +249,7 @@ export async function preview(layer: "chord" | "drum" | "fx", onEnded?: () => vo
     transport.bpm.value = s.bpm;
     applySwing();
     setArrangementBypass(true);
+    previewLayer = layer;
     reloadLayer(layer);
 
     const fromBar = layer === "fx" ? fxPreviewStartBar(s.chordPattern) : 0;
@@ -261,16 +289,7 @@ let sampleRestore: Pick<AppState, "chordPattern" | "drumPattern" | "melodyNotes"
 // 全パートをアレンジに関係なく同時に鳴らし、コード進行・メロディはループする。
 // 各パートは AppState から読むので、鳴らしている間だけパターンとメロディを差し替え、止めたら元に戻す
 export async function playSample(sample: SampleSong, onEnded?: () => void): Promise<boolean> {
-  await Tone.start();
-  stopMetronome();     // BPM のクリック音と重ねない
-  stopScalePreview();  // キー・スケールの試聴とも重ねない
-  stopGrowPreview();   // grow の音色の試聴の1音とも重ねない
-  stop();
-  const token = ++startToken;
-  applyMixPreset(getState().genre);
-  await audioReady(getState().genre);
-  if (token !== startToken) return false;  // 待っている間に別の再生・停止が入った
-
+  if (!await prepareStart("sample")) return false;
   const s = getState();
   sampleRestore = { chordPattern: s.chordPattern, drumPattern: s.drumPattern, melodyNotes: s.melodyNotes, meter: s.meter };
   // 一時的な差し替えなので元に戻す履歴には残さない。メロディは拍子を差し替えてから作る
@@ -285,7 +304,7 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
     transport.bpm.value = s.bpm;
     applySwing();  // サンプルはジャンルの標準のスウィング（曲の設定が null のとき）
     setArrangementBypass(true);
-    SAMPLE_LAYERS.forEach(reloadLayer);
+    loadLayers(SAMPLE_LAYERS);
 
     // Transport は今（Tone.now()）から始まるので、その SAMPLE_SECONDS 秒後に無音になるよう絞り、そこで止める。
     // Transport の小節で決めると途中でテンポを変えたときに長さが変わるので、オーディオの時刻（秒）で決める
@@ -301,8 +320,9 @@ export async function playSample(sample: SampleSong, onEnded?: () => void): Prom
   }
 }
 
+// サンプルを鳴らしているか（始める準備を待っている間も含む：その間にジャンルを選び直したら鳴らし直し、画面を移ったら取りやめる）
 export function isSamplePlaying(): boolean {
-  return sampleRestore !== null;
+  return sampleRestore !== null || starting === "sample";
 }
 
 // サンプルのために差し替える前の曲の内容（サンプルを鳴らしていなければ null）。保存していない変更の確認に使う
@@ -318,6 +338,8 @@ export function stopSample(): void {
 // 停止して、前回読み込んだ Part をすべて破棄する
 export function stop(): void {
   startToken++;  // 準備を待っている開始があれば取りやめる
+  starting     = null;
+  previewLayer = null;
   const transport = Tone.getTransport();
   transport.stop();
   transport.loop = false;  // ループ再生の設定は曲の再生のたびに applyLoopPlayback で付け直す
@@ -329,7 +351,6 @@ export function stop(): void {
   }
   clearEndTimer();
   holdMasterFade();  // サンプルのフェードの途中で止めたら、その音量のまま（次の開始で戻す）
-  stopLoopArranger();
   setArrangementBypass(false);
   disposeAllLayers();
   transport.position = 0;
@@ -347,7 +368,7 @@ export function isPlaying(): boolean {
 // 再生中の BPM 変更（タップテンポなど）を Transport に反映する
 export function applyBpm(): void {
   Tone.getTransport().bpm.value = getState().bpm;
-  applyGrowLive();  // grow のテンポ同期（LFO・ディレイ）も合わせる
+  applyGrowBpm();  // grow のテンポ同期（LFO・ディレイ）も合わせる
 }
 
 // 曲全体の長さ（秒）
@@ -475,7 +496,21 @@ async function renderOffline(
   return buffer.get()!;
 }
 
-// 書き出した音声がすべて無音か（念のための確認。無音なら Tone.Offline で描き直す）
+// 書き出した音声に必ず音が入るはずか（鳴る音が決まっているパートが、アレンジのどこかで鳴るか）。
+// 念のための確認なので、鳴るかどうかが音の並びしだいのパート（カウンターメロディ・パーカッション・FX）は数えない
+function expectsSound(song: ChordProgression, melody: MelodyNote[]): boolean {
+  const s = getState();
+  const arrangement = getArrangement();
+  const end = endingBar() ?? s.bars;  // エンディングの小節では鳴らないパートがある
+  const audible = (part: LayerName) => s.parts[part] && s.volumes[part] > 0;
+  const plays   = (part: LayerName) => audible(part) && arrangement[part].some(b => b.start < end);
+  if (song.progression.length > 0 && (["chord", "bass", "pad", "arp", "signature"] as const).some(plays)) return true;
+  if (audible("melody") && melody.some(n => n.note !== null && findBlock(arrangement.melody, Math.floor(timeToBeats(n.time) / beatsPerBar())))) return true;
+  return audible("drum") && arrangement.drum.some(b => b.start < end
+    && Object.values(blockDrumPattern(b)?.tracks ?? {}).some(t => t.pattern.some(Boolean)));
+}
+
+// 書き出した音声がすべて無音か（念のための確認。音が入るはずなのに無音なら Tone.Offline で描き直す）
 function isSilent(buffer: AudioBuffer): boolean {
   for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
     const data = buffer.getChannelData(ch);
@@ -517,7 +552,6 @@ async function renderSongWithArrangement(onProgress?: RenderProgress, signal?: A
 
   const schedule = async () => {
     applyMixPreset(s.genre);
-    await mixerReady();
     // grow の AudioWorklet は書き出し用のコンテキストにも登録する
     await prepareGrowContext();
     Tone.getTransport().bpm.value = s.bpm;
@@ -541,7 +575,7 @@ async function renderSongWithArrangement(onProgress?: RenderProgress, signal?: A
     if (s.parts.arp)    { initAr(); loadAr(song, s.key); }
     if (s.parts.pad)    { initP();  loadP(song, s.key); }
     if (s.parts.signature) { initS(); loadS(song, s.key); }
-    if (s.parts.melody) { initM();  loadMel(melody, `${song.length_bars}m`); }
+    if (s.parts.melody) { initM();  loadMel(melody, song.length_bars); }
     if (s.parts.counter) { initCo(); loadCo(song, melody, s.key); }
     if (s.parts.fx)     { initF();  loadF(chordPattern); }
     Tone.getTransport().start();
@@ -551,9 +585,9 @@ async function renderSongWithArrangement(onProgress?: RenderProgress, signal?: A
   let buffer: AudioBuffer;
   try {
     buffer = await renderOffline(schedule, durationSec, onProgress, signal);
-    // 鳴らすパートがあるのに無音なら、進み具合なしの Tone.Offline で描き直す（標準のコンテキストで動かない場合の保険）
-    const anyPart = Object.values(s.parts).some(Boolean);
-    if (anyPart && isSilent(buffer)) throw new Error("書き出した音声が無音でした");
+    // 音が入るはずなのに無音なら、進み具合なしの Tone.Offline で描き直す（標準のコンテキストで動かない場合の保険）。
+    // もともと無音の曲（鳴る所のない FX だけ ON など）は描き直さない
+    if (isSilent(buffer) && expectsSound(song, melody)) throw new Error("書き出した音声が無音でした");
   } catch (e) {
     if (e instanceof RenderCancelled) {
       disposeAllLayers();  // 書き出し用コンテキストの Synth を捨てる（描き直さない）
@@ -656,13 +690,11 @@ function audioBufferToWav(buffer: AudioBuffer): ArrayBuffer {
   view.setUint16(34, 16,           true);
   ws(36, "data"); view.setUint32(40, dataSize, true);
 
-  let offset = 44;
-  for (let i = 0; i < numSamples; i++) {
-    for (let ch = 0; ch < numCh; ch++) {
-      const s = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
-      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-      offset += 2;
-    }
+  // 左右を交互に並べる（Int16Array はこの PC のバイト順で書く。WAV と同じリトルエンディアンの環境だけで動かすのでそのまま使う）
+  const pcm = new Int16Array(ab, 44);
+  for (let ch = 0; ch < numCh; ch++) {
+    const data = toInt16(buffer.getChannelData(ch), 0, numSamples);
+    for (let i = 0, o = ch; i < numSamples; i++, o += numCh) pcm[o] = data[i];
   }
   return ab;
 }

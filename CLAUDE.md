@@ -51,7 +51,7 @@ output/                 曲の出力フォルダ（audio = WAV / MP3、midi = MI
 docs/                   詳しい仕様（generation / arrangement / sound / ui。下の「詳しい仕様」）
 .github/workflows/      CI（test.yml = Lint・型チェック・テスト・一括計測、grow-wasm.yml = grow の wasm のビルドと確認）
 biome.json              Lint（Biome）の設定
-tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）/ GrowRest（grow のエフェクトの休み：余韻・ディレイのくり返しを切らない・再開した音が変わらない。Git に入れた grow.wasm を鳴らす）/ GrowSound（grow の折り返しノイズ・同じ高さの弾き直し・LFO のスムーズ・スロットの開き直し）/ GrowWorklet（grow の AudioWorklet）/ GrowSlots（grow のノードの使い回し）/ RenderContext（書き出しの合成中も、サイドチェイン・長さの換算が書き出し用のコンテキストを使う）/ Playback（描画が止まっていても曲・試聴・サンプルが終わりで止まる・試聴中の書き出しが曲全体になる）。helpers.ts = 共通、growWasm.ts = grow の wasm を鳴らす部品、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
+tests/                  テスト（Vitest。degree_resolver / MelodyGenerator / LoopArranger / SongLibrary / CounterPerc（カウンターメロディ・パーカッション）/ DrumFill（ドラムのフィル）/ SongMidi（曲全体の進行・ベース・MIDI書き出し・転調・シャッフル）/ MelodyRatings（メロディの評価の保存・集計）/ GenreScales（ジャンルに合うスケール・9th などのコード）/ VolumeCurve（フェーダーの値と dB）/ Meter（拍子：マスの数え方・各パート・MIDI書き出し・強拍の基準）/ Quiz（音楽クイズの出題範囲の初期値・全モードの出題・音程を鍵盤で答える問題の位置）/ GrowPresets（grow のプリセットの ID・カテゴリとパートごとのカテゴリ・ジャンルの標準の候補。Git に入れた grow.wasm を読む）/ GrowRest（grow のエフェクトの休み：余韻・ディレイのくり返しを切らない・再開した音が変わらない。Git に入れた grow.wasm を鳴らす）/ GrowSound（grow の折り返しノイズ・同じ高さの弾き直し・LFO のスムーズ・スロットの開き直し）/ GrowWorklet（grow の AudioWorklet）/ GrowSlots（grow のノードの使い回し）/ RenderContext（書き出しの合成中も、サイドチェイン・長さの換算が書き出し用のコンテキストを使う）/ Playback（描画が止まっていても曲・試聴・サンプルが終わりで止まる・準備を待つ間の変更・試聴中の書き出しが曲全体になる）/ DrumKit（ワンショット音源のハイハットのチョーク）/ LayerManager（曲の再生中・試聴中のパートの ON/OFF・読み込みの回数）/ Track（音の並びの予定）/ ReverbImpulse（リバーブの響き）/ LongReverb（FX が鳴る間だけ長い響きにつなぐ）。helpers.ts = 共通、growWasm.ts = grow の wasm を鳴らす部品、stubs/tone.ts = Tone.js の代わり、tsconfig.json = テストの型チェック）
 tools/test.mjs          npm test の起動（ドライブ文字を大文字にそろえて vitest run）
 tools/quality-report.mjs 自動チェックの一括計測（npm run quality。Vite で src/engine/QualityBatch.ts を読む。tone は quality-tone-stub.mjs に差し替える）
 tools/mix-measure.mjs   ミックスの一括計測（npm run mix:measure。Electron なしの Vite と画面なしの Chrome / Edge で全ジャンルの曲を書き出し、ピーク・統合ラウドネスを測って mix_presets.json の gain を提案する。測る式は tools/loudness.mjs）
@@ -114,13 +114,14 @@ src/engine/
   History.ts              元に戻す／やり直すの履歴（setState の直前に曲の内容のスナップショットを積む）
   SimpleModeResolver.ts   シンプルモード：ジャンル×雰囲気からパターンを決定
   LayerManager.ts         パートのON/OFF・差し替え・再ロード
-  LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、構成のプリセット ARRANGE_PRESETS、変えた所 ArrangeEdit の当て直し、以前のブロックの並びからの読み替え editsFromLegacy、各パートが鳴る小節の判定 arrangementGate、周回表示）
+  LoopArranger.ts         アレンジ（ジャンル標準の LOOP_SCHEDULE＝8小節のセクションごと（A A サビ A）のパート・add / drop / gap / build、構成のプリセット ARRANGE_PRESETS、変えた所 ArrangeEdit の当て直し、以前のブロックの並びからの読み替え editsFromLegacy、各パートが鳴る小節の判定 arrangementGate）
   SongForm.ts             曲の構成（セクション Aメロ／サビ、曲全体のコード進行 songProgression・メロディ songMelody、エンディング、ドラムのフィルの小節、Aメロ・サビのメロディ生成）
   MelodyRatings.ts        メロディの評価（人が付けた点数）の保存（localStorage の toniq.ratings）・集計（summarize / comparePairs）・CSV / JSON の書き出しと読み込み
   QualityCheck.ts         自動チェック（強拍でコードとぶつかる音・フレーズの終わり・跳躍・サビの高さ・抜き差し・DB の整合を数字で出す。画面には出さず npm run quality だけで使う。数値 songMetrics と合否の基準 QUALITY_RULES は一括計測と共通）
   QualityBatch.ts         自動チェックの一括計測（npm run quality が Node から呼ぶ。アプリからはメロディの評価画面が同じ曲を作るのに generateBatchSong だけを使う。シードを決めて全ジャンル×雰囲気の曲を生成し、合格率と多様さを集める）
   Groove.ts               グルーヴ（スウィング applySwing・MIDI書き出し用のずらし方 swungBeats・サイドチェイン createSidechain。量はジャンルの標準か AppState.swing / sidechain、単位は AppState.swingUnit）
-  {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの Tone.Part 生成（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
+  {Drum,Chord,Bass,Arp,Pad,Melody,Fx}Player/Engine.ts  各パートの音の並びと音色（Fx はループの継ぎ目の効果音。種類は FX_DEFS）
+  Track.ts                曲全体の音の並びを鳴らす予定（createTrack。音1つごとではなく、小節の中の位置ごとに Transport の予定を1つ作る）
   SignaturePlayer.ts      シグネチャー（ジャンルごとに鳴り方が変わる追加パート。定義は SIGNATURES）
   CounterPlayer.ts        カウンターメロディ（メロディとコード進行から作る。サビはハモり、Aメロは合いの手。counterNotes）
   PercPlayer.ts           パーカッション（シェイカー・タンバリン・コンガ・ライド。ジャンル×セクションのパターン PERC_PATTERNS）
@@ -133,6 +134,7 @@ src/engine/
   VolumeManager.ts        パート別 Volume ノード（0〜100 → dB）・サイドチェインのゲイン・定位（パン）・レベルメーター。オーディオコンテキストごとに保持
   VolumeCurve.ts          フェーダーの値と dB の換算（75 で 0dB・100 で +5dB の2乗のカーブ）、以前のカーブで保存した値の読み替え、定位の表示。Tone.js を使わない
   MixerEngine.ts          パートの EQ（低域カット PART_LOW_CUT・中域のへこみ PART_MID_DIP）と定位、マスター（入口→EQ→コンプ→持ち上げ→リミッター→フェード（サンプルの終わり））、リバーブ送り（ジャンルごとの量。戻りはコンプを通さない）、マスターのピーク。オーディオコンテキストごとに保持
+  ReverbImpulse.ts        リバーブの響きのデータ（聞こえない所で切る・乱数の種を決める・作ったものを使い回す。reverbImpulse）
   TapTempo.ts             タップテンポ（AppState.bpm を更新する。再生中の反映は呼び出し側が Playback.applyBpm()）
   Metronome.ts            BPM 試聴用のクリック音（Web Audio API で直接鳴らす）
   ScalePreview.ts         キー・スケールの試聴（スケールを順に鳴らして主音の和音で終わる。Web Audio API で直接鳴らす）
@@ -170,7 +172,7 @@ src/engine/
 ## その他の決まりごと
 
 - パート名は `"drum" | "perc" | "chord" | "bass" | "arp" | "pad" | "signature" | "melody" | "counter" | "fx"`（`LayerName`）で統一。UI 表示名はドラム／パーカッション／コード／ベース／アルペジオ／パッド／シグネチャー／メロディ／カウンターメロディ（アレンジャー・ミキサーでは「カウンター」）／FX/SE。並びは `LoopArranger.ts` の `LAYERS`（LayerManager などもこれを使う。循環 import になるので LayerManager 側に値を置かない）。
-- 各パートモジュールは `init*Synth()` / `load*()` / `dispose*()` の形にそろえる。`load*` は既存の Part を破棄してから作り直す。
+- 各パートモジュールは `init*Synth()` / `load*()` / `dispose*()` の形にそろえる。`load*` は既存の予定（`Track`・ドラムとパーカッションは `Tone.Sequence`）を破棄してから作り直す。曲全体の音の並びは `createTrack`（`Track.ts`）で鳴らす（`Tone.Part` は音1つごとに予定を作るので、再生の開始で画面が止まる）。音色は起動時には作らず、再生・試聴を始めるときに作る。
 - ジャンル名は `EDM` / `8bit` / `ローファイ` / `ゲームBGM` / `テクノ` / `ハウス` / `トランス` / `アンビエント` / `ワルツ` / `6/8バラード` / `シャッフル`、雰囲気は `明るい` / `暗い` / `落ち着いた` / `切ない` / `激しい`。JSON のキー（`easy_mode_table` / `tempo_presets` / `melody_params` / `bass_params` / `arp_params` / `mix_presets`）と完全に一致させる。見つからないときのフォールバックは `ローファイ` / `落ち着いた`。
 - ジャンルは今後も追加・削除がありうる。追加するときは上の6つの JSON と `LoopArranger.ts` の `LOOP_SCHEDULE`（A A サビ A の4セクション。`section` も）にそろえて追加する。ドラムのフィルは `DrumEngine.ts` の `FILLS`（小・中・大の3つ。なければローファイの定義）、ゴーストノートは `GHOST_RATE`（なければ入れない）。ドラムの音作りは `SynthFactory.ts` の `DRUM_KITS`（なければ標準キットで鳴る）。シグネチャーの鳴り方は `SignaturePlayer.ts` の `SIGNATURES`（なければローファイの定義で鳴る）。FX の標準の種類は `FxPlayer.ts` の `GENRE_FX`（なければライザー）。パーカッションのパターンは `PercPlayer.ts` の `PERC_PATTERNS`（なければローファイの定義）。
   - UI のジャンル一覧は `index.html` の3か所（シンプルモードのチップ `data-genre`、カスタムモードの `#c-genre`、曲一覧の `data-ml-genre`）と `CustomState.ts` の `APP_GENRES`（ドラムのカテゴリの並び順）、`SimpleScreen.ts` の `GENRE_DESCRIPTIONS`（ジャンルの一言の説明）と `MOOD_GENRES`（雰囲気ごとに選べるジャンル。どれか1つ以上の雰囲気に入れる）にも足す。
@@ -202,7 +204,7 @@ src/engine/
 - FX / SE（`FxPlayer.ts`）はループの継ぎ目を演出する効果音。種類は `AppState.fxType`（`SONG_FIELDS` に含む）で、`"auto"` はジャンルの標準（`GENRE_FX`）。カスタムモードのドラム欄の下の「FX / SE」で選び、「▷ 試聴」はループの終わりの盛り上げから次のループの頭の1小節まで鳴らす（`Playback.preview("fx")`）。
   - アレンジャーの FX のブロックは1つずつ種類を持てる（`ArrangeBlock.fx`。ブロックのラベルのセレクトで選ぶ。なし = 曲の設定 `fxType`）。鳴らすときは発音時刻にあるブロックを `arrangementBlockAt("fx")`（`LoopArranger.ts`）で調べて種類を決めるので、再生中の変更もすぐ反映される。音源は種類ごとに1つで、曲の設定とアレンジで使う種類を読み込み時に作る（WAV書き出しでは鳴らしている途中に作れないため）。再生中に新しい種類を選んだときは鳴らす直前に作る。
   - 種類（`FX_DEFS`）：`riser` = ライザー（ノイズのバンドパス掃き上げ＋2オクターブ上がる重ねたノコギリ波、トレモロ・オートパンが加速）、`build` = ライザー＋インパクト、`impact` = インパクト（沈むブーム＋閉じていくノイズ）、`downlifter` = ダウンリフター、`reverse` = リバースシンバル、`chip` = チップSE（8bit。矩形波の駆け上がり＋「ピュン」）。
-  - 各種類は `rise`（ループの終わりに向けて鳴り、ループの頭ちょうどで終わる。`riseLen` が `bars` なら1小節＝8小節以上の進行は2小節、`2n` なら最後の2拍）と `hit`（ループの頭）の片方または両方を持つ。音量の山は `setValueCurveAtTime` の曲線でかけ、終わりは短いフェードでクリックを防ぐ。
+  - 各種類は `rise`（ループの終わりに向けて鳴り、ループの頭ちょうどで終わる。`riseLen` が `bars` なら1小節＝8小節以上の進行は2小節、`2n` なら最後の2拍。位置と長さは `fxEvents()` が今の拍子で決める）と `hit`（ループの頭）の片方または両方を持つ。音量の山は `setValueCurveAtTime` の曲線でかけ、終わりは短いフェードでクリックを防ぐ。
   - 広がり：ノイズは左右別々のノイズ（`stereoNoise`）で鳴らし、各種類の音は `space()`（左右で揺れのずれたコーラス → 左右に跳ねるディレイ）を通す。インパクトの低音のブームは中央のまま広げない。チップSE はコーラスなし（ディレイだけ）。後ろの響きは自前のリバーブを持たず、マスターのリバーブ送りとロングリバーブで付ける。
   - 音は grow で出す（`GROW_FX`。コアの「FX …」のプリセット（ID は `fx_…`）を ID で探し、長さで変わる EG の時間などは、鳴らすたびに `GrowInstrument.setParamAtTime` で発音の少し前（`PARAM_LEAD`）に当てる。AudioParam の合図なので書き出しでもサンプル単位で合う）。grow の準備ができていない・プリセットがない（wasm が古い）ときは `FX_DEFS`（Tone.js）で鳴らす。ライザー・ダウンリフターの音程は、ピッチ EG を直線のカーブにし、時間を長さいっぱいにして一定の速さで動かす（2オクターブ下から上がる／3オクターブ上から下がる）。
   - 種類を足すときは `FxType`（`AppState.ts`）・`FX_DEFS`・`GROW_FX`・`index.html` の `#c-fx-type` にそろえて足す。音色は再生開始時に反映される。
@@ -260,7 +262,7 @@ src/engine/
 - 音楽クイズ：選んでいる出題モード（`quizMode`）は AppState に置く。出題中の問題・成績（正解数・連続）は表示上の一時的な状態として `QuizScreen.ts` に、出題設定は各モード（`QuizModes.ts`）に持つ（どちらも保存しない）。モードを足すときは `QuizMode`（`settings` と `question()`、必要なら出題設定に出すおすすめ `hint`）を作って `QUIZ_CATEGORIES` に加える。問題は回答方法（`choice` 選択肢／`notes` 鍵盤で複数選択／`key` 鍵盤を1つ押す）、回答後の一言の解説（`explain`）、再生ボタン（`sounds`、`afterAnswer` で回答後だけ表示）で表す。
 - クイズの音名の表記：単音・構成音は `displayNote`（`format.ts`。`QuizModes.ts` から再エクスポート）で今の表記にする。コード名・キー名は CDE 表記のまま。`notes` / `key` の正解は CDE 表記（`NOTES`）で持ち、表示するときに変換する。表記を切り替えると新しい問題を出す。
 - BPM の試聴（`Metronome.ts`。シンプルモードの「♪ テンポを聴く」（以前は「♪ メトロノームで速さを聴く」。テンポ欄では速さの選択肢（丸いチップ）と区別して、タップと並べて角の丸い四角の `.tempo-tool` にする）、カスタムモードの BPM ノブ横の「♪ メトロノーム」。初心者には「クリック」が拍の音のことだと伝わらないので、メトロノームと書いて用語の説明 `metronome` を付ける）は、曲の再生（Tone.js）とは別のオーディオコンテキストで 4/4 のクリック音（1拍目は高い音）を鳴らす。拍ごとに `AppState.bpm` を読むので、鳴らしたまま BPM を変えるとすぐ反映される。鳴っているかどうかは表示上の一時的な状態としてモジュール内に持つ（保存しない）。曲の再生・試聴の開始、画面の切り替え、シンプルモードの生成で止める。
-- キー・スケールの試聴（`ScalePreview.ts`。カスタムモードの「スケール・キー」欄の「響き」の「▷ 試聴」）は、今のキー（`AppState.key`）とスケール（`chordPattern.base_scale`）で、主音から1オクターブ上までの8音（主音は A3〜G#4）を順に鳴らし、最後に主音の和音を鳴らす。スケールの7音は `scaleSemitones()`（`degree_resolver.ts`。`SCALE_TONES` から作る。ピアノロールのスケールロックと共通）。曲の再生とは別のオーディオコンテキストで鳴らし、欄に並べた音名（`displayNote` で今の表記）のうち鳴っている音を光らせる。鳴っている・何音目かは表示上の一時的な状態としてモジュール内に持つ。鳴らしたままキー・スケールを変えると鳴らし直す。曲の再生・試聴・サンプルの開始、BPM のクリック音、画面の切り替えで止める。
+- キー・スケールの試聴（`ScalePreview.ts`。カスタムモードの「スケール・キー」欄の「響き」の「▷ 試聴」）は、今のキー（`AppState.key`）とスケール（`chordPattern.base_scale`）で、主音から1オクターブ上までの音（7音のスケールなら8音。主音は A3〜G#4）を順に鳴らし、最後に主音の和音（`scalePreviewChord`。主音・3度・5度は `degree_resolver.ts` の `scaleTriad` で決める。スケールの1・3・5番目の音ではない：ブルース・ペンタトニックは音の数が違うため）を鳴らす。スケールの7音は `scaleSemitones()`（`degree_resolver.ts`。`SCALE_TONES` から作る。ピアノロールのスケールロックと共通）。曲の再生とは別のオーディオコンテキストで鳴らし、欄に並べた音名（`displayNote` で今の表記）のうち鳴っている音を光らせる。鳴っている・何音目かは表示上の一時的な状態としてモジュール内に持つ。鳴らしたままキー・スケールを変えると鳴らし直す。曲の再生・試聴・サンプルの開始、BPM のクリック音、画面の切り替えで止める。
 - ジャンルの試聴（シンプルモードの設定画面、ジャンルのチップの下の「▷ ○○ のサンプルを聴く」と一言の説明 `GENRE_DESCRIPTIONS`）：
   - ジャンルのチップは雰囲気で絞り込む（`MOOD_GENRES` の順に並べ、合わないジャンルは隠す。開いた曲のジャンルが外れていても選んでいるジャンルは出す）。雰囲気を選び直して今のジャンルが合わなければ、合うジャンルの先頭に切り替える（テンポのプリセットもそのジャンルの BPM に）。
   - 説明文は `{TERMS のキー:文字}` と書いた所を用語のツールチップ付きの span にして表示する（`renderGenreDesc`）。
@@ -308,10 +310,11 @@ src/engine/
 - シンプルモードの生成後の「‹ 雰囲気・ジャンル・テンポを変更」（`#s-edit-settings`。以前は「設定を変更」でわかりにくく、目立たない文字のリンクだった）は、設定画面に戻る前にダイアログで「もう一度生成すると今の曲は置き換わって消える」と知らせる（保存していなければ「保存してから戻る」も選べる。`SimpleScreen.ts` の `confirmBackToSetup`）。
 - ピアノロールを開いている間は、編集中のパート（メロディ／ドラム）をアレンジのブロックがない小節でも鳴らす（`LoopArranger.ts` の `setForcedPart`。書き出しには反映しない。docs/arrangement.md）。
 - 各パートの Synth はモジュールに1つずつ。WAV書き出しは再生を止めて Synth を作り直し、終わったら破棄する。曲のあとに付ける余韻は `renderTailSeconds()`（2 秒。エンディングを使うときは1小節以上。遅い曲で最後の和音が切れないように）。再生中に書き出すと再生は止まる。
-- WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・鳴らすパートがあるのに無音のときは Tone.Offline で描き直す（進み具合なし）。中断（`signal`）したときは描き直さない（予定の組み立ては `OfflineContext` の内部の `_duration` を負にして抜け、合成は次の `suspend` から再開しない。docs/ui.md）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。
+- WAV書き出し（`Playback.renderWav(onProgress)`）は進み具合を知らせる。Tone.Offline は途中経過を返さないので、`renderOffline` がブラウザ標準の `OfflineAudioContext` を `Tone.OfflineContext` で包んで同じ手順で描画し、合成の途中を `suspend()` で区切って（`RENDER_STEPS` 回）進み具合を知らせる。段階は `prepare`（準備）→ `schedule`（Tone.js が演奏の予定を組み立てる。`currentTime` で測る）→ `render`（音声の合成）→ `encode`（WAV に変換）で、全体の割合は `STAGE_SPAN`。失敗したとき・音が入るはずなのに無音のとき（`expectsSound`。もともと無音の曲は数えない）は Tone.Offline で描き直す（進み具合なし）。中断（`signal`）したときは描き直さない（予定の組み立ては `OfflineContext` の内部の `_duration` を負にして抜け、合成は次の `suspend` から再開しない。docs/ui.md）。UI は `ExportProgress.ts` の `exportAudioWithProgress(format, …)` を使う。
 - MP3書き出し（`Playback.renderMp3(onProgress)`）は WAV と同じ `renderSong()` で合成した音声を `@breezystack/lamejs`（純 JS の MP3 エンコーダ。ES モジュール対応版の lamejs）で 192kbps に変換する。エンコーダは書き出すときだけ動的に読み込む。変換は重いので `MP3_CHUNK` ごとに区切って画面に返し、`encode` の段階の進み具合を知らせる（全体の割合は `STAGE_SPAN.mp3`）。ボタンは両モードの書き出し欄（`s-export-mp3` / `c-export-mp3` / `c-arr-export-mp3`）。
 - `Playback.play()` は開始時点の AppState で各パートを読み込むので、再生中に曲の内容（コード進行・ドラム・メロディ・キーなど）を変えたら先頭から再生し直す（アレンジの編集だけは再生し直さなくてよい）。
 - 二重起動はしない（`electron/main.ts` の `requestSingleInstanceLock`）：2つ目は localStorage を1つ目が使っていて開けないので、ミュージックリストが空で始まり、そこで保存した曲は閉じると消える。2つ目は何もせずに終わり、1つ目のウィンドウを前に出す。開発時とインストール版は保存領域のフォルダが同じなので、片方を開いている間はもう片方も起動できない。
-- 書き出し（WAV / MP3）の合成中は、Tone.js の今のコンテキストが再生用に戻っている（`renderOffline`。Tone.Offline も同じ）。Part / Sequence のコールバックの中で `Tone.getContext()` / `Tone.getTransport()` / `Tone.Time` を使うと、書き出し用ではなく再生用のノード・BPM になる（以前は書き出しにサイドチェインが効かず、アルペジオの音の長さと FX の長さが最後に再生した曲の BPM になっていた）。読み込むとき（コールバックの外）に控えておく：小節の判定は `barAt()` / `positionAt()`、長さの換算は `secondsOf()`（`LoopArranger.ts`）、サイドチェインは `createSidechain()`（`Groove.ts`）、Tone.js のノードを作るときは `context` を渡す。
+- 書き出し（WAV / MP3）の合成中は、Tone.js の今のコンテキストが再生用に戻っている（`renderOffline`。Tone.Offline も同じ）。Part / Sequence のコールバックの中で `Tone.getContext()` / `Tone.getTransport()` / `Tone.Time` を使うと、書き出し用ではなく再生用のノード・BPM になる（以前は書き出しにサイドチェインが効かず、アルペジオの音の長さと FX の長さが最後に再生した曲の BPM になっていた）。読み込むとき（コールバックの外）に控えておく：小節の判定は `barAt()` / `positionAt()`、長さの換算は `secondsOf()`（`LoopArranger.ts`）、サイドチェインは `createSidechain()`（`Groove.ts`）、FX の長い響きは `createLongReverbGate()`（`MixerEngine.ts`）、Tone.js のノードを作るときは `context` を渡す。
 - 曲・試聴・サンプルの終わりはオーディオの時計（`Playback.ts` の `stopAt`。`Tone.getContext().setTimeout`）で止める。`Tone.getDraw()` は画面の描画に合わせるので、最小化などで描画が止まっている間の予定は 0.25 秒過ぎると捨てられる。音の鳴り方・止まり方を決める処理には使わない。
-- 再生の開始（`play` / `preview` / `playSample`）は音源の準備を待つ（await）。待っている間にほかの再生・停止が入ったら、その開始は取りやめる（`startToken`。`stop()` も番号を進める）。戻り値は鳴らし始めたら `true`。読み込みの途中で例外が出たら止めて `onPlaybackError` に知らせ、`main.ts` が「再生できませんでした」と出す（壊れた曲で無反応にならないように）。再生を始める所を足すときもこの形にそろえる。
+- 試聴（`Playback.preview`。コード進行・ドラム・FX）の間に曲の内容を変えたら、曲の再生ではなくその試聴をやり直す（カスタムモードの `restartIfPlaying`。`Playback.currentPreview()` で試聴しているパート、`isSongPlaying()` で曲の再生かを見分ける）。試聴・サンプル中のパートの ON/OFF（`setLayerEnabled`）とメロディの編集は、状態だけを変えて鳴っているものは変えない（`isPlaying()` は試聴・サンプルでも true なので、パートを読み込み直すかの判断には `isSongPlaying()` を使う）。
+- 再生の開始（`play` / `preview` / `playSample`）は音源の準備を待つ（await。共通の `prepareStart`）。待ったあとに AppState を読み直すので、待っている間に変えた BPM・曲の内容で鳴り、ジャンル・ドラムの音源が変わったら準備し直す。待っている間（`isStarting()`）に画面を移ったら取りやめる。待っている間にほかの再生・停止が入ったら、その開始は取りやめる（`startToken`。`stop()` も番号を進める）。戻り値は鳴らし始めたら `true`。読み込みの途中で例外が出たら止めて `onPlaybackError` に知らせ、`main.ts` が「再生できませんでした」と出す（壊れた曲で無反応にならないように）。再生を始める所を足すときもこの形にそろえる。

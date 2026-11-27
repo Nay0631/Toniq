@@ -23,16 +23,26 @@ export interface SavedSong extends SongFields {
   updatedAt: number;
 }
 
-// 保存した曲の一覧（新しく保存・更新したものが先頭）
-export function listSongs(): SavedSong[] {
+// 読み込んだ一覧（保存してある文字列が前と同じなら、解析し直さずに使う。画面を描くたびに曲を探すため）
+let parsed: { raw: string; songs: SavedSong[] } | null = null;
+
+// 保存した曲の一覧（新しく保存・更新したものが先頭）。曲そのものは使い回すので、中身を書き換えない
+function readSongs(): readonly SavedSong[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const songs = raw ? JSON.parse(raw) as SavedSong[] : [];
-    return Array.isArray(songs) ? songs.sort((a, b) => b.updatedAt - a.updatedAt) : [];
+    const raw = localStorage.getItem(STORAGE_KEY) ?? "";
+    if (parsed?.raw === raw) return parsed.songs;
+    const list: unknown = raw ? JSON.parse(raw) : [];
+    const songs = Array.isArray(list) ? (list as SavedSong[]).sort((a, b) => b.updatedAt - a.updatedAt) : [];
+    parsed = { raw, songs };
+    return songs;
   } catch (e) {
     console.error("ミュージックリストの読み込みに失敗:", e);
     return [];
   }
+}
+
+export function listSongs(): SavedSong[] {
+  return [...readSongs()];
 }
 
 // ミュージックリストに書き込めなかった（localStorage の容量オーバーなど）。画面側で知らせる
@@ -67,7 +77,7 @@ function writeSongs(songs: SavedSong[]): void {
 }
 
 export function findSong(id: string | null): SavedSong | undefined {
-  return id === null ? undefined : listSongs().find(song => song.id === id);
+  return id === null ? undefined : readSongs().find(song => song.id === id);
 }
 
 // 今の曲の内容（ネストしたオブジェクトも複製して、保存後の編集と切り離す）

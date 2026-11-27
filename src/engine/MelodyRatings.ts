@@ -83,10 +83,6 @@ export function findRating(label: string, key: string): MelodyRating | undefined
   return listRatings().find(r => r.label === label && songKey(r) === key);
 }
 
-export function deleteRating(id: string): void {
-  writeRatings(listRatings().filter(r => r.id !== id));
-}
-
 export function deleteLabel(label: string): void {
   writeRatings(listRatings().filter(r => r.label !== label));
 }

@@ -47,7 +47,8 @@ const tone = vi.hoisted(() => {
       }
     },
   };
-  return { context, transport };
+  const rendered = { numberOfChannels: 2, length: 128, sampleRate: 44100, getChannelData: () => new Float32Array(128) };
+  return { context, transport, rendered, offlineRenders: 0 };
 });
 
 vi.mock("tone", () => ({
@@ -58,22 +59,28 @@ vi.mock("tone", () => ({
   getDraw:      () => { throw new Error("終わりの合図に getDraw を使わない"); },
   // 書き出し：OfflineAudioContext のない Node では、Tone.Offline で描き直す経路になる
   Offline: async (schedule: () => Promise<void>) => {
+    tone.offlineRenders++;
     await schedule();
     return { get: () => ({ numberOfChannels: 1, length: 1, getChannelData: () => new Float32Array([0.5]) }) };
   },
+  OfflineContext: class {
+    currentTime = 0;
+    async render() { return { get: () => tone.rendered }; }
+  },
+  setContext: () => {},
 }));
 vi.mock("../src/engine/MixerEngine", () => ({
-  applyMixPreset: vi.fn(), fadeOutMaster: vi.fn(), holdMasterFade: vi.fn(), mixerReady: async () => {}, resetMasterFade: vi.fn(),
+  applyMixPreset: vi.fn(), fadeOutMaster: vi.fn(), holdMasterFade: vi.fn(), resetMasterFade: vi.fn(),
 }));
-vi.mock("../src/engine/LayerManager", () => ({ disposeAllLayers: vi.fn(), reloadLayer: vi.fn(), reloadAllLayers: vi.fn() }));
+vi.mock("../src/engine/LayerManager", () => ({ disposeAllLayers: vi.fn(), loadLayers: vi.fn(), reloadLayer: vi.fn(), reloadAllLayers: vi.fn() }));
 vi.mock("../src/engine/Metronome",    () => ({ stopMetronome: vi.fn() }));
 vi.mock("../src/engine/ScalePreview", () => ({ stopScalePreview: vi.fn() }));
 vi.mock("../src/engine/GrowPreview",  () => ({ stopGrowPreview: vi.fn() }));
 vi.mock("../src/engine/DrumSamples",  () => ({ prepareDrumSamples: async () => {} }));
 vi.mock("../src/engine/History",      () => ({ withoutHistory: (fn: () => unknown) => fn() }));
 vi.mock("../src/engine/Groove",       () => ({ applySwing: vi.fn() }));
-vi.mock("../src/engine/Grow",         () => ({ prepareGrowContext: async () => true, applyGrowLive: vi.fn() }));
-vi.mock("../src/engine/DrumEngine",   () => ({ loadDrumPattern: vi.fn() }));
+vi.mock("../src/engine/Grow",         () => ({ prepareGrowContext: vi.fn(async () => true), applyGrowBpm: vi.fn() }));
+vi.mock("../src/engine/DrumEngine",   () => ({ loadDrumPattern: vi.fn(), blockDrumPattern: vi.fn(() => null) }));
 vi.mock("../src/engine/ChordPlayer",  () => ({ initChordSynth: vi.fn(), loadChordProgression: vi.fn() }));
 vi.mock("../src/engine/BassPlayer",   () => ({ initBassSynth: vi.fn(), loadBassLine: vi.fn() }));
 vi.mock("../src/engine/ArpPlayer",    () => ({ initArpSynth: vi.fn(), loadArpPattern: vi.fn() }));
@@ -87,7 +94,11 @@ vi.mock("../src/engine/FxPlayer",     () => ({ initFxSynth: vi.fn(), loadFx: vi.
 import * as Playback from "../src/engine/Playback";
 import { loadChordProgression } from "../src/engine/ChordPlayer";
 import { isArrangementBypassed } from "../src/engine/LoopArranger";
+import { applyMixPreset } from "../src/engine/MixerEngine";
+import { prepareGrowContext } from "../src/engine/Grow";
+import { reloadAllLayers, reloadLayer } from "../src/engine/LayerManager";
 import { getState, setState } from "../src/engine/AppState";
+import { blockDrumPattern } from "../src/engine/DrumEngine";
 import { chords, drums, resetState } from "./helpers";
 
 const base = chords.find(c => c.length_bars === 4)!;
@@ -166,6 +177,94 @@ describe("自動停止（画面の描画が止まっていても止まる）", (
   });
 });
 
+describe("音源の準備を待っている間の変更", () => {
+  // 次の準備を、返す関数を呼ぶまで待たせる
+  function holdPreparation(): () => void {
+    let release = () => {};
+    vi.mocked(prepareGrowContext).mockImplementationOnce(() => new Promise<boolean>(resolve => { release = () => resolve(true); }));
+    return () => release();
+  }
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+  beforeEach(() => { vi.mocked(applyMixPreset).mockClear(); });
+
+  it("曲：待っている間に変えた BPM・ジャンルで鳴らし始める", async () => {
+    setState({ genre: "EDM", bpm: 128 });
+    const release = holdPreparation();
+    const playing = Playback.play();
+    await settle();
+    expect(Playback.isStarting()).toBe(true);
+    setState({ genre: "ローファイ", bpm: 80 });
+    release();
+    expect(await playing).toBe(true);
+    expect(Playback.isStarting()).toBe(false);
+    expect(tone.transport.bpm.value).toBe(80);
+    expect(vi.mocked(applyMixPreset).mock.calls.map(c => c[0])).toEqual(["EDM", "ローファイ"]);  // ミックスも新しいジャンル
+  });
+
+  it("コード進行の試聴：待っている間に選び直した進行の長さで止める", async () => {
+    const eight = chords.find(c => c.length_bars === 8)!;
+    const release = holdPreparation();
+    const playing = Playback.preview("chord");
+    await settle();
+    setState({ chordPattern: eight });
+    release();
+    expect(await playing).toBe(true);
+    expect([...tone.transport.once.values()].map(e => e.at)).toEqual(["8m"]);
+  });
+
+  it("待っている間に止めたら始めない", async () => {
+    const release = holdPreparation();
+    const playing = Playback.play();
+    await settle();
+    Playback.stop();
+    expect(Playback.isStarting()).toBe(false);
+    release();
+    expect(await playing).toBe(false);
+    expect(Playback.isPlaying()).toBe(false);
+  });
+
+  it("待っている間に別の再生が始まったら、あとのものだけが鳴る", async () => {
+    vi.mocked(reloadAllLayers).mockClear();
+    const release = holdPreparation();
+    const first = Playback.play();
+    await settle();
+    expect(await Playback.preview("drum")).toBe(true);
+    release();
+    expect(await first).toBe(false);
+    expect(reloadAllLayers).not.toHaveBeenCalled();
+    expect(Playback.currentPreview()).toBe("drum");
+  });
+
+  it("サンプル：待っている間も「鳴らしている」とみなし、止めれば取りやめる（曲の内容は差し替えない）", async () => {
+    const other = chords.find(c => c.id !== base.id)!;
+    const release = holdPreparation();
+    const playing = Playback.playSample({ chordPattern: other, drumPattern: drums[1], meter: "4/4", melody: () => [] });
+    await settle();
+    expect(Playback.isSamplePlaying()).toBe(true);
+    Playback.stopSample();  // 画面を移った
+    release();
+    expect(await playing).toBe(false);
+    expect(Playback.isSamplePlaying()).toBe(false);
+    expect(getState().chordPattern).toBe(base);
+  });
+});
+
+describe("鳴らしているものの種類", () => {
+  it("曲・試聴・サンプルを見分ける", async () => {
+    expect([Playback.isSongPlaying(), Playback.currentPreview()]).toEqual([false, null]);
+    await Playback.play();
+    expect([Playback.isSongPlaying(), Playback.currentPreview()]).toEqual([true, null]);
+    await Playback.preview("chord");
+    expect([Playback.isSongPlaying(), Playback.currentPreview()]).toEqual([false, "chord"]);
+    expect(reloadLayer).toHaveBeenLastCalledWith("chord");
+    await Playback.playSample({ chordPattern: base, drumPattern: drums[0], meter: "4/4", melody: () => [] });
+    expect([Playback.isSongPlaying(), Playback.currentPreview(), Playback.isSamplePlaying()]).toEqual([false, null, true]);
+    Playback.stop();
+    expect([Playback.isSongPlaying(), Playback.currentPreview(), Playback.isSamplePlaying()]).toEqual([false, null, false]);
+  });
+});
+
 describe("書き出す内容", () => {
   it("試聴の途中で書き出しても、曲全体の並び（サビ・エンディング込み）を書き出す", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});  // Tone.Offline で描き直す知らせは出さない
@@ -178,5 +277,61 @@ describe("書き出す内容", () => {
     expect(song.length_bars).toBe(32);
     expect(song.progression.some(c => c.section === "B")).toBe(true);
     expect(song.progression[song.progression.length - 1].ending).toBe(true);
+  });
+});
+
+describe("書き出した音声が無音のとき", () => {
+  // 合成は無音を返す（OfflineAudioContext の代わり）。描き直した回数を数える
+  beforeEach(() => {
+    vi.stubGlobal("OfflineAudioContext", class { suspend() { return new Promise(() => {}); } });
+    tone.offlineRenders = 0;
+    vi.mocked(blockDrumPattern).mockReturnValue(drums[0]);
+    const parts = { ...getState().parts };
+    for (const k of Object.keys(parts) as (keyof typeof parts)[]) parts[k] = false;
+    setState({ parts, melodyNotes: [], chorusMelodyNotes: [] });
+    return () => vi.unstubAllGlobals();
+  });
+  const on = (...names: (keyof ReturnType<typeof getState>["parts"])[]) =>
+    setState({ parts: { ...getState().parts, ...Object.fromEntries(names.map(n => [n, true])) } });
+
+  it("鳴るはずのパートがあれば、Tone.Offline で描き直す（保険）", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    on("chord");
+    await Playback.renderSong();
+    expect(tone.offlineRenders).toBe(1);
+    warn.mockRestore();
+  });
+
+  it("もともと無音の曲は描き直さない（FX だけ・メロディが空・音量 0・空のドラム・全部 OFF）", async () => {
+    await Playback.renderSong();
+    on("fx");
+    await Playback.renderSong();
+    on("melody", "counter");
+    await Playback.renderSong();
+    on("bass");
+    setState({ volumes: { ...getState().volumes, bass: 0 } });
+    await Playback.renderSong();
+    on("drum");
+    const empty = { ...drums[0], tracks: Object.fromEntries(Object.entries(drums[0].tracks).map(([n, t]) => [n, { ...t, pattern: t.pattern.map(() => 0) }])) };
+    vi.mocked(blockDrumPattern).mockReturnValue(empty);
+    await Playback.renderSong();
+    expect(tone.offlineRenders).toBe(0);
+  });
+});
+
+describe("WAV への変換", () => {
+  it("16bit・左右交互・リトルエンディアンで書き、範囲を超えた音は収める", async () => {
+    const left = new Float32Array([0.5, 0, 1, 2]), right = new Float32Array([-0.5, 0, -1, -2]);
+    vi.stubGlobal("OfflineAudioContext", class { suspend() { return new Promise(() => {}); } });
+    const before = { ...tone.rendered };
+    Object.assign(tone.rendered, { length: 4, getChannelData: (ch: number) => (ch === 0 ? left : right) });
+    const blob = await Playback.renderWav();
+    Object.assign(tone.rendered, before);
+    vi.unstubAllGlobals();
+    const view = new DataView(await blob.arrayBuffer());
+    expect(view.byteLength).toBe(44 + 4 * 2 * 2);
+    expect(view.getUint32(40, true)).toBe(16);
+    const samples = Array.from({ length: 8 }, (_, i) => view.getInt16(44 + i * 2, true));
+    expect(samples).toEqual([16383, -16384, 0, 0, 32767, -32768, 32767, -32768]);
   });
 });

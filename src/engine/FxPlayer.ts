@@ -1,10 +1,13 @@
 import * as Tone from "tone";
 import { ChordProgression } from "../data/types";
 import { createVolumeNode } from "./VolumeManager";
+import { createLongReverbGate } from "./MixerEngine";
 import { arrangementBlockAt, getArrangement, positionAt, secondsOf } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { endingBar } from "./SongForm";
 import { getState, FxType, ArrangeBlock } from "./AppState";
 import { GrowInstrument, isGrowReady, findGrowPreset, growPresetValuesWith } from "./Grow";
+import { beatsPerBar } from "./Meter";
 
 // FX / SE：ループの継ぎ目を演出する効果音
 // 種類は AppState.fxType（"auto" ならジャンルの標準 GENRE_FX）。音色は Synth を作り直したとき（再生開始時）に反映される
@@ -315,8 +318,8 @@ function play(inst: GrowInstrument, note: string, dur: number, time: number, val
   inst.triggerAttackRelease(note, dur, time, velocity);
 }
 
-// 1小節の長さ（秒）
-const barSeconds = () => 240 / getState().bpm;
+// 1小節の長さ（秒。拍の数は拍子で変わる）
+const barSeconds = () => (beatsPerBar() * 60) / getState().bpm;
 
 // 作った grow をまとめて破棄する（どれかのプリセットがなくて grow で鳴らせないとき）
 function disposeAll(list: ({ dispose(): unknown } | null | undefined)[]): null {
@@ -465,8 +468,8 @@ function riseBars(progression: ChordProgression): number {
 // ===== 読み込み =====
 
 // 種類ごとの音源。曲の中で使う種類だけ作る（ブロックごとに種類が違ってもよい）
-let fxPart: Tone.Part   | null = null;
-let fxOut:  Tone.Volume | null = null;  // 現在のオーディオコンテキスト用の Volume ノード
+let fxTrack: Track       | null = null;
+let fxOut:   Tone.Volume | null = null;  // 現在のオーディオコンテキスト用の Volume ノード
 const fxVoices = new Map<FxKind, FxVoice>();
 
 function voiceFor(kind: FxKind): FxVoice | null {
@@ -492,46 +495,53 @@ export function initFxSynth() {
   prepareVoices();
 }
 
-// hit = ループの頭、bars / 2n = rise の始まり（種類の riseLen に合うものだけ鳴らす）
-interface FxEvent {
-  time: string;
-  kind: "hit" | "bars" | "2n";
+// ループの頭の音（インパクト・ダウンリフターなど）の長さの目安（秒。1小節のほうが長ければ1小節）
+const HIT_SECONDS = 2;
+
+// hit = ループの頭、bars / 2n = rise の始まり（種類の riseLen に合うものだけ鳴らす）。
+// length は rise の長さ（Tone.js の長さ）で、time から length だけ鳴らすとループの頭ちょうどで終わる
+export interface FxEvent {
+  time:   string;
+  kind:   "hit" | "bars" | "2n";
+  length: string;
+}
+
+// コード進行1周の FX の発音。2n は最後の2拍（3/4 なら2拍目から）
+export function fxEvents(progression: ChordProgression): FxEvent[] {
+  const len  = progression.length_bars;
+  const rise = riseBars(progression);
+  return [
+    { time: "0:0:0",                              kind: "hit",  length: "0" },
+    { time: `${len - rise}:0:0`,                  kind: "bars", length: `${rise}m` },
+    { time: `${len - 1}:${beatsPerBar() - 2}:0`,  kind: "2n",   length: "2n" },
+  ];
 }
 
 export function loadFx(progression: ChordProgression) {
-  if (fxPart) { fxPart.dispose(); fxPart = null; }
+  fxTrack?.dispose();
   if (!fxOut) initFxSynth();
   else prepareVoices();
-
-  const len  = progression.length_bars;
-  const rise = riseBars(progression);
-  const events: FxEvent[] = [
-    { time: "0:0:0",                kind: "hit"  },
-    { time: `${len - rise}:0:0`,    kind: "bars" },
-    { time: `${len - 1}:2:0`,       kind: "2n"   },
-  ];
 
   // 鳴らすかどうかと種類は、発音時刻にあるブロックで決める（再生中のアレンジの編集もすぐ反映される）
   const blockAt  = arrangementBlockAt("fx");
   const position = positionAt();
   const seconds  = secondsOf();
-  fxPart = new Tone.Part((time, event: FxEvent) => {
+  const longReverb = createLongReverbGate();  // FX が鳴る間だけ、長い響きにつなぐ
+  fxTrack = createTrack(fxEvents(progression), progression.length_bars, (time, event) => {
     const block = blockAt(time);
     if (block === undefined) return;
     if (position(time).bar === endingBar()) return;  // エンディングの小節では鳴らさない（主和音で静かに終える）
     const voice = voiceFor(blockFxType(block));
     if (!voice) return;
-    if (event.kind === "hit") {
-      voice.hit?.(time);
+    if (event.kind === "hit" && voice.hit) {
+      longReverb(time, Math.max(HIT_SECONDS, seconds("1m")));
+      voice.hit(time);
     } else if (voice.rise && event.kind === (voice.riseLen ?? "bars")) {
-      const dur = seconds(event.kind === "2n" ? "2n" : `${rise}m`);
+      const dur = seconds(event.length);
+      longReverb(time, dur);
       voice.rise(time, dur);
     }
-  }, events);
-
-  fxPart.loop    = true;
-  fxPart.loopEnd = `${len}m`;
-  fxPart.start(0);
+  });
 }
 
 function disposeVoices() {
@@ -540,8 +550,8 @@ function disposeVoices() {
 }
 
 export function disposeFx() {
-  fxPart?.dispose();
-  fxPart = null;
+  fxTrack?.dispose();
+  fxTrack = null;
   disposeVoices();
   fxOut = null;
 }

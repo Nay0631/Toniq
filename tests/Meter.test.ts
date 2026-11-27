@@ -13,7 +13,7 @@ import { Midi } from "@tonejs/midi";
 import {
   METERS, Meter, beatsPerBar, unitsPerBar, unitsPerBeat, isStrongUnit, stepSubdivision,
   fitPattern, gridStep, gridSteps, barUnits, unitTime, barTime,
-  unitsToTime, timeToUnits, unitsToDuration, durationToUnits, durationToBeats, convertNotes, genreMeter,
+  unitsToTime, timeToUnits, timeToBeats, unitsToDuration, durationToUnits, durationToBeats, convertNotes, genreMeter,
 } from "../src/engine/Meter";
 import { generateBatchSong } from "../src/engine/QualityBatch";
 import { getState, setState } from "../src/engine/AppState";
@@ -27,10 +27,12 @@ import { arpNotes } from "../src/engine/ArpPlayer";
 import { counterNotes } from "../src/engine/CounterPlayer";
 import { percStepHits } from "../src/engine/PercPlayer";
 import { customDrumPattern, drumPatternBars, drumPatternIn, drumStepHits, withDrumHit } from "../src/engine/DrumEngine";
+import { fxEvents } from "../src/engine/FxPlayer";
 import { exportMidi } from "../src/engine/MidiExporter";
 import { saveOutput } from "../src/engine/OutputFiles";
 import { songMetrics, QUALITY_RULES, STRONG_CLASH_LIMIT, MelodyMetrics } from "../src/engine/QualityCheck";
 import type { ChordProgression } from "../src/data/types";
+import { noteToMidi, voiceProgression, VOICING_RANGES } from "../src/data/degree_resolver";
 import { chords, drums, resetState, seededRandom } from "./helpers";
 
 const GENRES = ["EDM", "8bit", "ローファイ", "ゲームBGM", "テクノ", "ハウス", "トランス", "アンビエント", "ワルツ", "6/8バラード", "シャッフル"];
@@ -392,5 +394,49 @@ describe("自動チェック：強拍の基準", () => {
     expect(count("D4")).toEqual([0, 0, bars]);
     expect(count("A4")).toEqual([0, 0, bars]);
     expect(count("F4")).toEqual([0, bars, bars]);
+  });
+});
+
+describe("FX の発音（どの拍子でもループの頭ちょうどで終わる）", () => {
+  it.each(METERS)("%s：盛り上げ（1小節・2小節・最後の2拍）の終わりがループの頭", meter => {
+    for (const length of [2, 4, 8]) {
+      const base = song(meter, "ワルツ", length);
+      const loop = base.length_bars * beatsPerBar();
+      for (const e of fxEvents(base)) {
+        const start = timeToBeats(e.time);
+        expect(start).toBeGreaterThanOrEqual(0);
+        if (e.kind === "hit") expect(start).toBe(0);
+        else {
+          const beats = e.length.endsWith("m") ? parseFloat(e.length) * beatsPerBar() : durationToBeats(e.length);
+          expect(start + beats, `${length} 小節 ${e.kind}`).toBe(loop);
+        }
+      }
+    }
+  });
+});
+
+describe("コードのボイシング（どの拍子でも、鳴っているコードの上のメロディを避ける）", () => {
+  it.each(METERS)("%s：メロディの位置を今の拍子のマスで数える", meter => {
+    let misplaced = 0;  // 1小節を 16 マスと数え間違えると、転回形が変わる曲の数
+    for (const base of chords.filter(c => c.length_bars === 4)) {
+      song(meter, "EDM");
+      setState({ chordPattern: base, chorusPattern: null });
+      const random = Math.random;
+      Math.random = seededRandom(7);
+      try { setState(generateSongMelodies()); } finally { Math.random = random; }
+
+      const p   = songProgression()!;
+      const BAR = unitsPerBar();
+      const melody = songMelody().filter(n => n.note !== null).map(n => {
+        const start = timeToUnits(n.time);
+        return { midi: noteToMidi(n.note!), start, end: start + durationToUnits(n.duration) };
+      });
+      // 小節の中の割合で同じ位置（4/4 の 16 マス）に直して選んだ転回形と同じになる
+      const scaled   = melody.map(m => ({ midi: m.midi, start: (m.start * 16) / BAR, end: (m.end * 16) / BAR }));
+      const expected = voiceProgression(p, "A", VOICING_RANGES.chord, { melody: scaled });
+      expect(chordEvents(p, "A").map(h => h.notes), base.id).toEqual(expected);
+      if (JSON.stringify(voiceProgression(p, "A", VOICING_RANGES.chord, { melody })) !== JSON.stringify(expected)) misplaced++;
+    }
+    if (meter !== "4/4") expect(misplaced).toBeGreaterThan(0);  // 確かめる意味のある曲がある
   });
 });

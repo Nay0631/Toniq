@@ -4,6 +4,7 @@ import { NOTE_INDEX, SCALE_TONES, resolveChord, scaleSemitones, chordKey } from 
 import { MelodyNote, noteToMidi, midiToNote, timeToUnits, durationToUnits } from "./MelodyGenerator";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 import { isStrongUnit, isTriplet, unitTime, unitsPerBar, unitsPerBeat } from "./Meter";
 
@@ -174,7 +175,7 @@ export function counterNotes(progression: ChordProgression, melody: MelodyNote[]
 
 // ===== 再生 =====
 
-let counterPart:  Tone.Part | null = null;
+let counterTrack: Track | null = null;
 let counterSynth: Tone.MonoSynth | GrowInstrument | null = null;
 let counterVol:   Tone.Volume | null = null;
 
@@ -196,8 +197,8 @@ export function initCounterSynth() {
   }).connect(counterVol);
 }
 
+// 今の予定と同じ音の並びなら作り直さない
 export function loadCounter(progression: ChordProgression, melody: MelodyNote[], key: string = "A") {
-  if (counterPart) { counterPart.dispose(); counterPart = null; }
   if (!counterSynth) initCounterSynth();
 
   const events = counterNotes(progression, melody, key).map(n => ({
@@ -207,15 +208,13 @@ export function loadCounter(progression: ChordProgression, melody: MelodyNote[],
     vel:  n.velocity,
   }));
 
+  if (counterTrack?.isSame(events, progression.length_bars)) return;
+  counterTrack?.dispose();
   const arranged = arrangementGate("counter");
-  counterPart = new Tone.Part((time, event: { note: string; dur: string; vel: number }) => {
+  counterTrack = createTrack(events, progression.length_bars, (time, event) => {
     if (!arranged(time)) return;
     counterSynth?.triggerAttackRelease(event.note, event.dur, time, event.vel);
-  }, events);
-
-  counterPart.loop    = true;
-  counterPart.loopEnd = `${progression.length_bars}m`;
-  counterPart.start(0);
+  });
 }
 
 function disposeSynth() {
@@ -224,7 +223,7 @@ function disposeSynth() {
 }
 
 export function disposeCounter() {
-  counterPart?.dispose();
-  counterPart = null;
+  counterTrack?.dispose();
+  counterTrack = null;
   disposeSynth();
 }

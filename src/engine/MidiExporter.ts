@@ -69,6 +69,7 @@ const TRACKS: Record<Exclude<LayerName, "signature" | "fx">, { name: string; cha
 };
 
 // ===== MIDIエクスポート本体 =====
+// 保存できないときは例外を投げる（画面側で知らせる）。曲がなければ何もしない
 export async function exportMidi(filename?: string): Promise<void> {
   // コード進行・ドラムの試聴中はアレンジを通していないので、通した内容で作る（試聴は鳴らしたまま）
   const midi = withArrangement(buildMidi);

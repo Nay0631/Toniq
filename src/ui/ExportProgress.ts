@@ -98,12 +98,23 @@ async function prepareExport(format: ExportFormat): Promise<string | null> {
   return choice.filename;
 }
 
-// 曲を MIDI で書き出す。始めにファイル名を聞く。書き出したら true
+// 書き出せなかったことを知らせる
+function notifyExportError(format: ExportFormat, e: unknown): void {
+  console.error(`${FORMAT_NAMES[format]}エクスポートエラー:`, e);
+  alert(`${FORMAT_NAMES[format]} の書き出しに失敗しました。\n${e instanceof Error ? e.message : String(e)}`);
+}
+
+// 曲を MIDI で書き出す。始めにファイル名を聞く。書き出したら true（キャンセル・失敗は false）
 export async function exportMidiWithName(): Promise<boolean> {
   const filename = await prepareExport("mid");
   if (!filename) return false;
-  await exportMidi(filename);
-  return true;
+  try {
+    await exportMidi(filename);
+    return true;
+  } catch (e) {
+    notifyExportError("mid", e);
+    return false;
+  }
 }
 
 // 曲を WAV / MP3 で書き出して保存する。始めにファイル名を聞く。button は書き出し中に押せなくする。
@@ -170,8 +181,7 @@ export async function exportAudioWithProgress(
       console.log(`${FORMAT_NAMES[format]} の書き出しを中断しました`);
       return false;
     }
-    console.error(`${FORMAT_NAMES[format]}エクスポートエラー:`, e);
-    alert(`${FORMAT_NAMES[format]} の書き出しに失敗しました。\n${e instanceof Error ? e.message : String(e)}`);
+    notifyExportError(format, e);
     return false;
   } finally {
     clearInterval(timer);

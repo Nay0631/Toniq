@@ -1,7 +1,7 @@
 import { getState, setState, applySimpleToCustom, Screen, Tab } from "../engine/AppState";
 import { stopMetronome } from "../engine/Metronome";
 import { stopScalePreview } from "../engine/ScalePreview";
-import { isPlaying, stop, stopSample } from "../engine/Playback";
+import { isPlaying, isStarting, stop, stopSample } from "../engine/Playback";
 
 // 画面ごとのパンくず表示（メニュー画面は表示しない）
 const SCREEN_TITLES: Record<Screen, string> = {
@@ -113,7 +113,8 @@ export function showScreen(screen: Screen): void {
   const { screen: prev, tab, screenTabs } = getState();
   if (prev !== screen) screenChangeHandlers.forEach(fn => fn(prev, screen));
   // 画面を移ったら曲の再生も止める（メニューに戻ったとき・ピアノロールからほかの画面へ移ったときに鳴り続けないように）
-  if (prev !== screen && isPlaying()) stop();
+  // （音源の準備を待っている再生も取りやめる）
+  if (prev !== screen && (isPlaying() || isStarting())) stop();
   stopMetronome();     // BPM のクリック音は画面を離れたら止める
   stopScalePreview();  // キー・スケールの試聴も止める
   stopSample();     // ジャンルのサンプルも止める（差し替えていたパターンを元に戻す）

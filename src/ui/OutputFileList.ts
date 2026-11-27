@@ -60,10 +60,6 @@ export function stopFilePlayback(): void {
   }
 }
 
-export function isFilePlaying(): boolean {
-  return playingPath !== null;
-}
-
 async function togglePlay(file: OutputFileInfo): Promise<void> {
   const same = playingPath === file.path;
   stopFilePlayback();

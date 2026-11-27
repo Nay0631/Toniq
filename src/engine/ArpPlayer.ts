@@ -3,6 +3,7 @@ import { ChordProgression } from "../data/types";
 import { voiceProgression, VOICING_RANGES, noteToMidi, midiToNote } from "../data/degree_resolver";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate, secondsOf } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { getState } from "./AppState";
 import arpParams from "../data/arp_params.json";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
@@ -119,7 +120,7 @@ export function arpNotes(progression: ChordProgression, key: string, param: ArpP
   return out;
 }
 
-let arpPart:    Tone.Part | null = null;
+let arpTrack:   Track | null = null;
 let arpSynth:   Tone.PolySynth<any> | GrowInstrument | null = null;
 let arpVol:     Tone.Volume | null = null;
 let arpEffects: Tone.ToneAudioNode[] = [];
@@ -149,7 +150,7 @@ export function initArpSynth() {
 
 // 刻み・パターン・音の長さは読み込んだ時点のジャンルで決める
 export function loadArpPattern(progression: ChordProgression, key: string = "A") {
-  if (arpPart) { arpPart.dispose(); arpPart = null; }
+  arpTrack?.dispose();
   if (!arpSynth) initArpSynth();
 
   const param  = arpParam();
@@ -157,17 +158,13 @@ export function loadArpPattern(progression: ChordProgression, key: string = "A")
 
   const arranged = arrangementGate("arp");
   const seconds  = secondsOf();
-  arpPart = new Tone.Part((time, event: ArpNote) => {
+  arpTrack = createTrack(events, progression.length_bars, (time, event) => {
     if (!arranged(time)) return;
     // BPM が変わっても合うよう、長さは鳴らすときに秒にする
     const dur = seconds(param.step) * param.gate;
     const velocity = Math.min(1, Math.max(0.1, event.velocity + (Math.random() - 0.5) * 0.1));
     arpSynth?.triggerAttackRelease(event.note, dur, time, velocity);
-  }, events);
-
-  arpPart.loop    = true;
-  arpPart.loopEnd = `${progression.length_bars}m`;
-  arpPart.start(0);
+  });
 }
 
 function disposeSynth() {
@@ -178,7 +175,7 @@ function disposeSynth() {
 }
 
 export function disposeArp() {
-  arpPart?.dispose();
-  arpPart = null;
+  arpTrack?.dispose();
+  arpTrack = null;
   disposeSynth();
 }

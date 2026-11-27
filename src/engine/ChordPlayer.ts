@@ -5,6 +5,7 @@ import { MelodyNote, noteToMidi, timeToUnits, durationToUnits } from "./MelodyGe
 import { songMelody } from "./SongForm";
 import { createVolumeNode } from "./VolumeManager";
 import { arrangementGate } from "./LoopArranger";
+import { createTrack, type Track } from "./Track";
 import { getState, ChordRhythm } from "./AppState";
 import { GrowInstrument, growValues, isGrowReady } from "./Grow";
 import { barUnits, beatsPerBar, unitTime, unitsPerBar, unitsPerBeat } from "./Meter";
@@ -33,7 +34,7 @@ const FALLBACK = {
 // ストラム：和音の音を下から少しずつずらして鳴らす間隔（秒）。長い音ほどゆったり
 const STRUM_SEC = { long: 0.012, short: 0.005 };
 
-let chordPart:    Tone.Part | null = null;
+let chordTrack:   Track | null = null;
 let padSynth:     Tone.PolySynth<any> | GrowInstrument | null = null;
 let chordVol:     Tone.Volume | null = null;
 let chordEffects: Tone.ToneAudioNode[] = [];
@@ -82,7 +83,7 @@ export function chordEvents(progression: ChordProgression, key: string): ChordHi
   const hits: ChordHit[] = [];
   const inBar = rhythmUnits(getState().chordRhythm);
   const BAR = unitsPerBar(), BEAT = unitsPerBeat();
-  const voiced = voiceProgression(progression, key, VOICING_RANGES.chord, { melody: melodyToAvoid() });
+  const voiced = voiceProgression(progression, key, VOICING_RANGES.chord, { melody: melodyToAvoid(), unitsPerBar: BAR });
 
   progression.progression.forEach((chord, i) => {
     const notes = voiced[i];
@@ -116,9 +117,9 @@ interface ChordEvent {
   strum:    number;  // 音をずらす間隔（秒）
 }
 
-// ボイシングは進行全体で動きが最小になり、メロディとぶつからない転回形で決める（voiceProgression）
+// ボイシングは進行全体で動きが最小になり、メロディとぶつからない転回形で決める（voiceProgression）。
+// 今の予定と同じ音の並びなら作り直さない（再生中にメロディを1音編集しても、ボイシングが変わらないことが多い）
 export function loadChordProgression(progression: ChordProgression, key: string = "A") {
-  if (chordPart) { chordPart.dispose(); chordPart = null; }
   if (!padSynth) initChordSynth();
 
   // 小節ちょうどの長さは小節表記（`2m` など）、刻むときはマスの数の長さで鳴らす
@@ -131,18 +132,16 @@ export function loadChordProgression(progression: ChordProgression, key: string 
     strum:    h.strum,
   }));
 
+  if (chordTrack?.isSame(events, progression.length_bars)) return;
+  chordTrack?.dispose();
   const arranged = arrangementGate("chord");
-  chordPart = new Tone.Part((time, event: ChordEvent) => {
+  chordTrack = createTrack(events, progression.length_bars, (time, event) => {
     if (!arranged(time)) return;
     const velocity = humanize(event.velocity);
     event.notes.forEach((note, i) => {
       padSynth?.triggerAttackRelease(note, event.dur, time + i * event.strum, velocity);
     });
-  }, events);
-
-  chordPart.loop    = true;
-  chordPart.loopEnd = `${progression.length_bars}m`;
-  chordPart.start(0);
+  });
 }
 
 // 強さを ±0.05 の範囲で揺らす
@@ -158,7 +157,7 @@ function disposeSynth() {
 }
 
 export function disposeChord() {
-  chordPart?.dispose();
-  chordPart = null;
+  chordTrack?.dispose();
+  chordTrack = null;
   disposeSynth();
 }

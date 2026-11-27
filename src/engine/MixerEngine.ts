@@ -1,5 +1,6 @@
 import * as Tone from "tone";
 import mixPresets from "../data/mix_presets.json";
+import { reverbImpulse, type Impulse } from "./ReverbImpulse";
 
 interface MixPreset {
   // wet = リバーブ送りの全体量、preDelay = 響き始めるまでの間（秒。なければ REVERB_PRE_DELAY）、
@@ -30,11 +31,16 @@ const REVERB_SENDS: Record<string, number> = {
 const REVERB_PRE_DELAY = 0.02;
 
 // ロングリバーブ：FX / SE だけを送る長い響き（ライザーやインパクトの余韻を後ろに大きく残す）
-// ジャンルのリバーブ（短め・薄め）とは別に持ち、ジャンルによらず同じ響きにする
+// ジャンルのリバーブ（短め・薄め）とは別に持ち、ジャンルによらず同じ響きにする。
+// 長い響きは計算が重いので、FX が鳴る間（と余韻）だけつなぐ（createLongReverbGate）
 const LONG_REVERB = { decay: 5.5, preDelay: 0.04, wet: 0.55 };  // wet = 戻りの量
 const LONG_REVERB_SENDS: Record<string, number> = {
   fx: 0.8,
 };
+// 音が鳴り終わってから切り離すまで（秒）。音色のリリース・ディレイの残りも響かせる（響きそのものの余韻は、切り離しても最後まで鳴る）
+const LONG_REVERB_RELEASE = 4;
+// 書き出しで、音の始まりより少し前につなぐ（秒）
+const LONG_REVERB_LEAD = 0.05;
 
 // パートの低域カット（Hz。12dB/oct）。キック・ベースの帯域に和音やメロディの低い成分を重ねない
 // （それぞれのパートの最低音より下に置く：コード G3・パッド E3・アルペジオ C4・メロディとカウンターメロディ G3 あたり）。
@@ -71,11 +77,13 @@ interface Mixer {
   fade:       Tone.Gain;    // フェードアウト（ジャンルのサンプルの終わり）。ふだんは 1 で素通し
   returnEq:   Tone.EQ3;     // リバーブの戻りの EQ（マスターの EQ と同じ設定）
   reverbIn:   Tone.Filter;
-  reverb:     Tone.Reverb;
+  reverb:     Tone.Convolver;
+  impulse:    Impulse | null;  // 今のリバーブの響き（ジャンルで変わる。変わったときだけ入れ替える）
   reverbOut:  Tone.Gain;
   reverbDuck: Tone.Gain;    // リバーブの戻りをキックに合わせて沈めるゲイン
   longIn:     Tone.Filter;  // ロングリバーブの送り先（低域カット）
-  longReverb: Tone.Reverb;
+  longSends:  Tone.Gain[];  // ロングリバーブへ送るパートの送り（longUsers が 1 以上の間だけ longIn につなぐ）
+  longUsers:  number;       // 今ロングリバーブを使っている FX の数
   sends:      Record<string, Tone.Gain>;  // パートごとのリバーブ送り（ジャンルで量を変える）
   genre:      string;                     // 今当てているジャンル（あとからつないだパートの送りの量を決める）
   peak:       Tone.Analyser | null;       // マスターのピークを測る波形（左右。再生用のコンテキストだけ）
@@ -100,12 +108,14 @@ function getMixer(): Mixer {
   const returnEq   = new Tone.EQ3().connect(makeup);
   const reverbDuck = new Tone.Gain(1).connect(returnEq);
   const reverbOut  = new Tone.Gain(0).connect(reverbDuck);
-  const reverb     = new Tone.Reverb({ decay: 1.5, preDelay: REVERB_PRE_DELAY, wet: 1 }).connect(reverbOut);
+  const reverb     = new Tone.Convolver().connect(reverbOut);  // 響きのデータは applyMixPreset が入れる
   const reverbIn   = new Tone.Filter({ type: "highpass", frequency: 250 }).connect(reverb);
 
   // ロングリバーブ：送り → 低域カット → リバーブ → 戻り → 戻りの EQ
-  const longOut    = new Tone.Gain(LONG_REVERB.wet).connect(returnEq);
-  const longReverb = new Tone.Reverb({ decay: LONG_REVERB.decay, preDelay: LONG_REVERB.preDelay, wet: 1 }).connect(longOut);
+  const long       = reverbImpulse(LONG_REVERB.decay, LONG_REVERB.preDelay, ctx.sampleRate);
+  const longOut    = new Tone.Gain(LONG_REVERB.wet * long.gain).connect(returnEq);
+  const longReverb = new Tone.Convolver().connect(longOut);
+  longReverb.buffer = new Tone.ToneAudioBuffer(long.buffer);
   const longIn     = new Tone.Filter({ type: "highpass", frequency: 350 }).connect(longReverb);
 
   // リミッターのあと（スピーカーに出る音）の波形を左右別々に取り、ピークを測る。音を出さない枝分かれ
@@ -113,8 +123,8 @@ function getMixer(): Mixer {
   if (peak) limiter.connect(peak);
 
   const mixer: Mixer = {
-    input, eq, compressor, makeup, limiter, fade, returnEq, reverbIn, reverb, reverbOut, reverbDuck, longIn, longReverb,
-    sends: {}, genre: "", peak,
+    input, eq, compressor, makeup, limiter, fade, returnEq, reverbIn, reverb, impulse: null, reverbOut, reverbDuck,
+    longIn, longSends: [], longUsers: 0, sends: {}, genre: "", peak,
   };
   mixers.set(ctx, mixer);
   console.log("Mixer初期化完了");
@@ -208,8 +218,73 @@ export function connectToMixer(node: Tone.ToneAudioNode, part: string, pan = 0):
   mixer.sends[part] = send;
 
   const long = LONG_REVERB_SENDS[part] ?? 0;
-  if (long > 0) panner.connect(new Tone.Gain(long).connect(mixer.longIn));
+  if (long > 0) {
+    const longSend = new Tone.Gain(long);
+    panner.connect(longSend);
+    mixer.longSends.push(longSend);
+    if (mixer.longUsers > 0) longSend.connect(mixer.longIn);
+  }
   return panner;
+}
+
+// ===== ロングリバーブのつなぎ方 =====
+// grow（AudioWorklet）は鳴っていない間も 0 を出し続け、ブラウザには無音とわからない。つないだままだと、FX を1音も鳴らさない曲でも
+// 長い響きを計算し続ける（書き出し時間の約2割）。鳴る間だけつなげば、つないでいない間は計算しない
+
+// FX が鳴る間だけロングリバーブにつなぐ関数（音の始まりの時刻と長さ。秒）を作る。
+// FX を読み込むときに呼ぶ（書き出しの合成中は Tone.getContext() が再生用に戻っているので、読み込んだ時点のミキサーを控える）
+export function createLongReverbGate(): (time: number, seconds: number) => void {
+  const context = Tone.getContext();
+  const mixer   = getMixer();
+  const open  = () => {
+    if (mixer.longUsers++ === 0) mixer.longSends.forEach(send => send.connect(mixer.longIn));
+  };
+  const close = () => {
+    if (--mixer.longUsers === 0) mixer.longSends.forEach(send => send.disconnect(mixer.longIn));
+  };
+
+  return (time, seconds) => {
+    const end = time + seconds + LONG_REVERB_RELEASE;
+    if (context.isOffline) {
+      // 書き出し：予定の組み立ては合成より前に全部終わるので、合成をその時刻で一時停止してつなぎ替える。
+      // 一時停止できないとき（Tone.Offline での描き直しなど）は、つないだままにする
+      const raw = context.rawContext as unknown as OfflineAudioContext;
+      atRenderTime(raw, time - LONG_REVERB_LEAD, open, open);
+      atRenderTime(raw, end, close, () => {});
+      return;
+    }
+    open();  // 呼ばれるのは鳴る少し前（先読みの分）なので、すぐつなぐ
+    context.setTimeout(close, Math.max(0, end - context.currentTime));
+  };
+}
+
+// 書き出しの合成を seconds（秒）の所で一時停止して fn を呼ぶ。一時停止できなければ fallback を呼ぶ。
+// 同じ所では1回しか一時停止できないので、重なったものは1つにまとめる
+const renderStops = new WeakMap<OfflineAudioContext, Map<number, (() => void)[]>>();
+const RENDER_QUANTUM = 128;  // 合成の1回分（サンプル）。一時停止はこの区切りで行われる
+
+function atRenderTime(raw: OfflineAudioContext, seconds: number, fn: () => void, fallback: () => void): void {
+  const frame = Math.max(0, Math.floor((seconds * raw.sampleRate) / RENDER_QUANTUM) * RENDER_QUANTUM);
+  if (frame === 0 || typeof raw.suspend !== "function") {
+    fallback();
+    return;
+  }
+  const stops = renderStops.get(raw) ?? new Map<number, (() => void)[]>();
+  renderStops.set(raw, stops);
+  const waiting = stops.get(frame);
+  if (waiting) {
+    waiting.push(fn);
+    return;
+  }
+  const list = [fn];
+  stops.set(frame, list);
+  raw.suspend(frame / raw.sampleRate).then(() => {
+    list.forEach(run => run());
+    return raw.resume();
+  }, () => {
+    stops.delete(frame);
+    fallback();
+  });
 }
 
 // 現在のコンテキストのミキサーにジャンルの設定を当てる
@@ -217,11 +292,13 @@ export function applyMixPreset(genre: string) {
   const preset  = presets[genre] ?? presets["ローファイ"];
   const mixer   = getMixer();
 
-  // decay・preDelay を変えると響きのデータを作り直すので、変わったときだけ設定する
-  const preDelay = preset.reverb.preDelay ?? REVERB_PRE_DELAY;
-  if (mixer.reverb.decay !== preset.reverb.decay) mixer.reverb.decay = preset.reverb.decay;
-  if (mixer.reverb.preDelay !== preDelay) mixer.reverb.preDelay = preDelay;
-  mixer.reverbOut.gain.value = preset.reverb.wet;
+  // 響きを入れ替えると鳴っている余韻が切れるので、変わったときだけ入れ替える
+  const impulse = reverbImpulse(preset.reverb.decay, preset.reverb.preDelay ?? REVERB_PRE_DELAY, Tone.getContext().sampleRate);
+  if (mixer.impulse !== impulse) {
+    mixer.impulse = impulse;
+    mixer.reverb.buffer = new Tone.ToneAudioBuffer(impulse.buffer);
+  }
+  mixer.reverbOut.gain.value = preset.reverb.wet * impulse.gain;
 
   mixer.genre = presets[genre] ? genre : "ローファイ";
   for (const [part, send] of Object.entries(mixer.sends)) send.gain.value = sendAmount(mixer.genre, part);
@@ -241,10 +318,4 @@ export function applyMixPreset(genre: string) {
   mixer.limiter.threshold.value = preset.limiter.threshold;
 
   console.log(`ミックスプリセット適用: ${genre}`, preset);
-}
-
-// リバーブの響きのデータができるまで待つ（WAV書き出しで曲の頭から響かせるため）
-export async function mixerReady(): Promise<void> {
-  const mixer = getMixer();
-  await Promise.all([mixer.reverb.ready, mixer.longReverb.ready]);
 }

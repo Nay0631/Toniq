@@ -7,7 +7,7 @@ import { signatureLabel } from "../engine/SignaturePlayer";
 import { percLabel } from "../engine/PercPlayer";
 import { bassSubStandard } from "../engine/BassPlayer";
 import { isMetronomeOn } from "../engine/Metronome";
-import { isScalePreviewOn, scalePreviewNotes, scalePreviewStep } from "../engine/ScalePreview";
+import { isScalePreviewOn, scalePreviewChord, scalePreviewNotes, scalePreviewStep } from "../engine/ScalePreview";
 import * as Playback from "../engine/Playback";
 import { CUSTOM_DRUM_ID, ChordProgression, DrumPattern } from "../data/types";
 import { SCALE_LABELS, chordNames, displayNote, toDoremi } from "./format";
@@ -152,13 +152,15 @@ export function render(): void {
   lock.setAttribute("aria-checked", String(s.scaleLock));
   $("c-scale-lock-label")!.textContent = s.scaleLock ? "有効" : "無効";
 
-  // スケールの音（試聴中は鳴っている音を光らせる。最後の和音では 1・3・5番目の音を光らせる）
+  // スケールの音（試聴中は鳴っている音を光らせる。最後の和音では和音の音と、1オクターブ上の主音を光らせる）
   const notes = scalePreviewNotes(s.key, scale);
   const step  = scalePreviewStep();
   const chordStep = step === notes.length;
+  const chord     = scalePreviewChord(s.key, scale);
+  const last      = notes.length - 1;  // 1オクターブ上の主音
   $("c-scale-notes")!.innerHTML = notes.map((n, i) => {
-    const lit = chordStep ? (i === 0 || i === 2 || i === 4 || i === 7) : i === step;
-    return `<span class="scale-note${i === 0 || i === 7 ? " is-root" : ""}${lit ? " is-lit" : ""}">${displayNote(n.name.replace(/-?\d+$/, ""))}</span>`;
+    const lit = chordStep ? (i === last || chord.includes(n.midi)) : i === step;
+    return `<span class="scale-note${i === 0 || i === last ? " is-root" : ""}${lit ? " is-lit" : ""}">${displayNote(n.name.replace(/-?\d+$/, ""))}</span>`;
   }).join("");
   const scaleOn = isScalePreviewOn();
   $("c-scale-preview")!.textContent = scaleOn ? "■ 停止" : "▷ 試聴";

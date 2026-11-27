@@ -13,7 +13,7 @@ class FakeParam {
   cancelScheduledValues(time: number) { this.events = [["cancel", time]]; }
   get pulses() { return this.events.filter(e => e[0] === "set" && e[1] !== 0); }
 }
-interface Msg { type: string; slot: number; id?: number; values?: unknown }
+interface Msg { type: string; slot: number; id?: number; values?: unknown; bpm?: number }
 class FakeNode {
   port = { sent: [] as Msg[], onmessage: null as ((e: { data: unknown }) => void) | null, postMessage(m: Msg) { this.sent.push(m); } };
   parameters = new Map<string, FakeParam>();
@@ -156,5 +156,51 @@ describe("grow のノードの使い回し", () => {
     create(1);
     await task();
     expect(nodes.map(n => [n.options.numberOfOutputs, n.options.processorOptions.keep])).toEqual([[2, false], [1, false]]);
+  });
+});
+
+describe("鳴っている grow に値・BPM を当てる", () => {
+  const sent = (type: string) => nodes[0].port.sent.filter(m => m.type === type);
+  const insts: InstanceType<typeof Grow.GrowInstrument>[] = [];
+  const make = (values: () => number[]) => {
+    const inst = new Grow.GrowInstrument(values, 120);
+    insts.push(inst);
+    return inst;
+  };
+  beforeEach(() => { insts.splice(0).forEach(i => i.dispose()); newContext(); });
+
+  it("音作りの値は、前に渡した値から変わったものだけ送る（変わっていない音色には送らない）", async () => {
+    let cutoff = 2;
+    make(() => [1, cutoff, 3]);
+    make(() => [7, 8, 9]);  // FX など、音作りのパネルで変わらない音色
+    await task();
+    Grow.applyGrowLive();
+    expect(sent("params")).toEqual([]);
+    cutoff = 5;
+    Grow.applyGrowLive();
+    expect(sent("params")).toEqual([{ type: "params", slot: 0, values: [[1, 5]] }]);
+    Grow.applyGrowLive();
+    expect(sent("params")).toHaveLength(1);
+  });
+
+  it("ノードができる前に変えた値は、ノードを作るときに渡す", async () => {
+    let v = 1;
+    make(() => [v]);
+    v = 2;
+    Grow.applyGrowLive();
+    await task();
+    expect(nodes[0].options.processorOptions.slots[0]).toMatchObject({ values: [2] });
+    expect(sent("params")).toEqual([]);
+  });
+
+  it("BPM は BPM だけを送る。同じ BPM なら送らない", async () => {
+    const { setState } = await import("../src/engine/AppState");
+    make(() => [1, 2, 3]);
+    await task();
+    setState({ bpm: 90 });
+    Grow.applyGrowBpm();
+    Grow.applyGrowBpm();
+    expect(nodes[0].port.sent.filter(m => m.type === "bpm")).toEqual([{ type: "bpm", slot: 0, bpm: 90 }]);
+    expect(sent("params")).toEqual([]);
   });
 });

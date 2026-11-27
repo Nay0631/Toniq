@@ -147,21 +147,3 @@ export function applyAllVolumes(): void {
     if (panners[part]) panners[part].pan.value = toPan(value);
   });
 }
-
-// Volumeノードを破棄
-export function disposeVolumeNodes(): void {
-  const nodes = currentNodes();
-  Object.values(nodes).forEach(node => node.dispose());
-  Object.keys(nodes).forEach(key => delete nodes[key]);
-  const ducks = currentDucks();
-  Object.values(ducks).forEach(duck => duck.dispose());
-  Object.keys(ducks).forEach(key => delete ducks[key]);
-  const meters = currentMeters();
-  if (meters) {
-    Object.values(meters).forEach(meter => meter.dispose());
-    Object.keys(meters).forEach(key => delete meters[key]);
-  }
-  const panners = currentPanners();
-  Object.values(panners).forEach(panner => panner.dispose());
-  Object.keys(panners).forEach(key => delete panners[key]);
-}
