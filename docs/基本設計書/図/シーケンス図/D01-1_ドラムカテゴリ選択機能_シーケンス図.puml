@@ -19,7 +19,11 @@ deactivate L4
 L3 -> L5 : カテゴリのパターンを取得する() : void
 activate L5
 deactivate L5
-opt 今のパターンが候補にない
+alt オリジナルのドラム（ピアノロールで作成）を使っている
+  L3 -> L3 : パターンを置き換えない() : void
+  activate L3
+  deactivate L3
+else 今のパターンが候補にない
   L3 -> L4 : 候補の先頭のパターンに切り替える() : void
   activate L4
   deactivate L4

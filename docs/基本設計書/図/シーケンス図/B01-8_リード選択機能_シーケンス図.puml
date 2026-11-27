@@ -3,47 +3,46 @@
 mainframe sd B01-8_リード選択機能_シーケンス図
 
 actor ":利用者" as L1
-boundary ":カスタムモード画面" as L2
+boundary ":growパネル" as L2
 control ":音色設定" as L3
-entity ":アプリの状態" as L4
-control ":再生" as L5
-control ":メロディ演奏" as L6
-entity ":メロディ設定マスタ" as L7
-control ":grow" as L8
-entity ":growプリセット" as L9
+entity ":growプリセット" as L4
+entity ":アプリの状態" as L5
+control ":音色試聴" as L6
+control ":grow" as L7
 
-note over L2 : 音色の初期値は grow。\ngrow の音は grow のパネル（B01-10）で作る
+note over L2 : 「対象」がメロディのとき。選べるのは「ジャンルの標準」と\nリード・和音・プラック・パッドのカテゴリのプリセット
 
-L1 -> L2 : メロディの音色を選ぶ() : void
+L1 -> L2 : プリセットのボタンを押下する() : void
 activate L2
-L2 -> L3 : 音色を設定する() : void
+L2 -> L3 : メロディの音色を設定する() : void
 activate L3
-L3 -> L4 : メロディの音色を更新する() : void
-activate L4
-deactivate L4
-opt 再生中
-  L3 -> L5 : 再生し直す() : void
-  activate L5
-  L5 -> L6 : メロディの音源を作り直す() : void
-  activate L6
-  L6 -> L4 : 音色・音作りの値を取得する() : void
+alt プリセット
+  L3 -> L4 : プリセットを取得する() : void
   activate L4
   deactivate L4
-  alt 音色が grow で、grow を読み込めている
-    L6 -> L8 : 音作りの値で音源を作る() : void
-    activate L8
-    L8 -> L9 : プリセットの値を取得する() : void
-    activate L9
-    deactivate L9
-    deactivate L8
-  else 音色が「ジャンルに合わせる」、または grow を読み込めない
-    L6 -> L7 : ジャンルの標準の音色を取得する() : void
-    activate L7
-    deactivate L7
-  end
-  deactivate L6
-  deactivate L5
+else ジャンルの標準
+  L3 -> L4 : ジャンルの標準のプリセットを取得する() : void
+  activate L4
+  deactivate L4
 end
+L3 -> L5 : メロディの音色を更新し、変えた値を捨てる() : void
+activate L5
+deactivate L5
+alt 停止中
+  L3 -> L6 : 主音を1音鳴らす() : void
+  activate L6
+  L6 -> L7 : 選んだ音色で鳴らす() : void
+  activate L7
+  deactivate L7
+  deactivate L6
+else 再生中
+  L3 -> L7 : 鳴っているメロディにすぐ反映する() : void
+  activate L7
+  deactivate L7
+end
+L3 -> L2 : 選んでいるボタンを表示する() : void
+activate L2
+deactivate L2
 deactivate L3
 deactivate L2
 

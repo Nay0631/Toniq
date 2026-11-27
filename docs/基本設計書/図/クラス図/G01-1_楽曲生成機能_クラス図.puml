@@ -4,13 +4,17 @@ mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
   {method} <U+002B> 生成するボタンを押下する() : void
-  {method} <U+002B> 生成結果を表示する() : void
+  {method} <U+002B> 生成結果と残した内容を表示する() : void
 }
 class "楽曲生成" as C1 <<control>> {
   {method} <U+002B> 楽曲を生成する() : void
+  {method} <U+002D> メロディなしで生成するか確認する() : void
 }
 class "再生" as C3 <<control>> {
   {method} <U+002B> 再生・クリック音を止める() : void
+}
+class "拍子" as C8 <<control>> {
+  {method} <U+002B> ジャンルの標準の拍子にし、オリジナルのドラムを置き直す() : void
 }
 class "パターン選出" as C4 <<control>> {
   {method} <U+002B> コード進行・ドラム・サビの進行を選ぶ() : void
@@ -29,6 +33,11 @@ class "シンプルモード表マスタ" as E1 <<entity>> {
   {field} <U+002B> コード進行の候補・ドラムの候補
   {method} <U+002B> ジャンル×雰囲気の候補を取得する() : void
 }
+class "ジャンルスケールマスタ" as E7 <<entity>> {
+  {field} <U+002B> ジャンル
+  {field} <U+002B> 合うスケール
+  {method} <U+002B> ジャンルに合うスケールを取得する() : void
+}
 class "コード進行マスタ" as E2 <<entity>> {
   {field} <U+002B> ジャンル・雰囲気・スケール
   {field} <U+002B> ディグリーの並び（長さ）
@@ -40,26 +49,32 @@ class "ドラムパターンマスタ" as E3 <<entity>> {
 }
 class "標準アレンジマスタ" as E4 <<entity>> {
   {field} <U+002B> ジャンル
-  {field} <U+002B> 周回ごとのセクション・鳴らすパート
+  {field} <U+002B> セクションごとの鳴らすパート
   {method} <U+002B> ジャンルの標準アレンジを取得する() : void
 }
 class "メロディ設定マスタ" as E5 <<entity>> {
   {field} <U+002B> リズム・フレーズ形式・音域
+  {field} <U+002B> 標準の拍子
+  {method} <U+002B> 標準の拍子を取得する() : void
   {method} <U+002B> 生成パラメータを取得する() : void
 }
 class "アプリの状態" as E6 <<entity>> {
+  {field} <U+002B> 拍子
   {field} <U+002B> コード進行・サビの進行・ドラムパターン
   {field} <U+002B> メロディ・サビのメロディ
   {field} <U+002B> 小節数
   {field} <U+002B> 生成済み
-  {field} <U+002B> 今の曲・アレンジ・セクション
+  {field} <U+002B> 今の曲・構成・変えた所・セクション
   {method} <U+002B> 曲の内容を更新し生成済みにする() : void
 }
 
 B1 --> C1
 C1 --> C3
+C1 --> C8
+C8 --> E5
 C1 --> C4
 C4 --> E1
+C4 --> E7
 C4 --> E2
 C4 --> E3
 C1 --> C5

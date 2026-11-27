@@ -1,0 +1,55 @@
+' astah 風の見た目の共通設定（ER図用。IDEF1X の記法）
+' ER図の先頭で相対パスで !include して使う。
+' 例: !include ../astah-er-style.puml
+' ※ このファイル単体では図にならないよう、@startuml / @enduml は書かない。
+'
+' 記法（エンティティ・キー・線の種類は IDEF1X、多重度は UML の表記）:
+'   - エンティティは entity で書き、主キーを区切り線 -- の上、ほかの属性を下に書く。外部キーには「(FK)」を付ける
+'   - 依存エンティティ（主キーに外部キーを含む）はステレオタイプ <<依存>> を付ける（角を丸くする）
+'   - 依存リレーション（親の主キーが子の主キーに入る）：実線 親 "1" -- "0..*" 子
+'   - 非依存リレーション（親の主キーが子の属性に入る）：破線 親 "1" .. "0..*" 子。外部キーが空でもよいときは親の側を "0..1"
+'   - 多重度は線の両端に "1"・"0..1"・"0..*"・"1..*" で書く。線にリレーションシップ名（関係の名前）は書かない
+'   - 多対多は描かず、関連エンティティ（両方の主キーを主キーに持つ依存エンティティ）を間に置いて分ける
+'   - SVG に変換したあと docs/基本設計書/tools/er_layout.mjs で、エンティティの名前を箱の上に出し
+'     （PlantUML では箱の中の見出しになるため）、線の端を箱の縁につけ、多重度の文字を線の端の横に置く
+
+' 影なし
+skinparam shadowing false
+
+' 線は縦横だけで引く
+skinparam linetype ortho
+
+' クラスの丸アイコン・ステレオタイプの文字は出さない
+hide circle
+hide stereotype
+
+' 背景は白
+skinparam BackgroundColor white
+
+' エンティティはクラス図と同じ薄い黄色、枠線は太い黒
+skinparam class {
+  BackgroundColor #FFFFCC
+  BorderColor black
+  BorderThickness 2
+  AttributeFontStyle plain
+  ArrowColor black
+  ArrowThickness 1
+}
+
+' 依存エンティティは角を丸くする
+skinparam roundCorner<<依存>> 20
+
+' 箱どうしの間をあける（箱の上に出す名前の場所）
+skinparam nodesep 60
+skinparam ranksep 70
+
+' 凡例（実体の説明）は白地に黒の細い枠
+skinparam legend {
+  BackgroundColor white
+  BorderColor black
+  FontSize 12
+}
+
+' エンティティ名は太字。
+' ※ この行は必ずファイルの最後に置く（クラス図の共通設定と同じ）
+skinparam classFontStyle bold

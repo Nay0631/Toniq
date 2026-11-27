@@ -10,7 +10,7 @@ control ":パターン選出" as L5
 entity ":テンポマスタ" as L6
 control ":ジャンル試聴" as L7
 
-L1 -> L2 : 雰囲気のチップを押下する() : void
+L1 -> L2 : 雰囲気のボタンを押下する() : void
 activate L2
 L2 -> L3 : 雰囲気を選択する() : void
 activate L3
@@ -35,7 +35,7 @@ opt 選んでいたジャンルが雰囲気に合わない
     deactivate L7
   end
 end
-L3 -> L2 : 選択中の雰囲気と雰囲気に合うジャンルのチップを表示する() : void
+L3 -> L2 : 選択中の雰囲気と雰囲気に合うジャンルのボタンを表示する() : void
 activate L2
 deactivate L2
 deactivate L3

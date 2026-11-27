@@ -4,6 +4,7 @@ mainframe **pkg**
 
 class "カスタムモード画面" as B1 <<boundary>> {
   {method} <U+002B> スケールを選ぶ() : void
+  {method} <U+002B> 進行を変えた通知を出し、進行の行を光らせる() : void
 }
 class "スケール設定" as C1 <<control>> {
   {method} <U+002B> スケールを設定する() : void
@@ -32,5 +33,6 @@ C1 --> E1
 C1 --> E2
 C1 --> C2
 C1 --> C3
+C1 --> B1
 
 @enduml

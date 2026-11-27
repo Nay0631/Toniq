@@ -6,28 +6,25 @@ actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
 control ":サビ進行設定" as L3
 entity ":アプリの状態" as L4
-control ":パターン選出" as L5
 entity ":コード進行マスタ" as L6
 control ":曲の構成" as L7
 control ":メロディ生成" as L8
 entity ":メロディ設定マスタ" as L9
 control ":再生" as L10
 
-note over L2 : サビのドロップダウンで選んだときは「サビの進行を切り替える()」で、\n候補から選ぶ代わりに選んだコード進行を取得する（「なし」なら空にする）。あとは同じ流れ
+note over L2 : ドロップダウンで選んだときも 前後の切り替えボタンで送ったときも同じ流れ
 
-L1 -> L2 : サビの差し替えボタンを押下する() : void
+L1 -> L2 : サビの進行を選ぶ() : void
 activate L2
-L2 -> L3 : サビの進行を差し替える() : void
+L2 -> L3 : サビの進行を切り替える() : void
 activate L3
 L3 -> L4 : コード進行・ジャンル・雰囲気を取得する() : void
 activate L4
 deactivate L4
-L3 -> L5 : 今のサビ以外から選ぶ() : void
-activate L5
-L5 -> L6 : 同じ長さ・スケールの候補を取得する() : void
+L3 -> L6 : 同じ長さ・スケールの候補を取得する() : void
 activate L6
+note right of L6 : 「なし」と、ジャンル・雰囲気が\n合うものを先に並べる
 deactivate L6
-deactivate L5
 L3 -> L4 : サビの進行を更新する() : void
 activate L4
 deactivate L4

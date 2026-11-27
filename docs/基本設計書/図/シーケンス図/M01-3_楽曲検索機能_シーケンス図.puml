@@ -9,7 +9,8 @@ entity ":アプリの状態" as L4
 control ":曲の管理" as L5
 entity ":楽曲データ" as L6
 
-L1 -> L2 : 曲名を入力する・条件を押下する() : void
+note over L2 : 検索は曲名・ジャンル・雰囲気・キー（キー＋スケール名）から。\nスペースで区切った言葉はすべて含む曲に絞る
+L1 -> L2 : 検索語を入力する・条件を押下する() : void
 activate L2
 L2 -> L3 : 絞り込みの条件を変える() : void
 activate L3
@@ -25,6 +26,9 @@ deactivate L5
 L3 -> L3 : 条件で絞り込んで並べる() : void
 activate L3
 deactivate L3
+L3 -> L2 : ジャンルごとの曲数を表示する() : void
+activate L2
+deactivate L2
 alt 条件に合う曲がある
   L3 -> L2 : 絞り込んだ一覧を表示する() : void
   activate L2

@@ -1,0 +1,35 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "もっと調整" as B1 <<boundary>> {
+  {method} <U+002B> 転調・転調する所を選ぶ() : void
+  {method} <U+002B> 変更の数を表示する() : void
+}
+class "転調設定" as C1 <<control>> {
+  {method} <U+002B> 転調を設定する() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 再生し直す() : void
+}
+class "曲の構成" as C3 <<control>> {
+  {method} <U+002B> 転調する周回を求める() : void
+  {method} <U+002D> 転調しない() : void
+}
+class "コード変換" as C4 <<control>> {
+  {method} <U+002B> 上げたキーでコードを求める() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 転調の幅（上げる半音の数。0＝しない）
+  {field} <U+002B> 転調する所（最後のサビから／サビだけ）
+  {method} <U+002B> 転調の幅・転調する所を更新する() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> B1
+C1 --> C2
+C2 --> C3
+C2 --> C4
+
+@enduml

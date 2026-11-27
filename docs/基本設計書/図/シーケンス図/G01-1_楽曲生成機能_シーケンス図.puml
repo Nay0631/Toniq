@@ -6,8 +6,10 @@ actor ":利用者" as L1
 boundary ":シンプルモード画面" as L2
 control ":楽曲生成" as L4
 control ":再生" as L5
+control ":拍子" as L16
 control ":パターン選出" as L6
 entity ":シンプルモード表マスタ" as L7
+entity ":ジャンルスケールマスタ" as L17
 entity ":コード進行マスタ" as L8
 entity ":ドラムパターンマスタ" as L9
 control ":アレンジ管理" as L10
@@ -17,26 +19,43 @@ control ":メロディ生成" as L13
 entity ":メロディ設定マスタ" as L14
 entity ":アプリの状態" as L15
 
-note over L2 : カスタムモードでメロディを作り直すときは\nピアノロールの「自動生成」（P01-1）を使う
+note over L2 : 「別の曲を生成する」も同じ流れ。カスタムモードでメロディを\n作り直すときはピアノロールの「自動生成」（P01-1）を使う
 
 L1 -> L2 : 生成するボタンを押下する() : void
 activate L2
 L2 -> L4 : 楽曲を生成する() : void
 activate L4
+opt メロディが「自分で入力」で音がない
+  L4 -> L4 : メロディなしで生成するか確認する() : void
+  activate L4
+  deactivate L4
+  note right of L4 : 取り消したら何もしない
+end
 L4 -> L5 : 再生・クリック音を止める() : void
 activate L5
 deactivate L5
+L4 -> L16 : ジャンルの標準の拍子にし、オリジナルのドラムを置き直す() : void
+activate L16
+L16 -> L14 : 標準の拍子を取得する() : void
+activate L14
+deactivate L14
+deactivate L16
 L4 -> L6 : コード進行・ドラム・サビの進行を選ぶ() : void
 activate L6
 L6 -> L7 : ジャンル×雰囲気の候補を取得する() : void
 activate L7
 deactivate L7
+L6 -> L17 : ジャンルに合うスケールを取得する() : void
+activate L17
+deactivate L17
 L6 -> L8 : コード進行と同じ長さ・スケールのサビの進行を取得する() : void
 activate L8
 deactivate L8
-L6 -> L9 : ドラムパターンを取得する() : void
-activate L9
-deactivate L9
+opt オリジナルのドラムを使っていない
+  L6 -> L9 : ドラムパターンを取得する() : void
+  activate L9
+  deactivate L9
+end
 deactivate L6
 L4 -> L10 : 全パートがそろう周回数を求める() : void
 activate L10
@@ -57,9 +76,9 @@ opt メロディが自動生成
 end
 L4 -> L15 : 曲の内容を更新し生成済みにする() : void
 activate L15
-note right of L15 : アレンジ・セクションは標準に、\n今の曲は未保存に戻す
+note right of L15 : 構成は標準に、変えた所・セクションは空に、\n今の曲は未保存に戻す
 deactivate L15
-L4 -> L2 : 生成結果を表示する() : void
+L4 -> L2 : 生成結果と残した内容を表示する() : void
 activate L2
 deactivate L2
 deactivate L4

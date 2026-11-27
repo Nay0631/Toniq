@@ -11,6 +11,8 @@ entity ":アプリの状態" as L4
 control ":曲の構成" as L5
 control ":アレンジ管理" as L6
 entity ":標準アレンジマスタ" as L7
+entity ":構成プリセットマスタ" as L18
+control ":拍子" as L19
 control ":コード変換" as L8
 entity ":スケールマスタ" as L9
 control ":各パートの演奏" as L10
@@ -49,17 +51,21 @@ deactivate L15
 opt ファイル名を決めた
   L2 -> L3 : MIDI で書き出す() : void
   activate L3
-  L3 -> L4 : キー・BPM・小節数・パートの ON/OFF・スウィングを取得する() : void
+  L3 -> L4 : キー・BPM・拍子・小節数・パートの ON/OFF・スウィングを取得する() : void
   activate L4
   deactivate L4
   L3 -> L5 : 曲全体のコード進行とメロディを求める() : void
   activate L5
+  note right of L5 : セクション・転調・エンディング込み
   opt セクションを編集していない
     L5 -> L7 : 標準のセクションを取得する() : void
     activate L7
     deactivate L7
   end
   deactivate L5
+  L3 -> L19 : 拍子と3連符の位置を求める() : void
+  activate L19
+  deactivate L19
   L3 -> L8 : コード・パッドのボイシングを求める() : void
   activate L8
   L8 -> L9 : スケールの音程を取得する() : void
@@ -81,11 +87,12 @@ opt ファイル名を決めた
   loop 曲全体（小節数分）の各パートの音
     L3 -> L6 : 鳴らす小節か確かめる() : void
     activate L6
-    opt アレンジを編集していない
-      L6 -> L7 : 標準アレンジを取得する() : void
-      activate L7
-      deactivate L7
-    end
+    L6 -> L7 : 標準アレンジを取得する() : void
+    activate L7
+    deactivate L7
+    L6 -> L18 : 構成のプリセットを取得する() : void
+    activate L18
+    deactivate L18
     deactivate L6
     L3 -> L3 : スウィングに合わせて発音位置をずらす() : void
     activate L3

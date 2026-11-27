@@ -8,6 +8,7 @@ control ":セクション切り替え" as L3
 control ":曲の構成" as L4
 entity ":アプリの状態" as L5
 entity ":標準アレンジマスタ" as L6
+entity ":構成プリセットマスタ" as L8
 control ":再生" as L7
 
 L1 -> L2 : セクションの行の周回を押下する() : void
@@ -16,13 +17,16 @@ L2 -> L3 : その周回の Aメロ／サビを切り替える() : void
 activate L3
 L3 -> L4 : 周回ごとのセクションを取得する() : void
 activate L4
-L4 -> L5 : セクション・ジャンル・小節数を取得する() : void
+L4 -> L5 : セクション・構成・ジャンル・小節数を取得する() : void
 activate L5
 deactivate L5
 opt セクションを編集していない
   L4 -> L6 : 標準のセクションを取得する() : void
   activate L6
   deactivate L6
+  L4 -> L8 : 構成のプリセットのセクションの並びを取得する() : void
+  activate L8
+  deactivate L8
 end
 deactivate L4
 L3 -> L3 : 押した周回を Aメロとサビで入れ替える() : void

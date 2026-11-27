@@ -3,15 +3,16 @@
 mainframe sd C01-6_コード音色選択機能_シーケンス図
 
 actor ":利用者" as L1
-boundary ":カスタムモード画面" as L2
+boundary ":もっと調整" as L2
 control ":コード音色設定" as L3
 entity ":アプリの状態" as L4
+control ":音色試聴" as L9
 control ":再生" as L5
 control ":コード演奏" as L6
 control ":grow" as L7
 entity ":growプリセット" as L8
 
-note over L2 : 選択肢は「ジャンルに合わせる（標準のプリセット名）」と\ngrow のコードのプリセット
+note over L2 : 選択肢は「ジャンルに合わせる（標準のプリセット名）」と\ngrow の和音・パッドのカテゴリのプリセット
 
 L1 -> L2 : コードの音色を選ぶ() : void
 activate L2
@@ -20,7 +21,17 @@ activate L3
 L3 -> L4 : コードのプリセットを更新し変えた値を捨てる() : void
 activate L4
 deactivate L4
-opt 再生中
+alt 停止中
+  L3 -> L9 : 主音を1音鳴らす() : void
+  activate L9
+  L9 -> L7 : 選んだ音色で鳴らす() : void
+  activate L7
+  L7 -> L8 : プリセットを取得する() : void
+  activate L8
+  deactivate L8
+  deactivate L7
+  deactivate L9
+else 再生中
   L3 -> L5 : 再生し直す() : void
   activate L5
   L5 -> L6 : コードの音源を作り直す() : void
