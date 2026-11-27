@@ -3,15 +3,15 @@
 mainframe **pkg**
 
 class "シンプルモード画面" as B1 <<boundary>> {
-  {method} <U+002B> クリックで試聴ボタンを押下する() : void
+  {method} <U+002B> 「テンポを聴く」ボタンを押下する() : void
 }
 class "カスタムモード画面" as B2 <<boundary>> {
-  {method} <U+002B> 試聴ボタンを押下する() : void
+  {method} <U+002B> 「メトロノーム」ボタンを押下する() : void
 }
 class "クリック音" as C1 <<control>> {
-  {method} <U+002B> クリック音を鳴らす() : void
-  {method} <U+002B> クリック音を止める() : void
-  {method} <U+002D> 次の拍のクリック音を予約する() : void
+  {method} <U+002B> メトロノームの音を鳴らす() : void
+  {method} <U+002B> メトロノームの音を止める() : void
+  {method} <U+002D> 次の拍の音を予約する() : void
 }
 class "再生" as C2 <<control>> {
   {method} <U+002B> 曲の再生を止める() : void

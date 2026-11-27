@@ -1,0 +1,56 @@
+@startuml
+!include ../astah-sequence-style.puml
+mainframe sd A01-10_区間ループ機能_シーケンス図
+
+actor ":利用者" as L1
+boundary ":アレンジ画面" as L2
+control ":区間ループ設定" as L3
+entity ":アプリの状態" as L4
+control ":再生" as L5
+
+note over L2 : 区間は曲には保存しない（曲を開く・新規作成で消える）。シンプルモード・書き出しには使わない。\nピアノロールでメロディを編集している間は、選んでいるセクションのくり返しを優先する
+
+L1 -> L2 : 小節の目盛りを横にドラッグする() : void
+activate L2
+L2 -> L3 : くり返す区間を決める() : void
+activate L3
+alt 別の小節までドラッグした
+  L3 -> L4 : 区間と再生開始位置を更新する() : void
+  activate L4
+  deactivate L4
+  note right of L4 : 曲の長さを超える区間は曲の終わりまでにする
+  L3 -> L2 : 区間の印と「区間ループ ○〜○ 小節」を表示する() : void
+  activate L2
+  deactivate L2
+  opt 再生中
+    L3 -> L5 : 区間の最初から再生し直す() : void
+    activate L5
+    deactivate L5
+  end
+else ドラッグしていない
+  L3 -> L3 : 再生開始位置の選択にする() : void
+  activate L3
+  deactivate L3
+end
+deactivate L3
+deactivate L2
+
+L1 -> L2 : 区間ループの解除ボタンを押下する() : void
+activate L2
+L2 -> L3 : 区間を解除する() : void
+activate L3
+L3 -> L4 : 区間をなくす() : void
+activate L4
+deactivate L4
+L3 -> L2 : 区間の印と「区間ループ」の表示を消す() : void
+activate L2
+deactivate L2
+opt 再生中
+  L3 -> L5 : 今の位置から曲全体の再生に戻す() : void
+  activate L5
+  deactivate L5
+end
+deactivate L3
+deactivate L2
+
+@enduml

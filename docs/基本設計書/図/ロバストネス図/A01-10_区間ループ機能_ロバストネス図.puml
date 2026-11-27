@@ -1,0 +1,18 @@
+@startuml
+!include ../astah-robustness-style.puml
+mainframe **uc** A01-10_区間ループ機能_ロバストネス図
+
+actor "利用者" as A1
+boundary "アレンジ画面" as B1
+control "区間ループ設定" as C1
+control "再生" as C2
+entity "アプリの状態" as E1
+
+A1 --> B1 : 小節の目盛りを\n横にドラッグする
+A1 --> B1 : 区間ループの\n解除ボタンを押下する
+B1 --> C1 : くり返す区間を決める・\n解除する
+C1 --> E1 : 区間と再生開始位置を\n更新する（解除なら\n区間をなくす）
+C1 --> C2 : 再生中なら区間の最初から\n（解除なら今の位置から\n曲全体で）再生し直す
+C1 --> B1 : 区間の印と\n「区間ループ ○〜○ 小節」\nを表示する
+
+@enduml

@@ -9,8 +9,21 @@ class "シンプルモード画面" as B1 <<boundary>> {
 }
 class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> 保存ボタンを押下する() : void
+  {method} <U+002B> 「メニューに戻る」を押下する() : void
   {method} <U+002B> 「保存しました」を表示する() : void
   {method} <U+002B> 保存容量の案内と保存し直すよう知らせる() : void
+}
+class "確認ダイアログ" as B3 <<boundary>> {
+  {method} <U+002B> 楽曲を保存するか聞く() : void
+  {method} <U+002B> 戻り方を選ぶ() : void
+}
+class "メニューに戻る確認" as C2 <<control>> {
+  {method} <U+002B> メニューに戻る() : void
+  {method} <U+002B> 選んだ戻り方を渡す() : void
+  {method} <U+002D> 戻らない() : void
+}
+class "画面切り替え" as C3 <<control>> {
+  {method} <U+002B> メニューに戻る() : void
 }
 class "曲の管理" as C1 <<control>> {
   {method} <U+002B> 今の曲を保存する() : void
@@ -35,5 +48,10 @@ C1 --> E1
 C1 --> E2
 C1 --> B1
 C1 --> B2
+B2 --> C2
+C2 --> B3
+B3 --> C2
+C2 --> C1
+C2 --> C3
 
 @enduml

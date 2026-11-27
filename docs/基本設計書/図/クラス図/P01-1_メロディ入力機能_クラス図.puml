@@ -8,13 +8,18 @@ class "ピアノロール画面" as B1 <<boundary>> {
   {method} <U+002B> グリッドを押下する・タイピングピアノのキーを押す() : void
   {method} <U+002B> 自動生成ボタンを押下する() : void
   {method} <U+002B> クリアボタンを押下する() : void
+  {method} <U+002B> 表示の拡大・縮小ボタンを押下する() : void
+  {method} <U+002B> 情報バーの「再生」・スペースキーを押下する() : void
   {method} <U+002B> 音符を表示する() : void
+  {method} <U+002B> 「ここにはすでに音があります」の注意を5秒出す() : void
+  {method} <U+002B> 音符と拡大率を表示する() : void
 }
 class "音符編集" as C1 <<control>> {
   {method} <U+002B> 音を置く() : void
   {method} <U+002B> 自動生成のメロディに置き換える() : void
   {method} <U+002B> すべて消す() : void
-  {method} <U+002D> 重なる音を手前で切る() : void
+  {method} <U+002B> 表示を拡大・縮小する() : void
+  {method} <U+002D> 後ろの音にかかる長さを手前まで短くする() : void
   {method} <U+002D> 置き換えるか確認する() : void
   {method} <U+002D> 消すか確認する() : void
 }
@@ -33,11 +38,19 @@ class "曲の構成" as C5 <<control>> {
 class "メロディ生成" as C6 <<control>> {
   {method} <U+002B> メロディを作る() : void
 }
+class "再生" as C7 <<control>> {
+  {method} <U+002B> 選んでいるセクションの最初の周回をくり返し鳴らす() : void
+}
+class "アレンジ管理" as C8 <<control>> {
+  {method} <U+002B> メロディを置いていない小節でもメロディを鳴らす() : void
+}
 class "アプリの状態" as E1 <<entity>> {
   {field} <U+002B> メロディ・サビのメロディ
   {field} <U+002B> メロディの入力方法
   {field} <U+002B> 音符の長さ・オクターブ
   {field} <U+002B> スケールロック（ピアノロール）
+  {field} <U+002B> 横・縦の拡大率
+  {method} <U+002B> 拡大率を更新する() : void
   {method} <U+002B> キー・スケール・スケールロックを取得する() : void
   {method} <U+002B> 編集中のセクションのメロディを更新し「自分で入力」にする() : void
   {method} <U+002B> メロディとサビのメロディを更新し「自動生成」にする() : void
@@ -58,5 +71,7 @@ C1 --> C4
 C1 --> C5
 C5 --> C6
 C1 --> B1
+B1 --> C7
+C7 --> C8
 
 @enduml

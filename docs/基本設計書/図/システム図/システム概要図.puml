@@ -11,7 +11,7 @@ skinparam ranksep 120
 ' 両向きの線（<-->）の文は、処理を主語にして「〜を読む・〜を書き込む」のように書き、どちら向きに何が流れるか分かるようにする
 ' 線の文の頭には全角の空白を1つ入れ、線と文の間にすき間を作る（PlantUML は文を線のすぐ右に置くので、文の左端が線に触れるため。2026-11-23）
 ' 線の文が自分の線のすぐ横に出るよう、線を短く・交わらないように並べる（処理は左から 履歴管理・端末の設定・曲の管理・書き出し・再生・自動作曲・クイズ出題。
-' スピーカー・出力フォルダ・曲ファイルは Toniq の枠の下、使う処理の下に置く。クイズ問題マスタはクイズ出題の右に置く。2026-11-23 ユーザーの指示）
+' スピーカー・出力フォルダは Toniq の枠の下、使う処理の下に置く。クイズ問題マスタはクイズ出題の右に置く。2026-11-23 ユーザーの指示）
 
 actor "利用者" as U
 
@@ -21,7 +21,7 @@ rectangle "Toniq（Windows PC で動くデスクトップアプリ）" as SYS <<
   database "<&layers{scale=2}>\nパターンDB\n（コード進行マスタ・ドラムパターンマスタ・\nジャンル別の設定のマスタ）" as DB
   rectangle "自動作曲\n（パターン選出・\nメロディ生成・アレンジ管理）" as P1
   rectangle "再生\n（各パートの演奏・\ngrow・ミックス）" as P2
-  rectangle "書き出し\n（音声合成・音声変換・\nMIDI書き出し）" as P3
+  rectangle "書き出し\n（音声合成・音声変換・\nMIDI書き出し・\n出力ファイル保存）" as P3
   rectangle "曲の管理\n（保存・読み込み）" as P4
   rectangle "履歴管理\n（元に戻す・やり直す）" as P5
   rectangle "クイズ出題\n（出題・採点・\nクイズの音）" as P6
@@ -33,7 +33,6 @@ rectangle "Toniq（Windows PC で動くデスクトップアプリ）" as SYS <<
 
 rectangle "<&volume-high{scale=3}>\nスピーカー・\nヘッドホン" as SPK
 folder "<&folder{scale=3}>\n出力フォルダ\n（MIDIファイル・\nWAVファイル・MP3ファイル）" as OUT
-artifact "<&document{scale=3}>\n曲ファイル\n（.toniq.json）" as FILE
 
 U --> UI : 　選ぶ・編集する
 UI --> ST : 　選んだ値を書き込む
@@ -48,9 +47,8 @@ QDB -left-> P6 : 　問題を読む
 ST <--> P7 : 　設定を読む・書き込む
 P2 --> SPK : 　音を出す
 P6 --> SPK : 　問題の音を出す
-P3 --> OUT : 　保存する
+P3 <--> OUT : 　ファイルを保存し、\n一覧・試聴のために読む
 P4 --> LIST : 　保存・読み込み
-P4 -down-> FILE : 　書き出し・読み込み
 P7 --> PREF : 　保存・読み込み
 
 ' 並び（見えない線）：処理を左から順に並べ、外の機器・ファイルを枠の下の段に置く
@@ -61,7 +59,6 @@ P3 -[hidden]right- P2
 P2 -[hidden]right- P1
 P1 -[hidden]right- P6
 PREF -[hidden]right- LIST
-LIST -[hidden]down- FILE
-FILE -[hidden]right- OUT
+LIST -[hidden]down- OUT
 OUT -[hidden]right- SPK
 @enduml

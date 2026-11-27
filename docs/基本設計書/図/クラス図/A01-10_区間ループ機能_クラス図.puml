@@ -1,0 +1,32 @@
+@startuml
+!include ../astah-class-style.puml
+mainframe **pkg**
+
+class "アレンジ画面" as B1 <<boundary>> {
+  {method} <U+002B> 小節の目盛りを横にドラッグする() : void
+  {method} <U+002B> 区間ループの解除ボタンを押下する() : void
+  {method} <U+002B> 区間の印と「区間ループ ○〜○ 小節」を表示する() : void
+  {method} <U+002B> 区間の印と「区間ループ」の表示を消す() : void
+}
+class "区間ループ設定" as C1 <<control>> {
+  {method} <U+002B> くり返す区間を決める() : void
+  {method} <U+002B> 区間を解除する() : void
+  {method} <U+002D> 再生開始位置の選択にする() : void
+}
+class "再生" as C2 <<control>> {
+  {method} <U+002B> 区間の最初から再生し直す() : void
+  {method} <U+002B> 今の位置から曲全体の再生に戻す() : void
+}
+class "アプリの状態" as E1 <<entity>> {
+  {field} <U+002B> 区間ループ（最初の小節・小節数）
+  {field} <U+002B> 再生開始位置（小節）
+  {method} <U+002B> 区間と再生開始位置を更新する() : void
+  {method} <U+002B> 区間をなくす() : void
+}
+
+B1 --> C1
+C1 --> E1
+C1 --> B1
+C1 --> C2
+
+@enduml

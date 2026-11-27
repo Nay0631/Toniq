@@ -22,6 +22,15 @@ alt 音符をドラッグ（移動・長さ変更）
   L3 -> L3 : 位置・高さ・長さを変える() : void
   activate L3
   deactivate L3
+  note right of L3 : 位置は1マスずつ動かす。長さは音符長にかかわらず\n1マスずつ変え、後ろの音の手前までしか伸ばさない
+  opt 動かした先にほかの音が鳴っている
+    L3 -> L3 : 元の位置に戻す() : void
+    activate L3
+    deactivate L3
+    L3 -> L2 : 「ここにはすでに音があります」の注意を5秒出す() : void
+    activate L2
+    deactivate L2
+  end
   opt 音を動かした、かつスケールロック中
     L3 -> L5 : スケール音に寄せる() : void
     activate L5

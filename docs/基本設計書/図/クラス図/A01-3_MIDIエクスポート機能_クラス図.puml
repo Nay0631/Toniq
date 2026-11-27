@@ -12,8 +12,16 @@ class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> フォルダを開くか確認する() : void
   {method} <U+002B> OK を押下する() : void
 }
+class "ミュージックリスト画面" as B5 <<boundary>> {
+  {method} <U+002B> 曲のメニューの「MIDI で書き出す」を押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
+  {method} <U+002B> 書き出したファイルの一覧を読み直す() : void
+}
 class "ファイル名ダイアログ" as B3 <<boundary>> {
-  {method} <U+002B> 初期値のファイル名でダイアログを表示する() : void
+  {field} <U+002D> 書き出す前の注意書き
+  {field} <U+002D> 「ミュージックリストにも保存する」のチェックボックス
+  {method} <U+002B> 初期値のファイル名と注意書きでダイアログを表示する() : void
   {method} <U+002B> ファイル名を入力して書き出すボタンを押下する() : void
   {method} <U+002B> キャンセルボタンを押下する() : void
 }
@@ -22,9 +30,14 @@ class "ファイル名入力" as C6 <<control>> {
   {method} <U+002B> ファイル名を確定する() : void
   {method} <U+002B> 取り消す() : void
 }
+class "楽曲切り替え" as C11 <<control>> {
+  {method} <U+002B> その曲を今の曲として読み込む() : void
+}
+class "保存の確認" as C12 <<control>> {
+  {method} <U+002B> ミュージックリストに保存する() : void
+}
 class "MIDI書き出し" as C1 <<control>> {
   {method} <U+002B> MIDI で書き出す() : void
-  {method} <U+002D> スウィングに合わせて発音位置をずらす() : void
   {method} <U+002D> テンポ・拍子と8トラックを書く() : void
 }
 class "曲の構成" as C2 <<control>> {
@@ -38,6 +51,9 @@ class "コード変換" as C4 <<control>> {
 }
 class "各パートの演奏" as C5 <<control>> {
   {method} <U+002B> コード・パッド・アルペジオ・ベース・カウンターメロディ・ドラム・パーカッションの音を並べる() : void
+}
+class "グルーヴ" as C13 <<control>> {
+  {method} <U+002B> 発音位置をスウィングでずらす() : void
 }
 class "拍子" as C8 <<control>> {
   {method} <U+002B> 拍子と3連符の位置を求める() : void
@@ -82,6 +98,11 @@ class "構成プリセットマスタ" as E8 <<entity>> {
   {field} <U+002B> 標準アレンジへの変形
   {method} <U+002B> 構成のプリセットを取得する() : void
 }
+class "楽曲データ" as E9 <<entity>> {
+  {field} <U+002B> 保存した曲
+  {method} <U+002B> 曲の内容を取得する() : void
+  {method} <U+002B> 曲を保存する() : void
+}
 class "MIDIファイル" as E7 <<entity>> {
   {field} <U+002B> Melody・Chord・Pad・Arpeggio・Bass・Counter Melody・Drums・Percussion のトラック
   {field} <U+002B> 保存先（output/midi）
@@ -101,6 +122,7 @@ C1 --> C3
 C3 --> E2
 C3 --> E8
 C1 --> C8
+C1 --> C13
 C1 --> C4
 C4 --> E3
 C1 --> C5
@@ -113,5 +135,14 @@ C7 --> B1
 C7 --> B2
 B1 --> C7
 B2 --> C7
+
+B5 --> C11
+C11 --> E9
+B5 --> C6
+B5 --> C1
+C6 --> C12
+C12 --> E9
+C7 --> B5
+B5 --> C7
 
 @enduml

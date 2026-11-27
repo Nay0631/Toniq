@@ -12,14 +12,23 @@ class "カスタムモード画面" as B2 <<boundary>> {
   {method} <U+002B> フォルダを開くか確認する() : void
   {method} <U+002B> OK を押下する() : void
 }
+class "ミュージックリスト画面" as B5 <<boundary>> {
+  {method} <U+002B> 曲のメニューの「WAV で書き出す」を押下する() : void
+  {method} <U+002B> フォルダを開くか確認する() : void
+  {method} <U+002B> OK を押下する() : void
+  {method} <U+002B> 書き出したファイルの一覧を読み直す() : void
+}
 class "ファイル名ダイアログ" as B4 <<boundary>> {
-  {method} <U+002B> 初期値のファイル名でダイアログを表示する() : void
+  {field} <U+002D> 書き出す前の注意書き
+  {field} <U+002D> 「ミュージックリストにも保存する」のチェックボックス
+  {method} <U+002B> 初期値のファイル名と注意書きでダイアログを表示する() : void
   {method} <U+002B> ファイル名を入力して書き出すボタンを押下する() : void
   {method} <U+002B> キャンセルボタンを押下する() : void
 }
 class "書き出しダイアログ" as B3 <<boundary>> {
   {method} <U+002B> 書き出しダイアログを開く() : void
   {method} <U+002B> 段階と進み具合を表示する() : void
+  {method} <U+002B> 「中断する」を押下する() : void
   {method} <U+002B> 書き出しダイアログを閉じる() : void
   {method} <U+002B> 失敗のメッセージを表示する() : void
 }
@@ -28,8 +37,15 @@ class "ファイル名入力" as C7 <<control>> {
   {method} <U+002B> ファイル名を確定する() : void
   {method} <U+002B> 取り消す() : void
 }
+class "楽曲切り替え" as C11 <<control>> {
+  {method} <U+002B> その曲を今の曲として読み込む() : void
+}
+class "保存の確認" as C12 <<control>> {
+  {method} <U+002B> ミュージックリストに保存する() : void
+}
 class "再生" as C1 <<control>> {
   {method} <U+002B> WAV で書き出す() : void
+  {method} <U+002B> 書き出しを中断する() : void
   {method} <U+002D> 再生を止める() : void
 }
 class "ドラム音源読み込み" as C2 <<control>> {
@@ -75,6 +91,11 @@ class "growプリセット" as E5 <<entity>> {
   {field} <U+002B> 音作りの値
   {method} <U+002B> プリセットを取得する() : void
 }
+class "楽曲データ" as E9 <<entity>> {
+  {field} <U+002B> 保存した曲
+  {method} <U+002B> 曲の内容を取得する() : void
+  {method} <U+002B> 曲を保存する() : void
+}
 class "WAVファイル" as E4 <<entity>> {
   {field} <U+002B> 16bit PCM ステレオ
   {field} <U+002B> 保存先（output/audio）
@@ -104,5 +125,15 @@ C8 --> B1
 C8 --> B2
 B1 --> C8
 B2 --> C8
+
+B5 --> C11
+C11 --> E9
+B5 --> C7
+B5 --> C1
+C7 --> C12
+C12 --> E9
+C8 --> B5
+B5 --> C8
+B3 --> C1
 
 @enduml

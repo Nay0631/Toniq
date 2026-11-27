@@ -7,6 +7,10 @@ boundary ":アレンジ画面" as L2
 control ":再生開始位置設定" as L3
 entity ":アプリの状態" as L4
 control ":再生" as L5
+boundary ":シンプルモード画面" as L6
+control ":再生位置の選択" as L7
+
+note over L2 : アレンジャータブの再生は開始位置から、ほかのタブでは先頭から始める
 
 L1 -> L2 : 小節の目盛りを押下する() : void
 activate L2
@@ -26,5 +30,22 @@ else 止まっている
 end
 deactivate L3
 deactivate L2
+
+note over L6 : 生成後の画面。波形は実際の音声ではなく表示用。\n左右の矢印キーで前・次の小節から、Home キーで先頭から鳴らす
+
+L1 -> L6 : 生成された楽曲の波形をクリック・ドラッグする() : void
+activate L6
+L6 -> L7 : 再生する小節を選ぶ() : void
+activate L7
+L7 -> L6 : 再生位置の線と「○小節目 0:12」を表示する() : void
+activate L6
+deactivate L6
+opt 離した（クリックした）
+  L7 -> L5 : 選んだ小節の頭から再生する() : void
+  activate L5
+  deactivate L5
+end
+deactivate L7
+deactivate L6
 
 @enduml

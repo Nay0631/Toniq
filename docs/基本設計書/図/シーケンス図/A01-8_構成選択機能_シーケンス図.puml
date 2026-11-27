@@ -11,7 +11,7 @@ entity ":標準アレンジマスタ" as L6
 entity ":構成プリセットマスタ" as L7
 control ":再生" as L8
 
-note over L2 : 構成：標準／静かに始まる／サビを強く／短く繰り返す／だんだん盛り上がる
+note over L2 : 構成：標準／静かに始まる／サビを強く／短く繰り返す／だんだん盛り上がる／サビ頭
 
 L1 -> L2 : 構成を選ぶ() : void
 activate L2

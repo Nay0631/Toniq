@@ -5,6 +5,9 @@ mainframe sd M01-2_新規作成機能_シーケンス図
 actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
 control ":新規作成" as L3
+boundary ":確認ダイアログ" as L12
+control ":保存の確認" as L13
+entity ":楽曲データ" as L14
 control ":再生" as L4
 control ":曲の管理" as L5
 entity ":アプリの状態" as L6
@@ -23,19 +26,33 @@ activate L3
 L3 -> L5 : 保存していない変更があるか確かめる() : void
 activate L5
 deactivate L5
-opt 保存していない変更がある
-  L3 -> L1 : 設定をリセットしてよいか確認する() : void
-  activate L1
-  deactivate L1
-end
-alt OK・変更がない
+L3 -> L12 : 編集内容が消えることと失われるものを知らせる() : void
+activate L12
+deactivate L12
+note right of L12 : 変更があれば「保存せずに新規作成」「保存してから新規作成」~N（リストの曲なら「上書き保存してから新規作成」）、~Nなければ「新規作成」を選べる
+L1 -> L12 : 新規作成のしかたを選ぶ() : void
+activate L12
+L12 -> L3 : 選んだしかたを渡す() : void
+activate L3
+deactivate L3
+deactivate L12
+alt 新規作成する
+  opt 保存してから新規作成
+    L3 -> L13 : ミュージックリストに保存する() : void
+    activate L13
+    L13 -> L14 : 曲を保存する() : void
+    activate L14
+    deactivate L14
+    deactivate L13
+    note right of L13 : 保存できなければ新規作成しない
+  end
   L3 -> L4 : 再生を止める() : void
   activate L4
   deactivate L4
   L3 -> L5 : 曲の内容を初期状態に戻す() : void
   activate L5
   L5 -> L6 : 曲の内容を初期値にし、未保存の曲にする() : void
-  note right of L6 : メロディは空にする
+  note right of L6 : メロディは空にし、区間ループも消す
   activate L6
   deactivate L6
   L5 -> L7 : パターンとテンポを選ぶ() : void
@@ -57,7 +74,7 @@ alt OK・変更がない
   L3 -> L2 : 設定タブを表示する() : void
   activate L2
   deactivate L2
-else 取り消し
+else キャンセル・Esc・ダイアログの外のクリック
   L3 -> L3 : 何もしない() : void
   activate L3
   deactivate L3

@@ -13,7 +13,7 @@ class "音量管理" as C1 <<control>> {
   {field} <U+002D> パートの音量・左右の位置のノード・音量メーター
   {method} <U+002B> パートの音量・左右の位置を変える() : void
   {method} <U+002B> パートのレベルを取得する() : void
-  {method} <U+002D> dB に変換して再生中の音量に反映する() : void
+  {method} <U+002D> 音量を dB に直して再生中の音量・左右の位置に反映する() : void
 }
 class "パート管理" as C2 <<control>> {
   {method} <U+002B> パートを ON/OFF する() : void

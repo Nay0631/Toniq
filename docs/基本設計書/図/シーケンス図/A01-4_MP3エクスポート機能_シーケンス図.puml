@@ -6,6 +6,8 @@ actor ":利用者" as L1
 boundary ":カスタムモード画面" as L2
 control ":ファイル名入力" as L14
 boundary ":ファイル名ダイアログ" as L15
+control ":保存の確認" as L30
+entity ":楽曲データ" as L31
 control ":再生" as L3
 boundary ":書き出しダイアログ" as L4
 control ":ドラム音源読み込み" as L5
@@ -21,13 +23,13 @@ control ":音声変換" as L13
 control ":出力ファイル保存" as L18
 entity ":MP3ファイル" as L11
 
-note over L2 : シンプルモード画面の「MP3で書き出すボタン」も同じ流れ。\nブラウザで開いたときはダウンロードにする（確認は出さない）
+note over L2 : シンプルモード画面の「MP3で書き出すボタン」も同じ流れ。\nミュージックリスト画面の曲のメニューから書き出すときは、先にその曲を今の曲として読み込み（M01-4 と同じ確認）、\n保存したあとは書き出したファイルの一覧を読み直す。\nブラウザで開いたときはダウンロードにする（確認は出さない）
 
 L1 -> L2 : MP3 ボタンを押下する() : void
 activate L2
 L2 -> L14 : ファイル名を聞く() : void
 activate L14
-L14 -> L15 : 初期値のファイル名でダイアログを表示する() : void
+L14 -> L15 : 初期値のファイル名と注意書きでダイアログを表示する() : void
 activate L15
 deactivate L15
 alt 書き出す
@@ -35,6 +37,15 @@ alt 書き出す
   activate L15
   L15 -> L14 : ファイル名を確定する() : void
   activate L14
+  opt 「ミュージックリストにも保存する」を入れている（保存していない変更があるとき）
+    L14 -> L30 : ミュージックリストに保存する() : void
+    activate L30
+    L30 -> L31 : 曲を保存する() : void
+    activate L31
+    deactivate L31
+    deactivate L30
+    note right of L30 : 保存できなければ書き出さない
+  end
   deactivate L14
   deactivate L15
 else キャンセル・Esc・ダイアログの外のクリック
@@ -94,6 +105,14 @@ opt ファイル名を決めた
     L3 -> L4 : 段階と進み具合を表示する() : void
     activate L4
     deactivate L4
+    opt 「中断する」・Esc キー
+      L1 -> L4 : 「中断する」を押下する() : void
+      activate L4
+      L4 -> L3 : 書き出しを中断する() : void
+      activate L3
+      deactivate L3
+      deactivate L4
+    end
   end
   alt 合成できた
     loop 変換の区切りごと
@@ -124,6 +143,11 @@ opt ファイル名を決めた
       deactivate L2
     end
     deactivate L18
+  else 中断した
+    L3 -> L4 : 書き出しダイアログを閉じる() : void
+    activate L4
+    deactivate L4
+    note right of L4 : 何も保存しない
   else 失敗した
     L3 -> L4 : 失敗のメッセージを表示する() : void
     activate L4
